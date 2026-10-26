@@ -8,6 +8,8 @@ run/
 *.db*
 *.sqlite*
 *.token
+companion.json
+auth.json
 .env*
 !.env.example
 *.zip

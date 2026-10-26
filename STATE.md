@@ -3,7 +3,7 @@
 2026-10-26: Phase 1 reference workflow implemented on
 `phase/1-engineering-assistant`; public repo:
 https://github.com/1xmint/minecraft-ai-engineer. Implementation PR awaits final
-client CI and review. No helper branches. The full pasted phase 1 is **not complete**.
+client CI and review in PR #5. No helper branches. The full pasted phase 1 is **not complete**.
 
 ## Outcomes and evidence
 
