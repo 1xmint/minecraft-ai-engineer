@@ -16,6 +16,16 @@ companion_pid=""
 cleanup() {
   for pid in "${pids[@]}"; do kill -- "-$pid" 2>/dev/null || true; done
   if [[ -n "$companion_pid" ]]; then kill -- "-$companion_pid" 2>/dev/null || true; fi
+  for role in alice bob eve eve-text; do
+    checkout="$repo"
+    [[ "$role" == bob ]] && checkout="$temporary/bob"
+    [[ "$role" == eve || "$role" == eve-text ]] && checkout="$temporary/eve"
+    run="$checkout/mod/build/run/mp-$role"
+    if [[ -d "$run" ]]; then
+      mkdir -p "$evidence/$role-runtime"
+      find "$run" -type f \( -name '*.log' -o -name '*.png' \) -exec cp --parents '{}' "$evidence/$role-runtime" \;
+    fi
+  done
   for copy in "${copies[@]}"; do git -C "$repo" worktree remove --force "$copy" 2>/dev/null || true; done
   cp -a "$coord" "$evidence/" 2>/dev/null || true
 }
