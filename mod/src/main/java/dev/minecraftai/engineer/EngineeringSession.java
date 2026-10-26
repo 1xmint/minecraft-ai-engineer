@@ -24,6 +24,8 @@ final class EngineeringSession implements BuildExecutor {
     String state = "PENDING", detail = "Select a region, then ask for a design.";
     final List<Change> journal = new ArrayList<>();
     final Map<BlockPos, BlockState> baseline = new LinkedHashMap<>();
+    boolean pendingPlacement;
+    boolean undoRequested;
     long nextPlacement;
     int testTick = -1;
     BlockState testOriginal;
@@ -39,7 +41,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     ServerPlayer player() { return server.getPlayerList().getPlayer(owner); }
     void tell(String text) { ServerPlayer player = player(); if (player != null) player.sendSystemMessage(Component.literal("Engineer: " + text)); }
-    boolean available() { ServerPlayer p = player(); return p != null && server.isSingleplayer()
+    boolean available() { ServerPlayer p = player(); return p != null && server.isSingleplayer() && !server.isPublished()
             && server.getPlayerList().getPlayerCount() == 1 && dimension.equals(p.level().dimension().identifier().toString()); }
     void requireCreative() {
         if (!server.isSameThread() || !available() || !player().isCreative()) throw new IllegalStateException("World edits require the single-player owner in creative mode");
@@ -55,12 +57,12 @@ final class EngineeringSession implements BuildExecutor {
         return new BlockPos(Math.min(corner1.getX(),corner2.getX()), Math.min(corner1.getY(),corner2.getY()), Math.min(corner1.getZ(),corner2.getZ()));
     }
     void select(int corner, BlockPos pos) {
-        if (state.equals("EXECUTING") || testTick >= 0 || !journal.isEmpty()) throw new IllegalStateException("Stop and undo assistant work before changing the delegated region");
+        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || testOriginal!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo assistant work before changing the delegated region");
         if (corner == 1) corner1 = pos.immutable(); else corner2 = pos.immutable();
         baseline.clear(); state = blueprint == null ? "PENDING" : "READY"; save(); tell("Corner " + corner + " set to " + pos.toShortString());
     }
     void accept(Blueprint value) {
-        if (state.equals("EXECUTING") || testTick >= 0 || !journal.isEmpty()) throw new IllegalStateException("Stop and undo the previous assignment before replacing its blueprint");
+        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || testOriginal!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo the previous assignment before replacing its blueprint");
         blueprint = value; baseline.clear(); stage = 0; teaching = true; verified = "untested"; state = "READY";
         save(); explain();
     }
@@ -101,33 +103,40 @@ final class EngineeringSession implements BuildExecutor {
     }
     void reconcile() {
         requireCreative();
+        if (undoRequested) throw new IllegalStateException("Undo was interrupted; use /engineer undo to reconcile it");
         for (Map.Entry<BlockPos, BlockState> entry : expectedNow().entrySet()) {
             validateTarget(entry.getKey());
             BlockState actual = player().level().getBlockState(entry.getKey());
             if (!Blueprint.matches(entry.getValue(), actual)) {
                 // A crash between journal flush and placement may leave before-state. It is safe to retry only that case.
                 Change pending = journal.isEmpty() ? null : journal.getLast();
-                if (pending != null && pending.pos().equals(entry.getKey()) && actual.equals(pending.before())) {
-                    journal.removeLast(); save(); continue;
+                if (pendingPlacement && pending != null && pending.pos().equals(entry.getKey()) && actual.equals(pending.before())) {
+                    journal.removeLast(); pendingPlacement=false;save(); continue;
                 }
                 throw new IllegalStateException("Player/world edit conflicts at " + entry.getKey().toShortString() + ". Resolve the conflict before resuming.");
             }
         }
+        if (pendingPlacement) { pendingPlacement=false;save(); }
     }
     @Override public void resume() {
+        if (testOriginal!=null) { requireCreative();restoreTest();state="PAUSED";detail="Interrupted test reconciled; inspect before requesting another test";save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
         reconcile(); state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
     }
     @Override public void pause(String reason) {
         state="PAUSED"; detail=reason; teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        if (testTick >= 0) restoreTest();
+        if (testOriginal != null) restoreTest();
         save(); checkpoint(); tell(reason);
     }
     @Override public String status() { return state + ": " + detail + "; assistant placements=" + journal.size() + "; functional verification=" + verified; }
     @Override public void tick() {
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Owner disconnected or changed dimension; explicit resume required"); return; }
         if (testTick>=0) { tickTest(); return; }
+        if (blueprint != null && verified.startsWith("passed:") && server.getTickCount()%10==0) {
+            boolean changed=blueprint.blocks().stream().anyMatch(b->!player().level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),player().level().getBlockState(b.pos())));
+            if(changed){verified="stale: circuit changed or chunks unloaded since test";detail="Functional evidence is stale; inspect and test the current circuit again";state="PAUSED";save();checkpoint();tell(detail);}
+        }
         if (state.equals("EXECUTING")) {
             try {
                 reconcile();
@@ -137,9 +146,9 @@ final class EngineeringSession implements BuildExecutor {
                     BlockState actual = player().level().getBlockState(b.pos());
                     if (Blueprint.matches(b.state(),actual)) continue;
                     if (!actual.isAir() || !b.state().canSurvive(player().level(), b.pos())) throw new IllegalStateException("Placement blocked at " + b.pos().toShortString());
-                    journal.add(new Change(b.pos(),actual,b.state())); save();
+                    journal.add(new Change(b.pos(),actual,b.state())); pendingPlacement=true;save();
                     if (!player().level().setBlockAndUpdate(b.pos(),b.state())) throw new IllegalStateException("Minecraft rejected placement");
-                    save(); return;
+                    pendingPlacement=false;save(); return;
                 }
                 state="COMPLETED"; detail="Geometry matches the blueprint. Functional test still required."; save(); checkpoint(); tell(detail);
             } catch (RuntimeException e) { pause(e.getMessage()); }
@@ -155,16 +164,19 @@ final class EngineeringSession implements BuildExecutor {
     }
     void undo() {
         requireCreative();
-        if (testTick>=0) restoreTest();
+        if (testOriginal!=null) restoreTest();
+        if (undoRequested && !journal.isEmpty() && player().level().hasChunkAt(journal.getLast().pos())
+                && player().level().getBlockState(journal.getLast().pos()).equals(journal.getLast().before())) { journal.removeLast();save(); }
         // Preflight every entry before removing anything. Never erase a later player edit.
         for (Change c : journal) { validateTarget(c.pos()); if (!Blueprint.matches(c.after(),player().level().getBlockState(c.pos()))) throw new IllegalStateException("Undo blocked by later edit at " + c.pos().toShortString()); }
-        state="PAUSED"; detail="Undo requested"; save();
+        state="PAUSED"; detail="Undo requested";undoRequested=true;save();
         while (!journal.isEmpty()) {
             Change c = journal.getLast();
             player().level().setBlockAndUpdate(c.pos(),c.before());
+            if(!player().level().getBlockState(c.pos()).equals(c.before())) throw new IllegalStateException("Minecraft rejected undo; journal retained for recovery");
             journal.removeLast(); save();
         }
-        baseline.clear(); verified="untested"; state="READY"; detail="Assistant placements undone; player-built blocks kept"; save(); checkpoint(); tell(detail);
+        baseline.clear();pendingPlacement=false;undoRequested=false;verified="untested"; state="READY"; detail="Assistant placements undone; player-built blocks kept"; save(); checkpoint(); tell(detail);
     }
     JsonObject inspect() {
         BlockPos min=anchor();
@@ -213,19 +225,22 @@ final class EngineeringSession implements BuildExecutor {
         player().level().setBlockAndUpdate(input(),testLast);
     }
     void restoreTest() {
-        if (testOriginal!=null && available() && player().level().hasChunkAt(input()) && player().level().getBlockState(input()).equals(testLast)) {
-            player().level().setBlockAndUpdate(input(),testOriginal);testOriginal=null;testLast=null;
+        if (testOriginal!=null && server.isSameThread() && available() && player().isCreative() && contains(input()) && player().level().hasChunkAt(input()) && player().level().getBlockEntity(input())==null) {
+            if(player().level().getBlockState(input()).equals(testLast)) player().level().setBlockAndUpdate(input(),testOriginal);
+            // A different state belongs to a later edit. Preserve it and relinquish restoration.
+            testOriginal=null;testLast=null;
         }
         testTick=-1;
     }
     void checkpoint() {
         if (blueprint==null) return; JsonObject out=new JsonObject(); out.addProperty("worldId",worldId); out.addProperty("dimension",dimension);
-        out.addProperty("projectId",blueprint.projectId()); out.addProperty("taskId",blueprint.id()); out.addProperty("status",state); out.addProperty("detail",detail); out.addProperty("verified",verified);
+        out.addProperty("projectId",blueprint.projectId());out.addProperty("blueprintRevision",blueprint.revision()); out.addProperty("taskId",blueprint.id()); out.addProperty("status",state); out.addProperty("detail",detail); out.addProperty("verified",verified);
         Companion.post("/v1/checkpoint",out).exceptionally(error->null);
     }
     void save() {
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",1); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
         json.addProperty("owner",owner.toString()); json.addProperty("status",state); json.addProperty("detail",detail); json.addProperty("stage",stage); json.addProperty("verified",verified);
+        json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
         if (corner1!=null) json.add("corner1",Blueprint.jsonPos(corner1)); if (corner2!=null) json.add("corner2",Blueprint.jsonPos(corner2));
         if (blueprint!=null) json.add("blueprint",blueprint.source()); JsonArray changes=new JsonArray();
         if (testOriginal!=null) { json.addProperty("testOriginal",Blueprint.describe(testOriginal)); json.addProperty("testLast",Blueprint.describe(testLast)); }
@@ -241,7 +256,11 @@ final class EngineeringSession implements BuildExecutor {
             if(json.has("corner1")) corner1=Blueprint.pos(json.getAsJsonObject("corner1")); if(json.has("corner2")) corner2=Blueprint.pos(json.getAsJsonObject("corner2"));
             if(json.has("blueprint")) blueprint=Blueprint.parse(json.getAsJsonObject("blueprint"),worldId,dimension);
             if(json.has("testOriginal")) { testOriginal=Blueprint.state(json.get("testOriginal").getAsString());testLast=Blueprint.state(json.get("testLast").getAsString()); }
-            stage=json.get("stage").getAsInt(); verified=json.get("verified").getAsString();
+            stage=json.get("stage").getAsInt();
+            if(stage<0 || (blueprint!=null && stage>=blueprint.stages().size())) throw new IllegalStateException("Checkpoint has an invalid tutorial stage");
+            verified=json.get("verified").getAsString();
+            if(verified.startsWith("passed:")) verified="stale: saved functional evidence requires a new world observation and test";
+            pendingPlacement=json.has("pendingPlacement")&&json.get("pendingPlacement").getAsBoolean();undoRequested=json.has("undoRequested")&&json.get("undoRequested").getAsBoolean();
             for(JsonElement e:json.getAsJsonArray("journal")){JsonObject x=e.getAsJsonObject();journal.add(new Change(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("before").getAsString()),Blueprint.state(x.get("after").getAsString())));}
             for(JsonElement e:json.getAsJsonArray("baseline")){JsonObject x=e.getAsJsonObject();baseline.put(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("state").getAsString()));}
             state="PAUSED";detail="Checkpoint restored. Inspect the world; explicit resume reconciles before editing.";

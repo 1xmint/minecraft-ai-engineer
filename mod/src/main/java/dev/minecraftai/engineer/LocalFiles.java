@@ -16,7 +16,10 @@ final class LocalFiles {
         String override = System.getenv("MCE_CONFIG_DIR");
         if (override != null && !override.isBlank()) return Path.of(override);
         String appdata = System.getenv("APPDATA");
-        return appdata != null ? Path.of(appdata, "minecraft-ai-engineer")
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win") && appdata != null)
+            return Path.of(appdata, "minecraft-ai-engineer");
+        String xdg = System.getenv("XDG_CONFIG_HOME");
+        return xdg != null && !xdg.isBlank() ? Path.of(xdg, "minecraft-ai-engineer")
                 : Path.of(System.getProperty("user.home"), ".config", "minecraft-ai-engineer");
     }
     static String worldId(MinecraftServer server) {

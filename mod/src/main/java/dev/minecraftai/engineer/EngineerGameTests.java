@@ -36,4 +36,27 @@ public final class EngineerGameTests {
         helper.assertTrue(Blueprint.matches(Blueprint.state("minecraft:redstone_lamp[lit=false]"),Blueprint.state("minecraft:redstone_lamp[lit=true]")),"Runtime signals do not create false construction conflicts");
         helper.succeed();
     }
+    @GameTest(maxTicks=50)
+    public void rotatedSignalLamp(GameTestHelper helper){
+        Blueprint plan=Blueprint.reference("test","minecraft:overworld",new BlockPos(3,2,2),90);
+        for(Blueprint.PlannedBlock b:plan.blocks())helper.setBlock(b.pos(),b.state());
+        BlockPos input=new BlockPos(3,3,2),output=new BlockPos(3,3,4);
+        var lever=plan.blocks().stream().filter(b->b.pos().equals(input)).findFirst().orElseThrow().state();
+        helper.runAtTickTime(5,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.setBlock(input,lever.setValue(BlockStateProperties.POWERED,true));});
+        helper.runAtTickTime(13,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.setBlock(input,lever.setValue(BlockStateProperties.POWERED,false));});
+        helper.runAtTickTime(23,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.succeed();});
+    }
+    @GameTest
+    public void rejectsWrongWorldAndUnsafeBlocks(GameTestHelper helper){
+        Blueprint plan=Blueprint.reference("test","minecraft:overworld",BlockPos.ZERO,0);
+        boolean wrongWorld=false;try{Blueprint.parse(plan.source(),"different","minecraft:overworld");}catch(IllegalArgumentException e){wrongWorld=true;}
+        helper.assertTrue(wrongWorld,"A blueprint from another world must be rejected");
+        var json=plan.source().deepCopy();json.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:chest");
+        boolean inventory=false;try{Blueprint.parse(json,"test","minecraft:overworld");}catch(IllegalArgumentException e){inventory=true;}
+        helper.assertTrue(inventory,"Inventory blueprints must be rejected");
+        json=plan.source().deepCopy();json.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:tnt");
+        boolean unsafe=false;try{Blueprint.parse(json,"test","minecraft:overworld");}catch(IllegalArgumentException e){unsafe=true;}
+        helper.assertTrue(unsafe,"Blocks outside the safe library must be rejected");
+        helper.succeed();
+    }
 }

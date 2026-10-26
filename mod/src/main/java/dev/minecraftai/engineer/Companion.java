@@ -22,12 +22,15 @@ final class Companion {
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + route))
                     .timeout(Duration.ofSeconds(90)).header("Authorization", "Bearer " + token).header("Content-Type", "application/json");
             if (body == null) builder.GET(); else builder.POST(HttpRequest.BodyPublishers.ofString(LocalFiles.GSON.toJson(body)));
-            return CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString()).thenApply(response -> {
+            CompletableFuture<HttpResponse<String>> exchange=CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString());
+            CompletableFuture<JsonObject> parsed=exchange.thenApply(response -> {
                 if (response.body().length() > 2_000_000) throw new IllegalStateException("Companion response too large");
                 JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
                 if (response.statusCode() != 200) throw new IllegalStateException(result.has("error") ? result.get("error").getAsString() : "Companion request failed");
                 return result;
             });
+            parsed.whenComplete((result,error)->{if(parsed.isCancelled())exchange.cancel(true);});
+            return parsed;
         } catch (Exception e) { return CompletableFuture.failedFuture(new IllegalStateException("Start the companion service and check its local configuration", e)); }
     }
 }

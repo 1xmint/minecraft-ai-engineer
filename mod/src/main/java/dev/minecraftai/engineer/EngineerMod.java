@@ -30,6 +30,7 @@ public final class EngineerMod implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)->dispatcher.register(
             Commands.literal("engineer")
                 .executes(ctx->run(ctx.getSource(),s->s.tell("select1/select2 [x y z], inspect, reference, plan <request>, rotate <0|90|180|270>, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status")))
+                .then(Commands.literal("help").executes(ctx->run(ctx.getSource(),s->s.tell("Select two corners, plan or reference, follow the preview, then build to delegate. stop, resume, undo, test, status. See the launch guide for the full flow."))))
                 .then(Commands.literal("select1").executes(ctx->run(ctx.getSource(),s->s.select(1,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),s->s.select(2,s.player().blockPosition())))
@@ -64,7 +65,7 @@ public final class EngineerMod implements ModInitializer {
     private static int run(CommandSourceStack source,Consumer<EngineeringSession> action) {
         try {
             ServerPlayer p=source.getPlayerOrException();
-            if(!source.getServer().isSingleplayer() || source.getServer().getPlayerList().getPlayerCount()!=1) throw new IllegalStateException("Use a local single-player world; remote and LAN worlds are unsupported");
+            if(!source.getServer().isSingleplayer() || source.getServer().isPublished() || source.getServer().getPlayerList().getPlayerCount()!=1) throw new IllegalStateException("Use a local single-player world; remote and LAN worlds are unsupported");
             String key=p.getUUID()+":"+p.level().dimension().identifier();
             EngineeringSession session=SESSIONS.computeIfAbsent(key,k->new EngineeringSession(source.getServer(),p));
             action.accept(session);publish(session);return Command.SINGLE_SUCCESS;
@@ -88,12 +89,12 @@ public final class EngineerMod implements ModInitializer {
             if(PLANS.get(s.owner)!=future)return;PLANS.remove(s.owner);
             if(!s.available()){s.pause("World changed while planning; request discarded");return;}
             if(error!=null){s.state="BLOCKED";s.detail=safe(error);s.save();s.tell(s.detail);return;}
-            try{s.accept(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension));s.tell(result.get("message").getAsString());}
+            try{s.state="READY";s.accept(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension));s.tell(result.get("message").getAsString());}
             catch(Exception e){s.state="BLOCKED";s.detail="Rejected blueprint: "+safe(e);s.save();s.tell(s.detail);}
         }));
     }
     private static void publish(EngineeringSession session) {
-        if(!session.available() || session.blueprint==null)return;
+        if(!session.available() || session.blueprint==null){if(preview!=null && preview.owner().equals(session.owner) && preview.dimension().equals(session.dimension))preview=null;return;}
         String stage=session.blueprint.stages().get(session.stage).id();List<Ghost> blocks=new ArrayList<>();
         for(Blueprint.PlannedBlock b:session.blueprint.blocks()){
             boolean loaded=session.player().level().hasChunkAt(b.pos());BlockState actual=loaded?session.player().level().getBlockState(b.pos()):null;

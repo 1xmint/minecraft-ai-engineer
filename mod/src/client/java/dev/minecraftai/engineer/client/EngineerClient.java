@@ -10,6 +10,7 @@ import net.minecraft.gizmos.Gizmos;
 import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /** Only immutable preview records cross from the integrated server to the client. */
@@ -24,6 +25,7 @@ public final class EngineerClient implements ClientModInitializer {
                     Gizmos.cuboid(ghost.pos(),0.003f,GizmoStyle.strokeAndFill(color,ghost.currentStage()?2f:1f,fill));
                     if(ghost.state().hasProperty(BlockStateProperties.HORIZONTAL_FACING)){
                         var facing=ghost.state().getValue(BlockStateProperties.HORIZONTAL_FACING);
+                        if(ghost.state().is(Blocks.REPEATER))facing=facing.getOpposite();
                         Vec3 center=Vec3.atCenterOf(ghost.pos());
                         Gizmos.arrow(center,center.add(facing.getStepX()*.45,0,facing.getStepZ()*.45),color,2f);
                     }
