@@ -26,9 +26,10 @@ final class ProjectManager {
         try {
             Files.createDirectories(directory);
             try (var files = Files.list(directory)) {
-                for (Path path : files.filter(p -> p.getFileName().toString().endsWith(".json")).sorted().toList()) {
+                for (Path path : files.filter(p -> p.getFileName().toString().matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.json")).sorted().toList()) {
                     JsonObject value = JsonParser.parseString(Files.readString(path)).getAsJsonObject();
                     UUID project = UUID.fromString(value.get("projectId").getAsString());
+                    if(!path.getFileName().toString().equals(project+".json"))throw new IllegalStateException("Project filename and identity disagree");
                     var session = new EngineeringSession(this, project, UUID.fromString(value.get("owner").getAsString()), value.get("dimension").getAsString());
                     if (projects.putIfAbsent(project, session) != null) throw new IllegalStateException("Duplicate project identity");
                 }
@@ -72,6 +73,18 @@ final class ProjectManager {
         LocalFiles.write(directory.resolveSibling("creator-grants.json"), data);
     }
     RegionReservations.Scope scope(EngineeringSession project) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId); }
+    void workspace(EngineeringSession project, UUID actor, BlockPos a, BlockPos b) {
+        long volume=((long)Math.abs((long)a.getX()-b.getX())+1)*(Math.abs((long)a.getY()-b.getY())+1)*(Math.abs((long)a.getZ()-b.getZ())+1);
+        if(volume<1 || volume>4096 || Math.abs((long)a.getX()-b.getX())>127 || Math.abs((long)a.getY()-b.getY())>127 || Math.abs((long)a.getZ()-b.getZ())>127)
+            throw new IllegalStateException("A workspace must fit 4096 blocks within 128 blocks per axis");
+        for(var other:projects.values()) {
+            if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
+            boolean overlap=Math.max(Math.min(a.getX(),b.getX()),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(Math.max(a.getX(),b.getX()),Math.max(other.corner1.getX(),other.corner2.getX()))
+                    && Math.max(Math.min(a.getY(),b.getY()),Math.min(other.corner1.getY(),other.corner2.getY()))<=Math.min(Math.max(a.getY(),b.getY()),Math.max(other.corner1.getY(),other.corner2.getY()))
+                    && Math.max(Math.min(a.getZ(),b.getZ()),Math.min(other.corner1.getZ(),other.corner2.getZ()))<=Math.min(Math.max(a.getZ(),b.getZ()),Math.max(other.corner1.getZ(),other.corner2.getZ()));
+            if(overlap && !other.access.allows(actor,ProjectAccess.Permission.EDIT))throw new IllegalStateException("This workspace overlaps a project that has not granted you edit permission");
+        }
+    }
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
@@ -82,7 +95,10 @@ final class ProjectManager {
             for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-margin,-margin,-margin), b.pos().offset(margin,margin,margin))) reads.add(p.immutable());
         }
         for (EngineeringSession other : projects.values()) {
-            if (other == project || other.testOriginal == null || other.blueprint == null || !other.dimension.equals(project.dimension)) continue;
+            if(other==project || !other.dimension.equals(project.dimension))continue;
+            boolean touches=writes.stream().anyMatch(other::contains) || (test && reads.stream().anyMatch(other::contains));
+            if(touches && !other.access.allows(actor,action))throw new IllegalStateException("The assignment intersects a workspace that has not granted the required permission");
+            if (other.testOriginal == null || other.blueprint == null) continue;
             for (Blueprint.PlannedBlock b : other.blueprint.blocks()) for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-2,-2,-2), b.pos().offset(2,2,2)))
                 if (reads.contains(p) || writes.contains(p)) throw new IllegalStateException("An interrupted neighboring test must be safely reconciled first");
         }

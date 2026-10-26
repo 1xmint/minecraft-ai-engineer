@@ -118,11 +118,13 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             });
             command(server,"engineer test");
             command(server,"engineer build");
+            command(server,"engineer undo");
             server.runOnServer(s->{
                 JsonObject stored=checkpoint(s);
                 check(stored.has("testOriginal") && stored.get("testOriginal").getAsString().equals(pendingInput),"New test/build requests cannot replace a pending restoration checkpoint");
                 check(stored.get("status").getAsString().equals("PAUSED"),"Pending test restoration does not silently grant build authority");
                 check(player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED),"Rejected requests preserve the pending actual input state");
+                check(stored.getAsJsonArray("journal").size()==2 && player(s).level().getBlockState(REPEATER).is(Blocks.REPEATER) && player(s).level().getBlockState(LAMP).is(Blocks.REDSTONE_LAMP),"Unsafe pending test recovery blocks undo before it removes its circuit");
                 player(s).level().setBlockAndUpdate(intruder,Blocks.AIR.defaultBlockState());
             });
             command(server,"engineer resume");

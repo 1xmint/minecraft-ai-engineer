@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
@@ -23,7 +24,7 @@ public final class EngineerNetwork {
     }
 
     public record HelloPayload(int protocol) implements CustomPacketPayload {
-        public static final Type<HelloPayload> TYPE = CustomPacketPayload.createType("engineer:overlay_hello");
+        public static final Type<HelloPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("engineer","overlay_hello"));
         public static final StreamCodec<RegistryFriendlyByteBuf, HelloPayload> CODEC = StreamCodec.of(
                 (buffer, value) -> buffer.writeVarInt(value.protocol()),
                 buffer -> {
@@ -36,7 +37,7 @@ public final class EngineerNetwork {
 
     /** The transport sequence also fences CLEAR against already queued snapshots. */
     public record SnapshotPayload(long transportSequence, ProjectView view) implements CustomPacketPayload {
-        public static final Type<SnapshotPayload> TYPE = CustomPacketPayload.createType("engineer:overlay_snapshot");
+        public static final Type<SnapshotPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("engineer","overlay_snapshot"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SnapshotPayload> CODEC =
                 StreamCodec.of(EngineerNetwork::encode, EngineerNetwork::decode);
         public SnapshotPayload {

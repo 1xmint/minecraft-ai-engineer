@@ -95,7 +95,8 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can change the delegated workspace");
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || testOriginal!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo assistant work before changing the delegated region");
-        if (corner == 1) corner1 = pos.immutable(); else corner2 = pos.immutable();
+        if (corner == 1) {corner1 = pos.immutable();corner2=null;}
+        else {if(corner1==null)throw new IllegalStateException("Set the first corner before completing the workspace");manager.workspace(this,actor(),corner1,pos);corner2 = pos.immutable();}
         baseline.clear();dependencies.clear(); state = blueprint == null ? "PENDING" : "READY"; save(); tell("Corner " + corner + " set to " + pos.toShortString());
     }
     void accept(Blueprint value) {
@@ -244,6 +245,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void undoReserved() {
         if (testOriginal!=null) restoreTest();
+        if(testOriginal!=null)throw new IllegalStateException("Reconcile the interrupted test input before undo; the circuit and recovery checkpoint were preserved");
         if (undoRequested && !journal.isEmpty() && level().hasChunkAt(journal.getLast().pos())
                 && level().getBlockState(journal.getLast().pos()).equals(journal.getLast().before())) { journal.removeLast();save(); }
         // Preflight every entry before removing anything. Never erase a later player edit.
