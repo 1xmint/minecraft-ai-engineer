@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 
 // This launcher only supplies CLI isolation switches absent from the official
 // TypeScript SDK. Auth and inference remain inside the pinned official binary.
@@ -12,8 +13,6 @@ internal static class PlannerLauncher {
     static extern bool SetInformationJobObject(IntPtr job, int kind, IntPtr info, uint length);
     [DllImport("kernel32.dll")]
     static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
-    [DllImport("kernel32.dll")]
-    static extern bool CloseHandle(IntPtr handle);
     [StructLayout(LayoutKind.Sequential)]
     struct BasicLimits {
         public long ProcessTime, JobTime;
@@ -58,17 +57,37 @@ internal static class PlannerLauncher {
         try {
             Marshal.StructureToPtr(limits, info, false);
             if (!SetInformationJobObject(job, 9, info, (uint)length)) return 70;
+            // Join the job before spawning: the child inherits membership from
+            // birth, so cancellation cannot leave an unassigned child running.
+            if (!AssignProcessToJobObject(job, Process.GetCurrentProcess().Handle)) return 70;
             var command = new StringBuilder("exec --ignore-user-config --ignore-rules --ephemeral");
             for (int index = 1; index < args.Length; index++) command.Append(" ").Append(Quote(args[index]));
             var start = new ProcessStartInfo(binary, command.ToString());
             start.UseShellExecute = false;
             start.CreateNoWindow = true;
+            start.RedirectStandardInput = true;
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
             using (var child = Process.Start(start)) {
                 if (child == null) return 70;
-                if (!AssignProcessToJobObject(job, child.Handle)) { child.Kill(); return 70; }
+                // A hidden launcher has no console handles. Explicit stream
+                // forwarding preserves the SDK pipes in desktop environments.
+                var input = Console.OpenStandardInput().CopyToAsync(child.StandardInput.BaseStream);
+                input.ContinueWith(delegate(Task completed) {
+                    try { child.StandardInput.Close(); } catch (InvalidOperationException) { }
+                });
+                var output = child.StandardOutput.BaseStream.CopyToAsync(Console.OpenStandardOutput());
+                var errors = child.StandardError.BaseStream.CopyToAsync(Console.OpenStandardError());
                 child.WaitForExit();
+                Task.WaitAll(output, errors);
                 return child.ExitCode;
             }
-        } finally { Marshal.FreeHGlobal(info); CloseHandle(job); }
+        } finally {
+            Marshal.FreeHGlobal(info);
+            // Keep our non-inherited job handle open until process exit. Closing
+            // it here would terminate this launcher before its exit code returns.
+            // The OS closes it on normal exit or SDK cancellation, killing children.
+            GC.KeepAlive(job);
+        }
     }
 }

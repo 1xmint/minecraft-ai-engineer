@@ -32,9 +32,10 @@ Runtime-changing powered/lit/power properties are observations, not construction
 mistakes. Registry validates complete block-state strings before preview/build.
 
 Reference template `signal-lamp`: solid supports at (0,0,0), (1,0,0), (2,0,0);
-floor lever at (0,1,0) facing east; repeater at (1,1,0) facing east delay=1;
+floor lever at (0,1,0) facing east; repeater at (1,1,0) facing west delay=1;
 redstone lamp at (2,1,0). Stages `foundation`, `input`, `output`. The repeater
-outputs east into the lamp. Test off->on->off using scheduled ticks. Test only
+outputs east into the lamp (the repeater's facing state points toward its input).
+Test off->on->off using scheduled ticks. Test only
 this curated circuit and restore input; never infer arbitrary circuit validity.
 Blueprints can be structurally valid but remain functionally untested until
 the actual mod records game test evidence for that project and revision.

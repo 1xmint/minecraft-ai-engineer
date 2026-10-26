@@ -1,0 +1,38 @@
+plugins { id 'net.fabricmc.fabric-loom' version "${loom_version}" }
+
+version = project.mod_version
+group = 'dev.minecraftai'
+
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        engineer {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand version: project.version }
+}
+
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+
+fabricApi {
+    configureTests {
+        createSourceSet = false
+        modId = 'engineer'
+        enableGameTests = true
+        enableClientGameTests = false
+        eula = true
+    }
+}

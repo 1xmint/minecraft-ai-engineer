@@ -126,7 +126,7 @@ test("a plan is executable, scoped, versioned and explicitly untested", async ()
   assert.ok(
     result.blueprint.blocks.some(
       (block: { state: string }) =>
-        block.state.includes("repeater") && block.state.includes("facing=east"),
+        block.state.includes("repeater") && block.state.includes("facing=west"),
     ),
   );
   assert.equal(result.blueprint.stages.length, 3);
