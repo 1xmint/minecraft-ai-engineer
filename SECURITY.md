@@ -1,5 +1,11 @@
 # Security
 
+The multiplayer-first target in STATE.md requires a server-owned authorization
+gateway, per-player project grants and recipient filtering before the current
+single-player restrictions can be relaxed. The released alpha has none of
+those multiplayer guarantees. One private companion remains beside the server;
+no direct player/public access to its bearer token, Codex process or credentials.
+
 Report vulnerabilities privately using this repository's GitHub security
 advisory reporting, rather than posting tokens, worlds or exploits in issues.
 Only the current pinned development version is supported.

@@ -1,5 +1,39 @@
 # PROJECT: Minecraft AI Engineer
 
+## Architecture amendment — 2026-10-26
+
+Josh changed the target to **multiplayer-first, single-player-compatible**.
+This amendment supersedes the original single-player-first and integrated-only
+requirements below; the original brief is retained for its feature requirements.
+The decision, Outcomes and implementation sequence live in [STATE.md](../STATE.md).
+
+- Develop and prove the engineering core on a dedicated Fabric server first,
+  even when only one player is initially connected. It may run on Josh's PC.
+  Keep the same logical-server core compatible with integrated single-player.
+- The server authorizes projects, player ownership, permissions, bounded work,
+  execution, conflict handling and functional testing. Durable project memory
+  is stored by the companion on the server side, independent of any client.
+- One operator-owned companion serves the server. Its localhost credential and
+  Codex login stay on the server machine; players never receive them. No hosted
+  service or separate API billing is authorized. Verify eligibility before
+  relying on shared multi-user subscription requests.
+- Shared blueprints and observed construction state are visible to authorized
+  members. Tutorial cursors are per player. Optional client overlays receive
+  permission-filtered data; core commands and text teaching work without them.
+- Derive players from authenticated connections. Deny unauthorized project
+  access and work; recheck grants at execution, not just at request time.
+- Prevent overlapping AI work and unsafe interactions with nearby circuitry.
+  Human edits pause affected work for reconciliation instead of being silently
+  overwritten. Testing and undo follow the same permissions and reservations.
+- The next proof must use multiple clients on a real dedicated server, including
+  denied access, conflicts, revocation, reconnect/restart and optional overlays.
+
+The published v0.1.0-alpha.1 remains a single-player reference release. This
+amendment does not make its current runtime multiplayer-capable. The user's
+six phase 2 extensions remain phase 2 after the engineering foundation works.
+
+## Original feature brief
+
 ## Mission
 
 Build a local-first, AI-powered Minecraft Java Edition engineering companion that can:

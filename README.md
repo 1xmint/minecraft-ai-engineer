@@ -11,6 +11,12 @@ the rest, interrupt or resume, and test the actual redstone. Broader engineering
 features in the [product brief](docs/product-brief.md) are still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
 
+**Updated architecture target:** dedicated Fabric server first, with server-owned
+projects, player permissions, shared building and optional client overlays.
+Playing alone uses the same server; integrated single-player remains a
+compatibility target. This migration is the next build milestone. The released
+preview below is still single-player-only; see the [coding plan](STATE.md).
+
 ![Reference blueprint preview captured from the actual Minecraft client CI test](docs/images/reference-preview.png)
 
 ## Try it
