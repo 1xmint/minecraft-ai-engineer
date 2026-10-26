@@ -1,5 +1,10 @@
 # Loopback protocol v1
 
+This describes the shipped single-player reference protocol. It is not a
+multiplayer authorization boundary. The planned server gateway, authenticated
+actor context, revision fencing and recipient filtering are specified in
+[STATE.md](../STATE.md). Minecraft clients must never receive this service bearer token.
+
 Companion binds only 127.0.0.1:43127. Requests require Authorization: Bearer TOKEN;
 the shared token is stored in a user-only config file outside world saves/repo.
 Reject browser Origin, unknown routes, excessive bodies, and non-loopback hosts.
