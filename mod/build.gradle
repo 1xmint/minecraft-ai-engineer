@@ -32,7 +32,7 @@ fabricApi {
         createSourceSet = false
         modId = 'engineer'
         enableGameTests = true
-        enableClientGameTests = false
+        enableClientGameTests = true
         eula = true
     }
 }

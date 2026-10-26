@@ -54,6 +54,9 @@ export const PLAN_SCHEMA = {
     explanation: { type: "string" },
   },
 };
+// Template selection is focused classification; use the efficient Codex model
+// rather than inheriting a potentially expensive account default.
+export const DEFAULT_PLANNER_MODEL = "gpt-6-luna";
 export function validatePlan(value: unknown): Plan {
   const v = object(value);
   if (v.template !== "signal-lamp" && v.template !== "unsupported")
@@ -126,7 +129,7 @@ export class CodexPlanningProvider implements PlanningProvider {
         env: plannerEnvironment(launcher.binary, directory),
       });
       const thread = codex.startThread({
-        ...(this.options.model ? { model: this.options.model } : {}),
+        model: this.options.model ?? DEFAULT_PLANNER_MODEL,
         workingDirectory: directory,
         skipGitRepoCheck: true,
         sandboxMode: "read-only",

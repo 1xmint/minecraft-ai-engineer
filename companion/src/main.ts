@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { preparePlannerLauncher } from "./launcher.js";
 import { MemoryStore } from "./memory.js";
-import { CodexPlanningProvider, plannerEnvironment } from "./provider.js";
+import {
+  CodexPlanningProvider,
+  plannerEnvironment,
+  DEFAULT_PLANNER_MODEL,
+} from "./provider.js";
 import { createCompanionServer } from "./server.js";
 
 const execFileAsync = promisify(execFile);
@@ -45,7 +49,7 @@ async function main(): Promise<void> {
       "Authentication: ChatGPT subscription. No API keys are forwarded. Launcher ignores inherited config and rules.",
     );
     console.log(
-      `Model: ${model ?? "pinned Codex runtime default"}; actual account availability requires --probe.`,
+      `Model: ${model ?? DEFAULT_PLANNER_MODEL}; actual account availability requires --probe.`,
     );
     if (process.argv.includes("--probe")) {
       const result = await provider.plan(

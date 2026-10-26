@@ -27,7 +27,8 @@ Each explicit `/engineer plan ...` action makes at most one model request,
 with a 90-second timeout and no automatic retry. Ordinary inspection, stages,
 placement, progress and functional checks never invoke the model. Account
 limits still apply. `MCE_MODEL` can select a model available to the signed-in
-account; otherwise the pinned runtime's default is used. A successful probe
+account; otherwise `gpt-6-luna` at low reasoning effort is used for focused
+template selection. A successful probe
 establishes access at that moment, not unlimited or unattended entitlement.
 Public CI never receives sign-in credentials and never invokes a paid model.
 
