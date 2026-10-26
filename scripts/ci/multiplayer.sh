@@ -35,6 +35,16 @@ git -C "$repo" worktree add --detach "$temporary/bob" HEAD
 git -C "$repo" worktree add --detach "$temporary/eve" HEAD
 copies+=("$temporary/bob" "$temporary/eve")
 
+# Loom shares its Minecraft extraction cache across checkouts. Finish its first
+# configuration serially before three Gradle processes consume that cache.
+for checkout in "$repo" "$temporary/bob" "$temporary/eve"; do
+  (
+    cd "$checkout/mod"
+    chmod +x gradlew
+    ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava
+  )
+done
+
 setsid node "$repo/scripts/ci/companion.mjs" "$temporary/config-alice" >"$evidence/companion.log" 2>&1 &
 companion_pid=$!
 for attempt in {1..50}; do
