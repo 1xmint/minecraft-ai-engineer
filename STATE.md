@@ -8,7 +8,7 @@ checks and release in PR #5. No helper branches. The full pasted phase 1 is **no
 ## Outcomes and evidence
 
 - O1 — Public reproducible contribution workflow: implemented. Protected main
-  requires Companion, Fabric and Windows planner checks, PRs, linear history
+  requires Companion, Fabric, Windows planner and Minecraft client checks, PRs, linear history
   and resolved conversations, including owner pushes. Pinned toolchains,
   dependency updates, secret scanning/push protection, private vulnerability
   reporting, templates, CODEOWNERS and shared agent instructions exist.
