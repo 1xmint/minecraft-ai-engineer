@@ -91,6 +91,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(view(context).stage() == 0, "Alice begins her own support lesson");
                 server.waitFor(s -> s.getPlayerList().getPlayerByName("Bob") != null
                         && s.getPlayerList().getPlayerByName("Eve") != null, 12_000);
+                UUID deniedActor=server.computeOnServer(s->player(s,"Eve").getUUID());
                 server.runOnServer(s -> {
                     for (ServerPlayer player : s.getPlayerList().getPlayers()) {
                         player.setGameMode(GameType.CREATIVE);
@@ -111,7 +112,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     EngineeringSession project = session(s, "Alice");
                     check(project.cursor(player(s, "Bob").getUUID()).stage == 1, "Bob has an independent lesson cursor");
                     check(project.cursor(player(s, "Alice").getUUID()).stage == 0, "Alice's server cursor is unchanged");
-                    check(!project.access.allows(player(s, "Eve").getUUID(), ProjectAccess.Permission.VIEW), "Eve has no project grant");
+                    check(!project.access.allows(deniedActor, ProjectAccess.Permission.VIEW), "Eve has no project grant after disconnect too");
                     for (int x = 0; x < 3; x++) project.level().setBlockAndUpdate(ANCHOR.east(x), Blocks.STONE.defaultBlockState());
                     project.level().setBlockAndUpdate(LEVER, Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]"));
                 });
