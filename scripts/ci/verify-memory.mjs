@@ -39,6 +39,25 @@ try {
     passes.count >= 2,
     "Both actual functional passes must be recorded durably across the dedicated-server restart",
   );
+  const observations = db
+    .prepare(
+      "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id",
+    )
+    .all(server.serverId, project)
+    .map((row) => JSON.parse(row.document));
+  assert.ok(
+    observations.length >= 2,
+    "Actual before-build and after-restart inspections must be durable",
+  );
+  assert.ok(
+    observations[0].blocks.every((block) => block.state === "minecraft:air"),
+  );
+  assert.ok(
+    observations
+      .at(-1)
+      .blocks.some((block) => block.state.startsWith("minecraft:repeater")),
+    "Restart inspection must contain the real built repeater",
+  );
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -46,6 +65,7 @@ try {
       projectId: project,
       revision: row.project_revision,
       recordedFunctionalPasses: passes.count,
+      recordedWorldInspections: observations.length,
     }),
   );
 } finally {

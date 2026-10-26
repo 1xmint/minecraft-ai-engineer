@@ -1,47 +1,36 @@
 # Now
 
 2026-10-26: **Multiplayer-first, single-player-compatible is the approved target.**
-The active goal is **complete all milestones**, including remaining phase 1 and
-all six phase 2 capabilities. Building the dedicated-server foundation (#8) on
-`phase/2-multiplayer-foundation`, ahead of adding mechanisms. No multiplayer
-runtime support has shipped. The existing v0.1.0-alpha.1 remains single-player-only.
+The active goal remains **complete all milestones**, including remaining phase 1
+and all six phase 2 capabilities. Foundation #8 is on
+`phase/2-multiplayer-foundation`, PR #10. No multiplayer release has shipped;
+v0.1.0-alpha.1 remains single-player-only.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Current work: optional negotiated overlay networking, private project grants,
-per-player tutorial cursors, stable world/server identity and dependency-aware
-execution reservations are implemented on the branch. Scoped Java main/client
-and TypeScript compilation pass; runtime proofs are pending. Existing actual
-client/undo/test checks are retained, adapted to network previews and project
-files. New policy/lease/wire-format proofs are queued for GitHub CI.
+Implemented: server-owned private projects/grants, personal lessons, stable
+world/server identity, fenced construction/reservations, optional recipient-filtered
+overlays, private v2 companion memory and bounded operator-only planning.
+Explicit operator/self legacy adoption preserves per-attempt backups and journals
+with private paused ownership. Independent Java/gateway review is complete;
+identified authorization, recovery, report-ordering and stale-boot defects are fixed.
+Blueprint integers/text and overlay packet budgets are bounded.
 
-The v2 companion gateway and its Java integration now capture server/project/
-authorization revisions, fence stale replies, persist shared memory in SQLite,
-and limit model requests to the configured operator. The three-client native
-dedicated-server harness is implemented, including an overlay-disabled client,
-revocation, overlapping tasks, actual redstone tests and saved-world restart.
-CI also verifies its real HTTP/SQLite checkpoints without inference credentials.
-These runtime proofs have not passed yet. Local TypeScript/Java compilation and
-formatting pass. Independent Java safety review found and fixed workspace,
-recovery and revocation defects; the gateway integration review is pending.
+CI run 40417390399 passed all five checks, including Dedicated multiplayer and
+the retained integrated Minecraft client. The real dedicated proof passed two
+functional off/on/off runs (before/after restart), independent lessons, denied
+Eve, overlay-disabled text teaching, live/cross-project revocation, conflict
+preservation, overlapping work, backed-up adoption and ambiguous target rejection.
+All four native client roles finished. The real SQLite verifier recorded the
+intended six-block blueprint and functional checkpoint history. Native libraries
+are isolated per client; disconnected test clients return to the title screen.
+Dedicated multiplayer is now a required main-branch check alongside the other four.
 
-Explicit operator/self legacy adoption is implemented with validation, private
-ownership, per-attempt backups, preserved journals and paused recovery; it has
-not passed runtime proof yet. Independent gateway review found and fixed
-reordered report delivery and unseen stale-boot races using report sequences
-and durable boot generations. Added dedicated regressions for cross-project
-revocation, backed-up adoption and ambiguous selection after restart. Blueprint
-integers/text and overlay packet budgets are bounded before presentation.
-
-CI run 40415489199 passed Companion, Fabric, Windows planner and the actual
-single-player Minecraft client. Dedicated multiplayer could not launch because
-Ubuntu's Azure graphics-package mirror timed out. The next run uses the official
-Ubuntu archive; this infrastructure failure does not prove multiplayer behavior.
-
-Unfinished in this slice: passing the complete updated runtime proofs and final
-review of any failures before merge/release. Worker worktrees
-are under this chat's work/multiplayer-network and work/multiplayer-companion;
-their completed commits are integrated. Helpers resumed after the account reset;
-none of this is evidence that #8 or either milestone is complete.
+Final acceptance addition pending: inspect the actual dedicated world before
+building and after restart, await real gateway receipts and verify both exact
+observations in SQLite. The complete green proof above predates that addition.
+Then finish #8 and merge the foundation. Neither milestone is complete.
+Worker commits from work/multiplayer-network and work/multiplayer-companion are
+integrated. Automated tests run on GitHub only; local compile/format checks pass.
 
 ## Outcomes for the next build
 

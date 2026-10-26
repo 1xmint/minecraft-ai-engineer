@@ -87,6 +87,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 send(context, "engineer select2 2 101 0");
                 send(context, "engineer reference");
                 server.waitFor(s -> session(s, "Alice").blueprint != null);
+                inspectPersisted(context,server);
                 await(context, () -> view(context) != null, "Alice's authorized network preview");
                 check(view(context).stage() == 0, "Alice begins her own support lesson");
                 server.waitFor(s -> s.getPlayerList().getPlayerByName("Bob") != null
@@ -151,6 +152,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 send(context, "engineer test");
                 server.waitFor(s -> session(s, "Alice").verified.startsWith("passed:"));
                 assertPersisted(server);
+                server.runCommand("tp Bob 5 102 6");
                 connection.waitForClientboundPackets();
                 context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
                 context.takeScreenshot("engineer-multiplayer-authorized-build");
@@ -260,6 +262,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             awaitFile(context, "bob-reconnected");
             send(context, "engineer resume");
             server.waitFor(s -> session(s, "Alice").state.equals("COMPLETED"));
+            inspectPersisted(context,server);
             send(context, "engineer test");
             server.waitFor(s -> session(s, "Alice").verified.startsWith("passed:"));
             assertPersisted(server);
@@ -272,6 +275,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             awaitFile(context, "bob.done");
             server.waitFor(s -> s.getPlayerList().getPlayerCount() == 1, 12_000);
             connection.waitForClientboundPackets();
+            context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
         }
     }
@@ -379,6 +383,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(checkpoint!=null,"The actual functional pass must generate a project checkpoint");
         var receipt=checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS);
         check(receipt.get("protocol").getAsInt()==2,"The real companion gateway must acknowledge the functional result");
+    }
+    private static void inspectPersisted(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var previous=server.computeOnServer(s->session(s,"Alice").lastObservation);
+        send(context,"engineer inspect");
+        server.waitFor(s->session(s,"Alice").lastObservation!=previous);
+        var receipt=server.computeOnServer(s->session(s,"Alice").lastObservation).get(30,java.util.concurrent.TimeUnit.SECONDS);
+        check(receipt.get("protocol").getAsInt()==2,"Actual dedicated-world observations must reach the private companion");
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {

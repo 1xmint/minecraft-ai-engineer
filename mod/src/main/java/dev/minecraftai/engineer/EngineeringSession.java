@@ -46,6 +46,7 @@ final class EngineeringSession implements BuildExecutor {
     String verified = "untested";
     String memoryStatus = "not synchronized";
     java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
+    java.util.concurrent.CompletableFuture<JsonObject> lastObservation;
     long reportSequence;
     record Change(BlockPos pos, BlockState before, BlockState after) {}
 
@@ -298,7 +299,7 @@ final class EngineeringSession implements BuildExecutor {
         if (blueprint!=null) for (Blueprint.PlannedBlock b:blueprint.blocks()) if (!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos()))) mismatch++;
         snapshot.add("blocks",blocks); LocalFiles.write(file.resolveSibling(file.getFileName()+".snapshot.json"),snapshot);
         tell("Inspected " + volume + " exact block states; " + nonair + " non-air; " + mismatch + " blueprint differences. Snapshot saved locally.");
-        Companion.report(this,Companion.gateway(this,"/v2/observe",snapshot,actor())); return snapshot;
+        lastObservation=Companion.gateway(this,"/v2/observe",snapshot,actor());Companion.report(this,lastObservation);return snapshot;
     }
     void test() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
