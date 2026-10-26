@@ -75,8 +75,13 @@ Every project operation carries:
 }
 ```
 
-POST `/v2/server/open` accepts `{serverId,serverEpoch}` and responds with
-`{protocol:2,status:'ready',serverId,serverEpoch}`. Registration is live-process
+POST `/v2/server/open` accepts `{serverId,serverEpoch,serverGeneration}` and responds with
+`{protocol:2,status:'ready',serverId,serverEpoch,serverGeneration}`. Fabric increments
+the positive safe-integer generation durably under a private file lock before
+each new Minecraft boot. The companion durably rejects lower generations, even
+for epochs it has never seen. An equal generation must retain the same epoch;
+a higher generation requires a new epoch. Reopening the same boot after a
+companion restart is allowed. Registration is live-process
 state: after a companion restart, Fabric must reopen and synchronize projects.
 Previously retired epochs cannot be reopened, including after service restart.
 A new registration pauses old task mirrors, invalidates evidence and aborts

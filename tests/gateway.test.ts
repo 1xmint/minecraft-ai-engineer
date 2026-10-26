@@ -83,8 +83,12 @@ async function fixture(
     });
   const get = (route: string) =>
     fetch(`${base}${route}`, { headers: { Authorization: `Bearer ${TOKEN}` } });
-  const open = (epoch = "epoch-one", serverId = "server-a") =>
-    post("/v2/server/open", { serverId, serverEpoch: epoch });
+  const open = (
+    epoch = "epoch-one",
+    serverId = "server-a",
+    serverGeneration = epoch === "epoch-two" ? 2 : 1,
+  ) =>
+    post("/v2/server/open", { serverId, serverEpoch: epoch, serverGeneration });
   const sync = (c = context(), changes: Record<string, unknown> = {}) =>
     post("/v2/project", {
       context: c,
@@ -106,6 +110,88 @@ async function fixture(
 async function json<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
+
+test("durable boot generations fence delayed unseen boots without retiring the live server", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "mce-boot-generation-"));
+  const file = join(directory, "memory.sqlite");
+  let f = await fixture(plan, file);
+  try {
+    const ready = await f.open("epoch-two", "server-a", 2);
+    assert.equal(ready.status, 200);
+    assert.equal(
+      (await json<{ serverGeneration: number }>(ready)).serverGeneration,
+      2,
+    );
+    await f.sync(context({ serverEpoch: "epoch-two" }));
+    const read = () =>
+      f.post("/v2/project/read", {
+        context: context({ serverEpoch: "epoch-two" }),
+      });
+    assert.equal(
+      (await f.open("unseen-delayed-first-boot", "server-a", 1)).status,
+      409,
+    );
+    assert.equal(
+      (await f.open("different-epoch-same-generation", "server-a", 2)).status,
+      409,
+    );
+    assert.equal((await f.open("epoch-two", "server-a", 3)).status, 409);
+    assert.equal(
+      (await read()).status,
+      200,
+      "rejected registration must not retire or invalidate current projects",
+    );
+    for (const serverGeneration of [
+      undefined,
+      0,
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      assert.equal(
+        (
+          await f.post("/v2/server/open", {
+            serverId: "server-a",
+            serverEpoch: "invalid-boot",
+            serverGeneration,
+          })
+        ).status,
+        400,
+      );
+    }
+    await f.close();
+    f = await fixture(plan, file);
+    assert.equal(
+      (await f.open("unseen-delayed-first-boot", "server-a", 1)).status,
+      409,
+      "service restart preserves the generation fence",
+    );
+    assert.equal(
+      (await f.open("epoch-two", "server-a", 2)).status,
+      200,
+      "the actual current boot can reopen after companion restart",
+    );
+    assert.equal(
+      (await read()).status,
+      409,
+      "a service restart still requires a fresh project mirror",
+    );
+    assert.equal(
+      (await f.sync(context({ serverEpoch: "epoch-two" }))).status,
+      200,
+    );
+    assert.equal((await read()).status, 200);
+    assert.equal((await f.open("epoch-three", "server-a", 3)).status, 200);
+    assert.equal((await f.open("epoch-two", "server-a", 2)).status, 409);
+    assert.equal(
+      (await f.sync(context({ serverEpoch: "epoch-three" }))).status,
+      200,
+    );
+  } finally {
+    await f.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("gateway registration, membership and identity reject access before inference", async () => {
   let calls = 0;

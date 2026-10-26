@@ -73,14 +73,31 @@ export class ServerGateway {
     if (method === "POST" && pathname === "/v2/server/open") {
       const v = object(value),
         serverId = identifier(v.serverId, "serverId"),
-        serverEpoch = identifier(v.serverEpoch, "serverEpoch");
+        serverEpoch = identifier(v.serverEpoch, "serverEpoch"),
+        serverGeneration = integer(
+          v.serverGeneration,
+          "serverGeneration",
+          1,
+          Number.MAX_SAFE_INTEGER,
+        );
+      memory.open(
+        serverId,
+        serverEpoch,
+        serverGeneration,
+        this.liveEpochs.get(serverId) !== serverEpoch,
+      );
       if (this.liveEpochs.get(serverId) !== serverEpoch) {
-        memory.open(serverId, serverEpoch);
         for (const active of this.planning)
           if (active.context.serverId === serverId) active.controller.abort();
         this.liveEpochs.set(serverId, serverEpoch);
       }
-      return { protocol: 2, status: "ready", serverId, serverEpoch };
+      return {
+        protocol: 2,
+        status: "ready",
+        serverId,
+        serverEpoch,
+        serverGeneration,
+      };
     }
     if (method === "GET" && pathname === "/v2/projects") {
       const serverId = identifier(query.get("serverId"), "serverId"),

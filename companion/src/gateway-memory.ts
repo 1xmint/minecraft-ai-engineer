@@ -36,6 +36,7 @@ export class GatewayMemory {
       INSERT OR IGNORE INTO metadata VALUES('gateway_schema_version','1');
       CREATE TABLE IF NOT EXISTS gateway_servers(server_id TEXT PRIMARY KEY,current_epoch TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS gateway_epochs(server_id TEXT NOT NULL,epoch TEXT NOT NULL,retired INTEGER NOT NULL,PRIMARY KEY(server_id,epoch));
+      CREATE TABLE IF NOT EXISTS gateway_boots(server_id TEXT PRIMARY KEY,generation INTEGER NOT NULL,epoch TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS gateway_projects(server_id TEXT NOT NULL,project_id TEXT NOT NULL,world_id TEXT NOT NULL,dimension TEXT NOT NULL,name TEXT NOT NULL,project_revision INTEGER NOT NULL,authorization_revision INTEGER NOT NULL,members TEXT NOT NULL,synced_epoch TEXT NOT NULL,PRIMARY KEY(server_id,project_id));
       CREATE TABLE IF NOT EXISTS gateway_blueprints(server_id TEXT NOT NULL,project_id TEXT NOT NULL,revision INTEGER NOT NULL,document TEXT NOT NULL,PRIMARY KEY(server_id,project_id,revision));
       CREATE TABLE IF NOT EXISTS gateway_tasks(server_id TEXT NOT NULL,project_id TEXT NOT NULL,task_id TEXT NOT NULL,project_revision INTEGER NOT NULL,authorization_revision INTEGER NOT NULL,epoch TEXT NOT NULL,status TEXT NOT NULL,detail TEXT NOT NULL,observed TEXT,verified TEXT,PRIMARY KEY(server_id,project_id,task_id));
@@ -81,8 +82,27 @@ export class GatewayMemory {
         new Date().toISOString(),
       );
   }
-  open(serverId: string, epoch: string): void {
+  open(
+    serverId: string,
+    epoch: string,
+    generation: number,
+    refresh = true,
+  ): void {
+    integer(generation, "serverGeneration", 1, Number.MAX_SAFE_INTEGER);
     this.atomic(() => {
+      const boot = this.db
+        .prepare("SELECT generation,epoch FROM gateway_boots WHERE server_id=?")
+        .get(serverId) as { generation: number; epoch: string } | undefined;
+      if (
+        boot &&
+        (generation < boot.generation ||
+          (generation === boot.generation && epoch !== boot.epoch) ||
+          (generation > boot.generation && epoch === boot.epoch))
+      )
+        throw new RequestError(
+          "Stale or mismatched server boot generation.",
+          409,
+        );
       const known = this.db
         .prepare(
           "SELECT retired FROM gateway_epochs WHERE server_id=? AND epoch=?",
@@ -93,6 +113,12 @@ export class GatewayMemory {
           "Server epoch is retired. Reopen the current server instance.",
           409,
         );
+      this.db
+        .prepare(
+          "INSERT INTO gateway_boots VALUES(?,?,?) ON CONFLICT(server_id) DO UPDATE SET generation=excluded.generation,epoch=excluded.epoch",
+        )
+        .run(serverId, generation, epoch);
+      if (!refresh) return;
       this.db
         .prepare(
           "UPDATE gateway_epochs SET retired=1 WHERE server_id=? AND epoch<>?",
