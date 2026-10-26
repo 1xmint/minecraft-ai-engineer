@@ -25,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 
 /**
@@ -57,7 +58,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write(role + ".done", "passed");
         } catch (Throwable failure) {
             write(role + ".failed", failure.toString());
-            throw failure instanceof RuntimeException runtime ? runtime : new AssertionError(failure);
+            if (failure instanceof RuntimeException runtime) throw runtime;
+            throw new AssertionError(failure);
         }
     }
 
@@ -85,17 +87,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 send(context, "engineer select2 2 101 0");
                 send(context, "engineer reference");
                 server.waitFor(s -> session(s, "Alice").blueprint != null);
-                await(context, () -> ClientPreview.current() != null, "Alice's authorized network preview");
-                check(ClientPreview.current().stage() == 0, "Alice begins her own support lesson");
+                await(context, () -> view(context) != null, "Alice's authorized network preview");
+                check(view(context).stage() == 0, "Alice begins her own support lesson");
                 server.waitFor(s -> s.getPlayerList().getPlayerByName("Bob") != null
                         && s.getPlayerList().getPlayerByName("Eve") != null, 12_000);
+                server.runOnServer(s -> {
+                    for (ServerPlayer player : s.getPlayerList().getPlayers()) {
+                        player.setGameMode(GameType.CREATIVE);
+                        player.getAbilities().flying = true;
+                        player.onUpdateAbilities();
+                    }
+                });
+                server.runCommand("tp @a 1 102 6 180 20");
                 send(context, "engineer project share Bob editor");
                 server.waitFor(s -> session(s, "Alice").access.allows(player(s, "Bob").getUUID(), ProjectAccess.Permission.BUILD));
                 write("shared", "ready");
                 awaitFile(context, "bob-next");
                 awaitFile(context, "eve-denied");
                 context.waitTicks(5);
-                check(ClientPreview.current() != null && ClientPreview.current().stage() == 0,
+                check(view(context) != null && view(context).stage() == 0,
                         "Bob's Next must not advance Alice's personal tutorial");
                 server.runOnServer(s -> {
                     EngineeringSession project = session(s, "Alice");
@@ -139,6 +149,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 server.waitFor(s -> session(s, "Alice").state.equals("COMPLETED"));
                 send(context, "engineer test");
                 server.waitFor(s -> session(s, "Alice").verified.startsWith("passed:"));
+                assertPersisted(server);
                 connection.waitForClientboundPackets();
                 context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
                 context.takeScreenshot("engineer-multiplayer-authorized-build");
@@ -200,6 +211,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.waitFor(s -> session(s, "Alice").state.equals("COMPLETED"));
             send(context, "engineer test");
             server.waitFor(s -> session(s, "Alice").verified.startsWith("passed:"));
+            assertPersisted(server);
             server.runOnServer(s -> {
                 var project = session(s, "Alice");
                 check(project.level().getBlockState(REPEATER).is(Blocks.REPEATER), "Dedicated reconciliation builds the real repeater");
@@ -219,25 +231,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String project = read("project");
         send(context, "engineer project use " + project);
         send(context, "engineer teach");
-        await(context, () -> ClientPreview.current() != null && ClientPreview.current().projectId().equals(project), "Bob's shared preview");
+        await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's shared preview");
         send(context, "engineer next");
-        await(context, () -> ClientPreview.current() != null && ClientPreview.current().stage() == 1, "Bob's personal next step");
+        await(context, () -> view(context) != null && view(context).stage() == 1, "Bob's personal next step");
         write("bob-next", "ready");
         awaitFile(context, "build-bob");
         send(context, "engineer build");
         awaitFile(context, "revoked");
-        await(context, () -> ClientPreview.current() == null, "Revocation clears Bob's cached blueprint");
+        await(context, () -> view(context) == null, "Revocation clears Bob's cached blueprint");
         send(context, "engineer resume");
         send(context, "engineer undo");
         context.waitTicks(8);
-        check(ClientPreview.current() == null, "Commands do not resurrect revoked overlay access");
+        check(view(context) == null, "Commands do not resurrect revoked overlay access");
         write("bob-revoked", "ready");
         awaitFile(context, "overlap-create");
         send(context, "engineer project new");
         send(context, "engineer select1 0 100 0");
         send(context, "engineer select2 2 101 0");
         send(context, "engineer reference");
-        await(context, () -> ClientPreview.current() != null && !ClientPreview.current().projectId().equals(project), "Bob's independent overlapping project");
+        await(context, () -> view(context) != null && !view(context).projectId().equals(project), "Bob's independent overlapping project");
+        send(context, "engineer project share Alice editor");
+        send(context, "engineer project permission Alice undo true");
+        await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Project rights updated")), "Mutually authorized overlapping workspaces with explicit undo rights");
         write("bob-overlap-created", "ready");
         awaitFile(context, "prepare-restart");
         disconnect(context);
@@ -246,7 +261,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connect(context, 2);
         send(context, "engineer project use " + project);
         send(context, "engineer status");
-        await(context, () -> ClientPreview.current() != null && ClientPreview.current().projectId().equals(project), "Bob's membership after server restart");
+        await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's membership after server restart");
         write("bob-reconnected", "ready");
         awaitFile(context, "finish");
         disconnect(context);
@@ -262,7 +277,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context, "engineer plan Make me a lamp");
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("not shared with you")), "Eve's denied project command");
         context.waitTicks(10);
-        check(ClientPreview.current() == null, "An unauthorized native client receives no project preview");
+        check(view(context) == null, "An unauthorized native client receives no project preview");
         write("eve-denied", "ready");
         disconnect(context);
     }
@@ -279,7 +294,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context, "engineer repeat");
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Project " + project)), "Status over ordinary Minecraft text packets");
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Step ")), "Text tutorial without overlay negotiation");
-        check(ClientPreview.current() == null, "Text-only clients do not acquire visual metadata caches");
+        check(view(context) == null, "Text-only clients do not acquire visual metadata caches");
         disconnect(context);
     }
 
@@ -292,6 +307,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         result.setProperty("white-list", "false");
         result.setProperty("max-players", "8");
         result.setProperty("gamemode", "creative");
+        result.setProperty("force-gamemode", "true");
         result.setProperty("spawn-protection", "0");
         result.setProperty("view-distance", "3");
         result.setProperty("simulation-distance", "3");
@@ -304,7 +320,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void publishServer(TestDedicatedServerContext server, int generation) {
         int port = server.computeOnServer(MinecraftServer::getPort);
         var value = new JsonObject(); value.addProperty("port", port); value.addProperty("generation", generation);
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);value.addProperty("serverId",manager.serverId);value.addProperty("serverEpoch",manager.epoch.toString());value.addProperty("worldId",manager.worldId);});
         write("server.json", value.toString());
+    }
+    private static void assertPersisted(TestDedicatedServerContext server) throws Exception {
+        var checkpoint=server.computeOnServer(s->session(s,"Alice").lastCheckpoint);
+        check(checkpoint!=null,"The actual functional pass must generate a project checkpoint");
+        var receipt=checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS);
+        check(receipt.get("protocol").getAsInt()==2,"The real companion gateway must acknowledge the functional result");
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {
@@ -326,6 +349,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(client.getConnection() != null, "Command needs a real Minecraft connection");
             client.getConnection().sendCommand(command);
         });
+    }
+    private static ProjectView view(ClientGameTestContext context) {
+        return context.computeOnClient(client -> ClientPreview.current());
     }
     private static void disconnect(ClientGameTestContext context) {
         context.runOnClient(client -> client.disconnectFromWorld(Component.literal("Multiplayer CI step complete")));

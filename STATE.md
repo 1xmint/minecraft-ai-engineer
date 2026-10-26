@@ -14,10 +14,18 @@ and TypeScript compilation pass; runtime proofs are pending. Existing actual
 client/undo/test checks are retained, adapted to network previews and project
 files. New policy/lease/wire-format proofs are queued for GitHub CI.
 
-Unfinished in this slice: v2 companion gateway implementation (only its types
-and queue are integrated so far), real three-client dedicated-server harness,
-legacy data adoption, and independent safety review. Current v1 companion calls
-must be migrated before claiming canonical multiplayer memory. Worker worktrees
+The v2 companion gateway and its Java integration now capture server/project/
+authorization revisions, fence stale replies, persist shared memory in SQLite,
+and limit model requests to the configured operator. The three-client native
+dedicated-server harness is implemented, including an overlay-disabled client,
+revocation, overlapping tasks, actual redstone tests and saved-world restart.
+CI also verifies its real HTTP/SQLite checkpoints without inference credentials.
+These runtime proofs have not passed yet. Local TypeScript/Java compilation and
+formatting pass. Independent Java safety review found and fixed workspace,
+recovery and revocation defects; the gateway integration review is pending.
+
+Unfinished in this slice: passing runtime proofs, explicit legacy data adoption,
+and the final independent gateway review. Worker worktrees
 are under this chat's work/multiplayer-network and work/multiplayer-companion;
 their completed commits are integrated. Helpers resumed after the account reset;
 none of this is evidence that #8 or either milestone is complete.

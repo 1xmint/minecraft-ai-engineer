@@ -34,5 +34,14 @@ fabricApi {
         enableGameTests = true
         enableClientGameTests = true
         eula = true
+        username = providers.gradleProperty('mceClientName').getOrElse('Player0')
+    }
+}
+
+if (providers.gradleProperty('mceTestRunDir').isPresent()) {
+    loom.runs.clientGameTest {
+        runDir providers.gradleProperty('mceTestRunDir').get()
+        vmArg '-Dfabric.client.gametest.disableNetworkSynchronizer=true'
+        vmArg '-Xmx1536m'
     }
 }

@@ -41,12 +41,20 @@ final class ProjectManager {
     boolean operator(ServerPlayer player) {
         return server.getPlayerList().isOp(player.nameAndId()) || (server.isSingleplayer() && server.isSingleplayerOwner(player.nameAndId()));
     }
+    boolean modelOperator(ServerPlayer player) {
+        if(player==null || !operator(player))return false;
+        String configured=System.getenv("MCE_CODEX_OPERATOR_UUID");
+        if(configured==null || configured.isBlank())return server.isSingleplayer() && server.isSingleplayerOwner(player.nameAndId());
+        try{return UUID.fromString(configured).equals(player.getUUID());}catch(IllegalArgumentException invalid){return false;}
+    }
     EngineeringSession selected(ServerPlayer player, boolean create) {
         UUID id = selections.get(player.getUUID());
         EngineeringSession project = id == null ? null : projects.get(id);
         if (project == null) {
             // Reconnect restores a view, never permission to execute.
-            project = projects.values().stream().filter(p -> p.owner.equals(player.getUUID()) && p.dimension.equals(player.level().dimension().identifier().toString())).findFirst().orElse(null);
+            var owned=projects.values().stream().filter(p -> p.owner.equals(player.getUUID()) && p.dimension.equals(player.level().dimension().identifier().toString())).toList();
+            if(owned.size()>1)throw new IllegalStateException("Several projects could be the target. Use project list, then project use <id> explicitly");
+            project = owned.isEmpty()?null:owned.getFirst();
             if (project == null && create) project = create(player);
             if (project == null) throw new IllegalStateException("No selected project. Ask an operator for create access, or join a project shared with you");
             selections.put(player.getUUID(), project.projectId);
@@ -58,7 +66,7 @@ final class ProjectManager {
         if (!operator(player) && !creators.contains(player.getUUID())) throw new IllegalStateException("An operator must grant project creation permission first");
         if (projects.size() >= 256) throw new IllegalStateException("Server project limit reached");
         var project = new EngineeringSession(this, UUID.randomUUID(), player.getUUID(), player.level().dimension().identifier().toString());
-        projects.put(project.projectId, project); selections.put(player.getUUID(), project.projectId); project.save();
+        projects.put(project.projectId, project); selections.put(player.getUUID(), project.projectId); project.save();Companion.synchronize(project);
         return project;
     }
     void use(ServerPlayer player, UUID id) {
@@ -107,12 +115,29 @@ final class ProjectManager {
     void validate(EngineeringSession project) {
         if (!server.isSameThread()) throw new IllegalStateException("World authority belongs to the server thread");
         if (project.delegation == null || !project.access.allows(project.controller, project.delegation.action())) throw new IllegalStateException("Delegation was revoked");
+        ServerPlayer current=server.getPlayerList().getPlayer(project.controller);
+        if(current==null || current.connection!=project.delegationConnection)throw new IllegalStateException("The controlling connection changed; explicit resume is required");
         reservations.validate(scope(project), project.delegation, project.controller, project.revision(), project.access.revision(), server.getTickCount());
+        // Other owners can revoke a cross-project grant while this task runs.
+        // Its own authorization revision alone cannot fence that dependency.
+        for(var other:projects.values()) {
+            if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
+            boolean intersects=false;
+            for(var block:project.blueprint.blocks()) {
+                int margin=project.isolationLease?2:0;
+                BlockPos a=block.pos().offset(-margin,-margin,-margin),b=block.pos().offset(margin,margin,margin);
+                intersects=Math.max(a.getX(),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(b.getX(),Math.max(other.corner1.getX(),other.corner2.getX()))
+                        && Math.max(a.getY(),Math.min(other.corner1.getY(),other.corner2.getY()))<=Math.min(b.getY(),Math.max(other.corner1.getY(),other.corner2.getY()))
+                        && Math.max(a.getZ(),Math.min(other.corner1.getZ(),other.corner2.getZ()))<=Math.min(b.getZ(),Math.max(other.corner1.getZ(),other.corner2.getZ()));
+                if(intersects)break;
+            }
+            if(intersects && !other.access.allows(project.controller,project.delegation.action()))throw new IllegalStateException("A required cross-project workspace grant was revoked; execution paused");
+        }
     }
     boolean mayMutate(EngineeringSession project) {
         try { validate(project); return true; } catch (RuntimeException revoked) { return false; }
     }
-    void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null; }
+    void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
         EngineerMod.cancelPlan(project);
@@ -121,6 +146,7 @@ final class ProjectManager {
         if(!project.access.allows(project.controller,ProjectAccess.Permission.VIEW))project.controller=project.owner;
         project.cursors.keySet().removeIf(actor->!project.access.allows(actor,ProjectAccess.Permission.VIEW));
         project.save();
+        Companion.synchronize(project);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (project.projectId.equals(selections.get(p.getUUID())) && !project.access.allows(p.getUUID(), ProjectAccess.Permission.VIEW)) {
                 selections.remove(p.getUUID()); EngineerNetwork.send(p, null);

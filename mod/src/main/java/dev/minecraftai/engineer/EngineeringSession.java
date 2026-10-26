@@ -24,6 +24,8 @@ final class EngineeringSession implements BuildExecutor {
     UUID controller;
     UUID commandActor;
     RegionReservations.Fence delegation;
+    net.minecraft.server.network.ServerGamePacketListenerImpl delegationConnection;
+    boolean isolationLease;
     private int projectRevision = 1;
     static final class Cursor { int stage; boolean teaching = true; }
     final Map<UUID,Cursor> cursors = new HashMap<>();
@@ -42,6 +44,8 @@ final class EngineeringSession implements BuildExecutor {
     BlockState testOriginal;
     BlockState testLast;
     String verified = "untested";
+    String memoryStatus = "not synchronized";
+    java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
     record Change(BlockPos pos, BlockState before, BlockState after) {}
 
     EngineeringSession(ProjectManager manager, UUID projectId, UUID owner, String dimension) {
@@ -70,7 +74,7 @@ final class EngineeringSession implements BuildExecutor {
         requireCreative();
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
-        controller=actor(); delegation=lease;
+        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test;
     }
     void validateMutation() {
         validateMutation(ProjectAccess.Permission.BUILD);
@@ -194,7 +198,7 @@ final class EngineeringSession implements BuildExecutor {
         manager.release(this);
         save(); checkpoint(); tell(reason);
     }
-    @Override public String status() { return state + ": " + detail + "; assistant placements=" + journal.size() + "; functional verification=" + verified; }
+    @Override public String status() { return state + ": " + detail + "; assistant placements=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
@@ -290,7 +294,7 @@ final class EngineeringSession implements BuildExecutor {
         if (blueprint!=null) for (Blueprint.PlannedBlock b:blueprint.blocks()) if (!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos()))) mismatch++;
         snapshot.add("blocks",blocks); LocalFiles.write(file.resolveSibling(file.getFileName()+".snapshot.json"),snapshot);
         tell("Inspected " + volume + " exact block states; " + nonair + " non-air; " + mismatch + " blueprint differences. Snapshot saved locally.");
-        Companion.post("/v1/observe",snapshot).exceptionally(error -> null); return snapshot;
+        Companion.report(this,Companion.gateway(this,"/v2/observe",snapshot,actor())); return snapshot;
     }
     void test() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
@@ -346,11 +350,13 @@ final class EngineeringSession implements BuildExecutor {
     void checkpoint() {
         if (blueprint==null) return; JsonObject out=new JsonObject(); out.addProperty("worldId",worldId); out.addProperty("dimension",dimension);
         out.addProperty("projectId",blueprint.projectId());out.addProperty("blueprintRevision",blueprint.revision()); out.addProperty("taskId",blueprint.id()); out.addProperty("status",state); out.addProperty("detail",detail); out.addProperty("verified",verified);
-        Companion.post("/v1/checkpoint",out).exceptionally(error->null);
+        var observed=new JsonObject();observed.addProperty("controller",controller.toString());observed.addProperty("assistantPlacements",journal.size());observed.addProperty("tick",level().getGameTime());out.add("observed",observed);
+        lastCheckpoint=Companion.gateway(this,"/v2/checkpoint",out,owner);Companion.report(this,lastCheckpoint);
     }
     void save() {
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
         json.addProperty("projectId",projectId.toString());json.addProperty("projectRevision",projectRevision);json.add("access",access.json());
+        json.addProperty("memoryStatus",memoryStatus);
         json.addProperty("controller",controller.toString());json.addProperty("owner",owner.toString()); json.addProperty("status",state); json.addProperty("detail",detail); json.addProperty("stage",cursor(controller).stage); json.addProperty("verified",verified);
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);

@@ -13,6 +13,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
@@ -25,11 +26,20 @@ import net.minecraft.server.level.ServerPlayer;
 public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
-    private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, CompletableFuture<JsonObject> future) { }
+    private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future) { }
     private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
+            ProjectManager manager=MANAGERS.get(server);if(manager==null)return;
+            for(var project:manager.projects.values())if(project.controller.equals(handler.player.getUUID())
+                    && (project.state.equals("EXECUTING") || project.state.equals("PLANNING") || project.testTick>=0)) {
+                cancelPlan(project);manager.reservations.revoke(manager.scope(project));project.delegation=null;project.delegationConnection=null;
+                project.pause("Controller disconnected; another authorized connection must explicitly resume");
+            }
+            manager.selections.remove(handler.player.getUUID());
+        });
         CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)->dispatcher.register(
             Commands.literal("engineer")
                 .executes(ctx->help(ctx.getSource()))
@@ -80,7 +90,7 @@ public final class EngineerMod implements ModInitializer {
             for(var entry:new ArrayList<>(PLANS.entrySet())) {
                 var s=entry.getKey();var request=entry.getValue();if(s.server!=server)continue;
                 ServerPlayer actor=server.getPlayerList().getPlayer(request.actor());
-                if(actor==null || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
+                if(actor==null || actor.connection!=request.connection() || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
                     cancelPlan(s);s.pause("Planning controller disconnected or lost authority; request cancelled");
                 }
             }
@@ -93,6 +103,7 @@ public final class EngineerMod implements ModInitializer {
         });
     }
     static ProjectManager managerFor(MinecraftServer server) { return MANAGERS.computeIfAbsent(server,ProjectManager::new); }
+    static boolean current(ProjectManager manager) { return MANAGERS.get(manager.server)==manager; }
     static EngineeringSession sessionFor(ServerPlayer player) { return managerFor(player.level().getServer()).selected(player,false); }
     private static int help(CommandSourceStack source) { source.sendSuccess(()->Component.literal("Engineer: "+HELP),false);return Command.SINGLE_SUCCESS; }
     private static int withManager(CommandSourceStack source,BiConsumer<ProjectManager,ServerPlayer> action) {
@@ -129,20 +140,21 @@ public final class EngineerMod implements ModInitializer {
         String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));
     }
     private static void plan(EngineeringSession s,String request) {
-        if(!s.manager.operator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning currently requires the project owner to be a server operator; shared subscription access is not enabled");
+        if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
         if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
         if(s.state.equals("EXECUTING") || s.testTick>=0 || s.testOriginal!=null || !s.journal.isEmpty())throw new IllegalStateException("Stop and reconcile existing work before replacing the plan");
         UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
         JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);body.addProperty("projectId",s.projectId.toString());
         JsonObject size=new JsonObject();size.addProperty("x",Math.abs(s.corner1.getX()-s.corner2.getX())+1);size.addProperty("y",Math.abs(s.corner1.getY()-s.corner2.getY())+1);size.addProperty("z",Math.abs(s.corner1.getZ()-s.corner2.getZ())+1);body.add("maxSize",size);
+        body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
         s.state="PLANNING";s.detail="One bounded operator-owned planning request";s.save();s.tell(s.detail);
-        CompletableFuture<JsonObject> future=Companion.post("/v1/design",body);
-        var pending=new PlanRequest(actor,s.manager.epoch,revision,authorization,future);PLANS.put(s,pending);
+        CompletableFuture<JsonObject> future=Companion.gateway(s,"/v2/design",body,actor);
+        var pending=new PlanRequest(actor,s.manager.epoch,revision,authorization,s.player().connection,future);PLANS.put(s,pending);
         future.whenComplete((result,error)->s.server.execute(()->{
             if(PLANS.get(s)!=pending)return;PLANS.remove(s);
             if(MANAGERS.get(s.server)!=s.manager || !pending.epoch().equals(s.manager.epoch) || s.revision()!=pending.revision()
                     || s.access.revision()!=pending.authorization() || !s.access.allows(actor,ProjectAccess.Permission.PLAN)
-                    || s.server.getPlayerList().getPlayer(actor)==null || !s.manager.operator(s.server.getPlayerList().getPlayer(actor))){s.pause("Planning authority changed; late result discarded");return;}
+                    || s.server.getPlayerList().getPlayer(actor)==null || s.server.getPlayerList().getPlayer(actor).connection!=pending.connection() || !s.manager.operator(s.server.getPlayerList().getPlayer(actor))){s.pause("Planning authority changed; late result discarded");return;}
             s.commandActor=actor;
             try {
                 if(error!=null)throw new IllegalStateException(safe(error));
