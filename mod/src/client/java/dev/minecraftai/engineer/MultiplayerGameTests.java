@@ -407,6 +407,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void disconnect(ClientGameTestContext context) {
         context.runOnClient(client -> client.disconnectFromWorld(Component.literal("Multiplayer CI step complete")));
         await(context, () -> context.computeOnClient(client -> client.player == null), "Native client disconnect");
+        context.runOnClient(client -> client.gui.setScreen(new net.minecraft.client.gui.screens.TitleScreen()));
     }
     private static ServerPlayer player(MinecraftServer server, String name) {
         ServerPlayer player = server.getPlayerList().getPlayerByName(name);
