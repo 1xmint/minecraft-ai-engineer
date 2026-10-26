@@ -1,0 +1,10 @@
+name: Product request
+description: Describe the engineering experience you want
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What should the player be able to do?
+      description: Give a concrete example and what success looks like.
+    validations:
+      required: true

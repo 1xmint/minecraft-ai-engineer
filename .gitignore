@@ -16,3 +16,4 @@ run/
 !mod/gradle/wrapper/gradle-wrapper.jar
 .idea/
 .vscode/
+work/

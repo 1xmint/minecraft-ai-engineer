@@ -1,0 +1,38 @@
+{
+  "name": "minecraft-ai-engineer",
+  "version": "0.1.0-dev",
+  "description": "Local-first Minecraft Java engineering companion",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "start": "node dist/companion/src/main.js",
+    "doctor": "node dist/companion/src/main.js doctor",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "format:check": "prettier --check .",
+    "format": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1xmint/minecraft-ai-engineer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/1xmint/minecraft-ai-engineer/issues"
+  },
+  "homepage": "https://github.com/1xmint/minecraft-ai-engineer#readme",
+  "dependencies": {
+    "@openai/codex-sdk": "0.164.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24.14.0 <25"
+  }
+}
