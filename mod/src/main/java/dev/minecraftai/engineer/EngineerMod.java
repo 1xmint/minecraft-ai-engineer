@@ -2,106 +2,168 @@ package dev.minecraftai.engineer;
 
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.state.BlockState;
 
+/** The Minecraft server is the only entry point for player identity and project authority. */
 public final class EngineerMod implements ModInitializer {
-    private static final Map<String,EngineeringSession> SESSIONS = new HashMap<>();
-    private static final Map<UUID,CompletableFuture<?>> PLANS = new HashMap<>();
-    public record Ghost(BlockPos pos, BlockState state, boolean currentStage, boolean matches, boolean wrong) {}
-    public record View(UUID owner,String dimension,List<Ghost> blocks,String text) {}
-    public static volatile View preview;
+    private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
+    private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
+    private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future) { }
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
+        EngineerNetwork.initialize();
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
+            ProjectManager manager=MANAGERS.get(server);if(manager==null)return;
+            for(var project:manager.projects.values())if(project.controller.equals(handler.player.getUUID())
+                    && (project.state.equals("EXECUTING") || project.state.equals("PLANNING") || project.testTick>=0)) {
+                cancelPlan(project);manager.reservations.revoke(manager.scope(project));project.delegation=null;project.delegationConnection=null;
+                project.pause("Controller disconnected; another authorized connection must explicitly resume");
+            }
+            manager.selections.remove(handler.player.getUUID());
+        });
         CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)->dispatcher.register(
             Commands.literal("engineer")
-                .executes(ctx->run(ctx.getSource(),s->s.tell("select1/select2 [x y z], inspect, reference, plan <request>, rotate <0|90|180|270>, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status")))
-                .then(Commands.literal("help").executes(ctx->run(ctx.getSource(),s->s.tell("Select two corners, plan or reference, follow the preview, then build to delegate. stop, resume, undo, test, status. See the launch guide for the full flow."))))
-                .then(Commands.literal("select1").executes(ctx->run(ctx.getSource(),s->s.select(1,s.player().blockPosition())))
-                    .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
-                .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),s->s.select(2,s.player().blockPosition())))
-                    .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
-                .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),EngineeringSession::inspect)))
-                .then(Commands.literal("reference").executes(ctx->run(ctx.getSource(),s->s.accept(Blueprint.reference(s.worldId,s.dimension,s.anchor(),0)))))
-                .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),s->plan(s,StringArgumentType.getString(ctx,"request"))))))
-                .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),s->{ if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
-                .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
-                .then(Commands.literal("teach").executes(ctx->run(ctx.getSource(),s->{s.teaching=true;s.explain();})))
-                .then(Commands.literal("next").executes(ctx->run(ctx.getSource(),s->s.moveStage(1))))
-                .then(Commands.literal("skip").executes(ctx->run(ctx.getSource(),s->s.moveStage(1))))
-                .then(Commands.literal("previous").executes(ctx->run(ctx.getSource(),s->s.moveStage(-1))))
-                .then(Commands.literal("repeat").executes(ctx->run(ctx.getSource(),EngineeringSession::explain)))
-                .then(Commands.literal("pause").executes(ctx->run(ctx.getSource(),s->stop(s,"Paused by player"))))
-                .then(Commands.literal("stop").executes(ctx->run(ctx.getSource(),s->stop(s,"Emergency stop requested by player"))))
-                .then(Commands.literal("build").executes(ctx->run(ctx.getSource(),EngineeringSession::build)))
-                .then(Commands.literal("resume").executes(ctx->run(ctx.getSource(),EngineeringSession::resume)))
-                .then(Commands.literal("undo").executes(ctx->run(ctx.getSource(),EngineeringSession::undo)))
-                .then(Commands.literal("test").executes(ctx->run(ctx.getSource(),EngineeringSession::test)))
-                .then(Commands.literal("status").executes(ctx->run(ctx.getSource(),s->s.tell(s.status()))))
+                .executes(ctx->help(ctx.getSource()))
+                .then(Commands.literal("help").executes(ctx->help(ctx.getSource())))
+                .then(Commands.literal("project")
+                    .then(Commands.literal("adopt-legacy").executes(ctx->withManager(ctx.getSource(),(m,p)->{
+                        var adopted=LegacyAdoption.adopt(m,p);p.sendSystemMessage(Component.literal("Engineer: Legacy project backed up and adopted privately as "+adopted.projectId+". Inspect before explicitly resuming or undoing."));
+                    })))
+                    .then(Commands.literal("new").executes(ctx->withManager(ctx.getSource(),(m,p)->{var s=m.create(p);p.sendSystemMessage(Component.literal("Engineer: Created private project "+s.projectId));})))
+                    .then(Commands.literal("list").executes(ctx->withManager(ctx.getSource(),(m,p)->{
+                        for(var s:m.projects.values())if(s.access.allows(p.getUUID(),ProjectAccess.Permission.VIEW))p.sendSystemMessage(Component.literal("Engineer: "+s.projectId+" | "+(s.blueprint==null?"New project":s.blueprint.name())+" | "+s.state));
+                    })))
+                    .then(Commands.literal("use").then(Commands.argument("project",StringArgumentType.word()).executes(ctx->withManager(ctx.getSource(),(m,p)->m.use(p,UUID.fromString(StringArgumentType.getString(ctx,"project")))))))
+                    .then(Commands.literal("share").then(Commands.argument("player",StringArgumentType.word()).then(Commands.argument("role",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{
+                        var role=ProjectAccess.Role.valueOf(StringArgumentType.getString(ctx,"role").toUpperCase(Locale.ROOT));
+                        s.access.member(s.actor(),target(s.server,StringArgumentType.getString(ctx,"player")),role);s.manager.changed(s);s.tell("Project membership updated");
+                    })))))
+                    .then(Commands.literal("revoke").then(Commands.argument("player",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{
+                        s.access.revoke(s.actor(),target(s.server,StringArgumentType.getString(ctx,"player")));s.manager.changed(s);s.tell("Project access revoked; old delegations invalidated");
+                    }))))
+                    .then(Commands.literal("permission").then(Commands.argument("player",StringArgumentType.word()).then(Commands.argument("permission",StringArgumentType.word()).then(Commands.argument("allowed",BoolArgumentType.bool()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{
+                        var permission=ProjectAccess.Permission.valueOf(StringArgumentType.getString(ctx,"permission").toUpperCase(Locale.ROOT));
+                        s.access.permission(s.actor(),target(s.server,StringArgumentType.getString(ctx,"player")),permission,BoolArgumentType.getBool(ctx,"allowed"));s.manager.changed(s);s.tell("Project rights updated");
+                    })))))))
+                .then(Commands.literal("permit").then(Commands.argument("player",StringArgumentType.word()).executes(ctx->withManager(ctx.getSource(),(m,p)->{m.permit(p,target(m.server,StringArgumentType.getString(ctx,"player")));p.sendSystemMessage(Component.literal("Engineer: Project creation permitted"));}))))
+                .then(Commands.literal("stopall").executes(ctx->withManager(ctx.getSource(),(m,p)->{if(!m.operator(p))throw new IllegalStateException("Only operators can stop all projects");for(var s:m.projects.values()){cancelPlan(s);s.pause("Emergency stop by server operator");}})))
+                .then(Commands.literal("world").then(Commands.literal("fork").executes(ctx->fork(ctx.getSource()))))
+                .then(Commands.literal("select1").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(1,s.player().blockPosition())))
+                    .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
+                .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
+                    .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
+                .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect)))
+                .then(Commands.literal("reference").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(Blueprint.reference(s.worldId,s.dimension,s.anchor(),0)))))
+                .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->plan(s,StringArgumentType.getString(ctx,"request"))))))
+                .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
+                .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner can move its workspace");if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
+                .then(Commands.literal("teach").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{s.cursor(s.actor()).teaching=true;s.save();s.explain();})))
+                .then(Commands.literal("next").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.moveStage(1))))
+                .then(Commands.literal("skip").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.moveStage(1))))
+                .then(Commands.literal("previous").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.moveStage(-1))))
+                .then(Commands.literal("repeat").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::explain)))
+                .then(Commands.literal("pause").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{s.cursor(s.actor()).teaching=false;s.save();s.tell("Your tutorial is paused; stop pauses project execution");})))
+                .then(Commands.literal("stop").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->{cancelPlan(s);s.pause("Project stopped by an authorized player");})))
+                .then(Commands.literal("build").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::build)))
+                .then(Commands.literal("resume").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::resume)))
+                .then(Commands.literal("undo").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.UNDO,EngineeringSession::undo)))
+                .then(Commands.literal("test").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::test)))
+                .then(Commands.literal("status").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.tell("Project "+s.projectId+" | "+s.status()))))
         ));
         ServerTickEvents.END_SERVER_TICK.register(server->{
-            for(EngineeringSession session:SESSIONS.values()) {session.tick();publish(session);}
+            for(var entry:new ArrayList<>(PLANS.entrySet())) {
+                var s=entry.getKey();var request=entry.getValue();if(s.server!=server)continue;
+                ServerPlayer actor=server.getPlayerList().getPlayer(request.actor());
+                if(actor==null || actor.connection!=request.connection() || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
+                    cancelPlan(s);s.pause("Planning controller disconnected or lost authority; request cancelled");
+                }
+            }
+            ProjectManager manager=MANAGERS.get(server);if(manager!=null)manager.tick();
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server->{
-            PLANS.values().forEach(p->p.cancel(true));PLANS.clear();
-            SESSIONS.values().forEach(s->s.pause("Minecraft is closing; explicit reconciliation required on restart"));
-            SESSIONS.clear();preview=null;
+            ProjectManager manager=MANAGERS.remove(server);
+            if(manager!=null){for(var s:manager.projects.values())cancelPlan(s);manager.close();}
+            EngineerNetwork.close();
         });
     }
-    private static int run(CommandSourceStack source,Consumer<EngineeringSession> action) {
-        try {
-            ServerPlayer p=source.getPlayerOrException();
-            if(!source.getServer().isSingleplayer() || source.getServer().isPublished() || source.getServer().getPlayerList().getPlayerCount()!=1) throw new IllegalStateException("Use a local single-player world; remote and LAN worlds are unsupported");
-            String key=p.getUUID()+":"+p.level().dimension().identifier();
-            EngineeringSession session=SESSIONS.computeIfAbsent(key,k->new EngineeringSession(source.getServer(),p));
-            action.accept(session);publish(session);return Command.SINGLE_SUCCESS;
-        }catch(Exception e){source.sendFailure(Component.literal("Engineer: "+safe(e)));return 0;}
+    static ProjectManager managerFor(MinecraftServer server) { return MANAGERS.computeIfAbsent(server,ProjectManager::new); }
+    static boolean current(ProjectManager manager) { return MANAGERS.get(manager.server)==manager; }
+    static EngineeringSession sessionFor(ServerPlayer player) { return managerFor(player.level().getServer()).selected(player,false); }
+    private static int help(CommandSourceStack source) { source.sendSuccess(()->Component.literal("Engineer: "+HELP),false);return Command.SINGLE_SUCCESS; }
+    private static int withManager(CommandSourceStack source,BiConsumer<ProjectManager,ServerPlayer> action) {
+        try {ServerPlayer p=source.getPlayerOrException();action.accept(managerFor(source.getServer()),p);return Command.SINGLE_SUCCESS;}
+        catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
     }
+    private static int run(CommandSourceStack source,ProjectAccess.Permission permission,Consumer<EngineeringSession> action) {
+        EngineeringSession project=null;
+        try {
+            ServerPlayer player=source.getPlayerOrException();ProjectManager manager=managerFor(source.getServer());
+            project=manager.selected(player,true);project.access.require(player.getUUID(),permission);
+            project.commandActor=player.getUUID();action.accept(project);return Command.SINGLE_SUCCESS;
+        } catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
+        finally {if(project!=null)project.commandActor=null;}
+    }
+    private static UUID target(MinecraftServer server,String value) {
+        ServerPlayer player=server.getPlayerList().getPlayerByName(value);
+        if(player!=null)return player.getUUID();
+        try{return UUID.fromString(value);}catch(IllegalArgumentException invalid){throw new IllegalArgumentException("Choose an online player name or an exact player UUID");}
+    }
+    private static int fork(CommandSourceStack source) {
+        try {
+            ServerPlayer p=source.getPlayerOrException();MinecraftServer server=source.getServer();
+            if(!server.getPlayerList().isOp(p.nameAndId()) && !(server.isSingleplayer()&&server.isSingleplayerOwner(p.nameAndId())))throw new IllegalStateException("Only the server operator can fork a world identity");
+            ProjectManager current=MANAGERS.get(server);
+            if(current!=null && !current.projects.isEmpty())throw new IllegalStateException("Fork only a newly copied world before adopting projects; existing server projects need explicit migration");
+            LocalFiles.forkWorld(server);if(current!=null){current.close();MANAGERS.remove(server);}
+            source.sendSuccess(()->Component.literal("Engineer: World identity forked; the previous identity was backed up. Old projects were not granted authority."),false);return 1;
+        }catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
+    }
+    static void cancelPlan(EngineeringSession session) {var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
     private static String safe(Throwable error) {
         Throwable t=error;while(t.getCause()!=null)t=t.getCause();
-        return t.getMessage()==null ? "Operation failed; inspect local logs" : t.getMessage().substring(0,Math.min(350,t.getMessage().length()));
-    }
-    private static void stop(EngineeringSession session,String reason) {
-        CompletableFuture<?> plan=PLANS.remove(session.owner);if(plan!=null)plan.cancel(true);session.pause(reason);
+        String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));
     }
     private static void plan(EngineeringSession s,String request) {
-        if(PLANS.containsKey(s.owner))throw new IllegalStateException("A planning request is already active; stop it first");
-        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.testOriginal!=null || !s.journal.isEmpty())throw new IllegalStateException("Stop, reconcile interrupted tests, and undo existing assistant work before replacing the plan");
-        JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);
-        if(s.blueprint!=null)body.addProperty("projectId",s.blueprint.projectId());
+        if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
+        if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
+        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.testOriginal!=null || !s.journal.isEmpty())throw new IllegalStateException("Stop and reconcile existing work before replacing the plan");
+        UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
+        JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);body.addProperty("projectId",s.projectId.toString());
         JsonObject size=new JsonObject();size.addProperty("x",Math.abs(s.corner1.getX()-s.corner2.getX())+1);size.addProperty("y",Math.abs(s.corner1.getY()-s.corner2.getY())+1);size.addProperty("z",Math.abs(s.corner1.getZ()-s.corner2.getZ())+1);body.add("maxSize",size);
-        s.state="PLANNING";s.detail="One bounded Codex request; /engineer stop cancels local planning";s.save();s.tell(s.detail);
-        CompletableFuture<JsonObject> future=Companion.post("/v1/design",body);PLANS.put(s.owner,future);
+        body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
+        s.state="PLANNING";s.detail="One bounded operator-owned planning request";s.save();s.tell(s.detail);
+        CompletableFuture<JsonObject> future=Companion.gateway(s,"/v2/design",body,actor);
+        var pending=new PlanRequest(actor,s.manager.epoch,revision,authorization,s.player().connection,future);PLANS.put(s,pending);
         future.whenComplete((result,error)->s.server.execute(()->{
-            if(PLANS.get(s.owner)!=future)return;PLANS.remove(s.owner);
-            if(!s.available()){s.pause("World changed while planning; request discarded");return;}
-            if(error!=null){s.state="BLOCKED";s.detail=safe(error);s.save();s.tell(s.detail);return;}
-            try{s.state="READY";s.accept(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension));s.tell(result.get("message").getAsString());}
-            catch(Exception e){s.state="BLOCKED";s.detail="Rejected blueprint: "+safe(e);s.save();s.tell(s.detail);}
+            if(PLANS.get(s)!=pending)return;PLANS.remove(s);
+            if(MANAGERS.get(s.server)!=s.manager || !pending.epoch().equals(s.manager.epoch) || s.revision()!=pending.revision()
+                    || s.access.revision()!=pending.authorization() || !s.access.allows(actor,ProjectAccess.Permission.PLAN)
+                    || s.server.getPlayerList().getPlayer(actor)==null || s.server.getPlayerList().getPlayer(actor).connection!=pending.connection() || !s.manager.operator(s.server.getPlayerList().getPlayer(actor))){s.pause("Planning authority changed; late result discarded");return;}
+            s.commandActor=actor;
+            try {
+                if(error!=null)throw new IllegalStateException(safe(error));
+                s.state="READY";s.accept(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension));s.tell(result.get("message").getAsString());
+            }catch(Exception rejected){s.state="BLOCKED";s.detail="Plan unavailable or rejected: "+safe(rejected);s.save();s.tell(s.detail);}
+            finally{s.commandActor=null;}
         }));
-    }
-    private static void publish(EngineeringSession session) {
-        if(!session.available() || session.blueprint==null){if(preview!=null && preview.owner().equals(session.owner) && preview.dimension().equals(session.dimension))preview=null;return;}
-        String stage=session.blueprint.stages().get(session.stage).id();List<Ghost> blocks=new ArrayList<>();
-        for(Blueprint.PlannedBlock b:session.blueprint.blocks()){
-            boolean loaded=session.player().level().hasChunkAt(b.pos());BlockState actual=loaded?session.player().level().getBlockState(b.pos()):null;
-            boolean match=loaded && Blueprint.matches(b.state(),actual);
-            blocks.add(new Ghost(b.pos(),b.state(),b.stage().equals(stage),match,loaded && !actual.isAir() && !match));
-        }
-        preview=new View(session.owner,session.dimension,List.copyOf(blocks),session.blueprint.name()+" | "+session.blueprint.stages().get(session.stage).title()+" | "+session.state);
     }
 }

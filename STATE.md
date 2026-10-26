@@ -1,12 +1,55 @@
 # Now
 
 2026-10-26: **Multiplayer-first, single-player-compatible is the approved target.**
-The next implementation slice is the dedicated-server foundation (#8), ahead of
-adding mechanisms. This change updates the coding plan; no multiplayer runtime
-support has shipped. The existing v0.1.0-alpha.1 remains single-player-only.
+The active goal remains **complete all milestones**, including remaining phase 1
+and all six phase 2 capabilities. Foundation #8 is on
+`phase/2-multiplayer-foundation`, PR #10. No multiplayer release has shipped;
+v0.1.0-alpha.1 remains single-player-only.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-## Outcomes for the next build
+Implemented: server-owned private projects/grants, personal lessons, stable
+world/server identity, fenced construction/reservations, optional recipient-filtered
+overlays, private v2 companion memory and bounded operator-only planning.
+Explicit operator/self legacy adoption preserves per-attempt backups and journals
+with private paused ownership. Independent Java/gateway review is complete;
+identified authorization, recovery, report-ordering and stale-boot defects are fixed.
+Blueprint integers/text and overlay packet budgets are bounded.
+
+CI run 40418092324 passed all five checks, including Dedicated multiplayer and
+the retained integrated Minecraft client. The real dedicated proof passed two
+functional off/on/off runs (before/after restart), independent lessons, denied
+Eve, overlay-disabled text teaching, live/cross-project revocation, conflict
+preservation, overlapping work, backed-up adoption and ambiguous target rejection.
+All four native client roles finished. The real SQLite verifier recorded the
+intended six-block blueprint, functional checkpoint history and two exact world
+inspections (empty before building and built after restart). Native libraries
+are isolated per client; disconnected test clients return to the title screen.
+Dedicated multiplayer is now a required main-branch check alongside the other four.
+
+Foundation acceptance is proven; #8 is ready to close through PR #10 after final
+documentation checks. Next is the validated mechanism library (#1), followed by
+component collaboration (#2) and deeper teaching/debugging (#3). Neither milestone
+is complete. Shared multi-user subscription inference remains blocked; only the
+configured account-owning operator can request model work.
+Worker commits from work/multiplayer-network and work/multiplayer-companion are
+integrated. Automated tests run on GitHub only; local compile/format checks pass.
+
+## Outcomes for the next build — mechanism library (#1)
+
+- N1 — Choose useful mechanisms beyond a signal lamp. Proof: actual Minecraft
+  truth-table/timing tests, including rotated layouts, plus the same native
+  server teach/delegate/test flow. Unsupported designs fail before world edits.
+- N2 — Understand and correct a mistake in those mechanisms. Proof: introduce
+  wrong wiring/orientation, identify the relevant component and cause, preserve
+  player changes, explicitly delegate a correction and run the functional test.
+
+Next tasks: define mechanism contracts and failing actual-game cases first
+(N1/N2); implement bounded registry-validated templates and test routines (N1);
+connect the supported catalog to planning, lessons and diagnoses (N1/N2); drive
+the actual dedicated/integrated flow and independently review new mutation paths
+before merge (N1/N2). Keep physical execution replaceable for phase 2.
+
+## Proven foundation outcomes
 
 - M1 — Play alone on a local dedicated Fabric server, then invite a friend
   without moving project authority to a client. Proof: boot the real dedicated
@@ -99,22 +142,18 @@ it does not establish this multiplayer entitlement.
 
 ## Build sequence
 
-1. **Next: dedicated foundation (M1/M3), issue #8.** Split project execution from player
-   sessions, add stable server/world identity and explicit project membership,
-   migrate journals safely, and prove bounded reference building, reservations,
-   revoke/disconnect/restart and denied access on a real two-client server.
-   Add a required multiplayer CI gate before relaxing existing release guards.
-2. **Then: shared presentation (M2).** Add optional overlay handshake and
-   recipient-filtered snapshots/deltas, independent tutorial cursors and command
-   fallback. Prove two authorized clients and a denied third; retain solo play.
-3. **Then: controlled shared planning (M4).** Resolve subscription eligibility,
-   server-owned queue and caps, project-scoped context, cancellation and stale
-   replies. Public CI remains credential-free; any live operator probe is
-   separate evidence.
-4. **Then: remaining phase 1.** Resume validated mechanisms (#1), component
+1. **Proven foundation (#8, M1–M4 technical controls).** Dedicated/integrated
+   logical-server execution, private grants, stable identity, backed-up migration,
+   reservations, revocation/restart recovery, optional shared overlays, personal
+   lessons, private SQLite memory and bounded operator-only planning. Five CI
+   gates are required. Offline CI identities and overlay opt-out do not prove
+   production Mojang authentication or a separate vanilla-client binary.
+2. **Next: remaining phase 1.** Validated mechanisms (#1), component
    dependencies/ownership and perception (#2), deeper debugging/richer teaching
-   and combined live-model acceptance (#3) on the server foundation.
-5. **Phase 2 unchanged (#4).** Voice, physical NPC, survival gathering,
+   and combined live-model acceptance (#3), in that order. Public CI stays
+   credential-free; any live operator probe is separate evidence. Resolve
+   documented eligibility before enabling shared multi-user subscription work.
+3. **Phase 2 unchanged (#4).** Voice, physical NPC, survival gathering,
    schematics, advanced optimization and multiple independent builders.
 
 ## Preserved release and proof
@@ -130,6 +169,6 @@ combined live-model/game flow. All automated tests stay on GitHub CI; only
 scoped compilation/formatting runs locally. Existing game/toolchain pins remain.
 
 Release: https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
-Next build: https://github.com/1xmint/minecraft-ai-engineer/issues/8
+Next build: https://github.com/1xmint/minecraft-ai-engineer/issues/1
 Current reference supports only the signal lamp. Larger designs, inventories,
 general debugging, textured previews and the full phase 1 remain unfinished.

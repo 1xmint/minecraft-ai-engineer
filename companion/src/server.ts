@@ -6,6 +6,8 @@ import {
 import { timingSafeEqual } from "node:crypto";
 import { makeReferenceBlueprint } from "./blueprint.js";
 import { MemoryStore } from "./memory.js";
+import { ServerGateway } from "./gateway.js";
+import { PlanningQueue } from "./planning-queue.js";
 import {
   type PlanningProvider,
   RequestError,
@@ -21,6 +23,8 @@ export interface ServerOptions {
   provider: PlanningProvider;
   maxBodyBytes?: number;
   planTimeoutMs?: number;
+  actorPlansPerMinute?: number;
+  serverPlansPerHour?: number;
 }
 function respond(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, {
@@ -61,8 +65,25 @@ async function body(req: IncomingMessage, maxBytes: number): Promise<unknown> {
 export function createCompanionServer(options: ServerOptions) {
   if (options.token.length < 32)
     throw new Error("Service token must contain at least 32 characters.");
+  for (const limit of [options.actorPlansPerMinute, options.serverPlansPerHour])
+    if (
+      limit !== undefined &&
+      (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000)
+    )
+      throw new Error("Planning limits must be integers between 1 and 1000.");
   const expected = Buffer.from(`Bearer ${options.token}`);
-  let planning = false;
+  const planning = new PlanningQueue();
+  const gateway = new ServerGateway({
+    memory: options.store.gateway,
+    provider: options.provider,
+    queue: planning,
+    ...(options.actorPlansPerMinute === undefined
+      ? {}
+      : { actorPlansPerMinute: options.actorPlansPerMinute }),
+    ...(options.serverPlansPerHour === undefined
+      ? {}
+      : { serverPlansPerHour: options.serverPlansPerHour }),
+  });
   const controllers = new Set<AbortController>();
   const server = createServer((req, res) => {
     void (async () => {
@@ -82,6 +103,37 @@ export function createCompanionServer(options: ServerOptions) {
       )
         throw new RequestError("Unauthorized.", 401);
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
+      if (url.pathname.startsWith("/v2/")) {
+        const controller = new AbortController();
+        const timeout = setTimeout(
+          () => controller.abort(),
+          options.planTimeoutMs ?? 95_000,
+        );
+        const abort = () => {
+          if (!res.writableEnded) controller.abort();
+        };
+        controllers.add(controller);
+        res.once("close", abort);
+        try {
+          const value =
+            req.method === "POST"
+              ? await body(req, options.maxBodyBytes ?? 2_000_000)
+              : undefined;
+          const result = await gateway.handle(
+            req.method ?? "",
+            url.pathname,
+            value,
+            url.searchParams,
+            controller.signal,
+          );
+          if (!res.destroyed) respond(res, 200, result);
+        } finally {
+          clearTimeout(timeout);
+          res.removeListener("close", abort);
+          controllers.delete(controller);
+        }
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/v1/health")
         return respond(res, 200, { protocol: 1, status: "ok" });
       if (req.method === "GET" && url.pathname === "/v1/projects")
@@ -91,7 +143,7 @@ export function createCompanionServer(options: ServerOptions) {
           ),
         });
       if (req.method === "POST" && url.pathname === "/v1/design") {
-        if (planning)
+        if (planning.busy)
           throw new RequestError(
             "Another planning request is active. Wait or cancel it before retrying.",
             409,
@@ -109,14 +161,13 @@ export function createCompanionServer(options: ServerOptions) {
         makeReferenceBlueprint(input);
         // Body parsing yields to other requests. Acquire the single planning
         // slot only after that await and immediately before invoking a provider.
-        if (planning)
+        if (planning.busy)
           throw new RequestError(
             "Another planning request is active. Wait or cancel it before retrying.",
             409,
           );
         const controller = new AbortController();
         controllers.add(controller);
-        planning = true;
         const timeout = setTimeout(
           () => controller.abort(),
           options.planTimeoutMs ?? 95_000,
@@ -126,14 +177,20 @@ export function createCompanionServer(options: ServerOptions) {
         };
         res.once("close", abort);
         try {
-          const plan = await options.provider.plan(
-            input,
+          const plan = await planning.run(
+            "legacy",
             controller.signal,
-            options.store.context(
-              input.projectId,
-              input.worldId,
-              input.dimension,
-            ),
+            () =>
+              options.provider.plan(
+                input,
+                controller.signal,
+                options.store.context(
+                  input.projectId,
+                  input.worldId,
+                  input.dimension,
+                ),
+              ),
+            false,
           );
           if (controller.signal.aborted)
             throw new RequestError("Planning cancelled or timed out.", 503);
@@ -156,7 +213,6 @@ export function createCompanionServer(options: ServerOptions) {
           clearTimeout(timeout);
           res.removeListener("close", abort);
           controllers.delete(controller);
-          planning = false;
         }
         return;
       }
@@ -193,6 +249,7 @@ export function createCompanionServer(options: ServerOptions) {
   server.keepAliveTimeout = 5_000;
   server.maxHeadersCount = 40;
   server.once("close", () => {
+    gateway.close();
     for (const controller of controllers) controller.abort();
   });
   return server;

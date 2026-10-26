@@ -1,5 +1,49 @@
 # Try the Fabric mod
 
+## Multiplayer development branch
+
+PR #10 implements the dedicated-server foundation. All five checks passed in
+[the dedicated acceptance run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40418092324).
+The published alpha below remains single-player-only.
+On the development branch, run one companion beside the Fabric server, using
+the same private `MCE_CONFIG_DIR`. Use `./gradlew runServer` from `mod/` for a
+development server and accept Minecraft's EULA yourself. Keep production
+`online-mode=true`. Start a matching client and connect locally. The optional
+client mod adds previews; ordinary commands and text teaching are server-side.
+No public hosting or port forwarding is needed for local play.
+
+An operator can create a private project with `/engineer project new`, or grant
+another player creation access with `/engineer permit <name-or-UUID>`. Use
+`project list` and `project use <UUID>` to choose a project, then follow the
+reference handoff below. The owner can `project share <player> editor` or
+`viewer`, and `project revoke <player>`. Editors may build; removal requires
+the owner's separate `project permission <player> undo true`. Overlapping
+projects need the relevant permission from each owner. Personal teaching steps
+do not move another player's lesson. `/engineer stopall` is the operator stop.
+
+Planning is restricted to the single account-owning operator configured with
+`MCE_CODEX_OPERATOR_UUID` on a dedicated server. Other members never receive
+the companion token or direct model access. Shared subscription eligibility
+has not been established. Reference building requires no model request.
+
+Projects and write-ahead journals now live under private
+`servers/<server-id>/worlds/<world-id>/projects/` config storage. A persisted
+world UUID survives a move when the original path no longer exists. A copied
+world with the same UUID is rejected while the original exists; an operator
+can `/engineer world fork` before adopting projects to give the copy a new
+identity. This does not copy existing project permissions or history.
+
+To upgrade a legacy solo checkpoint, an operator runs
+`/engineer project adopt-legacy` in its original world path and dimension.
+It adopts only that operator's UUID, validates the recovery document, and
+backs up the original checkpoint/snapshot under private `legacy-backups/`
+before creating a private paused project. The original stays untouched.
+Inspect before explicitly resuming or undoing. Other players, copied paths,
+and arbitrary file imports are not silently adopted. Restart expires all
+delegations, and multiple owned projects require an explicit `project use`.
+
+## Published alpha
+
 The current implementation is the first reference circuit, not the entire
 phase 1 product brief. It supports only local Java Edition 26.3 single-player
 creative worlds. Remote servers, LAN sharing, survival mutation, physical

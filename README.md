@@ -11,15 +11,18 @@ the rest, interrupt or resume, and test the actual redstone. Broader engineering
 features in the [product brief](docs/product-brief.md) are still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
 
-**Updated architecture target:** dedicated Fabric server first, with server-owned
-projects, player permissions, shared building and optional client overlays.
-Playing alone uses the same server; integrated single-player remains a
-compatibility target. This migration is the next build milestone. The released
-preview below is still single-player-only; see the [coding plan](STATE.md).
+**Multiplayer-first source build:** one dedicated Fabric server owns projects,
+player permissions and construction. Authorized players share blueprints and
+keep separate lessons; client overlays are optional. The same core also passes
+integrated single-player checks. Follow the [dedicated-server guide](docs/mod-guide.md#multiplayer-development-branch).
+The downloadable alpha below is still the older single-player reference.
 
 ![Reference blueprint preview captured from the actual Minecraft client CI test](docs/images/reference-preview.png)
 
 ## Try it
+
+For the multiplayer source build, start with the [dedicated-server instructions](docs/mod-guide.md#multiplayer-development-branch).
+The following download and walkthrough describe the published solo alpha.
 
 Start with the [downloadable development preview](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1):
 get the mod jar and companion zip, then follow `START-HERE.txt` inside the zip.
@@ -72,11 +75,13 @@ optimization and multiple builders belong to **phase 2**.
 
 ```mermaid
 flowchart LR
-    Player[Player commands] --> Mod[Fabric mod]
-    Mod --> Preview[Client preview and teaching]
-    Mod --> Executor[Integrated-server executor]
+    Player[Player commands] --> Server[Fabric logical server]
+    Server --> Policy[Project grants and reservations]
+    Policy --> Executor[Bounded construction and testing]
+    Server -->|Authorized snapshots| Preview[Optional client overlays]
+    Server --> Lessons[Personal text lessons]
     Executor <--> World[Minecraft world]
-    Mod <-->|Authenticated loopback HTTP| Companion[Local TypeScript companion]
+    Server <-->|Private fenced loopback HTTP| Companion[Server-side TypeScript companion]
     Companion --> Planner[Official Codex SDK / ChatGPT sign-in]
     Companion <--> Memory[Local SQLite and versioned blueprints]
 ```

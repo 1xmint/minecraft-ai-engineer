@@ -31,6 +31,7 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
     private static final BlockPos LAMP = new BlockPos(2,101,0);
 
     @Override public void runTest(ClientGameTestContext context) {
+        if(System.getenv("MCE_MP_ROLE")!=null)return;
         TestWorldSave save;
         String project;
         try (TestSingleplayerContext world=context.worldBuilder().create()) {
@@ -49,10 +50,11 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             command(server,"engineer reference");
             project=server.computeOnServer(s->checkpoint(s).getAsJsonObject("blueprint").get("id").getAsString());
             context.waitTicks(3);
+            context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.current()!=null);
             context.runOnClient(client->{
-                check(EngineerMod.preview!=null,"Reference preview must reach the client");
-                check(EngineerMod.preview.blocks().size()==6,"All six reference blocks must be previewed");
-                check(EngineerMod.preview.blocks().stream().filter(EngineerMod.Ghost::currentStage).count()==3,"Only the three support blocks belong to the first step");
+                check(dev.minecraftai.engineer.client.ClientPreview.current()!=null,"Reference preview must reach the client");
+                check(dev.minecraftai.engineer.client.ClientPreview.current().blocks().size()==6,"All six reference blocks must be previewed");
+                check(dev.minecraftai.engineer.client.ClientPreview.current().blocks().stream().filter(ProjectView.Ghost::currentStage).count()==3,"Only the three support blocks belong to the first step");
             });
             context.takeScreenshot("engineer-01-reference-preview");
 
@@ -116,11 +118,13 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             });
             command(server,"engineer test");
             command(server,"engineer build");
+            command(server,"engineer undo");
             server.runOnServer(s->{
                 JsonObject stored=checkpoint(s);
                 check(stored.has("testOriginal") && stored.get("testOriginal").getAsString().equals(pendingInput),"New test/build requests cannot replace a pending restoration checkpoint");
                 check(stored.get("status").getAsString().equals("PAUSED"),"Pending test restoration does not silently grant build authority");
                 check(player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED),"Rejected requests preserve the pending actual input state");
+                check(stored.getAsJsonArray("journal").size()==2 && player(s).level().getBlockState(REPEATER).is(Blocks.REPEATER) && player(s).level().getBlockState(LAMP).is(Blocks.REDSTONE_LAMP),"Unsafe pending test recovery blocks undo before it removes its circuit");
                 player(s).level().setBlockAndUpdate(intruder,Blocks.AIR.defaultBlockState());
             });
             command(server,"engineer resume");
@@ -214,9 +218,7 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
         return server.getPlayerList().getPlayers().getFirst();
     }
     private static Path checkpointPath(MinecraftServer server) {
-        ServerPlayer player=player(server);
-        String dimension=player.level().dimension().identifier().toString().replace(':','_');
-        return LocalFiles.configDir().resolve("sessions").resolve(LocalFiles.worldId(server)+"-"+player.getUUID()+"-"+dimension+".json");
+        return EngineerMod.sessionFor(player(server)).file;
     }
     private static JsonObject checkpoint(MinecraftServer server) { return read(checkpointPath(server)); }
     private static JsonObject snapshot(MinecraftServer server) { Path file=checkpointPath(server);return read(file.resolveSibling(file.getFileName()+".snapshot.json")); }
