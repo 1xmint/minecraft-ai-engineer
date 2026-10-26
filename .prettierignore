@@ -1,0 +1,6 @@
+node_modules
+dist
+mod
+work
+docs/product-brief.md
+package-lock.json

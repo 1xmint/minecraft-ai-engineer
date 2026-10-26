@@ -12,7 +12,11 @@ rotation:0|90|180|270,projectId?:string,maxSize?:{x,y,z}}
 Response: {blueprint:Blueprint,message:string,projectId:string}
 POST /v1/observe — {worldId,dimension,region:{min,max},blocks:[{pos,state}],tick}
 GET /v1/projects?worldId=... — {projects:[...]}
-POST /v1/checkpoint — {worldId,dimension,projectId,taskId,status,detail,observed?,verified?}
+POST /v1/checkpoint — {worldId,dimension,projectId,taskId,status,detail,blueprintRevision?,observed?,verified?}
+Functional evidence requires a positive blueprintRevision matching the current
+stored blueprint. Stale revision reports are rejected. New revisions, changed
+world observations, and fresh checkpoints invalidate previous functional evidence;
+historical reports remain in the audit log.
 GET /v1/health — {protocol:1,status:'ok'} (also authenticated).
 
 Blueprint format (coordinates relative unless stated):
@@ -32,9 +36,10 @@ Runtime-changing powered/lit/power properties are observations, not construction
 mistakes. Registry validates complete block-state strings before preview/build.
 
 Reference template `signal-lamp`: solid supports at (0,0,0), (1,0,0), (2,0,0);
-floor lever at (0,1,0) facing east; repeater at (1,1,0) facing east delay=1;
+floor lever at (0,1,0) facing east; repeater at (1,1,0) facing west delay=1;
 redstone lamp at (2,1,0). Stages `foundation`, `input`, `output`. The repeater
-outputs east into the lamp. Test off->on->off using scheduled ticks. Test only
+outputs east into the lamp (the repeater's facing state points toward its input).
+Test off->on->off using scheduled ticks. Test only
 this curated circuit and restore input; never infer arbitrary circuit validity.
 Blueprints can be structurally valid but remain functionally untested until
 the actual mod records game test evidence for that project and revision.

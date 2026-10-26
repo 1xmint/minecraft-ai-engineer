@@ -1,0 +1,109 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  companion:
+    name: Companion
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
+  fabric:
+    name: Fabric
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - run: chmod +x gradlew
+      - run: ./gradlew --no-daemon --max-workers=2 build runGameTest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: fabric-evidence
+          path: |
+            mod/build/libs/*.jar
+            mod/build/reports/
+            mod/build/test-results/
+            mod/run/gametest/logs/latest.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  planner-windows:
+    name: Windows planner
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node --test dist/tests/launcher.test.js
+
+  minecraft-client:
+    name: Minecraft client
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      MCE_CONFIG_DIR: ${{ github.workspace }}/mod/build/client-test-config
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Prepare software graphics
+        run: |
+          if ! command -v xvfb-run >/dev/null || ! dpkg -s mesa-vulkan-drivers >/dev/null 2>&1; then
+            sudo timeout 120 apt-get update -qq
+            sudo timeout 120 apt-get install -y xvfb xauth libgl1-mesa-dri mesa-vulkan-drivers
+          fi
+      - run: chmod +x gradlew
+      - name: Drive single-player handoff and safety failures
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon --max-workers=2 runClientGameTest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: minecraft-client-evidence
+          path: |
+            mod/build/run/clientGameTest/screenshots/
+            mod/build/run/clientGameTest/logs/
+            mod/build/reports/
+          if-no-files-found: warn
+          retention-days: 14

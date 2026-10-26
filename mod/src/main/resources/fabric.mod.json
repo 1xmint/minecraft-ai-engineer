@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "engineer",
+  "version": "${version}",
+  "name": "Minecraft AI Engineer",
+  "description": "A local-first engineering companion for single-player creative worlds.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.minecraftai.engineer.EngineerMod"],
+    "client": ["dev.minecraftai.engineer.client.EngineerClient"],
+    "fabric-gametest": ["dev.minecraftai.engineer.EngineerGameTests"],
+    "fabric-client-gametest": ["dev.minecraftai.engineer.EngineerClientGameTests"]
+  },
+  "depends": { "fabricloader": ">=0.20.1", "minecraft": "26.3", "java": ">=25", "fabric-api": "*" }
+}

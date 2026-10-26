@@ -8,6 +8,8 @@ run/
 *.db*
 *.sqlite*
 *.token
+companion.json
+auth.json
 .env*
 !.env.example
 *.zip
@@ -16,3 +18,4 @@ run/
 !mod/gradle/wrapper/gradle-wrapper.jar
 .idea/
 .vscode/
+work/
