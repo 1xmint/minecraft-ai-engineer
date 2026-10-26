@@ -115,7 +115,7 @@ export class GatewayMemory {
         .run(serverId);
       this.db
         .prepare(
-          "UPDATE gateway_tasks SET status='PAUSED',detail='Server/service registration changed; reconcile before resuming.',verified=NULL WHERE server_id=?",
+          "UPDATE gateway_tasks SET status='PAUSED',detail='Server/service registration changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=?",
         )
         .run(serverId);
       this.audit(serverId, undefined, "server-open", { serverEpoch: epoch });
@@ -292,7 +292,7 @@ export class GatewayMemory {
       )
         this.db
           .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Project or authorization revision changed; reconcile before resuming.',verified=NULL WHERE server_id=? AND project_id=?",
+            "UPDATE gateway_tasks SET status='PAUSED',detail='Project or authorization revision changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
           )
           .run(c.serverId, c.projectId);
       this.audit(c.serverId, c.projectId, "project-sync", input);
@@ -421,7 +421,7 @@ export class GatewayMemory {
       if (changed)
         this.db
           .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Observed world changes invalidate functional evidence.',verified=NULL WHERE server_id=? AND project_id=?",
+            "UPDATE gateway_tasks SET status='PAUSED',detail='Observed world changes invalidate functional evidence.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
           )
           .run(context.serverId, context.projectId);
       return { changed, previousTick: old?.tick ?? null };
