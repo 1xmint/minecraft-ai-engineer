@@ -2,8 +2,9 @@
 
 ## Multiplayer development branch
 
-PR #10 implements the dedicated-server foundation. Its multiplayer acceptance
-checks are still pending; the published alpha below remains single-player-only.
+PR #10 implements the dedicated-server foundation. All five checks passed in
+[the dedicated acceptance run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40418092324).
+The published alpha below remains single-player-only.
 On the development branch, run one companion beside the Fabric server, using
 the same private `MCE_CONFIG_DIR`. Use `./gradlew runServer` from `mod/` for a
 development server and accept Minecraft's EULA yourself. Keep production
