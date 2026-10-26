@@ -15,6 +15,11 @@ See [STATE.md](STATE.md) for evidence, limits and the next work.
 
 ## Try it
 
+Start with the [downloadable development preview](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1):
+get the mod jar and companion zip, then follow `START-HERE.txt` inside the zip.
+The companion bundle already contains compiled JavaScript; no TypeScript or
+Java compiler is needed to run that bundle. The steps below launch from source.
+
 Use a disposable single-player creative world with commands enabled. Minecraft
 Java **26.3**, Fabric Loader **0.20.1**, Fabric API **0.165.0+26.3**, Java **25**
 and Node **24.14.0** are pinned. Remote/LAN worlds and survival construction are
@@ -49,6 +54,8 @@ in a matching Fabric launcher profile, commands, undo and restart behavior.
   records and checkpoints outside your world saves and repository.
 - Actual Minecraft tick tests for reference circuit behavior. Geometry matches
   and model explanations never count as functional verification.
+
+![Completed reference circuit after save/reopen and the actual off/on/off test](docs/images/tested-build.png)
 
 General mechanism generation, large component projects, deeper world-aware
 redstone debugging and broad revision propagation remain phase 1 work. Voice,
