@@ -1,9 +1,10 @@
 # Now
 
-2026-10-26: Phase 1 reference workflow implemented on
-`phase/1-engineering-assistant`; public repo:
-https://github.com/1xmint/minecraft-ai-engineer. Implementation PR awaits final
-checks and release in PR #5. No helper branches. The full pasted phase 1 is **not complete**.
+2026-10-26: Reference workflow shipped as development release
+`v0.1.0-alpha.1`, commit `168ac190daddd066957ecaebd50a807e7926167c`.
+PR #5 merged after all four required checks passed. No helper branches.
+The full pasted phase 1 is **not complete**; the next slice is issue #1.
+Release: https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
 
 ## Outcomes and evidence
 
@@ -32,7 +33,10 @@ checks and release in PR #5. No helper branches. The full pasted phase 1 is **no
 
 Evidence: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40365335148
 Client flow: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40366890185
-Check current SHA and client run before merge. Locally only scoped Java and
+Final release checks: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40367902860
+(attempt 2; retry recovered a graphics package download timeout).
+Final screenshot capture and local geometry-revision identity checks passed.
+Locally only scoped Java and
 TypeScript compilation plus the explicitly requested feasibility probe ran;
 automated tests run on GitHub.
 
@@ -67,9 +71,9 @@ player dependencies. Model requests and operations are bounded.
 
 ## Roadmap and remaining phase 1
 
-1. Reference workflow implemented and proved — PR #5 is the reviewed landing;
-   ship only after its current checks pass. Development release is a reference
-   implementation, not a claim that the whole phase 1 is complete.
+1. Done — reference workflow implemented, independently reviewed, proved in CI
+   and released through PR #5. Downloadable mod, companion bundle and SHA-256
+   checksums are on the development release page.
 2. Next — expand validated designs and region-aware revisions (O2/O4), issue #1:
    https://github.com/1xmint/minecraft-ai-engineer/issues/1
 3. Next — component ownership, dependencies, interfaces, inventory perception
