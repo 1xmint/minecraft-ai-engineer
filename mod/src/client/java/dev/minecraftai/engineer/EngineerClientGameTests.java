@@ -101,6 +101,34 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
                 check(Blueprint.matches(Blueprint.state("minecraft:repeater[facing=west,delay=1]"),player(s).level().getBlockState(REPEATER)),"Executor places the correct repeater orientation");
             });
             command(server,"engineer test");
+            server.waitFor(s->player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED));
+            BlockPos intruder=LEVER.offset(0,0,1);
+            server.runOnServer(s->player(s).level().setBlockAndUpdate(intruder,Blocks.STONE.defaultBlockState()));
+            context.waitTicks(8);
+            String pendingInput=server.computeOnServer(s->{
+                JsonObject stored=checkpoint(s);
+                check(stored.get("status").getAsString().equals("PAUSED"),"A neighbor introduced during testing pauses the actual test");
+                check(stored.get("verified").getAsString().startsWith("failed:"),"Interrupted testing records failure rather than a pass");
+                check(player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED),"Test must not restore or toggle an input beside an unexpected new block");
+                check(player(s).level().getBlockState(intruder).is(Blocks.STONE),"A player-added test neighbor is preserved");
+                check(stored.has("testOriginal"),"Unsafe input restoration remains pending for explicit reconciliation");
+                return stored.get("testOriginal").getAsString();
+            });
+            command(server,"engineer test");
+            command(server,"engineer build");
+            server.runOnServer(s->{
+                JsonObject stored=checkpoint(s);
+                check(stored.has("testOriginal") && stored.get("testOriginal").getAsString().equals(pendingInput),"New test/build requests cannot replace a pending restoration checkpoint");
+                check(stored.get("status").getAsString().equals("PAUSED"),"Pending test restoration does not silently grant build authority");
+                check(player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED),"Rejected requests preserve the pending actual input state");
+                player(s).level().setBlockAndUpdate(intruder,Blocks.AIR.defaultBlockState());
+            });
+            command(server,"engineer resume");
+            server.runOnServer(s->{
+                check(!checkpoint(s).has("testOriginal"),"Explicit resume safely reconciles the original input once the interference is gone");
+                check(!player(s).level().getBlockState(LEVER).getValue(BlockStateProperties.POWERED),"Explicit safe reconciliation restores the original off state");
+            });
+            command(server,"engineer test");
             server.waitFor(s->checkpoint(s).get("verified").getAsString().startsWith("passed:"));
             server.runOnServer(s->{
                 check(!player(s).level().getBlockState(LAMP).getValue(BlockStateProperties.LIT),"Functional test observes the final off transition");
@@ -110,6 +138,21 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             world.getConnection().waitForClientboundPackets();
             world.getConnection().waitForChunksRender();
             context.takeScreenshot("engineer-02-reloaded-tested-build");
+
+            // A new attachment can depend on an assistant block even outside the blueprint.
+            BlockPos attachment=LAMP.offset(1,0,0);
+            server.runOnServer(s->{
+                player(s).level().setBlockAndUpdate(attachment,Blueprint.state("minecraft:wall_torch[facing=east]"));
+                check(player(s).level().getBlockState(attachment).is(Blocks.WALL_TORCH),"Attachment fixture is actually supported by the lamp");
+            });
+            command(server,"engineer undo");
+            server.runOnServer(s->{
+                check(player(s).level().getBlockState(attachment).is(Blocks.WALL_TORCH),"Undo preserves the player's later attached block");
+                check(player(s).level().getBlockState(LAMP).is(Blocks.REDSTONE_LAMP),"Undo retains the attachment's support");
+                check(player(s).level().getBlockState(REPEATER).is(Blocks.REPEATER),"Attachment preflight prevents a partial undo");
+                check(checkpoint(s).getAsJsonArray("journal").size()==2,"Rejected attachment undo retains the full journal");
+                player(s).level().setBlockAndUpdate(attachment,Blocks.AIR.defaultBlockState());
+            });
 
             // Undo first refuses a later edit, then removes only assistant blocks.
             server.runOnServer(s->player(s).level().setBlockAndUpdate(REPEATER,Blocks.GLASS.defaultBlockState()));

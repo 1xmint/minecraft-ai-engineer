@@ -74,6 +74,7 @@ final class EngineeringSession implements BuildExecutor {
     void moveStage(int delta) { if (blueprint == null) throw new IllegalStateException("No blueprint"); stage = Math.clamp(stage + delta,0,blueprint.stages().size()-1); teaching=true; save(); explain(); }
     void build() {
         requireCreative();
+        if(testOriginal!=null) throw new IllegalStateException("Reconcile the interrupted functional test with resume before building");
         if (blueprint == null) throw new IllegalStateException("Preview a blueprint first");
         if (state.equals("EXECUTING") || testTick >= 0) throw new IllegalStateException("An operation is already running");
         if (!baseline.isEmpty()) { resume(); return; }
@@ -119,7 +120,7 @@ final class EngineeringSession implements BuildExecutor {
         if (pendingPlacement) { pendingPlacement=false;save(); }
     }
     @Override public void resume() {
-        if (testOriginal!=null) { requireCreative();restoreTest();state="PAUSED";detail="Interrupted test reconciled; inspect before requesting another test";save();tell(detail);return; }
+        if (testOriginal!=null) { requireCreative();restoreTest();state="PAUSED";detail=testOriginal==null?"Interrupted test reconciled; inspect before requesting another test":"Test input still needs restoration; preserve/resolve conflicting edits before resume";save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
         reconcile(); state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
     }
@@ -168,7 +169,21 @@ final class EngineeringSession implements BuildExecutor {
         if (undoRequested && !journal.isEmpty() && player().level().hasChunkAt(journal.getLast().pos())
                 && player().level().getBlockState(journal.getLast().pos()).equals(journal.getLast().before())) { journal.removeLast();save(); }
         // Preflight every entry before removing anything. Never erase a later player edit.
-        for (Change c : journal) { validateTarget(c.pos()); if (!Blueprint.matches(c.after(),player().level().getBlockState(c.pos()))) throw new IllegalStateException("Undo blocked by later edit at " + c.pos().toShortString()); }
+        Set<BlockPos> assistantPositions=new HashSet<>();journal.forEach(c->assistantPositions.add(c.pos()));
+        Set<BlockPos> plannedPositions=new HashSet<>();if(blueprint!=null)blueprint.blocks().forEach(b->plannedPositions.add(b.pos()));
+        for (Change c : journal) {
+            validateTarget(c.pos());
+            if (!Blueprint.matches(c.after(),player().level().getBlockState(c.pos()))) throw new IllegalStateException("Undo blocked by later edit at " + c.pos().toShortString());
+            for(net.minecraft.core.Direction direction:net.minecraft.core.Direction.values()) {
+                BlockPos neighbor=c.pos().relative(direction);
+                if(!player().level().hasChunkAt(neighbor))throw new IllegalStateException("Undo needs loaded neighboring blocks");
+                BlockState actual=player().level().getBlockState(neighbor);
+                if(actual.isAir() || assistantPositions.contains(neighbor))continue;
+                boolean outside=!plannedPositions.contains(neighbor);
+                boolean playerSupported=(actual.is(net.minecraft.world.level.block.Blocks.LEVER)||actual.is(net.minecraft.world.level.block.Blocks.REPEATER))&&neighbor.below().equals(c.pos());
+                if(outside || playerSupported) throw new IllegalStateException("Undo would disturb a player block at "+neighbor.toShortString()+"; remove its dependency or take over this section first");
+            }
+        }
         state="PAUSED"; detail="Undo requested";undoRequested=true;save();
         while (!journal.isEmpty()) {
             Change c = journal.getLast();
@@ -197,20 +212,24 @@ final class EngineeringSession implements BuildExecutor {
     }
     void test() {
         requireCreative(); if (blueprint==null || !blueprint.source().has("provenance") || !blueprint.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")) throw new IllegalStateException("Only the curated signal-lamp has a functional test");
+        if(testOriginal!=null) throw new IllegalStateException("Reconcile the interrupted functional test with resume before starting another test");
         if (state.equals("EXECUTING") || testTick>=0) throw new IllegalStateException("Stop building before testing");
+        validateTestArea();
+        testOriginal=player().level().getBlockState(input()); testLast=testOriginal; testTick=0; verified="untested"; state="VERIFYING"; detail="Tick-accurate off/on/off test running"; save(); tell(detail);
+    }
+    void validateTestArea() {
         for (Blueprint.PlannedBlock b:blueprint.blocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),player().level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
         Set<BlockPos> planned=new HashSet<>(); blueprint.blocks().forEach(b->planned.add(b.pos()));
         // Refuse nearby structures: controlled inputs must not operate unrelated player circuits.
         for (Blueprint.PlannedBlock b:blueprint.blocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {
             if (!player().level().hasChunkAt(p) || (!planned.contains(p) && !player().level().getBlockState(p).isAir())) throw new IllegalStateException("Test needs a two-block air margin around the floating reference circuit");
         }
-        testOriginal=player().level().getBlockState(input()); testLast=testOriginal; testTick=0; verified="untested"; state="VERIFYING"; detail="Tick-accurate off/on/off test running"; save(); tell(detail);
     }
     BlockPos input() { return blueprint.blocks().stream().filter(b->b.component().equals("input")).findFirst().orElseThrow().pos(); }
     BlockPos output() { return blueprint.blocks().stream().filter(b->b.state().hasProperty(BlockStateProperties.LIT)).findFirst().orElseThrow().pos(); }
     void tickTest() {
         try {
-            requireCreative(); validateTarget(input()); validateTarget(output());
+            requireCreative(); validateTestArea();
             if (!player().level().getBlockState(input()).equals(testLast)) throw new IllegalStateException("Input changed during test; player edit preserved");
             if (testTick==0) setTestInput(false);
             if (testTick==8) { assertLamp(false); setTestInput(true); }
@@ -226,9 +245,16 @@ final class EngineeringSession implements BuildExecutor {
     }
     void restoreTest() {
         if (testOriginal!=null && server.isSameThread() && available() && player().isCreative() && contains(input()) && player().level().hasChunkAt(input()) && player().level().getBlockEntity(input())==null) {
-            if(player().level().getBlockState(input()).equals(testLast)) player().level().setBlockAndUpdate(input(),testOriginal);
-            // A different state belongs to a later edit. Preserve it and relinquish restoration.
-            testOriginal=null;testLast=null;
+            BlockState actual=player().level().getBlockState(input());
+            if(actual.equals(testOriginal) || !actual.equals(testLast)) {
+                // Already restored, or superseded by a later player edit. No write.
+                testOriginal=null;testLast=null;
+            } else {
+                try { validateTestArea(); }
+                catch(RuntimeException unsafe) { testTick=-1; return; }
+                player().level().setBlockAndUpdate(input(),testOriginal);
+                if(player().level().getBlockState(input()).equals(testOriginal)) {testOriginal=null;testLast=null;}
+            }
         }
         testTick=-1;
     }
