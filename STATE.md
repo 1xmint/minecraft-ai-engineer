@@ -1,52 +1,91 @@
 # Now
 
-Phase 1 building; branch phase/1-engineering-assistant. No existing code or PR.
-2026-10-26: public repo authorized and created at 1xmint/minecraft-ai-engineer.
-Local Minecraft Java 26.3 detected; Node 24.14.0 and Codex CLI 0.163.0 installed,
-ChatGPT login confirmed. System Java is only 8; development needs Java 25.
-No real-game acceptance evidence yet. Do not describe the full product as shipped.
+2026-10-26: Phase 1 reference workflow implemented on
+`phase/1-engineering-assistant`; public repo:
+https://github.com/1xmint/minecraft-ai-engineer. Implementation PR awaits final
+client CI and review. No helper branches. The full pasted phase 1 is **not complete**.
 
-## Outcomes
+## Outcomes and evidence
 
-- O1: A contributor clones the public repo and CI builds both components from
-  pinned versions; invalid contributions fail required checks.
-- O2: In single-player, select a loaded region, inspect exact states, preview and
-  follow a staged redstone reference; wrong orientation is visibly identified.
-- O3: Delegate the remaining section, stop/resume and undo safely. Player edits,
-  inventories, unloaded chunks, other worlds and survival writes are rejected.
-  Checkpoints survive restart and reconcile before resuming.
-- O4: Ask through Codex for a supported small contraption, remember the project,
-  and verify it using actual Minecraft ticks. Unsupported designs and failed
-  tests remain explicitly unverified; no fabricated model or game results.
+- O1 — Public reproducible contribution workflow: implemented. Protected main
+  requires Companion, Fabric and Windows planner checks, PRs, linear history
+  and resolved conversations, including owner pushes. Pinned toolchains,
+  dependency updates, secret scanning/push protection, private vulnerability
+  reporting, templates, CODEOWNERS and shared agent instructions exist.
+- O2 — Inspect exact states, preview and follow real placements: implemented
+  for the signal-lamp reference. Client compilation passed. Preview uses
+  translucent labeled block bounds and orientation arrows. Actual client
+  integration and screenshot evidence await CI.
+- O3 — Delegate, interrupt, resume, recover and undo without overwriting edits:
+  implemented. Independent review fixed HTTP cancellation, survival/LAN and
+  lifecycle guards, journal crash windows, unsafe test restoration, stale
+  evidence and player-attachment undo hazards. Real integrated-server
+  save/reopen and rejection cases await client CI on the latest fixes.
+- O4 — Subscription reasoning, memory and actual redstone proof:
+  `npm run doctor -- --probe` passed with official SDK/CLI 0.164.0,
+  ChatGPT sign-in, `gpt-6-luna`, low effort and structured output. No API key,
+  billing fallback or retries. CI run 40365335148 passed 16 Node tests, two
+  Windows launcher tests and five required Minecraft server GameTests (four
+  project tests plus framework smoke). SDK access and reference mechanics
+  are proved separately; the live-model-to-game combined flow is not yet proved.
 
-## Decision — 2026-10-26
+Evidence: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40365335148
+Check current SHA and client run before merge. Locally only scoped Java and
+TypeScript compilation plus the explicitly requested feasibility probe ran;
+automated tests run on GitHub.
 
-Build Fabric + Node 24 TypeScript + SQLite, authenticated loopback HTTP. This is
-a persistent job controller with a game adapter; ordinary placement and checks
-are deterministic, the model only plans. Pin detected Minecraft 26.3 rather
-than force a downgrade. Select curated circuits first; reject unsupported
-requests instead of inventing untested circuits. Keep an executor boundary for
-a later physical builder.
+## Decisions — 2026-10-26
 
-Alternatives considered: just write a plan (does not deliver the requested
-experience); standalone bot/Mineflayer first (adds navigation and survival risk
-before preview/teaching); mod-only (simpler IPC, but couples model runtime and
-memory to game lifecycle). The companion separation earns its small IPC cost.
-Challenge: read-only Codex still allows reads/tools; explicitly restrict tools,
-inherit no arbitrary user plugins, and prove the adapter's execution boundary.
+Fabric + Node 24 TypeScript + SQLite over authenticated loopback HTTP. A
+persistent job controller with a game adapter: deterministic placements and
+checks; the model proposes data and cannot authorize writes. Target detected
+installed Java Edition 26.3; pin Loader 0.20.1, API 0.165.0+26.3, Loom 1.17.21,
+Gradle 9.6.0 and Java 25. System Java is 8, so compilation used portable Java 25
+in the chat's scratch folder rather than installing software system-wide.
 
-## Roadmap
+Alternatives: planning alone does not deliver behavior; a physical bot first
+adds navigation/survival risk before teaching; mod-only couples inference and
+memory to the game. The small companion IPC earns its cost. Start with a
+curated circuit; reject unsupported requests rather than invent working
+redstone. Efficient Luna handles focused classification; an account-supported
+model override remains possible. Account quota and entitlement still apply.
 
-1. Building — foundation, feasibility, public repo, CI and exact protocol (O1/O4).
-2. Next — world inspection, curated preview and tutorial (O2).
-3. Next — bounded creative executor, interruption, journal and reconciliation (O3).
-4. Next — Codex design selection, project memory and game functional proof (O4).
-5. Next — integrated acceptance and release; record gaps against all brief slices.
-6. Later phase 2 — voice conversation; physical NPC; survival resource gathering;
-   schematic import/export; design optimization; multiple independent builders.
+Independent challenge found read-only Codex insufficient isolation. A small
+reviewed native launcher supplies official CLI flags to ignore inherited
+config/rules and run ephemerally. Shell/app/plugin/browser/agent tools disabled,
+API credentials filtered, project documents disabled, empty working directory,
+unexpected tool actions abort. Windows CI proves streams and process-tree
+cancellation without model credentials.
 
-## Proof and limits
+World identity hashes canonical save path plus owner/dimension. Moving a save
+creates a new identity. Authorizations never auto-resume. Test isolation is
+rechecked every tick and before restoration. Unsafe restoration remains pending
+until explicit reconciliation. Undo conservatively rejects new neighboring
+player dependencies. Model requests and operations are bounded.
 
-Confirmed: GitHub authentication, public repository, installed Java edition and
-version, Codex subscription login. Pending: SDK request, Java 25 build,
-mod/service IPC, functional game tests, full in-game player workflow.
+## Roadmap and remaining phase 1
+
+1. Building — finish reference client proof, inspect screenshots, fix failures,
+   merge reviewed PR and publish an honestly labeled development release.
+2. Next — expand validated designs and region-aware revisions (O2/O4), issue #1:
+   https://github.com/1xmint/minecraft-ai-engineer/issues/1
+3. Next — component ownership, dependencies, interfaces, inventory perception
+   and collaboration (O2/O3/O4), issue #2:
+   https://github.com/1xmint/minecraft-ai-engineer/issues/2
+4. Next — deeper debugging, richer previews and combined live-model player
+   acceptance against the complete brief (O2/O4), issue #3:
+   https://github.com/1xmint/minecraft-ai-engineer/issues/3
+5. Phase 2 after phase 1 — voice; physical NPC; legal survival gathering;
+   schematic exchange; size/resource/timing/reliability optimization;
+   multiple independent builders. Issue #4:
+   https://github.com/1xmint/minecraft-ai-engineer/issues/4
+
+## Known limits
+
+Only a lever/repeater/lamp is supported; no general generated mechanisms,
+large engineering projects or survival execution. Replaceable executor boundary
+exists. No broad world indexing, general debugging or textured ghost rendering.
+Functional evidence is revision-bound and invalidated on changes/restart.
+Neighboring game physics is not a whole-world undo: use disposable worlds and
+preserve backups. Offline reference projects persist in the mod; only
+companion-backed designs appear in SQLite. Original brief: docs/product-brief.md.
