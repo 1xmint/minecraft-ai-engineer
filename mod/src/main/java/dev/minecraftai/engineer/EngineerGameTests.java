@@ -34,6 +34,8 @@ public final class EngineerGameTests {
         helper.assertTrue(rejected,"Unsupported block-state values must fail closed");
         helper.assertTrue(!Blueprint.matches(Blueprint.state("minecraft:repeater[facing=west]"),Blueprint.state("minecraft:repeater[facing=east]")),"Wrong orientations are construction mistakes");
         helper.assertTrue(Blueprint.matches(Blueprint.state("minecraft:redstone_lamp[lit=false]"),Blueprint.state("minecraft:redstone_lamp[lit=true]")),"Runtime signals do not create false construction conflicts");
+        Blueprint moved=plan.transformed(new BlockPos(5,6,7),180);
+        helper.assertTrue(moved.revision()==plan.revision()+1 && !moved.id().equals(plan.id()),"Geometry revisions must not reuse test evidence identity");
         helper.succeed();
     }
     @GameTest(maxTicks=50)

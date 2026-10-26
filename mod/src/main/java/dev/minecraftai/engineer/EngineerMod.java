@@ -82,6 +82,7 @@ public final class EngineerMod implements ModInitializer {
         if(PLANS.containsKey(s.owner))throw new IllegalStateException("A planning request is already active; stop it first");
         if(s.state.equals("EXECUTING") || s.testTick>=0 || s.testOriginal!=null || !s.journal.isEmpty())throw new IllegalStateException("Stop, reconcile interrupted tests, and undo existing assistant work before replacing the plan");
         JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);
+        if(s.blueprint!=null)body.addProperty("projectId",s.blueprint.projectId());
         JsonObject size=new JsonObject();size.addProperty("x",Math.abs(s.corner1.getX()-s.corner2.getX())+1);size.addProperty("y",Math.abs(s.corner1.getY()-s.corner2.getY())+1);size.addProperty("z",Math.abs(s.corner1.getZ()-s.corner2.getZ())+1);body.add("maxSize",size);
         s.state="PLANNING";s.detail="One bounded Codex request; /engineer stop cancels local planning";s.save();s.tell(s.detail);
         CompletableFuture<JsonObject> future=Companion.post("/v1/design",body);PLANS.put(s.owner,future);

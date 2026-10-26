@@ -77,6 +77,11 @@ public record Blueprint(String id, String projectId, int revision, String worldI
     }
     public Blueprint transformed(BlockPos at, int degrees) {
         JsonObject json = source.deepCopy(); json.add("anchor", jsonPos(at)); json.addProperty("rotation", degrees);
+        // A different intended geometry must never reuse the tested revision's
+        // identity. The companion rejects evidence for unregistered local revisions.
+        json.addProperty("id", UUID.randomUUID().toString());
+        json.addProperty("revision", Math.addExact(revision,1));
+        json.addProperty("verification", "untested");
         return parse(json, worldId, dimension);
     }
     public static Blueprint reference(String world, String dimension, BlockPos anchor, int degrees) {

@@ -61,6 +61,11 @@ rotates positions and block states together; choose a region large enough for
 the result. `/engineer anchor x y z` moves the preview. Stop planning and undo
 assistant work before changing the delegation or replacing the blueprint.
 
+Rotation/anchor changes create a new local blueprint identity and revision,
+with verification reset. They persist in the mod. The companion rejects test
+evidence for a local revision it has not registered; use a new `/engineer plan`
+request to save a companion-backed revision of the current project.
+
 ## Persistence and safety boundary
 
 Checkpoints and snapshots live in the local config `sessions/` directory,

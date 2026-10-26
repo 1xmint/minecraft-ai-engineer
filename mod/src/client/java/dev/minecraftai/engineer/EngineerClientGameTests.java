@@ -137,6 +137,7 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             context.waitTick();
             world.getConnection().waitForClientboundPackets();
             world.getConnection().waitForChunksRender();
+            context.runOnClient(client->client.gui.getChat().clearMessages(false));
             context.takeScreenshot("engineer-02-reloaded-tested-build");
 
             // A new attachment can depend on an assistant block even outside the blueprint.

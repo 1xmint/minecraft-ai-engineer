@@ -3,7 +3,7 @@
 2026-10-26: Phase 1 reference workflow implemented on
 `phase/1-engineering-assistant`; public repo:
 https://github.com/1xmint/minecraft-ai-engineer. Implementation PR awaits final
-client CI and review in PR #5. No helper branches. The full pasted phase 1 is **not complete**.
+checks and release in PR #5. No helper branches. The full pasted phase 1 is **not complete**.
 
 ## Outcomes and evidence
 
@@ -15,12 +15,13 @@ client CI and review in PR #5. No helper branches. The full pasted phase 1 is **
 - O2 — Inspect exact states, preview and follow real placements: implemented
   for the signal-lamp reference. Client compilation passed. Preview uses
   translucent labeled block bounds and orientation arrows. Actual client
-  integration and screenshot evidence await CI.
+  integration passed in run 40366890185; screenshots visually inspected.
 - O3 — Delegate, interrupt, resume, recover and undo without overwriting edits:
   implemented. Independent review fixed HTTP cancellation, survival/LAN and
   lifecycle guards, journal crash windows, unsafe test restoration, stale
   evidence and player-attachment undo hazards. Real integrated-server
-  save/reopen and rejection cases await client CI on the latest fixes.
+  save/reopen, conflict, test-interference, attachment-protection and rejection
+  cases passed actual client CI in run 40366890185.
 - O4 — Subscription reasoning, memory and actual redstone proof:
   `npm run doctor -- --probe` passed with official SDK/CLI 0.164.0,
   ChatGPT sign-in, `gpt-6-luna`, low effort and structured output. No API key,
@@ -30,6 +31,7 @@ client CI and review in PR #5. No helper branches. The full pasted phase 1 is **
   are proved separately; the live-model-to-game combined flow is not yet proved.
 
 Evidence: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40365335148
+Client flow: https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40366890185
 Check current SHA and client run before merge. Locally only scoped Java and
 TypeScript compilation plus the explicitly requested feasibility probe ran;
 automated tests run on GitHub.
@@ -65,8 +67,9 @@ player dependencies. Model requests and operations are bounded.
 
 ## Roadmap and remaining phase 1
 
-1. Building — finish reference client proof, inspect screenshots, fix failures,
-   merge reviewed PR and publish an honestly labeled development release.
+1. Reference workflow implemented and proved — PR #5 is the reviewed landing;
+   ship only after its current checks pass. Development release is a reference
+   implementation, not a claim that the whole phase 1 is complete.
 2. Next — expand validated designs and region-aware revisions (O2/O4), issue #1:
    https://github.com/1xmint/minecraft-ai-engineer/issues/1
 3. Next — component ownership, dependencies, interfaces, inventory perception
