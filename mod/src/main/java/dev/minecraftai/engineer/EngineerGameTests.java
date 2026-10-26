@@ -9,6 +9,51 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest
+    public void serverProjectPolicyAndLeases(GameTestHelper helper){
+        var owner=java.util.UUID.randomUUID();var editor=java.util.UUID.randomUUID();var viewer=java.util.UUID.randomUUID();
+        var policy=new ProjectAccess(owner);
+        policy.member(owner,editor,ProjectAccess.Role.EDITOR);policy.member(owner,viewer,ProjectAccess.Role.VIEWER);
+        helper.assertTrue(policy.allows(editor,ProjectAccess.Permission.BUILD),"An explicitly shared editor can delegate");
+        helper.assertTrue(!policy.allows(editor,ProjectAccess.Permission.UNDO) && !policy.allows(editor,ProjectAccess.Permission.PLAN),"Building does not silently grant removal or account quota");
+        reject(helper,()->policy.require(viewer,ProjectAccess.Permission.BUILD),"A viewer cannot build");
+        reject(helper,()->policy.member(editor,viewer,ProjectAccess.Role.EDITOR),"An editor cannot escalate membership");
+        reject(helper,()->policy.member(owner,viewer,ProjectAccess.Role.OWNER),"Membership cannot replace the immutable owner");
+        policy.permission(owner,editor,ProjectAccess.Permission.UNDO,true);
+        var restored=ProjectAccess.read(owner,policy.json());
+        helper.assertTrue(restored.allows(editor,ProjectAccess.Permission.UNDO),"Explicit rights persist independently of role defaults");
+        var epoch=java.util.UUID.randomUUID();var leases=new RegionReservations(epoch);
+        var a=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
+        var b=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
+        var first=leases.acquire(a,editor,1,policy.revision(),ProjectAccess.Permission.BUILD,java.util.Set.of(BlockPos.ZERO),java.util.Set.of(new BlockPos(1,0,0)),0);
+        reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(1,0,0)),java.util.Set.of(),1),"A neighboring write cannot invalidate another task's read dependency");
+        leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(10,0,0)),java.util.Set.of(),1);
+        leases.validate(a,first,editor,1,policy.revision(),2);
+        policy.revoke(owner,editor);
+        reject(helper,()->leases.validate(a,first,editor,1,policy.revision(),3),"Revocation fences already-issued work");
+        reject(helper,()->new RegionReservations(java.util.UUID.randomUUID()).validate(a,first,editor,1,1,4),"A restarted server never restores an old lease");
+        reject(helper,()->leases.validate(b,first,owner,1,1,4),"A lease cannot be replayed for another project or actor");
+        reject(helper,()->leases.validate(a,first,editor,1,first.authorizationRevision(),200),"Expired work needs explicit reconciliation");
+        helper.succeed();
+    }
+    @GameTest
+    public void boundedOverlayWireFormat(GameTestHelper helper){
+        var recipient=java.util.UUID.randomUUID();
+        var view=new ProjectView(recipient,"world","minecraft:overworld","project","epoch",1,1,1,0,"Private lesson",
+                java.util.List.of(new ProjectView.Ghost(BlockPos.ZERO,Blocks.STONE.defaultBlockState(),true,false,false)));
+        var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),helper.getLevel().registryAccess());
+        try {
+            EngineerNetwork.SnapshotPayload.CODEC.encode(buffer,new EngineerNetwork.SnapshotPayload(1,view));
+            var decoded=EngineerNetwork.SnapshotPayload.CODEC.decode(buffer);
+            helper.assertTrue(decoded.view().recipient().equals(recipient) && decoded.view().blocks().size()==1,"Presentation retains its exact authorized recipient and bounded geometry");
+            buffer.clear();buffer.writeVarInt(1);buffer.writeByte(7);
+            reject(helper,()->EngineerNetwork.HelloPayload.CODEC.decode(buffer),"Hello cannot smuggle actor or command data after its protocol field");
+        } finally {buffer.release();}
+        helper.succeed();
+    }
+    private static void reject(GameTestHelper helper,Runnable action,String message){
+        boolean rejected=false;try{action.run();}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,message);
+    }
     @GameTest(maxTicks=50)
     public void signalLamp(GameTestHelper helper){
         Blueprint plan=Blueprint.reference("test","minecraft:overworld",new BlockPos(2,2,2),0);

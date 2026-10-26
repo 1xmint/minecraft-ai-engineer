@@ -1,10 +1,26 @@
 # Now
 
 2026-10-26: **Multiplayer-first, single-player-compatible is the approved target.**
-The next implementation slice is the dedicated-server foundation (#8), ahead of
-adding mechanisms. This change updates the coding plan; no multiplayer runtime
-support has shipped. The existing v0.1.0-alpha.1 remains single-player-only.
+The active goal is **complete all milestones**, including remaining phase 1 and
+all six phase 2 capabilities. Building the dedicated-server foundation (#8) on
+`phase/2-multiplayer-foundation`, ahead of adding mechanisms. No multiplayer
+runtime support has shipped. The existing v0.1.0-alpha.1 remains single-player-only.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
+
+Current work: optional negotiated overlay networking, private project grants,
+per-player tutorial cursors, stable world/server identity and dependency-aware
+execution reservations are implemented on the branch. Scoped Java main/client
+and TypeScript compilation pass; runtime proofs are pending. Existing actual
+client/undo/test checks are retained, adapted to network previews and project
+files. New policy/lease/wire-format proofs are queued for GitHub CI.
+
+Unfinished in this slice: v2 companion gateway implementation (only its types
+and queue are integrated so far), real three-client dedicated-server harness,
+legacy data adoption, and independent safety review. Current v1 companion calls
+must be migrated before claiming canonical multiplayer memory. Worker worktrees
+are under this chat's work/multiplayer-network and work/multiplayer-companion;
+their completed commits are integrated. Helpers resumed after the account reset;
+none of this is evidence that #8 or either milestone is complete.
 
 ## Outcomes for the next build
 

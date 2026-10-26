@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
@@ -24,9 +25,47 @@ final class LocalFiles {
     }
     static String worldId(MinecraftServer server) {
         try {
+            Path root = server.getWorldPath(LevelResource.ROOT).toRealPath();
+            Path identity = root.resolve("data").resolve("engineer-world.json");
+            String world = id(identity);
+            Path registryFile = configDir().resolve("servers").resolve(serverId()).resolve("world-registry.json");
+            JsonObject registry = Files.exists(registryFile) ? JsonParser.parseString(Files.readString(registryFile)).getAsJsonObject() : new JsonObject();
+            if (registry.has(world)) {
+                Path previous = Path.of(registry.get(world).getAsString());
+                if (!previous.equals(root) && Files.exists(previous))
+                    throw new IllegalStateException("This world UUID is already used by another save. An operator must explicitly fork the copied world before using Engineer");
+            }
+            registry.addProperty(world, root.toString());
+            write(registryFile, registry);
+            return serverId() + "." + world;
+        } catch (Exception e) { throw new IllegalStateException("Cannot identify this world", e); }
+    }
+    static String serverId() { return id(configDir().resolve("server-identity.json")); }
+    private static String id(Path file) {
+        try {
+            if (Files.exists(file)) {
+                JsonObject value = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+                return UUID.fromString(value.get("id").getAsString()).toString();
+            }
+            JsonObject value = new JsonObject();
+            value.addProperty("id", UUID.randomUUID().toString());
+            write(file, value);
+            return value.get("id").getAsString();
+        } catch (IOException | IllegalArgumentException e) { throw new IllegalStateException("Identity file needs administrator recovery; no automatic reset was made", e); }
+    }
+    static void forkWorld(MinecraftServer server) {
+        Path identity = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve("engineer-world.json");
+        try {
+            if (Files.exists(identity)) Files.copy(identity, identity.resolveSibling("engineer-world-before-fork-" + System.currentTimeMillis() + ".json"));
+            JsonObject value = new JsonObject(); value.addProperty("id", UUID.randomUUID().toString());
+            write(identity, value);
+        } catch (IOException e) { throw new IllegalStateException("Could not preserve the old identity; fork cancelled", e); }
+    }
+    static String legacyWorldId(MinecraftServer server) {
+        try {
             String path = server.getWorldPath(LevelResource.ROOT).toRealPath().toString();
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(path.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) { throw new IllegalStateException("Cannot identify this world", e); }
+        } catch (Exception e) { throw new IllegalStateException("Cannot locate the legacy world", e); }
     }
     static void write(Path file, JsonObject value) {
         try {
