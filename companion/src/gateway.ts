@@ -10,6 +10,7 @@ import {
 import { PlanningQueue } from "./planning-queue.js";
 import {
   identifier,
+  integer,
   object,
   RequestError,
   validateCheckpoint,
@@ -122,7 +123,11 @@ export class ServerGateway {
       };
     }
     if (method === "POST" && pathname === "/v2/checkpoint") {
-      memory.checkpoint(context, validateCheckpoint(v));
+      memory.checkpoint(
+        context,
+        validateCheckpoint(v),
+        integer(v.reportSequence, "reportSequence", 1, Number.MAX_SAFE_INTEGER),
+      );
       return { protocol: 2, status: "recorded", context };
     }
     if (method === "POST" && pathname === "/v2/observe") {
@@ -130,7 +135,16 @@ export class ServerGateway {
         protocol: 2,
         status: "recorded",
         context,
-        ...memory.observe(context, validateObservation(v)),
+        ...memory.observe(
+          context,
+          validateObservation(v),
+          integer(
+            v.reportSequence,
+            "reportSequence",
+            1,
+            Number.MAX_SAFE_INTEGER,
+          ),
+        ),
       };
     }
     if (method === "POST" && pathname === "/v2/project/read") {

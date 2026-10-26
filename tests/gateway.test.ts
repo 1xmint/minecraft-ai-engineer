@@ -456,6 +456,7 @@ test("durable gateway memory, evidence invalidation and quota survive service re
     await f.open();
     await f.sync();
     const report = {
+      reportSequence: 1,
       worldId: design.worldId,
       dimension: design.dimension,
       projectId: design.projectId,
@@ -489,13 +490,19 @@ test("durable gateway memory, evidence invalidation and quota survive service re
       tick: 1,
     };
     assert.equal(
-      (await f.post("/v2/observe", { context: context(), ...observation }))
-        .status,
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 2,
+          ...observation,
+        })
+      ).status,
       200,
     );
     const changed = await json<{ changed: number }>(
       await f.post("/v2/observe", {
         context: context(),
+        reportSequence: 3,
         ...observation,
         tick: 2,
         blocks: [{ pos: region.min, state: "minecraft:air" }],
@@ -563,6 +570,214 @@ test("durable gateway memory, evidence invalidation and quota survive service re
       ).status,
       429,
       "restarting the service cannot reset account protection counters",
+    );
+  } finally {
+    await f.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("same-revision reports cannot arrive backwards or resurrect evidence across either route", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "mce-report-order-"));
+  const file = join(directory, "projects.sqlite");
+  let f = await fixture(plan, file);
+  const report = {
+    worldId: design.worldId,
+    dimension: design.dimension,
+    projectId: design.projectId,
+    taskId: "ordered-task",
+    blueprintRevision: 1,
+    status: "COMPLETED",
+    detail: "Latest actual server test passed",
+    verified: { passed: true, ticks: [8, 16, 24] },
+  };
+  const readTask = () => {
+    const reader = new DatabaseSync(file, { readOnly: true });
+    try {
+      return reader
+        .prepare(
+          "SELECT status,verified FROM gateway_tasks WHERE task_id='ordered-task'",
+        )
+        .get() as { status: string; verified: string | null };
+    } finally {
+      reader.close();
+    }
+  };
+  const region = { min: { x: 0, y: 100, z: 0 }, max: { x: 0, y: 100, z: 0 } };
+  const observation = {
+    worldId: design.worldId,
+    dimension: design.dimension,
+    region,
+    blocks: [{ pos: region.min, state: "minecraft:stone" }],
+    tick: 25,
+  };
+  try {
+    await f.open();
+    await f.sync();
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 2,
+          ...report,
+        })
+      ).status,
+      200,
+    );
+    // This was captured before the completed report, but its HTTP chain arrives
+    // afterwards with a fresh request ID and otherwise identical authority.
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 1,
+          ...report,
+          status: "EXECUTING",
+          detail: "Older placement progress",
+          verified: "untested",
+        })
+      ).status,
+      409,
+    );
+    assert.equal(readTask().status, "COMPLETED");
+    assert.deepEqual(JSON.parse(readTask().verified!), report.verified);
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 2,
+          ...report,
+        })
+      ).status,
+      409,
+    );
+    for (const sequence of [
+      undefined,
+      0,
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      assert.equal(
+        (
+          await f.post("/v2/checkpoint", {
+            context: context(),
+            reportSequence: sequence,
+            ...report,
+          })
+        ).status,
+        400,
+      );
+    }
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 3,
+          ...observation,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 4,
+          ...observation,
+          tick: 26,
+          blocks: [{ pos: region.min, state: "minecraft:air" }],
+        })
+      ).status,
+      200,
+    );
+    assert.equal(readTask().status, "PAUSED");
+    assert.equal(readTask().verified, null);
+    // Checkpoints and observations deliberately share one ordering boundary:
+    // an old pass cannot restore evidence invalidated by a later observation.
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 3,
+          ...report,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(readTask().verified, null);
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 5,
+          ...report,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 4,
+          ...observation,
+        })
+      ).status,
+      409,
+    );
+    assert.deepEqual(JSON.parse(readTask().verified!), report.verified);
+
+    await f.close();
+    f = await fixture(plan, file);
+    await f.open();
+    await f.sync();
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 4,
+          ...report,
+        })
+      ).status,
+      409,
+      "service restart must not reset the current server epoch's ordering guard",
+    );
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 6,
+          ...report,
+          status: "PAUSED",
+          verified: "untested",
+        })
+      ).status,
+      200,
+    );
+    await f.open("epoch-two");
+    await f.sync(context({ serverEpoch: "epoch-two" }));
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context({ serverEpoch: "epoch-two" }),
+          reportSequence: 1,
+          ...report,
+        })
+      ).status,
+      200,
+      "a freshly authenticated Minecraft boot has an independent report sequence",
+    );
+    assert.equal(
+      (
+        await f.post("/v2/checkpoint", {
+          context: context(),
+          reportSequence: 7,
+          ...report,
+        })
+      ).status,
+      409,
+      "a higher sequence cannot revive retired server authority",
     );
   } finally {
     await f.close();

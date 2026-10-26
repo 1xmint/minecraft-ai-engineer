@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Blueprint, Checkpoint, Observation } from "./types.js";
-import { RequestError } from "./types.js";
+import { integer, RequestError } from "./types.js";
 import type {
   GatewayContext,
   ProjectMember,
@@ -41,6 +41,7 @@ export class GatewayMemory {
       CREATE TABLE IF NOT EXISTS gateway_tasks(server_id TEXT NOT NULL,project_id TEXT NOT NULL,task_id TEXT NOT NULL,project_revision INTEGER NOT NULL,authorization_revision INTEGER NOT NULL,epoch TEXT NOT NULL,status TEXT NOT NULL,detail TEXT NOT NULL,observed TEXT,verified TEXT,PRIMARY KEY(server_id,project_id,task_id));
       CREATE TABLE IF NOT EXISTS gateway_observations(id INTEGER PRIMARY KEY,server_id TEXT NOT NULL,project_id TEXT NOT NULL,document TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS gateway_requests(server_id TEXT NOT NULL,request_id TEXT NOT NULL,kind TEXT NOT NULL,PRIMARY KEY(server_id,request_id));
+      CREATE TABLE IF NOT EXISTS gateway_reports(server_id TEXT NOT NULL,project_id TEXT NOT NULL,epoch TEXT NOT NULL,last_sequence INTEGER NOT NULL,PRIMARY KEY(server_id,project_id,epoch));
       CREATE TABLE IF NOT EXISTS gateway_audit(id INTEGER PRIMARY KEY,server_id TEXT NOT NULL,project_id TEXT,kind TEXT NOT NULL,document TEXT NOT NULL,created_at TEXT NOT NULL);
     `);
     const version = db
@@ -196,6 +197,36 @@ export class GatewayMemory {
       .prepare("INSERT INTO gateway_requests VALUES(?,?,?)")
       .run(context.serverId, context.requestId, kind);
   }
+  /** Called inside the report's transaction, so rejection cannot partially update memory. */
+  private claimReport(
+    context: GatewayContext,
+    reportSequence: number,
+    kind: string,
+  ): void {
+    integer(reportSequence, "reportSequence", 1, Number.MAX_SAFE_INTEGER);
+    const previous = this.db
+      .prepare(
+        "SELECT last_sequence FROM gateway_reports WHERE server_id=? AND project_id=? AND epoch=?",
+      )
+      .get(context.serverId, context.projectId, context.serverEpoch) as
+      { last_sequence: number } | undefined;
+    if (previous && reportSequence <= previous.last_sequence)
+      throw new RequestError(
+        "Stale or duplicate project report sequence.",
+        409,
+      );
+    this.claim(context, kind);
+    this.db
+      .prepare(
+        "INSERT INTO gateway_reports VALUES(?,?,?,?) ON CONFLICT(server_id,project_id,epoch) DO UPDATE SET last_sequence=excluded.last_sequence",
+      )
+      .run(
+        context.serverId,
+        context.projectId,
+        context.serverEpoch,
+        reportSequence,
+      );
+  }
   sync(input: ProjectSync): GatewayProject {
     const c = input.context;
     this.assertEpoch(c.serverId, c.serverEpoch);
@@ -326,7 +357,11 @@ export class GatewayMemory {
       { document: string } | undefined;
     return row ? (JSON.parse(row.document) as Blueprint) : undefined;
   }
-  checkpoint(context: GatewayContext, checkpoint: Checkpoint): void {
+  checkpoint(
+    context: GatewayContext,
+    checkpoint: Checkpoint,
+    reportSequence: number,
+  ): void {
     const project = this.assertCurrent(context, "edit");
     if (
       checkpoint.projectId !== context.projectId ||
@@ -345,7 +380,7 @@ export class GatewayMemory {
         409,
       );
     this.atomic(() => {
-      this.claim(context, "checkpoint");
+      this.claimReport(context, reportSequence, "checkpoint");
       this.db
         .prepare(
           "INSERT INTO gateway_tasks VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(server_id,project_id,task_id) DO UPDATE SET project_revision=excluded.project_revision,authorization_revision=excluded.authorization_revision,epoch=excluded.epoch,status=excluded.status,detail=excluded.detail,observed=COALESCE(excluded.observed,gateway_tasks.observed),verified=excluded.verified",
@@ -368,6 +403,7 @@ export class GatewayMemory {
         );
       this.audit(context.serverId, context.projectId, "checkpoint", {
         context,
+        reportSequence,
         checkpoint,
       });
     });
@@ -375,6 +411,7 @@ export class GatewayMemory {
   observe(
     context: GatewayContext,
     observation: Observation,
+    reportSequence: number,
   ): { changed: number; previousTick: number | null } {
     const project = this.assertCurrent(context);
     if (
@@ -386,7 +423,7 @@ export class GatewayMemory {
         409,
       );
     return this.atomic(() => {
-      this.claim(context, "observe");
+      this.claimReport(context, reportSequence, "observe");
       const previous = this.db
         .prepare(
           "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id DESC LIMIT 1",

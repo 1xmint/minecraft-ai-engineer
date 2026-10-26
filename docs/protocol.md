@@ -94,7 +94,13 @@ An optional minimal Java blueprint is normalized to the typed format above;
 actual block-registry validation still belongs to Minecraft.
 
 POST `/v2/checkpoint` and `/v2/observe` accept the context plus their v1 body
-fields. A checkpoint must match the current world/project and revision, and
+fields and a required integer `reportSequence` from 1 to `Number.MAX_SAFE_INTEGER`.
+Fabric assigns one increasing sequence per project/server epoch across both
+report routes on the server thread. The companion durably rejects duplicate or
+older sequences, including after a service restart. A new Minecraft server epoch
+starts a new sequence; a fresh random request ID alone cannot make an old report
+current. This prevents late progress from undoing a newer observation or test.
+A checkpoint must match the current world/project and revision, and
 functional evidence requires its synchronized intended blueprint. Changes,
 revocation and fresh checkpoints clear stale functional evidence while audit
 records remain. Request IDs for mutating operations are one-use, even after
