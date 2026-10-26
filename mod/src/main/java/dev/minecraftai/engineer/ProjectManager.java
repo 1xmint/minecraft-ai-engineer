@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 final class ProjectManager {
     final MinecraftServer server;
     final String serverId, worldId;
+    final long serverGeneration=LocalFiles.nextServerGeneration();
     final UUID epoch = UUID.randomUUID();
     final RegionReservations reservations = new RegionReservations(epoch);
     final Path directory;
@@ -166,7 +167,10 @@ final class ProjectManager {
                 || !project.dimension.equals(player.level().dimension().identifier().toString())) return null;
         var cursor = project.cursor(player.getUUID());
         String stage = project.blueprint.stages().get(cursor.stage).id(); var ghosts = new ArrayList<ProjectView.Ghost>();
+        int bytes=ProjectView.MAX_TEXT_LENGTH*3+2048;
         for (Blueprint.PlannedBlock b : project.blueprint.blocks()) {
+            bytes+=Blueprint.describe(b.state()).length()*3+16;
+            if(bytes>ProjectView.MAX_PACKET_BYTES)break;
             boolean loaded = project.level().hasChunkAt(b.pos());
             var actual = loaded ? project.level().getBlockState(b.pos()) : null;
             boolean matches = loaded && Blueprint.matches(b.state(), actual);
@@ -174,7 +178,8 @@ final class ProjectManager {
         }
         return new ProjectView(player.getUUID(), worldId, project.dimension, project.projectId.toString(), epoch.toString(), ++sequence,
                 project.revision(), project.access.revision(), cursor.stage,
-                project.blueprint.name()+" | "+project.blueprint.stages().get(cursor.stage).title()+" | "+project.state, ghosts);
+                project.blueprint.name()+" | "+project.blueprint.stages().get(cursor.stage).title()+" | "+project.state
+                    +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");

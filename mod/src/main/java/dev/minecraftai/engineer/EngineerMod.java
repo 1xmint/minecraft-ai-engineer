@@ -45,6 +45,9 @@ public final class EngineerMod implements ModInitializer {
                 .executes(ctx->help(ctx.getSource()))
                 .then(Commands.literal("help").executes(ctx->help(ctx.getSource())))
                 .then(Commands.literal("project")
+                    .then(Commands.literal("adopt-legacy").executes(ctx->withManager(ctx.getSource(),(m,p)->{
+                        var adopted=LegacyAdoption.adopt(m,p);p.sendSystemMessage(Component.literal("Engineer: Legacy project backed up and adopted privately as "+adopted.projectId+". Inspect before explicitly resuming or undoing."));
+                    })))
                     .then(Commands.literal("new").executes(ctx->withManager(ctx.getSource(),(m,p)->{var s=m.create(p);p.sendSystemMessage(Component.literal("Engineer: Created private project "+s.projectId));})))
                     .then(Commands.literal("list").executes(ctx->withManager(ctx.getSource(),(m,p)->{
                         for(var s:m.projects.values())if(s.access.allows(p.getUUID(),ProjectAccess.Permission.VIEW))p.sendSystemMessage(Component.literal("Engineer: "+s.projectId+" | "+(s.blueprint==null?"New project":s.blueprint.name())+" | "+s.state));

@@ -41,6 +41,19 @@ final class LocalFiles {
         } catch (Exception e) { throw new IllegalStateException("Cannot identify this world", e); }
     }
     static String serverId() { return id(configDir().resolve("server-identity.json")); }
+    static long nextServerGeneration() {
+        Path directory=configDir().resolve("servers").resolve(serverId());
+        try {
+            Files.createDirectories(directory);
+            try(FileChannel lockFile=FileChannel.open(directory.resolve("boot.lock"),StandardOpenOption.CREATE,StandardOpenOption.WRITE);
+                var lock=lockFile.lock()) {
+                Path file=directory.resolve("boot-generation.json");
+                long previous=Files.exists(file)?JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("generation").getAsBigDecimal().longValueExact():0;
+                if(previous<0 || previous>=9_007_199_254_740_991L)throw new IllegalStateException("Server boot generation needs administrator recovery");
+                long next=Math.incrementExact(previous);var value=new JsonObject();value.addProperty("generation",next);write(file,value);return next;
+            }
+        }catch(Exception error){throw new IllegalStateException("Cannot preserve the server boot fence; companion requests were not authorized",error);}
+    }
     private static String id(Path file) {
         try {
             if (Files.exists(file)) {

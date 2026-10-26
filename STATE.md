@@ -24,8 +24,21 @@ These runtime proofs have not passed yet. Local TypeScript/Java compilation and
 formatting pass. Independent Java safety review found and fixed workspace,
 recovery and revocation defects; the gateway integration review is pending.
 
-Unfinished in this slice: passing runtime proofs, explicit legacy data adoption,
-and the final independent gateway review. Worker worktrees
+Explicit operator/self legacy adoption is implemented with validation, private
+ownership, per-attempt backups, preserved journals and paused recovery; it has
+not passed runtime proof yet. Independent gateway review found and fixed
+reordered report delivery and unseen stale-boot races using report sequences
+and durable boot generations. Added dedicated regressions for cross-project
+revocation, backed-up adoption and ambiguous selection after restart. Blueprint
+integers/text and overlay packet budgets are bounded before presentation.
+
+CI run 40415489199 passed Companion, Fabric, Windows planner and the actual
+single-player Minecraft client. Dedicated multiplayer could not launch because
+Ubuntu's Azure graphics-package mirror timed out. The next run uses the official
+Ubuntu archive; this infrastructure failure does not prove multiplayer behavior.
+
+Unfinished in this slice: passing the complete updated runtime proofs and final
+review of any failures before merge/release. Worker worktrees
 are under this chat's work/multiplayer-network and work/multiplayer-companion;
 their completed commits are integrated. Helpers resumed after the account reset;
 none of this is evidence that #8 or either milestone is complete.

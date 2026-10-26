@@ -46,13 +46,17 @@ final class EngineeringSession implements BuildExecutor {
     String verified = "untested";
     String memoryStatus = "not synchronized";
     java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
+    long reportSequence;
     record Change(BlockPos pos, BlockState before, BlockState after) {}
 
     EngineeringSession(ProjectManager manager, UUID projectId, UUID owner, String dimension) {
+        this(manager,projectId,owner,dimension,null);
+    }
+    EngineeringSession(ProjectManager manager, UUID projectId, UUID owner, String dimension, JsonObject adopted) {
         this.manager=manager; this.server=manager.server; this.projectId=projectId; this.owner=owner;
         this.controller=owner; this.access=new ProjectAccess(owner); this.worldId=manager.worldId; this.dimension=dimension;
         file=manager.directory.resolve(projectId+".json");
-        load();
+        if(adopted==null)load();else loadDocument(adopted);
     }
     UUID actor() { return commandActor == null ? controller : commandActor; }
     Cursor cursor(UUID actor) { return cursors.computeIfAbsent(actor, ignored->new Cursor()); }
@@ -188,7 +192,7 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if (testOriginal!=null) { claim(ProjectAccess.Permission.BUILD,true);restoreTest();state="PAUSED";detail=testOriginal==null?"Interrupted test reconciled; inspect before requesting another test":"Test input still needs restoration; preserve/resolve conflicting edits before resume";manager.release(this);save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
-        reconcile(); claim(ProjectAccess.Permission.BUILD,false);state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
+        reconcile(); var refreshedDependencies=dependencies.isEmpty()?captureDependencies():dependencies;claim(ProjectAccess.Permission.BUILD,false);dependencies.putAll(refreshedDependencies);state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
     }
     @Override public void pause(String reason) {
         state="PAUSED"; detail=reason; teaching=false;
@@ -372,6 +376,11 @@ final class EngineeringSession implements BuildExecutor {
         if(!Files.exists(file)) return;
         try {
             JsonObject json=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+            loadDocument(json);
+        }catch(Exception e){throw new IllegalStateException("Cannot safely load checkpoint; keep it for recovery",e);}
+    }
+    private void loadDocument(JsonObject json) {
+        try {
             if(json.get("schemaVersion").getAsInt()!=2 || !projectId.toString().equals(json.get("projectId").getAsString()))throw new IllegalStateException("Legacy or mismatched project data requires explicit administrator migration");
             if (!worldId.equals(json.get("worldId").getAsString()) || !dimension.equals(json.get("dimension").getAsString()) || !owner.toString().equals(json.get("owner").getAsString())) throw new IllegalStateException("Checkpoint identity mismatch");
             access=ProjectAccess.read(owner,json.getAsJsonObject("access"));controller=UUID.fromString(json.get("controller").getAsString());

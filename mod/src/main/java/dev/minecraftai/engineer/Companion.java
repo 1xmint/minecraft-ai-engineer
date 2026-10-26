@@ -28,7 +28,13 @@ final class Companion {
         });
         mirror.add("members",members);
         var open=new JsonObject();open.addProperty("serverId",session.manager.serverId);open.addProperty("serverEpoch",session.manager.epoch.toString());
+        open.addProperty("serverGeneration",session.manager.serverGeneration);
         var body=operation.deepCopy();body.add("context",context);
+        if("/v2/checkpoint".equals(route) || "/v2/observe".equals(route)) {
+            session.reportSequence=Math.incrementExact(session.reportSequence);
+            if(session.reportSequence>9_007_199_254_740_991L)throw new IllegalStateException("Report sequence exhausted; restart the server before continuing");
+            body.addProperty("reportSequence",session.reportSequence);
+        }
         var result=new CompletableFuture<JsonObject>();
         List<CompletableFuture<?>> exchanges=Collections.synchronizedList(new ArrayList<>());
         java.util.function.Function<CompletableFuture<JsonObject>,CompletableFuture<JsonObject>> track=future->{
@@ -36,7 +42,7 @@ final class Companion {
         };
         track.apply(request("/v2/server/open",open)).thenCompose(ready->{
             if(result.isCancelled())return CompletableFuture.failedFuture(new java.util.concurrent.CancellationException());
-            if(!ready.has("protocol") || ready.get("protocol").getAsInt()!=2 || !open.get("serverId").equals(ready.get("serverId")) || !open.get("serverEpoch").equals(ready.get("serverEpoch")))
+            if(!ready.has("protocol") || ready.get("protocol").getAsInt()!=2 || !open.get("serverId").equals(ready.get("serverId")) || !open.get("serverEpoch").equals(ready.get("serverEpoch")) || !open.get("serverGeneration").equals(ready.get("serverGeneration")))
                 return CompletableFuture.failedFuture(new IllegalStateException("Companion registered a different server context"));
             return track.apply(request("/v2/project",mirror));
         }).thenCompose(synced->{

@@ -10,6 +10,23 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
     @GameTest
+    public void legacyAdoptionIsPrivateAndPaused(GameTestHelper helper){
+        var owner=java.util.UUID.randomUUID();var id=java.util.UUID.randomUUID();var source=new com.google.gson.JsonObject();
+        source.addProperty("schemaVersion",1);source.addProperty("worldId","old");source.addProperty("dimension","minecraft:overworld");source.addProperty("owner",owner.toString());
+        source.addProperty("status","EXECUTING");source.addProperty("verified","passed:old");source.addProperty("stage",0);
+        source.add("blueprint",Blueprint.reference("old","minecraft:overworld",BlockPos.ZERO,0).source());
+        var journal=new com.google.gson.JsonArray();var change=new com.google.gson.JsonObject();change.add("pos",Blueprint.jsonPos(BlockPos.ZERO));change.addProperty("before","minecraft:air");change.addProperty("after","minecraft:stone");journal.add(change);source.add("journal",journal);
+        var adopted=LegacyAdoption.convert(source,"old","new","minecraft:overworld",owner,id);
+        helper.assertTrue(adopted.get("status").getAsString().equals("PAUSED") && adopted.get("controller").getAsString().equals(owner.toString()),"Historical execution never becomes an active delegation");
+        helper.assertTrue(!adopted.get("verified").getAsString().startsWith("passed:") && adopted.getAsJsonArray("journal").equals(journal),"Preserve undo journal while invalidating old evidence");
+        helper.assertTrue(ProjectAccess.read(owner,adopted.getAsJsonObject("access")).members().size()==1,"No legacy file grants friends access");
+        helper.assertTrue(adopted.getAsJsonObject("blueprint").get("projectId").getAsString().equals(id.toString()),"Intended identity moves with its new server project");
+        helper.assertTrue(source.get("worldId").getAsString().equals("old") && source.get("status").getAsString().equals("EXECUTING"),"Conversion leaves the recovery source unchanged");
+        reject(helper,()->LegacyAdoption.convert(source,"old","new","minecraft:overworld",java.util.UUID.randomUUID(),id),"Another player's checkpoint cannot be claimed");
+        reject(helper,()->LegacyAdoption.convert(source,"different","new","minecraft:overworld",owner,id),"Another world path cannot be silently adopted");
+        helper.succeed();
+    }
+    @GameTest
     public void serverProjectPolicyAndLeases(GameTestHelper helper){
         var owner=java.util.UUID.randomUUID();var editor=java.util.UUID.randomUUID();var viewer=java.util.UUID.randomUUID();
         var policy=new ProjectAccess(owner);
@@ -104,6 +121,12 @@ public final class EngineerGameTests {
         json=plan.source().deepCopy();json.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:tnt");
         boolean unsafe=false;try{Blueprint.parse(json,"test","minecraft:overworld");}catch(IllegalArgumentException e){unsafe=true;}
         helper.assertTrue(unsafe,"Blocks outside the safe library must be rejected");
+        var overflow=plan.source().deepCopy();overflow.getAsJsonArray("blocks").get(0).getAsJsonObject().getAsJsonObject("pos").addProperty("x",Integer.MIN_VALUE);
+        reject(helper,()->Blueprint.parse(overflow,"test","minecraft:overworld"),"Integer overflow cannot bypass relative extent limits");
+        var fractional=plan.source().deepCopy();fractional.getAsJsonObject("anchor").addProperty("x",0.5);
+        reject(helper,()->Blueprint.parse(fractional,"test","minecraft:overworld"),"Fractional coordinates cannot be silently truncated");
+        var huge=plan.source().deepCopy();huge.addProperty("name","x".repeat(1025));
+        reject(helper,()->Blueprint.parse(huge,"test","minecraft:overworld"),"Unbounded model text cannot break authorized preview packets");
         helper.succeed();
     }
 }

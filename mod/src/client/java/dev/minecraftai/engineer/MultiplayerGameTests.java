@@ -182,6 +182,52 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     return true;
                 });
                 check(server.computeOnServer(s -> session(s, "Alice").state.equals("PAUSED")), "Stop persists the interrupted assignment");
+                // Bob's own project's revision does not change when Alice revokes
+                // access to the workspace it overlaps. Check that dependency too.
+                server.runOnServer(s -> {
+                    commandAs(s,"Alice","engineer undo");
+                    commandAs(s,"Bob","engineer build");
+                });
+                server.waitFor(s -> {
+                    var second=session(s,"Bob");if(second.journal.isEmpty())return false;
+                    commandAs(s,"Alice","engineer project revoke Bob");return true;
+                });
+                server.waitFor(s -> session(s,"Bob").state.equals("PAUSED"));
+                server.runOnServer(s -> {
+                    var second=session(s,"Bob");
+                    check(second.journal.size()==1 && second.level().getBlockState(LAMP).isAir(),"Revoking an intersecting project's grant stops the next write in an independently owned project");
+                    commandAs(s,"Alice","engineer project share Bob editor");
+                    commandAs(s,"Alice","engineer project permission Bob undo true");
+                    commandAs(s,"Bob","engineer undo");
+                    check(second.journal.isEmpty(),"Explicit cross-project undo rights allow safe cleanup");
+                    commandAs(s,"Alice","engineer build");
+                });
+                server.waitFor(s -> {
+                    var project=session(s,"Alice");if(project.journal.isEmpty())return false;
+                    commandAs(s,"Alice","engineer stop");return true;
+                });
+                server.runOnServer(s -> {
+                    var original=session(s,"Alice");
+                    try {
+                        String oldWorld=LocalFiles.legacyWorldId(s);
+                        String name=oldWorld+"-"+original.owner+"-"+original.dimension.replace(':','_')+".json";
+                        Path source=LocalFiles.configDir().resolve("sessions").resolve(name);
+                        var legacy=com.google.gson.JsonParser.parseString(Files.readString(original.file)).getAsJsonObject();
+                        legacy.addProperty("schemaVersion",1);legacy.addProperty("worldId",oldWorld);legacy.getAsJsonObject("blueprint").addProperty("worldId",oldWorld);
+                        LocalFiles.write(source,legacy);String before=Files.readString(source);
+                        commandAs(s,"Alice","engineer project adopt-legacy");
+                        var adopted=session(s,"Alice");
+                        check(!adopted.projectId.equals(original.projectId) && adopted.state.equals("PAUSED") && adopted.delegation==null,"Explicit legacy adoption never imports execution authority");
+                        check(adopted.journal.size()==original.journal.size() && adopted.access.members().size()==1,"Adoption preserves the recovery journal with private ownership");
+                        try(var backups=Files.walk(LocalFiles.configDir().resolve("legacy-backups").resolve(adopted.projectId.toString()))) {
+                            Path preserved=backups.filter(path->path.getFileName().toString().equals(name)).findFirst().orElseThrow();
+                            check(Files.readString(source).equals(before) && Files.readString(preserved).equals(before),"The exact legacy source is preserved and backed up before adoption");
+                        }
+                        int count=adopted.manager.projects.size();commandAs(s,"Alice","engineer project adopt-legacy");
+                        check(adopted.manager.projects.size()==count,"Repeating adoption does not duplicate journal authority");
+                    }catch(java.io.IOException error){throw new AssertionError(error);}
+                    commandAs(s,"Alice","engineer project use "+projectId);
+                });
                 write("prepare-restart", "ready");
                 awaitFile(context, "bob-disconnected");
                 server.waitFor(s -> s.getPlayerList().getPlayerCount() == 1, 12_000);
@@ -196,6 +242,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
              TestDedicatedServerConnection connection = server.connect()) {
             send(context, "engineer status");
             server.waitFor(s -> !EngineerMod.managerFor(s).projects.isEmpty());
+            await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Several projects could be the target")),"Ambiguous project selection is rejected after restart");
+            server.runOnServer(s -> check(!EngineerMod.managerFor(s).selections.containsKey(player(s,"Alice").getUUID()),"Restart cannot silently choose between two owned projects"));
+            send(context,"engineer project use "+projectId);
+            server.waitFor(s -> EngineerMod.managerFor(s).selections.containsKey(player(s,"Alice").getUUID()));
             server.runOnServer(s -> {
                 var project = session(s, "Alice");
                 check(project.projectId.toString().equals(projectId), "Project identity survives a dedicated-server restart");
