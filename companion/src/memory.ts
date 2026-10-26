@@ -87,6 +87,11 @@ export class MemoryStore {
       this.db
         .prepare("INSERT INTO blueprints VALUES(?,?,?,?)")
         .run(saved.projectId, saved.revision, saved.id, document);
+      this.db
+        .prepare(
+          "UPDATE tasks SET status='PAUSED',detail='Blueprint revised; reconcile this task against the current revision before resuming.',observed=NULL,verified=NULL,updated_at=? WHERE project_id=?",
+        )
+        .run(now, saved.projectId);
       const componentIds = new Set(
         saved.blocks.map((block) => block.component),
       );
@@ -179,6 +184,17 @@ export class MemoryStore {
         new Date().toISOString(),
       );
     // Bounded recent perception; project designs, checkpoints and audit stay durable.
+    if (changed > 0) {
+      this.db
+        .prepare(
+          "UPDATE tasks SET status='PAUSED',detail='World changed since observation; prior functional evidence is stale. Reconcile and test again.',verified=NULL,updated_at=? WHERE project_id IN (SELECT id FROM projects WHERE world_id=? AND dimension=?)",
+        )
+        .run(
+          new Date().toISOString(),
+          observation.worldId,
+          observation.dimension,
+        );
+    }
     this.db
       .prepare(
         "DELETE FROM observations WHERE world_id=? AND dimension=? AND id NOT IN (SELECT id FROM observations WHERE world_id=? AND dimension=? ORDER BY id DESC LIMIT 20)",
@@ -203,6 +219,28 @@ export class MemoryStore {
         "Unknown project. Plan a design before reporting checkpoints.",
         404,
       );
+    if (
+      checkpoint.verified !== undefined &&
+      checkpoint.blueprintRevision === undefined
+    )
+      throw new RequestError(
+        "Functional evidence requires its blueprintRevision.",
+      );
+    if (checkpoint.blueprintRevision !== undefined) {
+      if (
+        !Number.isSafeInteger(checkpoint.blueprintRevision) ||
+        checkpoint.blueprintRevision < 1
+      )
+        throw new RequestError("Invalid blueprintRevision.");
+      if (
+        this.blueprint(checkpoint.projectId)?.revision !==
+        checkpoint.blueprintRevision
+      )
+        throw new RequestError(
+          "Checkpoint belongs to a stale blueprint revision. Reconcile before reporting progress.",
+          409,
+        );
+    }
     const existing = this.db
       .prepare("SELECT project_id FROM tasks WHERE id=?")
       .get(checkpoint.taskId) as { project_id: string } | undefined;
@@ -214,7 +252,7 @@ export class MemoryStore {
       this.db
         .prepare(
           `INSERT INTO tasks VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,detail=excluded.detail,
-        observed=COALESCE(excluded.observed,tasks.observed),verified=COALESCE(excluded.verified,tasks.verified),updated_at=excluded.updated_at`,
+        observed=COALESCE(excluded.observed,tasks.observed),verified=excluded.verified,updated_at=excluded.updated_at`,
         )
         .run(
           checkpoint.taskId,

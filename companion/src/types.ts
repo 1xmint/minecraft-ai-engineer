@@ -68,6 +68,7 @@ export interface Checkpoint {
   dimension: string;
   projectId: string;
   taskId: string;
+  blueprintRevision?: number;
   status: TaskState;
   detail: string;
   observed?: unknown;
@@ -219,11 +220,25 @@ export function validateCheckpoint(value: unknown): Checkpoint {
   const v = object(value);
   if (!TASK_STATES.includes(v.status as TaskState))
     throw new RequestError("Invalid task status.");
+  if (v.verified !== undefined && v.blueprintRevision === undefined)
+    throw new RequestError(
+      "Functional evidence requires its blueprintRevision.",
+    );
   return {
     worldId: identifier(v.worldId, "worldId"),
     dimension: identifier(v.dimension, "dimension"),
     projectId: identifier(v.projectId, "projectId"),
     taskId: identifier(v.taskId, "taskId"),
+    ...(v.blueprintRevision === undefined
+      ? {}
+      : {
+          blueprintRevision: integer(
+            v.blueprintRevision,
+            "blueprintRevision",
+            1,
+            Number.MAX_SAFE_INTEGER,
+          ),
+        }),
     status: v.status as TaskState,
     detail: text(v.detail, "detail", 4000),
     ...(v.observed === undefined ? {} : { observed: v.observed }),

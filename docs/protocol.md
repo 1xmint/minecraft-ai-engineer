@@ -12,7 +12,11 @@ rotation:0|90|180|270,projectId?:string,maxSize?:{x,y,z}}
 Response: {blueprint:Blueprint,message:string,projectId:string}
 POST /v1/observe — {worldId,dimension,region:{min,max},blocks:[{pos,state}],tick}
 GET /v1/projects?worldId=... — {projects:[...]}
-POST /v1/checkpoint — {worldId,dimension,projectId,taskId,status,detail,observed?,verified?}
+POST /v1/checkpoint — {worldId,dimension,projectId,taskId,status,detail,blueprintRevision?,observed?,verified?}
+Functional evidence requires a positive blueprintRevision matching the current
+stored blueprint. Stale revision reports are rejected. New revisions, changed
+world observations, and fresh checkpoints invalidate previous functional evidence;
+historical reports remain in the audit log.
 GET /v1/health — {protocol:1,status:'ok'} (also authenticated).
 
 Blueprint format (coordinates relative unless stated):

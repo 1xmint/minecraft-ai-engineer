@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { MemoryStore } from "../companion/src/memory.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
@@ -24,6 +25,85 @@ const input: DesignRequest = {
   anchor: { x: 1, y: 64, z: 1 },
   rotation: 0,
 };
+
+test("new design revisions, observed changes and fresh checkpoints invalidate old functional evidence", () => {
+  const directory = mkdtempSync(join(tmpdir(), "mce-stale-evidence-"));
+  const file = join(directory, "memory.sqlite");
+  const store = new MemoryStore(file),
+    reader = new DatabaseSync(file, { readOnly: true });
+  try {
+    const blueprint = store.saveDesign(input, makeReferenceBlueprint(input));
+    const report = {
+      worldId: input.worldId,
+      dimension: input.dimension,
+      projectId: blueprint.projectId,
+      taskId: "functional-test",
+      blueprintRevision: blueprint.revision,
+      status: "COMPLETED" as const,
+      detail: "Lamp passed actual tick checks",
+      verified: { test: "off-on-off", passed: true },
+    };
+    const evidence = () =>
+      (
+        reader
+          .prepare("SELECT verified FROM tasks WHERE id='functional-test'")
+          .get() as { verified: string | null }
+      ).verified;
+    store.checkpoint(report);
+    assert.notEqual(evidence(), null);
+    store.saveDesign(
+      { ...input, projectId: blueprint.projectId },
+      makeReferenceBlueprint({ ...input, projectId: blueprint.projectId }),
+    );
+    assert.equal(store.projects(input.worldId)[0]?.status, "PAUSED");
+    assert.equal(evidence(), null);
+    assert.throws(() => store.checkpoint(report));
+    report.blueprintRevision = 2;
+    store.checkpoint(report);
+    assert.notEqual(evidence(), null);
+    const region = { min: { x: 0, y: 64, z: 0 }, max: { x: 0, y: 64, z: 0 } };
+    store.recordObservation({
+      worldId: input.worldId,
+      dimension: input.dimension,
+      region,
+      blocks: [{ pos: region.min, state: "minecraft:stone" }],
+      tick: 10,
+    });
+    store.recordObservation({
+      worldId: input.worldId,
+      dimension: input.dimension,
+      region,
+      blocks: [{ pos: region.min, state: "minecraft:air" }],
+      tick: 11,
+    });
+    assert.equal(evidence(), null);
+    const { blueprintRevision: _revision, ...unversioned } = report;
+    assert.throws(() => store.checkpoint(unversioned));
+    assert.throws(() => validateCheckpoint(unversioned));
+    assert.throws(() =>
+      validateCheckpoint({ ...report, blueprintRevision: 0 }),
+    );
+    assert.equal(store.projects(input.worldId)[0]?.status, "PAUSED");
+    store.checkpoint(report);
+    const { verified: _verified, ...fresh } = report;
+    store.checkpoint({
+      ...fresh,
+      status: "EXECUTING",
+      detail: "Player requested a correction",
+    });
+    assert.equal(evidence(), null);
+    assert.equal(
+      store
+        .audit(blueprint.projectId)
+        .filter((entry) => entry.kind === "checkpoint").length,
+      4,
+    );
+  } finally {
+    reader.close();
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("planner does not inherit API credentials, proxy endpoints, node hooks or companion token", () => {
   const env = plannerEnvironment("/pinned/codex", "/empty", {
@@ -59,7 +139,6 @@ test("planner does not inherit API credentials, proxy endpoints, node hooks or c
     "apps",
     "plugins",
     "hooks",
-    "codex_hooks",
     "plugin_hooks",
     "apply_patch_freeform",
     "view_image",

@@ -24,22 +24,18 @@ export const PLANNER_CONFIG: NonNullable<CodexOptions["config"]> = {
   features: {
     shell_tool: false,
     unified_exec: false,
-    experimental_use_unified_exec_tool: false,
     apply_patch_freeform: false,
     apps: false,
     plugins: false,
     plugin_hooks: false,
     hooks: false,
-    codex_hooks: false,
     view_image: false,
     multi_agent: false,
-    collab: false,
     js_repl: false,
     browser_use: false,
     computer_use: false,
     image_generation: false,
     memories: false,
-    memory_tool: false,
     skill_search: false,
     code_mode: false,
     code_mode_host: false,
@@ -151,7 +147,9 @@ export class CodexPlanningProvider implements PlanningProvider {
           event.type === "item.updated" ||
           event.type === "item.completed"
         ) {
-          if (!["agent_message", "reasoning"].includes(event.item.type)) {
+          if (
+            !["agent_message", "reasoning", "error"].includes(event.item.type)
+          ) {
             controller.abort();
             throw new RequestError(
               "Planner attempted a prohibited tool action. Planning stopped.",

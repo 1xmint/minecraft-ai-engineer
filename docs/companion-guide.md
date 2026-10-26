@@ -44,6 +44,10 @@ while the companion is stopped to preserve memory; it contains a service token,
 so keep backups private. Mod authorization and write-ahead journals are owned by
 the mod rather than this service.
 
+Functional checkpoint reports must carry `blueprintRevision` matching the latest
+stored design. Stale reports are rejected. Revision changes and observed world
+changes clear current functional evidence; old reports remain in the audit log.
+
 See [protocol](protocol.md) for requests and response formats. There is no
 endpoint for running commands or modifying the world. Future providers can
 implement `PlanningProvider` without replacing the game adapter.

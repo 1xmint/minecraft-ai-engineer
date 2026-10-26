@@ -107,6 +107,13 @@ export function createCompanionServer(options: ServerOptions) {
           );
         // Check fit before spending subscription quota.
         makeReferenceBlueprint(input);
+        // Body parsing yields to other requests. Acquire the single planning
+        // slot only after that await and immediately before invoking a provider.
+        if (planning)
+          throw new RequestError(
+            "Another planning request is active. Wait or cancel it before retrying.",
+            409,
+          );
         const controller = new AbortController();
         controllers.add(controller);
         planning = true;

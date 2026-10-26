@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import type { AddressInfo } from "node:net";
+import { request as httpRequest } from "node:http";
 import { MemoryStore } from "../companion/src/memory.js";
 import { createCompanionServer } from "../companion/src/server.js";
 import {
@@ -94,10 +95,28 @@ test("browser and rebinding requests cannot invoke planning", async () => {
     (await post("/v1/design", request, { Origin: "http://malicious.invalid" }))
       .status >= 400,
   );
-  assert.ok(
-    (await post("/v1/design", request, { Host: "malicious.invalid" })).status >=
-      400,
-  );
+  // fetch normalizes Host to the URL; use a real native HTTP request to prove
+  // the server rejects the malicious Host header that would reach it.
+  const status = await new Promise<number>((resolve, reject) => {
+    const exchange = httpRequest(
+      `${base}/v1/design`,
+      {
+        method: "POST",
+        headers: {
+          Host: "malicious.invalid",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+      (response) => {
+        response.resume();
+        response.on("end", () => resolve(response.statusCode ?? 0));
+      },
+    );
+    exchange.once("error", reject);
+    exchange.end(JSON.stringify(request));
+  });
+  assert.equal(status, 403);
   assert.equal(calls, previous);
 });
 
