@@ -48,3 +48,79 @@ Test off->on->off using scheduled ticks. Test only
 this curated circuit and restore input; never infer arbitrary circuit validity.
 Blueprints can be structurally valid but remain functionally untested until
 the actual mod records game test evidence for that project and revision.
+
+## Server gateway v2 — multiplayer foundation
+
+V2 uses the same native loopback/Host/Origin/body limits and server-private
+bearer token. It is a Fabric-to-companion gateway, not a player HTTP API.
+Fabric derives the actor from its authenticated Minecraft connection and remains
+the only permission/execution authority. Node mirrors server assertions for
+privacy and stale-result rejection; it never grants a player world access.
+V1 remains for the historical single-player release and is not used by the
+multiplayer gateway.
+
+Every project operation carries:
+
+```json
+{
+  "context": {
+    "serverId": "server-namespace",
+    "serverEpoch": "current-boot-uuid",
+    "actorId": "11111111-1111-4111-8111-111111111111",
+    "projectId": "project-uuid",
+    "projectRevision": 1,
+    "authorizationRevision": 1,
+    "requestId": "unique-operation-uuid"
+  }
+}
+```
+
+POST `/v2/server/open` accepts `{serverId,serverEpoch}` and responds with
+`{protocol:2,status:'ready',serverId,serverEpoch}`. Registration is live-process
+state: after a companion restart, Fabric must reopen and synchronize projects.
+Previously retired epochs cannot be reopened, including after service restart.
+A new registration pauses old task mirrors, invalidates evidence and aborts
+queued/running old planning requests. Ownership/history remain durable.
+
+POST `/v2/project` accepts the context plus `worldId`, `dimension`, optional
+`name`/`blueprint`, and `members:[{actorId,role,canPlan}]`. Role is lowercase
+`owner`, `editor` or `viewer`, with exactly one owner and explicit `canPlan`.
+The first synchronization is owner-authored; editor/owner updates must match
+the current membership. Only an existing owner can mirror changed membership;
+the trusted Fabric server may assert `isOperator:true` for an administrator.
+Changed membership requires a higher authorization revision. Blueprint records
+are immutable, and a geometry change requires a higher project revision.
+An optional minimal Java blueprint is normalized to the typed format above;
+actual block-registry validation still belongs to Minecraft.
+
+POST `/v2/checkpoint` and `/v2/observe` accept the context plus their v1 body
+fields. A checkpoint must match the current world/project and revision, and
+functional evidence requires its synchronized intended blueprint. Changes,
+revocation and fresh checkpoints clear stale functional evidence while audit
+records remain. Request IDs for mutating operations are one-use, even after
+restart. A retry must be a new explicit operation, not replayed authority.
+
+POST `/v2/project/read` accepts context and returns the authorized project and
+current blueprint. GET `/v2/projects?serverId=...&serverEpoch=...&actorId=...&worldId=...`
+returns only that actor's current project memberships. Equal project UUIDs in
+different server namespaces do not share data. These read routes still require
+the private server bearer token; player UUID query fields are not authentication.
+
+POST `/v2/design` accepts context plus the v1 design fields, `modelAuthorized:true`
+and `isOperator:true`. Initially only a mirrored owner with `canPlan` may request
+operator-owned planning. This technical boundary does **not** establish that
+one subscription can serve arbitrary multiplayer users. General shared account
+access stays disabled pending the eligibility decision in STATE.md.
+
+One fair queue serializes v1/v2 inference. At most eight requests wait, with
+one waiting request per actor. Defaults cap v2 planning to four starts per actor
+per minute and 24 per server per hour; counters survive service restart. Queued
+work rechecks epoch, membership and both revisions before invoking the provider,
+and again before returning. Cancellation/revocation discards late replies.
+
+A design result returns the unchanged request context, a proposal at
+`projectRevision+1`, message and projectId. It records an audit proposal only.
+Fabric must validate and accept the proposal, then synchronize the new revision
+through `/v2/project`; the model response cannot advance canonical authority.
+Every response is protocol 2. Invalid/stale authority returns 403/409, exhausted
+budgets 429, and cancelled/unavailable planning 503. No route mutates Minecraft.

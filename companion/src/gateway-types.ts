@@ -188,6 +188,43 @@ export function serverBlueprint(
   const provenance = object(v.provenance);
   if (provenance.kind !== "curated" || provenance.minecraft !== "26.3")
     throw new RequestError("Unsupported blueprint provenance.");
+  if (
+    v.ports !== undefined &&
+    (!Array.isArray(v.ports) || v.ports.length > 128)
+  )
+    throw new RequestError("Invalid blueprint ports.");
+  const ports = ((v.ports ?? []) as unknown[]).map((entry) => {
+    const port = object(entry),
+      pos = position(port.pos);
+    if (port.kind !== "input" && port.kind !== "output")
+      throw new RequestError("Invalid port kind.");
+    if (
+      pos.x < min.x ||
+      pos.x > max.x ||
+      pos.y < min.y ||
+      pos.y > max.y ||
+      pos.z < min.z ||
+      pos.z > max.z
+    )
+      throw new RequestError("Port lies outside blueprint bounds.");
+    return {
+      name: text(port.name, "port name", 128),
+      pos,
+      kind: port.kind as "input" | "output",
+    };
+  });
+  if (
+    v.tests !== undefined &&
+    (!Array.isArray(v.tests) || v.tests.length > 128)
+  )
+    throw new RequestError("Invalid blueprint tests.");
+  const tests = ((v.tests ?? []) as unknown[]).map((entry) => {
+    const expected = object(entry);
+    return {
+      id: identifier(expected.id, "test id"),
+      description: text(expected.description, "test description", 4000),
+    };
+  });
   return {
     schemaVersion: 1,
     id: identifier(v.id, "blueprint id"),
@@ -206,8 +243,8 @@ export function serverBlueprint(
     stages,
     bounds: { min, max },
     resources,
-    ports: [],
-    tests: [],
+    ports,
+    tests,
     provenance: {
       kind: "curated",
       template: identifier(provenance.template, "template"),

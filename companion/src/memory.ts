@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { GatewayMemory } from "./gateway-memory.js";
 import {
   type Blueprint,
   type Checkpoint,
@@ -11,6 +12,7 @@ import {
 
 export class MemoryStore {
   private readonly db: DatabaseSync;
+  readonly gateway: GatewayMemory;
   constructor(
     dbPath: string,
     private readonly blueprintsDir?: string,
@@ -38,6 +40,7 @@ export class MemoryStore {
       throw new Error(
         "Unsupported project database version. Preserve the file and upgrade the service.",
       );
+    this.gateway = new GatewayMemory(this.db);
   }
   private projectScope(
     projectId: string,
