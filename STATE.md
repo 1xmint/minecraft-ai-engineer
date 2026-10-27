@@ -209,6 +209,23 @@ item getters. After the user's independent vanilla open, require exact new menu/
 backings and null loot tables before stillValid/item access. First natural loot
 opening may generate loot through vanilla; inspection must never do so itself.
 
+## Final phase review: undo context blocker
+
+GPT-6.1-Sol found one P1 before merge: undo selects another component before
+acquire/preflight but retains old verification/baseline/dependencies/operation
+metadata. A denied undo can give untested B the selected A pass on a later save;
+a crash during B undo can persist A baseline and become unloadable. No other
+confirmed blocker in final #2 review. Root wrote public rejection proofs first:
+build A/B, test A, deny B-overlap UNDO, then fail B preflight via a player edit;
+selection/labels/evidence/recovery fields and journals must remain unchanged.
+Proposed transactional beginUndo phase was independently challenged and accepted:
+no saves/archive before acquire/preflight; restore original context on rejection;
+no authority restoration. After success, archive original scope, preserve its
+label, clear old recovery state, select target with untested label and persist its
+WAL before writes. Never roll back after commit-attempt, including ambiguous save
+failure. A production beginUndo interruption followed by actual third server boot
+will prove isolated durable recovery. Implementation/proof still pending.
+
 ## Next slices
 
 1. Current C2/scoped-memory/block-view proofs are green; do not repeat without new

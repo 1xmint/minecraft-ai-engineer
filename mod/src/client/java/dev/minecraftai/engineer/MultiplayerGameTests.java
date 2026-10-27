@@ -282,6 +282,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRevisionFlow(context,server);
             targetedPerceptionFlow(context,server);
             inventoryFlow(context,server);
+            undoContextFailureFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -885,6 +886,40 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Refill current private cache so the later real-server restart rejection is meaningful.
         MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
         write("inventory-native.done","passed");
+    }
+
+    private static void assertUndoContextUnchanged(EngineeringSession project,JsonObject before) {
+        check(project.activeComponent.equals(before.get("activeComponent").getAsString()) && project.state.equals(before.get("status").getAsString())
+            && project.verified.equals(before.get("verified").getAsString()),"Rejected cross-component undo preserves original selection and verification");
+        var now=saved(project);
+        for(String key:java.util.List.of("controller","activeOperation","operationKind","originDiagnosis","baseline","dependencies","repairTargets","pendingPlacement","undoRequested","undoOperation","functionalEvidence","functionalScope"))
+            check(java.util.Objects.equals(now.get(key),before.get(key)),"Rejected undo preserves saved field "+key);
+        check(!assignment(project,"b").get("verified").getAsString().startsWith("passed:"),"B cannot inherit A's functional pass");
+        check(now.getAsJsonArray("componentAssignments").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals("b")).noneMatch(value->value.get("verified").getAsString().startsWith("passed:")),"A later real public save never persists A's label onto B");
+    }
+    private static void undoContextFailureFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 180 100 0");send(context,"engineer select2 190 101 0");
+        for(String spec:java.util.List.of("a root signal-lamp 180 100 0","b root signal-lamp 188 100 0")) {MESSAGES.clear();send(context,"engineer component add "+spec);expectChat(context,"Added component");}
+        server.runCommand("tp Alice 185 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos().offset(2,0,2))));
+        for(String id:java.util.List.of("a","b")){send(context,"engineer component build "+id);server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").state.equals("COMPLETED"));}
+        send(context,"engineer component test a");server.waitFor(s->session(s,"Alice").activeComponent.equals("a") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");player(s,"Bob").closeContainer();commandAs(s,"Bob","engineer project new");
+            commandAs(s,"Bob","engineer select1 188 100 0");commandAs(s,"Bob","engineer select2 190 101 0");});
+        var deniedBefore=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"has not granted");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals("a") && project.verified.startsWith("passed:") && project.journal.size()==12 && project.delegation==null,"Denied undo cannot select B, copy A's pass or mutate the journal");});
+        server.runOnServer(s->{commandAs(s,"Alice","engineer next");assertUndoContextUnchanged(session(s,"Alice"),deniedBefore);});
+        server.runOnServer(s->{commandAs(s,"Bob","engineer project share Alice editor");commandAs(s,"Bob","engineer project permission Alice undo true");
+            var project=session(s,"Alice");var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,2));});
+        var preflightBefore=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Undo blocked by later edit");
+        server.runOnServer(s->{commandAs(s,"Alice","engineer next");var project=session(s,"Alice");assertUndoContextUnchanged(project,preflightBefore);check(project.journal.size()==12 && project.delegation==null,"Failed preflight releases fresh authority without changing either component");
+            var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,1));});
+        write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("undo-context-failure.done","passed");
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
 
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
