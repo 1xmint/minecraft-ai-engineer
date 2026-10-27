@@ -23,13 +23,15 @@ The 16-entry operation journal survived; restored metadata granted no lease or
 connection. Later player removal of a recorded block blocked delegate-back.
 All tests ran on GitHub; locally only scoped compilation and formatting ran.
 
-No merge/release for #2 yet. A proof-first native service-restart request is now
-written: while B is handed to the player, it asks the CI harness to stop the
-actual companion, start a distinct PID on the same private database/config, then
-confirms HTTP checkpointing and retained progress without authority. The harness
-does not handle this request yet, so the first run should time out at
-companion-restart.done. Next action: implement that bounded actual process
-restart in scripts/ci/multiplayer.sh; never replace it with a marker-only fake.
+No merge/release for #2 yet. Proof-first CI 40543178771 reached the actual
+companion-restart.request barrier while B was handed to the player. With no
+handler, Alice waited and Bob eventually timed out waiting for finish; retained
+logs/request confirm this expected missing-harness failure. scripts/ci/multiplayer.sh
+now stops/waits for the actual companion child, checks its exit, starts a distinct
+PID on the same private SQLite/config directory, waits for a new readiness line,
+and atomically acknowledges the request. Local bash -n passes; actual service
+restart remains unproven until the next CI run passes. Never replace it with a
+marker-only fake. Next:
 Then complete C2 service restart and component-scoped
 diagnosis/repair/delay revisions with propagated dependency bases; then finish C3
 perception and scoped companion invalidation. Broader stale-assignment/revision
