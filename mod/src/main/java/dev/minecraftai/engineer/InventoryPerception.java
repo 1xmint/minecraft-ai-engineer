@@ -75,8 +75,11 @@ final class InventoryPerception {
     void container(EngineeringSession s) {
         Frame f=start(s);f.waiting=true;message(f,"Open a vanilla container in this workspace within 20 seconds; inspection is private and read-only.");
     }
-    void materials(EngineeringSession s) {
-        Frame f=start(s);Blueprint intended=s.blueprint==null?null:s.executionBlueprint();
+    void materials(EngineeringSession s) {materials(s,s.activeComponent);}
+    void materials(EngineeringSession s,String component) {
+        s.access.require(s.actor(),ProjectAccess.Permission.VIEW);
+        Blueprint intended=s.blueprint==null?null:ComponentTree.component(s.blueprint,component);
+        Frame f=start(s);
         f.future=Companion.gateway(s,"/v2/inventory/read",new JsonObject(),f.actor);
         f.future.whenComplete((reply,error)->manager.server.execute(()->{
             if(!live(f)){finish(f);return;}
@@ -89,7 +92,7 @@ final class InventoryPerception {
                 var totals=new TreeMap<String,Long>();
                 for(var value:snapshot.getAsJsonArray("items")){var item=value.getAsJsonObject();String id=item.get("id").getAsString();long count=item.get("count").getAsBigDecimal().longValueExact();
                     if(!id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+") || id.length()>128 || count<1 || totals.putIfAbsent(id,count)!=null || totals.size()>128)throw new IllegalStateException("Invalid private item totals");}
-                message(f,"Private materials ("+snapshot.get("source").getAsString()+" snapshot remembered "+remembered.get("ageMs").getAsLong()/1000+"s ago, observed at tick "+snapshot.get("tick").getAsLong()+"):");
+                message(f,"Private materials for "+component+" ("+snapshot.get("source").getAsString()+" snapshot remembered "+remembered.get("ageMs").getAsLong()/1000+"s ago, observed at tick "+snapshot.get("tick").getAsLong()+"):");
                 if(intended==null){message(f,summary(totals));return;}
                 for(var resource:intended.source().getAsJsonObject("resources").entrySet()){
                     long have=totals.getOrDefault(resource.getKey(),0L),need=resource.getValue().getAsLong();
@@ -139,6 +142,7 @@ final class InventoryPerception {
         if(menu instanceof ChestMenu chest) {
             source=chest.getContainer();
             if(source instanceof CompoundContainer compound) {
+                if(source.getClass()!=CompoundContainer.class)throw new IllegalStateException("Unsupported modded storage wrapper");
                 var state=f.project.level().getBlockState(c.pos());
                 if(!(c.entity() instanceof ChestBlockEntity) || !(state.getBlock() instanceof ChestBlock) || state.getValue(ChestBlock.TYPE)==ChestType.SINGLE)throw new IllegalStateException("ambiguous double-chest backing");
                 BlockPos partner=ChestBlock.getConnectedBlockPos(c.pos(),state);readable(f,partner);

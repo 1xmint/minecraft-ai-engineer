@@ -366,6 +366,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"diamond=4");
         check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private inspection never reads custom item names");
         write("inventory-bob-private.done","passed");
+        awaitFile(context,"inventory-bob-queue");
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");write("inventory-bob-queued","ready");
+        awaitFile(context,"inventory-bob-revoked");
+        await(context,()->view(context)==null,"Private inventory grant revocation clears Bob's project view");
+        context.runOnClient(client->{client.player.closeContainer();client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(new BlockPos(140,100,0)),net.minecraft.core.Direction.UP,new BlockPos(140,100,0),false));});
+        context.waitTicks(6);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Revoked container request never reveals items even when vanilla permits a normal open");
+        write("inventory-revocation.done","passed");
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -487,8 +496,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(receipt.get("protocol").getAsInt()==2,"Actual dedicated-world observations must reach the private companion");
     }
     private static JsonObject saved(EngineeringSession project){try{return JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(java.io.IOException error){throw new AssertionError(error);}}
-    private static void expectChat(ClientGameTestContext context,String text){
-        long deadline=System.currentTimeMillis()+20_000;
+    private static void expectChat(ClientGameTestContext context,String text){expectChat(context,text,20_000);}
+    private static void expectChat(ClientGameTestContext context,String text,long timeoutMillis){
+        long deadline=System.currentTimeMillis()+timeoutMillis;
         while(System.currentTimeMillis()<deadline){if(MESSAGES.stream().anyMatch(message->message.contains(text)))return;context.waitTicks(1);}
         throw new AssertionError("Expected native command response: "+text+"; received "+MESSAGES);
     }
@@ -810,7 +820,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
         server.runOnServer(s->check(net.minecraft.world.item.ItemStack.listMatches(ownBefore,inventoryCopies(player(s,"Alice").getInventory())),"Private own-inventory observation preserves every stack/component"));
         check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private facts exclude custom names/NBT");
-        MESSAGES.clear();send(context,"engineer materials");expectChat(context,"Private materials");
+        MESSAGES.clear();send(context,"engineer materials lamp");expectChat(context,"Private materials for lamp");
         var chestBefore=server.computeOnServer(s->{var out=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
             out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
             out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));return out;});
@@ -835,15 +845,45 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Changed project cancels the container request before item sampling/delivery");
         context.runOnClient(client->client.player.closeContainer());send(context,"engineer project use "+inventoryProject);
         server.waitFor(s->session(s,"Alice").projectId.toString().equals(inventoryProject));
+        server.runCommand("tp Alice 143.5 101 3 180 25");
+        for(int x:java.util.List.of(143,145))server.runCommand("setblock "+x+" 100 0 minecraft:chest");
+        server.runOnServer(s->{for(int x:java.util.List.of(143,145)) {
+            var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(x,100,0));
+            chest.setLootTable(net.minecraft.world.level.storage.loot.BuiltInLootTables.SPAWN_BONUS_CHEST);chest.setLootTableSeed(73L);
+        }});
         MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
-        int expiresAfter=server.computeOnServer(s->s.getTickCount()+401);server.runCommand("tick sprint 410");server.waitFor(s->s.getTickCount()>expiresAfter);
-        naturalStorageOpen(context,server,new BlockPos(140,100,0));context.waitTicks(5);
+        expectChat(context,"Private inventory request cancelled or expired",35_000);
+        server.runOnServer(s->{for(int x:java.util.List.of(143,145))check(((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(x,100,0))).getLootTable()!=null,"Queued/expired inspection never unpacks unopened loot");});
+        naturalStorageOpen(context,server,new BlockPos(143,100,0));context.waitTicks(5);
         check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Expired natural-container request reads and sends no items");
+        context.runOnClient(client->client.player.closeContainer());
+        server.runOnServer(s->check(((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(143,100,0))).getLootTable()==null
+            && ((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(145,100,0))).getLootTable()!=null,"Only the normal first-opened control chest has generated loot"));
+        var vanillaLoot=server.computeOnServer(s->inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(143,100,0))));
+        var cached=server.computeOnServer(s->Companion.gateway(session(s,"Alice"),"/v2/inventory/read",new JsonObject(),player(s,"Alice").getUUID())).get(30,java.util.concurrent.TimeUnit.SECONDS);
+        check(Blueprint.pos(cached.getAsJsonObject("inventory").getAsJsonObject("snapshot").getAsJsonArray("containers").get(0).getAsJsonObject()).equals(new BlockPos(142,100,0)),"Rejected selection/expiry never replace the previous private crafter snapshot");
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(145,100,0));expectChat(context,"Private inventory remembered");
+        server.runOnServer(s->{var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(145,100,0));
+            check(chest.getLootTable()==null && net.minecraft.world.item.ItemStack.listMatches(vanillaLoot,inventoryCopies(chest)),"A real first loot opening has identical items with and without the observer");});
         context.runOnClient(client->client.player.closeContainer());
         send(context,"engineer project share Bob viewer");server.runOnServer(s->{var bob=player(s,"Bob");bob.getInventory().clearContent();
             var item=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND,4);item.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));bob.getInventory().setItem(0,item);});
         MESSAGES.clear();write("inventory-bob-project",inventoryProject);awaitFile(context,"inventory-bob-private.done");context.waitTicks(3);
         check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered") || message.contains("diamond=4")),"Bob's private result is not sent to the project controller Alice");
+        server.runCommand("tp Bob 140.5 101 3 180 25");
+        server.runOnServer(s->{var bob=player(s,"Bob");bob.getAbilities().flying=true;bob.onUpdateAbilities();});
+        write("inventory-bob-queue","ready");awaitFile(context,"inventory-bob-queued");
+        send(context,"engineer project revoke Bob");
+        server.waitFor(s->!session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
+        write("inventory-bob-revoked","ready");awaitFile(context,"inventory-revocation.done");
+        server.waitFor(s->player(s,"Bob").containerMenu instanceof net.minecraft.world.inventory.ChestMenu);
+        server.runOnServer(s->{var after=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));
+            check(net.minecraft.world.item.ItemStack.listMatches(chestBefore,after),"Permission rejection does not alter natural gameplay or storage contents");});
+        // Refill current private cache so the later real-server restart rejection is meaningful.
+        MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
         write("inventory-native.done","passed");
     }
 

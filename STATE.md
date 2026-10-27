@@ -187,6 +187,23 @@ on 400 worldticks or20 monotonic seconds; no frames/snapshots enter world/projec
 saves. New native proof also requires private cache absence after the third actual
 server boot, fresh recapture, and zero private diamond/custom-name data anywhere
 in SQLite. No Minecraft implementation runtime proof yet; CI must prove it.
+CI40592614026 passed Companion/three existing checks and actual own/material,
+double-chest and crafter reads with unchanged items. The native expiry fixture
+failed because its default wait was10s for a20s product timeout; tick sprint did
+not bypass the test framework's pacing. Root removed sprint and awaits the real
+expiry message up to35s, then opens storage and asserts no capture. Product TTL
+is unchanged. Additional native proof revokes Bob's view grant after queueing,
+permits vanilla's normal chest open, rejects AI capture, preserves all stacks,
+and refills Alice's current cache before the actual third-boot stale-cache test.
+The expiry proof also leaves two seeded bonus-loot chests untouched, verifies
+both loot tables remain unresolved, then compares a normal first open against an
+observed first open with the same vanilla seed. Exact stacks/components must
+match. This distinguishes independent vanilla loot generation from an observer
+side effect; no synthetic menu or getter forces loot before a natural open.
+Private materials accepts an optional leaf ID, so a human can compare B's needs
+while the assistant works on A. It captures and labels that canonical leaf before
+the asynchronous private read. Unknown compound-container subclasses are rejected
+before any overridden backing method; only the exact vanilla wrapper is supported.
 Callback records target metadata only, returns PASS, never creates a menu or calls
 item getters. After the user's independent vanilla open, require exact new menu/
 backings and null loot tables before stillValid/item access. First natural loot

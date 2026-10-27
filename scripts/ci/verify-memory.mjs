@@ -352,6 +352,7 @@ try {
   for (const marker of [
     "inventory-native.done",
     "inventory-bob-private.done",
+    "inventory-revocation.done",
     "inventory-recovery.done",
   ])
     assert.equal(
@@ -364,7 +365,7 @@ try {
     )
     .get(server.serverId).count;
   assert.ok(
-    inventoryCaptures >= 5,
+    inventoryCaptures >= 7,
     "Actual private own/double-chest/crafter/other-actor/restart captures must reach the companion",
   );
   for (const table of db
