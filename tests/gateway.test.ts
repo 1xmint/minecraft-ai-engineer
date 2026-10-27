@@ -949,3 +949,66 @@ test("the bounded planning queue is fair, serial and cancellation aware", async 
   assert.equal(maximum, 1);
   assert.deepEqual(trace, ["a0", "b", "a1"]);
 });
+
+test("targeted observations bind self perception to the authenticated gateway actor before claiming report order", async () => {
+  const f = await fixture();
+  try {
+    await f.open();
+    await f.sync();
+    const pos = { x: 0, y: 100, z: 0 };
+    const observation = {
+      worldId: design.worldId,
+      dimension: design.dimension,
+      tick: 1,
+      region: { min: pos, max: pos },
+      blocks: [{ pos, state: "minecraft:stone" }],
+      perception: {
+        schemaVersion: 1,
+        kind: "block",
+        actorId: EDITOR,
+        player: {
+          position: { x: 0.5, y: 102, z: 4 },
+          eye: { x: 0.5, y: 103.62, z: 4 },
+          look: { x: 0, y: -0.6, z: -0.8 },
+        },
+        target: pos,
+        differences: { missing: 0, changed: 0, unplanned: 0 },
+      },
+    };
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 1,
+          ...observation,
+        })
+      ).status,
+      403,
+      "An otherwise-valid request cannot attribute another player's position to its authenticated actor",
+    );
+    observation.perception.actorId = OWNER;
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context(),
+          reportSequence: 1,
+          ...observation,
+        })
+      ).status,
+      200,
+      "The rejected actor mismatch did not claim report order",
+    );
+    assert.equal(
+      (
+        await f.post("/v2/observe", {
+          context: context({ actorId: EVE }),
+          reportSequence: 2,
+          ...observation,
+        })
+      ).status,
+      403,
+    );
+  } finally {
+    await f.close();
+  }
+});

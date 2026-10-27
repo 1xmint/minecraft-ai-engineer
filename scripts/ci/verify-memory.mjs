@@ -291,6 +291,64 @@ try {
     for (const vector of evidence)
       assert.equal(vector.outputs.light, vector.inputs.enable);
   }
+  assert.equal(
+    readFileSync(`${coordination}/targeted-perception.done`, "utf8").trim(),
+    "passed",
+  );
+  const perceptionProject = readFileSync(
+    `${coordination}/targeted-perception-project`,
+    "utf8",
+  ).trim();
+  assert.equal(perceptionProject, revisionProject);
+  const owner = JSON.parse(
+    db
+      .prepare(
+        "SELECT members FROM gateway_projects WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, perceptionProject).members,
+  ).find((member) => member.role === "owner").actorId;
+  for (const kind of ["block", "view"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? AND json_extract(document,'$.perception.kind')=? ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, perceptionProject, kind);
+    assert.ok(
+      entry,
+      `Actual ${kind} perception must survive the server/companion protocol`,
+    );
+    const captured = JSON.parse(entry.document);
+    assert.equal(captured.perception.schemaVersion, 1);
+    assert.equal(captured.perception.actorId, owner);
+    assert.equal(captured.blocks.length, 7);
+    assert.ok(Number.isFinite(captured.perception.player.position.x));
+    assert.ok(
+      Math.abs(
+        Math.hypot(
+          ...["x", "y", "z"].map(
+            (axis) => captured.perception.player.look[axis],
+          ),
+        ) - 1,
+      ) < 0.01,
+    );
+    if (kind === "block") {
+      assert.deepEqual(captured.perception.target, { x: 109, y: 101, z: 0 });
+      assert.ok(
+        captured.blocks
+          .find(
+            (block) =>
+              block.pos.x === 109 && block.pos.y === 101 && block.pos.z === 0,
+          )
+          .state.includes("delay=4"),
+      );
+      assert.equal(captured.perception.differences.changed, 0);
+    } else
+      assert.ok(
+        ["north", "south", "east", "west", "up", "down"].includes(
+          captured.perception.face,
+        ),
+      );
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -304,6 +362,7 @@ try {
       recoveredRepairProject: repairProject,
       testedProjectComponents: ["a", "b", "c"],
       revisedComponent: "b:delay4",
+      targetedPerception: ["block", "view"],
     }),
   );
 } finally {

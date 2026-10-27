@@ -11,16 +11,22 @@ restart recovery, three catalog mechanisms and snapshot-bound repair. The old
 published v0.1.0-alpha.1 remains a solo reference, not the current source build.
 Neither full phase 1 nor phase 2 is complete.
 
-Building #2 on **phase/4-component-collaboration**, draft PR #12. Current pushed
-runtime a544251 passed four checks including new scoped-memory proofs. Dedicated
-CI 40583311819 passed the new revision flow but timed out at third-boot legacy
-component recovery: test refused its isolation margin. Client had stayed at the
-origin, outside this old project's margin loading range. Root now moves the
-actual player back and waits for its full read footprint to load before positive
-recovery; production refusal is unchanged and now distinguishes unloaded from
-occupied margins. Native proof/SQL must run again. Local work also adds read-only
-component info, native message acceptance and user/protocol docs; compilation passes.
-No merge/release for #2; final independent review and full C3 perception remain.
+Building #2 on **phase/4-component-collaboration**, draft PR #12. Runtime
+**600b347 passed all five protected checks in CI 40584567109**. Root inspected
+actual native logs/markers, SQL proof and the constructed-component screenshot.
+Component info showed real materials/ports/test revision; component b4 revision,
+scoped repair/undo/testing, unaffected a's original vectors, service restart
+(PID3123 ->4352), legacy identity migration and third-boot recovery all passed.
+The positive recovery fixture now returns the player to the project and awaits
+loaded read dependencies; production refuses unknown margins and distinguishes
+unloaded from occupied coordinates. No safety check was relaxed.
+
+New uncommitted C3 proof-first work adds typed perception validation, actor-binding
+HTTP rejection, native block/view/unloaded acceptance and SQL metadata retention.
+Commands/DTOs are not implemented yet. No merge/release for #2; full perception,
+inventory and final independent review remain. GPT-6-Luna could not run the review
+because of the usage limit; GPT-6.1-Sol fallback is now reviewing only the proven
+C2/scoped-memory source. Do not claim final review complete before its result.
 
 C1: all five protected checks passed in CI 40539445528 (09d0d06) and 40536897959
 (b158881). Root inspected actual screenshots/logs/SQLite: nested composition,
@@ -32,7 +38,7 @@ A later player removal blocked delegate-back rather than being overwritten.
 C2: actual private companion restart passed dedicated CI 40544912152 with distinct
 old/new PIDs and native recovery/SQL proof. CI 40582347987 then passed all native
 component revision/repair/test/recovery markers, but its SQL verifier stopped on
-a root loop-variable typo. The verifier correction is in a544251; full data proof remains pending after the third-boot margin refusal above.
+a root loop-variable typo. The verifier correction and positive recovery fixture passed in 600b347 / CI 40584567109.
 That run also proved the updated graphics setup and integrated compatibility.
 All tests run on GitHub; locally only compilation, formatting and bash -n ran.
 
@@ -61,8 +67,8 @@ inspection. Preserve the full #3 and phase 2 roadmap below.
   order and canonical metadata. Ports are real leaf interfaces; metadata does
   not create or prove physical inter-module wires.
 - Commands: component add/group/depend/list/claim/build/diagnose/repair/revise/test.
-  Read-only info (materials, actual port coordinates, assignment/test identity) is
-  locally integrated and awaiting native acceptance. One AI task per project;
+  Read-only info shows materials, actual port coordinates and assignment/test
+  identity; native response acceptance passed in CI 40584567109. One AI task per project;
   humans can work in independent leaves. ComponentAssignments keeps granting
   actor, executor, generation, intended basis and status separate from authority.
   Version2 bases include transitive prerequisite intent; v1 records must match
@@ -85,10 +91,10 @@ inspection. Preserve the full #3 and phase 2 roadmap below.
 - Diagnosis proposals are ephemeral, actor/connection/epoch/revision/ACL/snapshot/
   TTL bound, now also assignment-generation/basis bound. Handoff clears proposals.
   Root/standalone diagnosis and same-kind allowlisted repair are proven. Composed
-  diagnose/repair/revise/test APIs are integrated; native acceptance is running.
+  diagnose/repair/revise/test APIs passed native/SQL acceptance in CI 40584567109.
 - Companion tasks use stable projectUUID:component IDs for composites. Scoped
   checkpoint results exist; component-aware companion invalidation is implemented
-  locally and awaits CI. All private memory stays
+  and proven in CI 40584567109. All private memory stays
   outside repository/world saves. No persisted metadata restores execution authority.
 
 ## Decision and Outcomes for #2
@@ -165,7 +171,7 @@ scope/basis fields surviving identity-changing legacy adoption. Conversion now
 clears results and rebuilds unassigned descriptions, preserving original source/
 backup/journal. New-format pending inputs must recover in their original project.
 Migration keeps changed bases stale even if their old label was only untested.
-CI 40582347987 native markers passed; CI 40583311819 reached third-boot recovery but refused an isolation margin. The positive fixture now awaits loaded chunks with a nearby actual player; full data proof remains pending.
+CI 40582347987 native markers passed; CI 40583311819 reached third-boot recovery but refused an isolation margin. Returning the actual player and awaiting loaded dependencies fixed the positive fixture; CI 40584567109 then passed full native/data proof.
 Independent GPT-6-Luna review hit the account usage limit and did not run; do not
 claim final review complete or merge before it is available.
 
@@ -193,6 +199,22 @@ to reuse each immutable blueprint identity when syncing unchanged revisions;
 new random IDs on ACL/restart sync would test an invalid server request. Local
 TypeScript checks and Companion CI 40583311819 pass. Full targeted
 player/view/inventory perception remains separate unfinished work.
+
+## Targeted perception acceptance (C3, next)
+
+Serves C3. Root wrote proof-first acceptance after CI 40584567109 proved
+600b347. New proofs require block/view observations to retain actual
+self-player position/eye/look, actor UUID, target/hit face and sampled geometry
+differences across the private server/companion protocol. Reject unknown fields,
+wrong actor attribution before claiming report order, uncovered/outside targets,
+invalid vectors and actual unloaded chunks without force-loading or guessed air.
+Native flow samples B's actual delay4 repeater plus six support/connection neighbors,
+drives a real server view ray and proves snapshots/journals stay unchanged on
+outside refusal. SQLite must retain both typed samples; plain observations stay
+wire-compatible. These commands/DTOs are not implemented yet; no acceptance claim.
+Inventory remains a later explicit, authenticated, read-only natural-container
+request with no names/NBT or automatic private-data sharing; final policy/API
+and independent review still need completion before claiming all of C3.
 
 ## Next proof/build steps
 

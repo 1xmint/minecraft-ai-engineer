@@ -280,6 +280,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             legacyRevisionFlow(context,server);
             componentFlow(context,server);
             componentRevisionFlow(context,server);
+            targetedPerceptionFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -708,6 +709,43 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer component revise b 4");expectChat(context,"already matches");
         server.runOnServer(s->{var current=saved(session(s,"Alice"));check(current.get("projectRevision").equals(noOp.get("projectRevision")) && current.getAsJsonArray("functionalEvidence").equals(noOp.getAsJsonArray("functionalEvidence")) && current.getAsJsonObject("functionalScope").equals(noOp.getAsJsonObject("functionalScope")),"A no-op component revision keeps intention identity and buffered evidence untouched");});
         write("component-revisions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("component-revisions.done","passed");
+    }
+
+    private static JsonObject observationSaved(EngineeringSession project) {
+        try{return JsonParser.parseString(Files.readString(project.file.resolveSibling(project.file.getFileName()+".snapshot.json"))).getAsJsonObject();}
+        catch(java.io.IOException failure){throw new AssertionError(failure);}
+    }
+    private static void targetedPerceptionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var prior=server.computeOnServer(s->session(s,"Alice").lastObservation);
+        int journal=server.computeOnServer(s->session(s,"Alice").journal.size());
+        MESSAGES.clear();send(context,"engineer inspect block 109 101 0");expectChat(context,"Targeted inspection");
+        server.waitFor(s->session(s,"Alice").lastObservation!=prior);
+        server.computeOnServer(s->session(s,"Alice").lastObservation).get(30,java.util.concurrent.TimeUnit.SECONDS);
+        server.runOnServer(s->{var project=session(s,"Alice");var snapshot=observationSaved(project);var facts=snapshot.getAsJsonObject("perception");
+            check(facts.get("kind").getAsString().equals("block") && facts.get("actorId").getAsString().equals(player(s,"Alice").getUUID().toString()),"Targeted facts belong to the authenticated requester");
+            check(Blueprint.pos(facts.getAsJsonObject("target")).equals(new BlockPos(109,101,0)) && snapshot.getAsJsonArray("blocks").size()==7,"Inspect the actual block and six immediate support/connection neighbors");
+            var relay=snapshot.getAsJsonArray("blocks").asList().stream().map(value->value.getAsJsonObject()).filter(value->Blueprint.pos(value.getAsJsonObject("pos")).equals(new BlockPos(109,101,0))).findFirst().orElseThrow();
+            check(relay.get("state").getAsString().contains("delay=4") && facts.getAsJsonObject("differences").get("changed").getAsInt()==0,"Actual repeater state and sampled geometry differences are retained");
+            check(facts.getAsJsonObject("player").getAsJsonObject("position").get("x").getAsDouble()==player(s,"Alice").getX(),"Perception captures the real requesting player's server position");
+            check(project.journal.size()==journal && project.verified.startsWith("passed:"),"Read-only targeted perception changes no construction or functional result");
+        });
+        var before=server.computeOnServer(s->observationSaved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer inspect block 99 101 0");expectChat(context,"outside");
+        server.runOnServer(s->check(observationSaved(session(s,"Alice")).equals(before),"An outside-workspace request writes no new snapshot"));
+        server.runCommand("tp Alice 109.5 102 4 180 40");
+        MESSAGES.clear();send(context,"engineer inspect view");expectChat(context,"Targeted inspection");
+        server.runOnServer(s->{var project=session(s,"Alice");var facts=observationSaved(project).getAsJsonObject("perception");
+            check(facts.get("kind").getAsString().equals("view") && project.contains(Blueprint.pos(facts.getAsJsonObject("target"))),"The real server view ray selects an actual block in the workspace");
+            check(facts.has("face") && facts.getAsJsonObject("player").getAsJsonObject("look").get("y").getAsDouble()<0,"The observed hit face and downward view direction are captured");
+        });
+        var oldProject=server.computeOnServer(s->session(s,"Alice").projectId);
+        write("targeted-perception-project",oldProject.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(oldProject));
+        send(context,"engineer select1 20000000 100 0");send(context,"engineer select2 20000002 101 0");
+        server.runOnServer(s->check(!session(s,"Alice").level().hasChunkAt(new BlockPos(20_000_000,100,0)),"The targeted unloaded fixture is actually unknown"));
+        MESSAGES.clear();send(context,"engineer inspect block 20000000 100 0");expectChat(context,"unloaded");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.level().hasChunkAt(new BlockPos(20_000_000,100,0)) && project.lastObservation==null,"A refused observation neither loads chunks nor sends guessed air to memory");});
+        write("targeted-perception.done","passed");
     }
 
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
