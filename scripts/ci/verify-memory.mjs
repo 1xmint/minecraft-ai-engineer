@@ -104,6 +104,50 @@ try {
     );
     catalogEvidence.push(template);
   }
+  assert.equal(
+    readFileSync(`${coordination}/repair-recovery.done`, "utf8").trim(),
+    "passed",
+  );
+  const repairProject = readFileSync(
+    `${coordination}/repair-project`,
+    "utf8",
+  ).trim();
+  const repairReports = db
+    .prepare(
+      "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' ORDER BY id",
+    )
+    .all(server.serverId, repairProject)
+    .map((entry) => JSON.parse(entry.document));
+  const testedDelays = new Set();
+  for (const report of repairReports.filter((entry) =>
+    entry.checkpoint.verified.startsWith("passed:"),
+  )) {
+    const intended = db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(server.serverId, repairProject, report.context.projectRevision);
+    const design = JSON.parse(intended.document);
+    assert.equal(design.provenance.template, "signal-lamp");
+    testedDelays.add(design.parameters.delay);
+    assert.ok(report.checkpoint.observed.testEvidence.length >= 3);
+    for (const vector of report.checkpoint.observed.testEvidence)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
+  assert.deepEqual(
+    [...testedDelays].sort(),
+    [1, 4],
+    "Both repaired delay revisions have actual immutable functional evidence",
+  );
+  assert.ok(
+    repairReports.some(
+      (report) =>
+        report.context.serverEpoch === server.serverEpoch &&
+        report.checkpoint.observed.assistantChanges === 5 &&
+        report.checkpoint.observed.undoRequested === false,
+    ),
+    "Third server boot records the completed undo without erasing earlier operation groups",
+  );
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -113,6 +157,8 @@ try {
       recordedFunctionalPasses: passes.count,
       recordedWorldInspections: observations.length,
       recordedCatalogMechanisms: catalogEvidence,
+      repairedDelays: [...testedDelays].sort(),
+      recoveredRepairProject: repairProject,
     }),
   );
 } finally {
