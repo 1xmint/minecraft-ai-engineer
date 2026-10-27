@@ -44,6 +44,7 @@ public final class EngineerMod implements ModInitializer {
             Commands.literal("engineer")
                 .executes(ctx->help(ctx.getSource()))
                 .then(Commands.literal("help").executes(ctx->help(ctx.getSource())))
+                .then(Commands.literal("catalog").executes(ctx->{ctx.getSource().sendSuccess(()->Component.literal("Engineer mechanisms: "+String.join(", ",MechanismCatalog.ids())+". Use reference <mechanism> [delay]; repeater delay is 1–4 redstone ticks, inverter uses 1."),false);return 1;}))
                 .then(Commands.literal("project")
                     .then(Commands.literal("adopt-legacy").executes(ctx->withManager(ctx.getSource(),(m,p)->{
                         var adopted=LegacyAdoption.adopt(m,p);p.sendSystemMessage(Component.literal("Engineer: Legacy project backed up and adopted privately as "+adopted.projectId+". Inspect before explicitly resuming or undoing."));
@@ -72,7 +73,11 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect)))
-                .then(Commands.literal("reference").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(Blueprint.reference(s.worldId,s.dimension,s.anchor(),0)))))
+                .then(Commands.literal("reference")
+                    .executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(Blueprint.reference(s.worldId,s.dimension,s.anchor(),0))))
+                    .then(Commands.argument("mechanism",StringArgumentType.word())
+                        .executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(MechanismCatalog.create(StringArgumentType.getString(ctx,"mechanism"),s.worldId,s.dimension,s.anchor(),0,1))))
+                        .then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(MechanismCatalog.create(StringArgumentType.getString(ctx,"mechanism"),s.worldId,s.dimension,s.anchor(),0,IntegerArgumentType.getInteger(ctx,"delay"))))))))
                 .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->plan(s,StringArgumentType.getString(ctx,"request"))))))
                 .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
                 .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner can move its workspace");if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
@@ -145,7 +150,7 @@ public final class EngineerMod implements ModInitializer {
     private static void plan(EngineeringSession s,String request) {
         if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
         if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
-        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.testOriginal!=null || !s.journal.isEmpty())throw new IllegalStateException("Stop and reconcile existing work before replacing the plan");
+        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || !s.journal.isEmpty())throw new IllegalStateException("Stop and reconcile existing work before replacing the plan");
         UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
         JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);body.addProperty("projectId",s.projectId.toString());
         JsonObject size=new JsonObject();size.addProperty("x",Math.abs(s.corner1.getX()-s.corner2.getX())+1);size.addProperty("y",Math.abs(s.corner1.getY()-s.corner2.getY())+1);size.addProperty("z",Math.abs(s.corner1.getZ()-s.corner2.getZ())+1);body.add("maxSize",size);

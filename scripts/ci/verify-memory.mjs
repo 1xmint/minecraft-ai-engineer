@@ -58,6 +58,37 @@ try {
       .blocks.some((block) => block.state.startsWith("minecraft:repeater")),
     "Restart inspection must contain the real built repeater",
   );
+  const catalogEvidence = [];
+  for (const template of ["or-gate", "not-gate"]) {
+    const row = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE ? ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, `passed:${template}:%`);
+    assert.ok(row, `Actual ${template} functional evidence must reach SQLite`);
+    const vectors = JSON.parse(row.document).checkpoint.observed.testEvidence;
+    assert.ok(vectors.length >= 3);
+    for (const [index, vector] of vectors.entries()) {
+      assert.equal(
+        vector.outputs.light,
+        template === "or-gate"
+          ? Boolean(vector.inputs.a || vector.inputs.b)
+          : !vector.inputs.enable,
+      );
+      if (index) assert.ok(vector.tick > vectors[index - 1].tick);
+    }
+    assert.equal(
+      new Set(
+        vectors.map((v) =>
+          template === "or-gate"
+            ? `${v.inputs.a}${v.inputs.b}`
+            : String(v.inputs.enable),
+        ),
+      ).size,
+      template === "or-gate" ? 4 : 2,
+    );
+    catalogEvidence.push(template);
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -66,6 +97,7 @@ try {
       revision: row.project_revision,
       recordedFunctionalPasses: passes.count,
       recordedWorldInspections: observations.length,
+      recordedCatalogMechanisms: catalogEvidence,
     }),
   );
 } finally {

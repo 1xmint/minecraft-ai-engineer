@@ -228,14 +228,6 @@
       "cases": [
         {
           "inputs": {
-            "enable": true
-          },
-          "outputs": {
-            "light": false
-          }
-        },
-        {
-          "inputs": {
             "enable": false
           },
           "outputs": {

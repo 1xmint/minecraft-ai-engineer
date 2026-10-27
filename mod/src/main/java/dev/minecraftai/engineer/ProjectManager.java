@@ -107,7 +107,7 @@ final class ProjectManager {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || (test && reads.stream().anyMatch(other::contains));
             if(touches && !other.access.allows(actor,action))throw new IllegalStateException("The assignment intersects a workspace that has not granted the required permission");
-            if (other.testOriginal == null || other.blueprint == null) continue;
+            if (!other.hasPendingTest() || other.blueprint == null) continue;
             for (Blueprint.PlannedBlock b : other.blueprint.blocks()) for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-2,-2,-2), b.pos().offset(2,2,2)))
                 if (reads.contains(p) || writes.contains(p)) throw new IllegalStateException("An interrupted neighboring test must be safely reconciled first");
         }

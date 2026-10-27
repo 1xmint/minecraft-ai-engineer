@@ -1,6 +1,6 @@
 # Now
 
-2026-10-26: Active goal: **complete all milestones**, including all remaining
+2026-10-27: Active goal: **complete all milestones**, including all remaining
 phase 1 and six phase 2 capabilities. Multiplayer-first remains the target.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
@@ -11,7 +11,7 @@ adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
 checkpoints plus before-build/after-restart inspections. The released
 v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
-Building #1 on phase/3-mechanism-library, draft PR #11. Step: catalog integration. Add inverter,
+Building #1 on phase/3-mechanism-library, draft PR #11. Step: runtime acceptance. Add inverter,
 two-input OR and configurable repeater delay to one catalog consumed by both
 Java resources and TypeScript. Root owns the proofs and implementation. No
 unmerged helper changes. The GPT-6-Luna challenge recovered after the verified
@@ -31,9 +31,15 @@ bounded delay/rotation decisions, region-aware orientation/anchor expansion,
 typed ports/prerequisites/material counts, v2 proposal generation and explicit
 jar/compiled-service packaging checks. Older immutable blueprint mirrors retain
 their original optional metadata; v1 clients reject unsupported adaptations.
-Pending: Java catalog consumer/geometry guard, generalized multi-input functional
-trial and durable restoration, diagnosis/targeted correction preserving players,
-native dedicated acceptance, final review and green CI. No new mechanism release.
+Java catalog consumer/geometry guard is integrated from helper commit a54d61a
+(cherry-picked as efac539). The new functional trial journals every input before
+vanilla activation/restoration, pauses on lost authority/player edits, preserves
+ambiguous crash windows and reads old scalar recovery safely. Test-start and
+functional evidence/input snapshots reach the companion. A fresh GPT-6-Luna
+read-only review found no blocking defect; runtime proof is still required.
+Scoped Java main/client compilation passes. Pending: native acceptance of the
+new trial, diagnosis/targeted correction preserving players (N2), and final green
+CI/review before merging #11. No new mechanism release; do not close #1 yet.
 
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's
@@ -43,7 +49,21 @@ GameTestHelper.pullLever invokes that path. Root changed the probe to pull an
 existing lever as a player would, keeping every truth-table assertion. The
 production functional tester must use the same vanilla activation after its
 write-ahead checkpoint, not only setBlockAndUpdate. Packaging assertion follows
-the physical GameTests and remains unproven until that job passes.
+the physical GameTests. CI 40447614933 then passed all five checks, including the
+physical inverter/OR probes and both packaging assertions, before Java catalog
+consumption and the generalized trial were integrated.
+
+Proof-first CI 40448252050: the new native catalog/revocation flow failed at the
+missing runtime command path; the other four checks passed. The implementation
+now adds reference <mechanism> [delay] and catalog commands, strict catalog checks
+before accepting/building/testing, a startup settle period, per-vector actual
+port evidence, per-input durable recovery, and player wall-torch undo protection.
+The new native proof exercises OR delay4, revokes Bob with two inputs captured,
+loads that checkpoint without importing authority, explicitly restores inputs,
+and tests a rotated inverter while preserving a player's originally ON lever.
+Inverter vectors use OFF/ON/OFF, matching the physical proof and the recipe's
+initial lit output; both boolean cases and the reset remain asserted. Additional
+GameTests cover all four rotations, maximum repeater delay and forged contracts.
 
 Decision — 2026-10-26 (N1/N2): use one immutable catalog and bounded model
 adaptations. Keeping the sole lamp fails the requested engineering scope;

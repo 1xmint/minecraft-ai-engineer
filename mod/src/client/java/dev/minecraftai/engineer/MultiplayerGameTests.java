@@ -411,6 +411,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var project=session(s,"Alice");
             try {var checkpoint=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();
                 check(project.state.equals("PAUSED") && checkpoint.getAsJsonArray("testInputs").size()==2,"Revocation retains both input originals without authority to restore them");
+                var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+                check(loaded.hasPendingTest() && loaded.delegation==null && loaded.state.equals("PAUSED"),"Deserializing both input journals never imports authority");
+                loaded.restoreTest();
+                check(loaded.hasPendingTest() && project.level().getBlockState(new BlockPos(10,101,2)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"A loaded checkpoint cannot restore world inputs without a fresh delegation");
             }catch(java.io.IOException error){throw new AssertionError(error);}
         });
         write("or-revoked","ready");awaitFile(context,"bob-or-revoked");
@@ -421,8 +425,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project new");send(context,"engineer select1 20 100 0");send(context,"engineer select2 22 101 2");
         send(context,"engineer reference not-gate");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.blocks().size()==4);
-        send(context,"engineer rotate 90");send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer rotate 90");server.waitFor(s->session(s,"Alice").blueprint.rotation()==90);
+        server.runOnServer(s->{var project=session(s,"Alice");project.level().setBlockAndUpdate(new BlockPos(20,100,0),Blocks.STONE.defaultBlockState());var lever=project.blueprint.blocks().stream().filter(b->b.state().is(Blocks.LEVER)).findFirst().orElseThrow();project.level().setBlockAndUpdate(lever.pos(),lever.state().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,true));});
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==2,"Inverter handoff preserves the player's support and initially powered lever"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(new BlockPos(20,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Functional testing restores the player's original ON input"));
     }
     private static void inspectPersisted(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         var previous=server.computeOnServer(s->session(s,"Alice").lastObservation);
