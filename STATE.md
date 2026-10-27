@@ -92,6 +92,20 @@ The riskiest assumption is that relevant read dependencies can be scoped without
 missing a real redstone interaction. Probe independent and connected/shared
 support cases in the actual pinned game before claiming that separation works.
 
+Proof-first command contract for C1/C2: `component add <id> <parent> <mechanism>
+<x y z>` composes trusted catalog geometry inside the selected workspace (root
+is the initial container); `component list` shows the tree/assignments;
+`component claim <id>` hands that component to the authenticated player and
+revokes its active AI lease; `component build <id>` explicitly delegates/reconciles
+only that component. Optional bounded rotation/delay can follow later without
+changing these meanings. Root's native proof creates two actual lamps eight
+blocks apart: the player adds b's support during a's execution, then takes b
+over mid-build and delegates it back. Expected journal count excludes both
+player supports and retains all assistant work. This is only the first C1/C2
+proof; shared-dependency, stale generation, restart and C3 cases still need
+actual proofs before the phase can ship. Runtime commands/composition are not
+implemented yet; the new test should initially fail at the missing command.
+
 ## Proven foundation outcomes
 
 - M1 — Play alone on a local dedicated Fabric server, then invite a friend

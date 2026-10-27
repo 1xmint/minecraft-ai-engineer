@@ -277,6 +277,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             catalogFlow(context,server);
             recovery=repairFlow(context,server);
             legacyRevisionFlow(context,server);
+            componentFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -548,6 +549,47 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(rejected,"Unloaded player construction cannot be classified as an empty design");
             }finally{project.blueprint=original;project.corner1=first;project.corner2=second;}
         });
+    }
+
+    private static void componentFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 64 103 4 180 20");
+        var previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        send(context,"engineer select1 60 100 0");send(context,"engineer select2 70 101 0");
+        MESSAGES.clear();send(context,"engineer component add a root signal-lamp 60 100 0");expectChat(context,"Added component a");
+        MESSAGES.clear();send(context,"engineer component add b root signal-lamp 68 100 0");expectChat(context,"Added component b");
+        server.runOnServer(s->check(session(s,"Alice").blueprint.blocks().size()==12,"A composed project contains both actual mechanism geometries"));
+        MESSAGES.clear();send(context,"engineer component claim b");expectChat(context,"Component b assigned to you");
+        send(context,"engineer component build a");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.journal.isEmpty())return false;
+            project.level().setBlockAndUpdate(new BlockPos(68,100,0),Blocks.STONE.defaultBlockState());return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==6,"Assistant builds only component a while the player works in b");
+            check(project.level().getBlockState(new BlockPos(68,100,0)).is(Blocks.STONE)
+                && project.level().getBlockState(new BlockPos(69,100,0)).isAir(),"Independent player work is preserved without extending assistant delegation");
+            check(project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Actual component a finishes despite the independent player edit");
+        });
+        MESSAGES.clear();send(context,"engineer component list");expectChat(context,"a");expectChat(context,"b");
+        MESSAGES.clear();send(context,"engineer component build b");
+        server.waitFor(s->{if(session(s,"Alice").journal.size()<=6)return false;
+            commandAs(s,"Alice","engineer component claim b");return true;});
+        expectChat(context,"Component b assigned to you");
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        int retained=server.computeOnServer(s->session(s,"Alice").journal.size());
+        server.runOnServer(s->{var project=session(s,"Alice");
+            var next=project.blueprint.blocks().stream().filter(block->block.pos().getX()>=68 && project.level().getBlockState(block.pos()).isAir()).findFirst().orElseThrow();
+            check(next.state().canSurvive(project.level(),next.pos()),"Player takeover continues the next buildable component part");
+            project.level().setBlockAndUpdate(next.pos(),next.state());
+            check(project.journal.size()==retained,"Human takeover retains every assistant journal entry");
+        });
+        send(context,"engineer component build b");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.level().getBlockState(new BlockPos(70,101,0)).is(Blocks.REDSTONE_LAMP)
+                && project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Delegate-back finishes b while retaining a");
+            check(project.journal.size()==10,"Delegate-back retains old work and excludes both player-placed supports");
+        });
+        write("components-independent.done","passed");
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {
