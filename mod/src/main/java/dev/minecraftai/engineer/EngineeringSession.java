@@ -514,8 +514,14 @@ final class EngineeringSession implements BuildExecutor {
         if(!activeComponent.equals(id))trial.resetEvidence();
         String previousComponent=activeComponent;String previousState=state,previousDetail=detail,previousVerified=verified;
         activeComponent=id;
-        try { claim(ProjectAccess.Permission.BUILD,true); }
-        catch(RuntimeException failure) { activeComponent=previousComponent;state=previousState;detail=previousDetail;verified=previousVerified;throw failure; }
+        var targetTask=assignments.task(blueprint,id);
+        UUID previousActor=targetTask.actor;String previousExecutor=targetTask.executor,previousTaskStatus=targetTask.status;
+        long previousGeneration=targetTask.generation;
+        try { targetTask.assign(actor(),"assistant");claim(ProjectAccess.Permission.BUILD,true); }
+        catch(RuntimeException failure) {
+            targetTask.actor=previousActor;targetTask.executor=previousExecutor;targetTask.status=previousTaskStatus;targetTask.generation=previousGeneration;
+            activeComponent=previousComponent;state=previousState;detail=previousDetail;verified=previousVerified;throw failure;
+        }
         clearDiagnoses();
         baseline.clear();baseline.putAll(proposedBaseline);dependencies.clear();dependencies.putAll(proposedDependencies);
         repairTargets.clear();repairTargets.addAll(proposedTargets);
@@ -680,6 +686,11 @@ final class EngineeringSession implements BuildExecutor {
         try { trial.start(); }
         catch(RuntimeException failure) {
             if(delegation!=null)manager.release(this);
+            if(hasPendingTest()) {
+                testTick=-1;state="PAUSED";verified="untested";
+                detail="Test initialization paused; captured inputs stay with component "+id+" for explicit recovery";
+                throw failure;
+            }
             activeComponent=previousComponent;state=previousState;detail=previousDetail;verified=previousVerified;
             baseline.clear();baseline.putAll(previousBaseline);dependencies.clear();dependencies.putAll(previousDependencies);
             repairTargets.clear();repairTargets.addAll(previousRepairTargets);activeOperation=previousOperation;operationKind=previousKind;
@@ -894,6 +905,7 @@ final class EngineeringSession implements BuildExecutor {
         observed.addProperty("tick",level().getGameTime());observed.add("testEvidence",trial.evidence());observed.add("testInputs",trial.inputsSnapshot());
         observed.addProperty("componentBasisVersion",ComponentAssignments.BASIS_VERSION);
         JsonObject testScope=trial.scope();if(testScope!=null)observed.add("testScope",testScope);
+        if(componentTask.lastPassedScope!=null)observed.add("lastPassedScope",componentTask.lastPassedScope.deepCopy());
         out.add("observed",observed);
         lastCheckpoint=Companion.gateway(this,"/v2/checkpoint",out,owner);Companion.report(this,lastCheckpoint);
     }

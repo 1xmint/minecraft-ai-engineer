@@ -669,6 +669,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer component test "+id);expectChat(context,"truth table running");
             server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         }
+        // Keep the unaffected leaf active so revision must archive its buffer without relabelling it.
+        MESSAGES.clear();send(context,"engineer component test a");expectChat(context,"truth table running");
+        server.waitFor(s->session(s,"Alice").activeComponent.equals("a") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
         var beforeA=server.computeOnServer(s->assignment(session(s,"Alice"),"a").deepCopy());
         var beforeB=server.computeOnServer(s->assignment(session(s,"Alice"),"b").deepCopy());

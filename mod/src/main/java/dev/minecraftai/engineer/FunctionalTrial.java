@@ -153,6 +153,12 @@ final class FunctionalTrial {
             validateCurrentScope(evidenceScope);
             evidenceBlueprint=session.blueprint.source().deepCopy();
         } else if(!evidence.isEmpty() || (json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty()) || json.has("testOriginal")) {
+            if(json.has("componentAssignments"))for(JsonElement entry:json.getAsJsonArray("componentAssignments")) {
+                JsonObject assignment=entry.getAsJsonObject();
+                if(assignment.get("id").getAsString().equals(session.activeComponent) && assignment.has("basisVersion")
+                        && assignment.get("basisVersion").getAsBigDecimal().intValueExact()>=2)
+                    throw new IllegalStateException("Versioned functional evidence is missing its captured scope");
+            }
             // Old buffers predate explicit scope. Bind them only to the exact saved intent,
             // and preserve the old v1 identity through archive instead of relabeling as v2.
             evidenceScope=makeScope(session.blueprint,session.activeComponent,1);
@@ -188,7 +194,7 @@ final class FunctionalTrial {
             UUID.fromString(saved.get("projectId").getAsString());
             String blueprint=saved.get("blueprintId").getAsString(),component=saved.get("component").getAsString(),basis=saved.get("basis").getAsString();
             long revision=saved.get("blueprintRevision").getAsBigDecimal().longValueExact();int version=saved.get("basisVersion").getAsBigDecimal().intValueExact();
-            if(blueprint.isBlank() || blueprint.length()>128 || !component.matches("[a-z][a-z0-9_-]{0,31}") || !basis.matches("[0-9a-f]{64}") || revision<1 || (version!=1 && version!=ComponentAssignments.BASIS_VERSION))
+            if(blueprint.isBlank() || blueprint.length()>128 || !component.matches("[a-z][a-z0-9_-]{0,31}") || !basis.matches("[0-9a-f]{64}") || revision<1 || revision>Integer.MAX_VALUE || (version!=1 && version!=ComponentAssignments.BASIS_VERSION))
                 throw new IllegalStateException("Invalid functional evidence scope values");
             return saved.deepCopy();
         } catch(RuntimeException bad) { if(bad instanceof IllegalStateException e)throw e;throw new IllegalStateException("Invalid functional evidence scope",bad); }

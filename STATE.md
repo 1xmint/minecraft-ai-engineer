@@ -40,7 +40,7 @@ state checks for all four required packages, and unchanged game/backend checks.
 GPT-6-Luna challenged the fix. Primary docs checked 2026-10-27:
 https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html and
 https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
-Actual revised setup still needs CI proof; no local package/test execution.
+CI 40549054217 proved revised graphics setup in both jobs; integrated gameplay passed. No local package/test execution.
 Local bash -n passes. Never replace process proof with a marker-only fake. Next:
 Then complete C2 service restart and component-scoped
 diagnosis/repair/delay revisions with propagated dependency bases; then finish C3
@@ -156,8 +156,7 @@ Root wrote the native acceptance before implementation in a separate project at
 without touching world/journals, preserve a's scope/generation, stale b/c bases,
 reject a stale b snapshot without changing active context, repair only b's relay,
 record v2-scoped actual tests, undo that b group from selected c and keep a valid,
-then prove a no-op revision preserves buffered vectors/scope. New API/runtime work
-is not implemented yet. Companion-wide invalidation is still a known C3 follow-up.
+then prove a no-op revision preserves buffered vectors/scope. Proof-first CI 40549054217 failed at the intended missing component-test command and legacy dependent-basis migration. Runtime APIs are now integrated with v2 bases and captured scopes; combined main/client compilation passes. Acceptance also keeps unaffected a active during b revision and resolves its old immutable pass through actual prior checkpoint vectors. Initialization failure retains captured inputs under their target component for recovery; failed repair leases roll back assignment selection. Actual new-runtime CI and fresh independent review are pending. Companion-wide invalidation remains a C3 follow-up.
 
 ## Next proof/build steps
 

@@ -131,7 +131,7 @@ try {
     assert.equal(design.provenance.template, "signal-lamp");
     testedDelays.add(design.parameters.delay);
     assert.ok(report.checkpoint.observed.testEvidence.length >= 3);
-    for (const vector of report.checkpoint.observed.testEvidence)
+    for (const vector of evidence)
       assert.equal(vector.outputs.light, vector.inputs.enable);
   }
   assert.deepEqual(
@@ -228,13 +228,49 @@ try {
       entry,
       `Actual revision-project component ${component} must have functional evidence`,
     );
-    const report = JSON.parse(entry.document),
-      scope = report.checkpoint.observed.testScope;
+    const report = JSON.parse(entry.document);
+    const observed = report.checkpoint.observed;
+    const scope = observed.testScope ?? observed.lastPassedScope;
+    assert.ok(scope, "A pass must retain its captured test identity");
     assert.equal(scope.projectId, revisionProject);
     assert.equal(scope.component, component);
     assert.equal(scope.basisVersion, 2);
-    assert.equal(scope.blueprintRevision, report.context.projectRevision);
     assert.match(scope.basis, /^[a-f0-9]{64}$/u);
+    let evidence = observed.testEvidence;
+    if (component === "a") {
+      // A remains valid after unrelated B changes, but its vectors belong to the old intent.
+      assert.ok(scope.blueprintRevision < report.context.projectRevision);
+      assert.equal(observed.componentBasis, scope.basis);
+      assert.equal(observed.testScope, undefined);
+      assert.equal(evidence.length, 0);
+      const historical = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')='a' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC",
+        )
+        .all(server.serverId, revisionProject)
+        .map((row) => JSON.parse(row.document))
+        .find((candidate) => {
+          const captured = candidate.checkpoint.observed.testScope;
+          return (
+            captured &&
+            Object.keys(scope).every((key) => captured[key] === scope[key]) &&
+            candidate.context.projectRevision === scope.blueprintRevision &&
+            candidate.checkpoint.observed.testEvidence.length === 3
+          );
+        });
+      assert.ok(
+        historical,
+        "A's historical pass must resolve to real vectors under its original intent",
+      );
+      evidence = historical.checkpoint.observed.testEvidence;
+    } else {
+      assert.equal(scope.blueprintRevision, report.context.projectRevision);
+    }
+    assert.equal(evidence.length, 3);
+    assert.deepEqual(
+      evidence.map((vector) => vector.inputs.enable),
+      [false, true, false],
+    );
     const intended = JSON.parse(
       db
         .prepare(
@@ -250,11 +286,9 @@ try {
     assert.equal(leaf.template, "signal-lamp");
     if (component === "b") {
       assert.equal(leaf.parameters.delay, 4);
-      assert.ok(
-        report.checkpoint.observed.testEvidence.at(-1).elapsedTicks >= 56,
-      );
+      assert.ok(evidence.at(-1).elapsedTicks >= 56);
     }
-    for (const vector of report.checkpoint.observed.testEvidence)
+    for (const vector of evidence)
       assert.equal(vector.outputs.light, vector.inputs.enable);
   }
   console.log(

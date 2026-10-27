@@ -121,7 +121,12 @@ final class ComponentAssignments {
             task.executor=executor;
             if(item.has("actor"))try{task.actor=UUID.fromString(item.get("actor").getAsString());}catch(RuntimeException bad){throw new IllegalStateException("Invalid assignment actor",bad);}else task.actor=null;
             if(!task.executor.equals("unassigned") && task.actor==null)throw new IllegalStateException("Assigned component has no granting actor");
-            if(item.has("lastPassedScope"))task.lastPassedScope=FunctionalTrial.validateHistoricalScope(item.getAsJsonObject("lastPassedScope"));
+            if(item.has("lastPassedScope")) {
+                JsonObject scope=FunctionalTrial.validateHistoricalScope(item.getAsJsonObject("lastPassedScope"));
+                if(!scope.get("projectId").getAsString().equals(project.projectId()) || !scope.get("component").getAsString().equals(id)
+                        || scope.get("blueprintRevision").getAsLong()>project.revision())throw new IllegalStateException("Historical pass belongs to another project, component or future revision");
+                task.lastPassedScope=scope;
+            }
             task.status="PAUSED";task.verified=item.get("verified").getAsString();
             if(task.verified.startsWith("passed:"))task.verified="stale: restored component needs observation and testing";
         }
