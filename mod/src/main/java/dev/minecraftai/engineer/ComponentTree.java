@@ -11,6 +11,7 @@ public final class ComponentTree {
     private static final int MAX_DEPTH = 8;
     private static final Set<String> LEAF_KEYS = Set.of("id", "parent", "kind", "template", "anchor", "rotation", "parameters", "dependsOn");
     private static final Set<String> GROUP_KEYS = Set.of("id", "parent", "kind");
+    private static final Set<String> ROOT_KEYS = Set.of("id", "kind");
 
     public record Node(String id, String parent, String kind, String template, BlockPos anchor,
                        int rotation, int delay, List<String> dependsOn) {
@@ -29,7 +30,7 @@ public final class ComponentTree {
         if (nodeJson == null) throw new IllegalArgumentException("Component nodes are required");
         List<Node> parsed = parseNodes(nodeJson);
         validateTree(parsed);
-        List<Node> leaves = parsed.stream().filter(n -> n.kind().equals("mechanism")).toList();
+        List<Node> leaves = topologicalLeaves(parsed);
         if (leaves.isEmpty()) throw new IllegalArgumentException("A component project needs at least one mechanism");
 
         JsonObject source = new JsonObject();
@@ -60,7 +61,6 @@ public final class ComponentTree {
         Map<String, Integer> resourceCounts = new TreeMap<>();
         Set<BlockPos> occupied = new HashSet<>();
         Map<String, String> firstStage = new HashMap<>(), lastStage = new HashMap<>();
-        Map<String, List<String>> leafStages = new HashMap<>();
 
         for (Node leaf : leaves) {
             Blueprint mechanism = MechanismCatalog.create(leaf.template(), world, dimension, leaf.anchor(), leaf.rotation(), leaf.delay());
@@ -79,8 +79,6 @@ public final class ComponentTree {
             }
             if (stageIds.isEmpty()) throw new IllegalArgumentException("Catalog mechanism has no stages");
             firstStage.put(leaf.id(), stageIds.get(0)); lastStage.put(leaf.id(), stageIds.get(stageIds.size() - 1));
-            leafStages.put(leaf.id(), stageIds);
-
             for (Blueprint.PlannedBlock block : mechanism.blocks()) {
                 if (!occupied.add(block.pos())) throw new IllegalArgumentException("Component mechanisms overlap actual blocks");
                 JsonObject out = new JsonObject(); out.add("pos", Blueprint.jsonPos(block.pos()));
@@ -179,9 +177,10 @@ public final class ComponentTree {
         for (JsonElement e : array) {
             JsonObject value = object(e);
             String kind = text(value.get("kind"), 16);
-            Set<String> keys = kind.equals("group") ? GROUP_KEYS : kind.equals("mechanism") ? LEAF_KEYS : Set.of();
-            if (keys.isEmpty() || !value.keySet().equals(keys)) throw new IllegalArgumentException("Invalid component node fields");
             String id = nodeId(value.get("id"));
+            Set<String> keys = kind.equals("group") ? (id.equals("root") ? ROOT_KEYS : GROUP_KEYS)
+                    : kind.equals("mechanism") ? LEAF_KEYS : Set.of();
+            if (keys.isEmpty() || !value.keySet().equals(keys)) throw new IllegalArgumentException("Invalid component node fields");
             String parent = value.has("parent") ? nodeId(value.get("parent")) : null;
             if (!kind.equals("group") && parent == null) throw new IllegalArgumentException("Mechanism components need a parent");
             if (kind.equals("group")) {
@@ -237,6 +236,20 @@ public final class ComponentTree {
         if (!active.add(id)) throw new IllegalArgumentException("Component dependencies contain a cycle");
         for (String dep : graph.get(id)) visitDependency(dep, graph, done, active);
         active.remove(id); done.add(id);
+    }
+
+    /** Stable topological order: among currently ready leaves, preserve source order. */
+    private static List<Node> topologicalLeaves(List<Node> nodes) {
+        List<Node> remaining = nodes.stream().filter(n -> n.kind().equals("mechanism")).toList();
+        List<Node> ordered = new ArrayList<>(remaining.size()); Set<String> emitted = new HashSet<>();
+        while (ordered.size() < remaining.size()) {
+            int before = ordered.size();
+            for (Node node : remaining) if (!emitted.contains(node.id()) && emitted.containsAll(node.dependsOn())) {
+                ordered.add(node); emitted.add(node.id());
+            }
+            if (ordered.size() == before) throw new IllegalArgumentException("Component dependencies cannot be ordered");
+        }
+        return List.copyOf(ordered);
     }
 
     private static JsonObject compositionProvenance() {
