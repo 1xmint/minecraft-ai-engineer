@@ -116,7 +116,12 @@ verifier then incorrectly included the same project's earlier inverter pass
 among lamp-delay evidence. Root restricted that query to actual signal-lamp
 pass records, still binding each to its immutable blueprint revision. Companion
 stopped at a formatting error, now fixed. Fresh review confirmed both safety
-fixes and their proofs, with no further blocking finding. The latest revision
+fixes and their proofs, with no further blocking finding. CI 40530261307 passed the other four checks and repeated the repair flow,
+but the added legacy fixture read the old selected project before its queued
+new-project command arrived. It consequently tried to label the delay4 design
+as historical delay1; production catalog validation correctly rejected it.
+The fixture now waits for the actual selected project to change and its new
+anchor to arrive before preparing the historical design. The latest revision
 still requires all five green checks before merging.
 
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup

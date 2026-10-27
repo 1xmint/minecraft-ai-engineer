@@ -521,8 +521,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
 
     private static void legacyRevisionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         server.runCommand("tp Alice 41 102 3 180 20");
-        send(context,"engineer project new");send(context,"engineer select1 40 100 0");send(context,"engineer select2 42 101 0");
-        send(context,"engineer reference signal-lamp");server.waitFor(s->session(s,"Alice").blueprint!=null);
+        var previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        send(context,"engineer select1 40 100 0");send(context,"engineer select2 42 101 0");
+        send(context,"engineer reference signal-lamp");server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(40,100,0)));
         server.runOnServer(s->{var project=session(s,"Alice");
             var source=project.blueprint.source().deepCopy();source.remove("parameters");source.getAsJsonObject("provenance").remove("catalogRevision");
             source.getAsJsonArray("blocks").get(4).getAsJsonObject().addProperty("component","output");
