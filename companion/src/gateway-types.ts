@@ -218,7 +218,9 @@ export function serverBlueprint(
         v.components === undefined)) ||
     (!composite && v.components !== undefined)
   )
-    throw new RequestError("Composite blueprint provenance or metadata is invalid.");
+    throw new RequestError(
+      "Composite blueprint provenance or metadata is invalid.",
+    );
   const componentTruth = composite ? validateComponentBlueprint(v) : undefined;
   if (
     v.ports !== undefined &&
@@ -295,7 +297,9 @@ export function serverBlueprint(
     ...(v.parameters === undefined || composite
       ? {}
       : { parameters: adaptation(String(provenance.template), v.parameters) }),
-    ...(composite ? { components: v.components as Blueprint["components"] } : {}),
+    ...(composite
+      ? { components: v.components as NonNullable<Blueprint["components"]> }
+      : {}),
     verification: "untested",
   };
   if (composite) {
@@ -308,7 +312,7 @@ export function serverBlueprint(
       resources: truth.resources,
       ports: truth.ports,
       tests: truth.tests,
-      components: truth.components,
+      components: truth.components!,
     };
   }
   return canonical;

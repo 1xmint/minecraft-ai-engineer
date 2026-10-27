@@ -97,11 +97,9 @@ final class ProjectManager {
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
-        Set<BlockPos> writes = new HashSet<>(), reads = new HashSet<>();
-        for (Blueprint.PlannedBlock b : project.blueprint.blocks()) {
+        Set<BlockPos> writes = new HashSet<>(), reads = project.dependencyPositions(test);
+        for (Blueprint.PlannedBlock b : project.assignmentBlocks()) {
             writes.add(b.pos());
-            int margin = test ? 2 : 1;
-            for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-margin,-margin,-margin), b.pos().offset(margin,margin,margin))) reads.add(p.immutable());
         }
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
@@ -118,13 +116,14 @@ final class ProjectManager {
         if (project.delegation == null || !project.access.allows(project.controller, project.delegation.action())) throw new IllegalStateException("Delegation was revoked");
         ServerPlayer current=server.getPlayerList().getPlayer(project.controller);
         if(current==null || current.connection!=project.delegationConnection)throw new IllegalStateException("The controlling connection changed; explicit resume is required");
+        project.validateAssignmentFence();
         reservations.validate(scope(project), project.delegation, project.controller, project.revision(), project.access.revision(), server.getTickCount());
         // Other owners can revoke a cross-project grant while this task runs.
         // Its own authorization revision alone cannot fence that dependency.
         for(var other:projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
             boolean intersects=false;
-            for(var block:project.blueprint.blocks()) {
+            for(var block:project.assignmentBlocks()) {
                 int margin=project.isolationLease?2:0;
                 BlockPos a=block.pos().offset(-margin,-margin,-margin),b=block.pos().offset(margin,margin,margin);
                 intersects=Math.max(a.getX(),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(b.getX(),Math.max(other.corner1.getX(),other.corner2.getX()))

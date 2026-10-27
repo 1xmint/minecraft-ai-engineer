@@ -238,18 +238,18 @@ public final class ComponentTree {
         active.remove(id); done.add(id);
     }
 
-    /** Stable topological order: among currently ready leaves, preserve source order. */
+    /** Stable depth-first dependency order, matching the companion composer. */
     private static List<Node> topologicalLeaves(List<Node> nodes) {
-        List<Node> remaining = nodes.stream().filter(n -> n.kind().equals("mechanism")).toList();
-        List<Node> ordered = new ArrayList<>(remaining.size()); Set<String> emitted = new HashSet<>();
-        while (ordered.size() < remaining.size()) {
-            int before = ordered.size();
-            for (Node node : remaining) if (!emitted.contains(node.id()) && emitted.containsAll(node.dependsOn())) {
-                ordered.add(node); emitted.add(node.id());
-            }
-            if (ordered.size() == before) throw new IllegalArgumentException("Component dependencies cannot be ordered");
-        }
+        Map<String,Node> leaves=new LinkedHashMap<>();
+        for(Node node:nodes)if(node.kind().equals("mechanism"))leaves.put(node.id(),node);
+        List<Node> ordered=new ArrayList<>();Set<String> emitted=new HashSet<>();
+        for(Node node:leaves.values())emitLeaf(node,leaves,emitted,ordered);
         return List.copyOf(ordered);
+    }
+    private static void emitLeaf(Node node,Map<String,Node> leaves,Set<String> emitted,List<Node> ordered) {
+        if(!emitted.add(node.id()))return;
+        for(String dependency:node.dependsOn())emitLeaf(leaves.get(dependency),leaves,emitted,ordered);
+        ordered.add(node);
     }
 
     private static JsonObject compositionProvenance() {

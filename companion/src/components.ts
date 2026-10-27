@@ -1,9 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  CATALOG_REVISION,
-  adaptation,
-  mechanism,
-} from "./catalog.js";
+import { CATALOG_REVISION, adaptation, mechanism } from "./catalog.js";
 import { rotateBlockState, rotatePosition } from "./geometry.js";
 import {
   type Blueprint,
@@ -47,10 +43,7 @@ function componentId(value: unknown): string {
 }
 
 function rotation(value: unknown): Rotation {
-  if (
-    typeof value !== "number" ||
-    ![0, 90, 180, 270].includes(value)
-  )
+  if (typeof value !== "number" || ![0, 90, 180, 270].includes(value))
     throw new RequestError("Component rotation must be 0, 90, 180 or 270.");
   return value as Rotation;
 }
@@ -108,7 +101,9 @@ export function validateComponentTree(value: unknown): ComponentTree {
       throw new RequestError("Invalid component dependencies.");
     const dependsOn = raw.dependsOn.map(componentId);
     if (new Set(dependsOn).size !== dependsOn.length || dependsOn.includes(id))
-      throw new RequestError("Component dependencies must be unique and non-self.");
+      throw new RequestError(
+        "Component dependencies must be unique and non-self.",
+      );
     const node: ComponentMechanismNode = {
       id,
       parent: componentId(raw.parent),
@@ -125,13 +120,17 @@ export function validateComponentTree(value: unknown): ComponentTree {
 
   const root = seen.get("root");
   if (!root || root.kind !== "group")
-    throw new RequestError("A component tree requires a root group named root.");
+    throw new RequestError(
+      "A component tree requires a root group named root.",
+    );
   const groups = new Set(
     nodes.filter((node) => node.kind === "group").map((node) => node.id),
   );
   const leaves = new Map(
     nodes
-      .filter((node): node is ComponentMechanismNode => node.kind === "mechanism")
+      .filter(
+        (node): node is ComponentMechanismNode => node.kind === "mechanism",
+      )
       .map((node) => [node.id, node]),
   );
   if (leaves.size < 1 || leaves.size > 16)
@@ -140,12 +139,13 @@ export function validateComponentTree(value: unknown): ComponentTree {
     if (node.id !== "root" && !groups.has(node.parent!))
       throw new RequestError("Every component must be parented by a group.");
     let current: ComponentNode | undefined = node,
-      depth = 0;
+      depth = 1;
     const path = new Set<string>();
     while (current && current.id !== "root") {
-      if (path.has(current.id)) throw new RequestError("Component parent cycle.");
+      if (path.has(current.id))
+        throw new RequestError("Component parent cycle.");
       path.add(current.id);
-      const parent = current.parent;
+      const parent: string | undefined = current.parent;
       current = parent ? seen.get(parent) : undefined;
       depth++;
       if (!current) throw new RequestError("Component parent is missing.");
@@ -155,9 +155,12 @@ export function validateComponentTree(value: unknown): ComponentTree {
   for (const leaf of leaves.values())
     for (const dependency of leaf.dependsOn)
       if (!leaves.has(dependency))
-        throw new RequestError("A dependency must reference another mechanism leaf.");
+        throw new RequestError(
+          "A dependency must reference another mechanism leaf.",
+        );
 
-  const visiting = new Set<string>(), visited = new Set<string>();
+  const visiting = new Set<string>(),
+    visited = new Set<string>();
   const visit = (id: string) => {
     if (visiting.has(id)) throw new RequestError("Component dependency cycle.");
     if (visited.has(id)) return;
@@ -175,10 +178,13 @@ export const parseComponentTree = validateComponentTree;
 function leafOrder(tree: ComponentTree): ComponentMechanismNode[] {
   const leaves = new Map(
     tree.nodes
-      .filter((node): node is ComponentMechanismNode => node.kind === "mechanism")
+      .filter(
+        (node): node is ComponentMechanismNode => node.kind === "mechanism",
+      )
       .map((node) => [node.id, node]),
   );
-  const ordered: ComponentMechanismNode[] = [], visited = new Set<string>();
+  const ordered: ComponentMechanismNode[] = [],
+    visited = new Set<string>();
   const visit = (node: ComponentMechanismNode) => {
     if (visited.has(node.id)) return;
     node.dependsOn.forEach((id) => visit(leaves.get(id)!));
@@ -189,7 +195,11 @@ function leafOrder(tree: ComponentTree): ComponentMechanismNode[] {
   return ordered;
 }
 
-function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rotation) {
+function content(
+  tree: ComponentTree,
+  wholeAnchor: Position,
+  wholeRotation: Rotation,
+) {
   const blocks: Blueprint["blocks"] = [],
     stages: Blueprint["stages"] = [],
     ports: Blueprint["ports"] = [],
@@ -222,9 +232,9 @@ function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rota
         }),
         stage = `${node.id}/${block.stage}`,
         prerequisites = [
-          ...catalog.stages.find((s) => s.id === block.stage)!.prerequisites.map(
-            (id) => `${node.id}/${id}`,
-          ),
+          ...catalog.stages
+            .find((s) => s.id === block.stage)!
+            .prerequisites.map((id) => `${node.id}/${id}`),
           ...(block.stage === catalog.stages[0]!.id
             ? node.dependsOn.map((id) => finalStages.get(id)!)
             : []),
@@ -234,17 +244,24 @@ function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rota
           node.rotation,
         );
       if (Math.max(Math.abs(pos.x), Math.abs(pos.y), Math.abs(pos.z)) > 64)
-        throw new RequestError("Composed component geometry exceeds 64 blocks from the blueprint anchor.");
+        throw new RequestError(
+          "Composed component geometry exceeds 64 blocks from the blueprint anchor.",
+        );
       const key = `${pos.x},${pos.y},${pos.z}`;
       if (occupied.has(key))
         throw new RequestError("Composed component mechanisms collide.", 422);
       occupied.add(key);
       const world = rotatePosition(pos, wholeRotation);
       if (wholeAnchor.y + world.y > 2047 || wholeAnchor.y + world.y < -2048)
-        throw new RequestError("Composed mechanism exceeds supported world bounds.");
+        throw new RequestError(
+          "Composed mechanism exceeds supported world bounds.",
+        );
       blocks.push({ pos, state, stage, component: node.id, prerequisites });
       const kind = state.split("[", 1)[0]!,
-        item = kind === "minecraft:redstone_wall_torch" ? "minecraft:redstone_torch" : kind;
+        item =
+          kind === "minecraft:redstone_wall_torch"
+            ? "minecraft:redstone_torch"
+            : kind;
       resources[item] = (resources[item] ?? 0) + 1;
     }
     for (const port of catalog.ports) {
@@ -285,7 +302,9 @@ function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rota
     max.z - min.z + 1 > 64 ||
     (max.x - min.x + 1) * (max.y - min.y + 1) * (max.z - min.z + 1) > 4096
   )
-    throw new RequestError("Composed blueprint extent exceeds supported limits.");
+    throw new RequestError(
+      "Composed blueprint extent exceeds supported limits.",
+    );
   if (
     blocks.some((block) => {
       const rotated = rotatePosition(block.pos, wholeRotation);
@@ -297,7 +316,9 @@ function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rota
       );
     })
   )
-    throw new RequestError("Composed mechanism exceeds supported world bounds.");
+    throw new RequestError(
+      "Composed mechanism exceeds supported world bounds.",
+    );
   return { blocks, stages, bounds: { min, max }, resources, ports, tests };
 }
 
@@ -312,9 +333,18 @@ export function makeComponentBlueprint(
       pos: rotatePosition(block.pos, input.rotation),
     })),
     size = {
-      x: Math.max(...wholeBounds.map((block) => block.pos.x)) - Math.min(...wholeBounds.map((block) => block.pos.x)) + 1,
-      y: Math.max(...wholeBounds.map((block) => block.pos.y)) - Math.min(...wholeBounds.map((block) => block.pos.y)) + 1,
-      z: Math.max(...wholeBounds.map((block) => block.pos.z)) - Math.min(...wholeBounds.map((block) => block.pos.z)) + 1,
+      x:
+        Math.max(...wholeBounds.map((block) => block.pos.x)) -
+        Math.min(...wholeBounds.map((block) => block.pos.x)) +
+        1,
+      y:
+        Math.max(...wholeBounds.map((block) => block.pos.y)) -
+        Math.min(...wholeBounds.map((block) => block.pos.y)) +
+        1,
+      z:
+        Math.max(...wholeBounds.map((block) => block.pos.z)) -
+        Math.min(...wholeBounds.map((block) => block.pos.z)) +
+        1,
     };
   if (
     input.maxSize &&
@@ -322,7 +352,10 @@ export function makeComponentBlueprint(
       size.y > input.maxSize.y ||
       size.z > input.maxSize.z)
   )
-    throw new RequestError("The composed project does not fit the selected dimensions.", 422);
+    throw new RequestError(
+      "The composed project does not fit the selected dimensions.",
+      422,
+    );
   return {
     schemaVersion: 1,
     id: randomUUID(),
@@ -331,7 +364,8 @@ export function makeComponentBlueprint(
     worldId: input.worldId,
     dimension: input.dimension,
     name: "Component project",
-    explanation: "Mechanism leaves are generated from the trusted catalog. Port labels describe leaf interfaces; physical connections require separate in-world verification.",
+    explanation:
+      "Mechanism leaves are generated from the trusted catalog. Port labels describe leaf interfaces; physical connections require separate in-world verification.",
     anchor: { ...input.anchor },
     rotation: input.rotation,
     ...generated,
@@ -353,11 +387,21 @@ export function validateComponentBlueprint(value: unknown): Blueprint {
     anchor = position(v.anchor),
     turn = rotation(v.rotation),
     generated = content(components, anchor, turn);
-  for (const field of ["blocks", "stages", "bounds", "resources", "ports", "tests"] as const)
+  for (const field of [
+    "blocks",
+    "stages",
+    "bounds",
+    "resources",
+    "ports",
+    "tests",
+  ] as const)
     if (stable(v[field]) !== stable(generated[field]))
-      throw new RequestError(`Composite blueprint ${field} do not match its trusted component tree.`);
+      throw new RequestError(
+        `Composite blueprint ${field} do not match its trusted component tree.`,
+      );
   if (v.parameters !== undefined)
-    throw new RequestError("Composite blueprints cannot have top-level parameters.");
+    throw new RequestError(
+      "Composite blueprints cannot have top-level parameters.",
+    );
   return { ...v, ...generated, components } as Blueprint;
 }
-

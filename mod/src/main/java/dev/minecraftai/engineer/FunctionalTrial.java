@@ -26,7 +26,7 @@ final class FunctionalTrial {
         var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);history.addProperty("projectId",s.projectId.toString());
         history.addProperty("blueprintId",s.blueprint.id());history.addProperty("blueprintRevision",s.revision());history.addProperty("verificationAtArchive",s.verified);
         history.addProperty("archivedAtTick",s.level().getGameTime());history.add("cases",evidence.deepCopy());
-        history.add("blueprint",s.blueprint.source().deepCopy());
+        history.add("blueprint",s.blueprint.source().deepCopy());history.addProperty("component",s.activeComponent);history.addProperty("componentBasis",ComponentAssignments.basis(s.blueprint,s.activeComponent));
         LocalFiles.write(s.file.resolveSibling(s.projectId+".evidence-"+UUID.randomUUID()+".json"),history);
     }
 
@@ -34,7 +34,7 @@ final class FunctionalTrial {
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
-        var candidate=MechanismCatalog.contract(s.blueprint);s.validateTestArea();
+        var candidate=MechanismCatalog.contract(s.executionBlueprint());s.validateTestArea();
         var captured=new LinkedHashMap<String,Input>();
         for(var port:candidate.ports())if(port.input()){
             s.validateTarget(port.pos());BlockState actual=s.level().getBlockState(port.pos());
@@ -140,7 +140,7 @@ final class FunctionalTrial {
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;
         if(entries!=null && entries.isEmpty()){if(json.has("testOriginal"))throw new IllegalStateException("Conflicting test recovery formats");return;}
-        contract=MechanismCatalog.contract(session.blueprint);
+        contract=MechanismCatalog.contract(session.executionBlueprint());
         if(entries==null){
             var port=contract.ports().stream().filter(MechanismCatalog.Port::input).findFirst().orElseThrow();
             if(contract.ports().stream().filter(MechanismCatalog.Port::input).count()!=1)throw new IllegalStateException("Scalar test recovery cannot authorize a multi-input mechanism");

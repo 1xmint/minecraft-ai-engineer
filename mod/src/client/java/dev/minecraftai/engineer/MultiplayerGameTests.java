@@ -570,7 +570,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 && project.level().getBlockState(new BlockPos(69,100,0)).isAir(),"Independent player work is preserved without extending assistant delegation");
             check(project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Actual component a finishes despite the independent player edit");
         });
-        MESSAGES.clear();send(context,"engineer component list");expectChat(context,"a");expectChat(context,"b");
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        MESSAGES.clear();send(context,"engineer component list");expectChat(context,"Component a");expectChat(context,"Component b");
         MESSAGES.clear();send(context,"engineer component build b");
         server.waitFor(s->{if(session(s,"Alice").journal.size()<=6)return false;
             commandAs(s,"Alice","engineer component claim b");return true;});
@@ -589,6 +590,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 && project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Delegate-back finishes b while retaining a");
             check(project.journal.size()==10,"Delegate-back retains old work and excludes both player-placed supports");
         });
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         write("components-independent.done","passed");
     }
 

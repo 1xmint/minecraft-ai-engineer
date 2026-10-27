@@ -10,6 +10,28 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Physical feasibility proofs independent of catalog generation or LLM output. */
 public final class MechanismGameTests {
+    @GameTest public void catalogCompositionRejectsForgedGeometry(GameTestHelper helper) {
+        var nodes=com.google.gson.JsonParser.parseString("""
+            [
+              {"id":"root","kind":"group"},
+              {"id":"b","parent":"root","kind":"mechanism","template":"not-gate","anchor":{"x":8,"y":0,"z":0},"rotation":90,"parameters":{"delay":1},"dependsOn":["a"]},
+              {"id":"c","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":16,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]},
+              {"id":"a","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":0,"y":0,"z":0},"rotation":0,"parameters":{"delay":4},"dependsOn":[]}
+            ]
+            """).getAsJsonArray();
+        var project=ComponentTree.compose("test","minecraft:overworld",new BlockPos(4,2,4),90,nodes);
+        ComponentTree.validate(project);
+        helper.assertTrue(project.blocks().size()==16 && project.blocks().getFirst().component().equals("a"),"Composition uses trusted geometry in stable dependency order");
+        var b=ComponentTree.component(project,"b");
+        helper.assertTrue(b.anchor().equals(new BlockPos(4,2,12)) && b.rotation()==180,"Leaf pivot and orientation compose with the whole-project transform");
+        helper.assertTrue(MechanismCatalog.contract(b).template().equals("not-gate"),"A selected leaf retains its real functional oracle");
+        var forged=project.source().deepCopy();forged.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:redstone_lamp[lit=false]");
+        reject(helper,()->ComponentTree.validate(Blueprint.parse(forged,"test","minecraft:overworld")),"Tree metadata cannot authorize invented component geometry");
+        var wrongOwner=project.source().deepCopy();wrongOwner.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("component","b");
+        reject(helper,()->ComponentTree.validate(Blueprint.parse(wrongOwner,"test","minecraft:overworld")),"A block cannot be reassigned across component boundaries by relabelling it");
+        reject(helper,()->ComponentTree.component(project,"root"),"Container selection cannot grant physical writes");
+        helper.succeed();
+    }
     @GameTest(maxTicks=55) public void inverter(GameTestHelper helper){inverter(helper,Rotation.NONE);}
     @GameTest(maxTicks=55) public void rotatedInverter(GameTestHelper helper){inverter(helper,Rotation.CLOCKWISE_90);}
     @GameTest(maxTicks=55) public void reversedInverter(GameTestHelper helper){inverter(helper,Rotation.CLOCKWISE_180);}

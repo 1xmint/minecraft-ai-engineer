@@ -27,7 +27,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/list/claim/build, inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -75,6 +75,11 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
+                .then(Commands.literal("component")
+                    .then(Commands.literal("list").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::componentList)))
+                    .then(Commands.literal("claim").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentClaim(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("build").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentBuild(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("add").then(Commands.argument("id",StringArgumentType.word()).then(Commands.argument("parent",StringArgumentType.word()).then(Commands.argument("mechanism",StringArgumentType.word()).then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.componentAdd(StringArgumentType.getString(ctx,"id"),StringArgumentType.getString(ctx,"parent"),StringArgumentType.getString(ctx,"mechanism"),BlockPosArgument.getBlockPos(ctx,"position"))))))))))
                 .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect)))
                 .then(Commands.literal("diagnose").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::diagnose)))
                 .then(Commands.literal("repair").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::repair)))

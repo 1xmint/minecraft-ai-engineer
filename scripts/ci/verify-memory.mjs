@@ -148,6 +148,50 @@ try {
     ),
     "Third server boot records the completed undo without erasing earlier operation groups",
   );
+  assert.equal(
+    readFileSync(`${coordination}/components-independent.done`, "utf8").trim(),
+    "passed",
+  );
+  const componentProject = readFileSync(
+    `${coordination}/components-project`,
+    "utf8",
+  ).trim();
+  for (const component of ["a", "b"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')=? AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, componentProject, component);
+    assert.ok(
+      entry,
+      `Actual composed component ${component} functional evidence must reach SQLite`,
+    );
+    const report = JSON.parse(entry.document);
+    assert.equal(report.checkpoint.taskId, `${componentProject}:${component}`);
+    assert.match(report.checkpoint.observed.componentBasis, /^[a-f0-9]{64}$/u);
+    assert.ok(report.checkpoint.observed.assignmentGeneration >= 1);
+    const intended = JSON.parse(
+      db
+        .prepare(
+          "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+        )
+        .get(server.serverId, componentProject, report.context.projectRevision)
+        .document,
+    );
+    assert.equal(intended.provenance.template, "composition");
+    assert.equal(
+      intended.components.nodes.find((node) => node.id === component).template,
+      "signal-lamp",
+    );
+    const vectors = report.checkpoint.observed.testEvidence;
+    assert.equal(vectors.length, 3);
+    assert.deepEqual(
+      vectors.map((vector) => vector.inputs.enable),
+      [false, true, false],
+    );
+    for (const vector of vectors)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -159,6 +203,7 @@ try {
       recordedCatalogMechanisms: catalogEvidence,
       repairedDelays: [...testedDelays].sort(),
       recoveredRepairProject: repairProject,
+      independentlyBuiltComponents: ["a", "b"],
     }),
   );
 } finally {

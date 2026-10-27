@@ -46,7 +46,7 @@ delegations, and multiple owned projects require an explicit `project use`.
 
 PR #11 adds `/engineer catalog` and `reference <mechanism> [delay]` for a
 signal lamp, inverter (`not-gate`) and two-input `or-gate`. Repeater delays are
-1�4 redstone ticks; the inverter accepts 1. Each mechanism has actual input
+1-4 redstone ticks; the inverter accepts 1. Each mechanism has actual input
 vectors and a separate functional test. Choose a region large enough for its
 preview, keeping the floating circuit's two-block isolation margin clear.
 

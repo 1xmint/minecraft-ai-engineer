@@ -40,6 +40,10 @@ final class EngineeringSession implements BuildExecutor {
     final Set<BlockPos> repairTargets = new LinkedHashSet<>();
     final Map<UUID, Diagnosis.Proposal> diagnoses = new LinkedHashMap<>();
     String activeOperation = "legacy";
+    String activeComponent = "root";
+    final ComponentAssignments assignments = new ComponentAssignments();
+    String delegationComponent, delegationBasis;
+    long delegationGeneration = -1;
     String operationKind = "BUILD";
     UUID originDiagnosis;
     String undoOperation;
@@ -53,7 +57,8 @@ final class EngineeringSession implements BuildExecutor {
     java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
     java.util.concurrent.CompletableFuture<JsonObject> lastObservation;
     long reportSequence;
-    record Change(BlockPos pos, BlockState before, BlockState after, String operation) {
+    record Change(BlockPos pos, BlockState before, BlockState after, String operation, String component) {
+        Change(BlockPos pos, BlockState before, BlockState after, String operation) { this(pos,before,after,operation,"root"); }
         Change(BlockPos pos, BlockState before, BlockState after) { this(pos,before,after,"legacy"); }
     }
 
@@ -85,9 +90,41 @@ final class EngineeringSession implements BuildExecutor {
     void claim(ProjectAccess.Permission action, boolean test) {
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
+        var task=assignments.task(blueprint,activeComponent);
+        if(ComponentTree.composite(blueprint) && !test && action==ProjectAccess.Permission.BUILD
+                && (!task.executor.equals("assistant") || !actor().equals(task.actor)))
+            throw new IllegalStateException("Explicitly delegate this component with component build "+activeComponent);
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
         controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test;
+        if(!test && action==ProjectAccess.Permission.BUILD && task.executor.equals("unassigned"))task.assign(actor(),"assistant");
+        delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
+    }
+    Blueprint executionBlueprint() {
+        if(blueprint==null)throw new IllegalStateException("No blueprint");
+        return ComponentTree.component(blueprint,activeComponent);
+    }
+    List<Blueprint.PlannedBlock> assignmentBlocks() { return executionBlueprint().blocks(); }
+    Set<BlockPos> dependencyPositions(boolean isolation) {
+        Set<BlockPos> result=new LinkedHashSet<>();
+        Set<String> visited=new HashSet<>();
+        collectDependencies(activeComponent,isolation?2:1,visited,result);
+        if(result.size()>65536)throw new IllegalStateException("Component dependency footprint exceeds its limit");
+        return result;
+    }
+    private void collectDependencies(String id,int margin,Set<String> visited,Set<BlockPos> result) {
+        if(!visited.add(id))return;
+        for(var block:ComponentTree.component(blueprint,id).blocks()) {
+            for(BlockPos pos:BlockPos.betweenClosed(block.pos().offset(-margin,-margin,-margin),block.pos().offset(margin,margin,margin)))result.add(pos.immutable());
+            if(result.size()>65536)throw new IllegalStateException("Component dependency footprint exceeds its limit");
+        }
+        for(var node:ComponentTree.nodes(blueprint))if(node.id().equals(id))
+            for(String prerequisite:node.dependsOn())collectDependencies(prerequisite,margin,visited,result);
+    }
+    void validateAssignmentFence() {
+        var task=assignments.task(blueprint,activeComponent);
+        if(!activeComponent.equals(delegationComponent) || !task.basis.equals(delegationBasis) || task.generation!=delegationGeneration)
+            throw new IllegalStateException("Component assignment changed; fresh delegation is required");
     }
     void validateMutation() {
         validateMutation(ProjectAccess.Permission.BUILD);
@@ -118,7 +155,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void accept(Blueprint value) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
-        MechanismCatalog.contract(value);
+        ComponentTree.validate(value);
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo the previous assignment before replacing its blueprint");
         JsonObject intended=value.source().deepCopy();
         intended.addProperty("projectId",projectId.toString()); intended.addProperty("revision",Math.addExact(projectRevision,1));
@@ -126,6 +163,8 @@ final class EngineeringSession implements BuildExecutor {
         trial.resetEvidence();
         clearDiagnoses();
         blueprint=candidate; projectRevision=blueprint.revision();
+        activeComponent=ComponentTree.composite(blueprint)?ComponentTree.nodes(blueprint).stream().filter(node->node.kind().equals("mechanism")).findFirst().orElseThrow().id():"root";
+        assignments.reconcile(blueprint);
         baseline.clear(); dependencies.clear();repairTargets.clear();originDiagnosis=null;activeOperation="legacy";operationKind="BUILD";cursors.clear(); stage = 0; teaching = true; verified = "untested"; state = "READY";
         manager.changed(this);
         save(); explain();
@@ -136,18 +175,89 @@ final class EngineeringSession implements BuildExecutor {
         tell("Step " + (c.stage + 1) + "/" + blueprint.stages().size() + ": " + s.title() + ". " + s.explanation());
     }
     void moveStage(int delta) { access.require(actor(),ProjectAccess.Permission.VIEW); if (blueprint == null) throw new IllegalStateException("No blueprint"); Cursor c=cursor(actor());c.stage = Math.clamp(c.stage + delta,0,blueprint.stages().size()-1); c.teaching=true; save(); explain(); }
+    void componentAdd(String id,String parent,String template,BlockPos position) {
+        access.require(actor(),ProjectAccess.Permission.EDIT);
+        if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner may change its component tree");
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || !journal.isEmpty() || pendingPlacement || undoRequested)
+            throw new IllegalStateException("Reconcile current work before changing the component tree");
+        BlockPos pivot=blueprint==null?anchor():blueprint.anchor();int turn=blueprint==null?0:blueprint.rotation();
+        JsonArray nodes=new JsonArray();
+        if(blueprint!=null && ComponentTree.composite(blueprint))nodes=blueprint.source().getAsJsonObject("components").getAsJsonArray("nodes").deepCopy();
+        else {
+            JsonObject root=new JsonObject();root.addProperty("id","root");root.addProperty("kind","group");nodes.add(root);
+            if(blueprint!=null) {
+                MechanismCatalog.contract(blueprint);
+                JsonObject original=componentNode("existing","root",catalogTemplate(blueprint),BlockPos.ZERO,0,
+                        blueprint.source().has("parameters")?blueprint.source().getAsJsonObject("parameters").get("delay").getAsInt():1);
+                nodes.add(original);
+            }
+        }
+        BlockPos relative=position.subtract(pivot).rotate(Blueprint.rotation((360-turn)%360));
+        nodes.add(componentNode(id,parent,template,relative,(360-turn)%360,1));
+        Blueprint candidate=ComponentTree.compose(worldId,dimension,pivot,turn,nodes);
+        for(var block:candidate.blocks())if(!contains(block.pos()))throw new IllegalStateException("Component geometry escaped the selected workspace");
+        accept(candidate);checkpoint();tell("Added component "+id);
+    }
+    private static JsonObject componentNode(String id,String parent,String template,BlockPos anchor,int rotation,int delay) {
+        JsonObject node=new JsonObject();node.addProperty("id",id);node.addProperty("parent",parent);node.addProperty("kind","mechanism");
+        node.addProperty("template",template);node.add("anchor",Blueprint.jsonPos(anchor));node.addProperty("rotation",rotation);
+        JsonObject parameters=new JsonObject();parameters.addProperty("delay",delay);node.add("parameters",parameters);node.add("dependsOn",new JsonArray());return node;
+    }
+    void componentList() {
+        access.require(actor(),ProjectAccess.Permission.VIEW);
+        if(blueprint==null)throw new IllegalStateException("Add or select a mechanism first");
+        for(var node:ComponentTree.nodes(blueprint)) {
+            if(node.kind().equals("group")){tell("Component "+node.id()+" | group | parent="+node.parent());continue;}
+            var task=assignments.task(blueprint,node.id());
+            tell("Component "+node.id()+" | parent="+node.parent()+" | "+node.template()+" | "+task.executor+" | actor="+task.actor+" | "+task.status+" | prerequisites="+node.dependsOn());
+        }
+    }
+    void componentClaim(String id) {
+        access.require(actor(),ProjectAccess.Permission.BUILD);
+        if(blueprint==null)throw new IllegalStateException("No component project");
+        var task=assignments.task(blueprint,id);
+        if(state.equals("PLANNING") || pendingPlacement || undoRequested || hasPendingTest())throw new IllegalStateException("Reconcile active planning, placement, undo or test before handoff");
+        if(id.equals(activeComponent))pause("Component handed to the player; journal retained");
+        task.assign(actor(),"player");forgetDiagnosis(actor());save();checkpoint();tell("Component "+id+" assigned to you");
+    }
+    void componentBuild(String id) {
+        requireCreative();access.require(actor(),ProjectAccess.Permission.BUILD);
+        if(blueprint==null)throw new IllegalStateException("No component project");
+        ComponentTree.validate(blueprint);var task=assignments.task(blueprint,id);
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || pendingPlacement || undoRequested || hasPendingTest())
+            throw new IllegalStateException("Stop and reconcile active world work before delegating a component");
+        Blueprint selected=ComponentTree.component(blueprint,id);
+        var node=ComponentTree.nodes(blueprint).stream().filter(n->n.id().equals(id)).findFirst().orElseThrow();
+        for(String prerequisite:node.dependsOn())for(var block:ComponentTree.component(blueprint,prerequisite).blocks()) {
+            if(!level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),level().getBlockState(block.pos())))
+                throw new IllegalStateException("Required component "+prerequisite+" is incomplete or unloaded");
+        }
+        Map<BlockPos,BlockState> recorded=new LinkedHashMap<>();
+        for(Change change:journal)if(change.component().equals(id))recorded.put(change.pos(),change.after());
+        for(var entry:recorded.entrySet())if(!level().hasChunkAt(entry.getKey()) || !Blueprint.matches(entry.getValue(),level().getBlockState(entry.getKey())))
+            throw new IllegalStateException("A recorded assistant component block changed; resolve it before delegating again");
+        for(var block:selected.blocks()) {
+            validateTarget(block.pos());BlockState actual=level().getBlockState(block.pos());
+            if(!actual.isAir() && !Blueprint.matches(block.state(),actual))throw new IllegalStateException("Player component edit conflicts at "+block.pos().toShortString());
+        }
+        trial.resetEvidence();manager.release(this);clearDiagnoses();
+        if(assignments.tasks.containsKey(activeComponent)){var old=assignments.tasks.get(activeComponent);old.status=state;old.verified=verified;}
+        activeComponent=id;baseline.clear();dependencies.clear();repairTargets.clear();originDiagnosis=null;
+        activeOperation="legacy";operationKind="BUILD";verified="untested";state="READY";task.assign(actor(),"assistant");
+        try{build();}catch(RuntimeException failure){state="PAUSED";detail=failure.getMessage();save();checkpoint();throw failure;}
+    }
     void build() {
         requireCreative();
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before building");
         if(hasPendingTest()) throw new IllegalStateException("Reconcile the interrupted functional test with resume before building");
         if (blueprint == null) throw new IllegalStateException("Preview a blueprint first");
-        MechanismCatalog.contract(blueprint);
+        ComponentTree.validate(blueprint);
         if (state.equals("EXECUTING") || testTick >= 0 || undoRequested) throw new IllegalStateException("An operation is already running or needs reconciliation");
         if (!baseline.isEmpty()) { resume(); return; }
         if(pendingPlacement)throw new IllegalStateException("Reconcile the interrupted placement before starting a new build");
         Map<BlockPos,BlockState> proposedBaseline = new LinkedHashMap<>();
-        for (Blueprint.PlannedBlock b : blueprint.blocks()) {
+        for (Blueprint.PlannedBlock b : assignmentBlocks()) {
             validateTarget(b.pos());
             BlockState actual = level().getBlockState(b.pos());
             if (!actual.isAir() && !Blueprint.matches(b.state(), actual)) throw new IllegalStateException("Occupied or incorrect block at " + b.pos().toShortString() + "; move the preview or correct it yourself");
@@ -201,9 +311,9 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     Map<BlockPos,BlockState> captureDependencies() {
-        var planned=new HashSet<BlockPos>(); blueprint.blocks().forEach(b->planned.add(b.pos()));
+        var planned=new HashSet<BlockPos>(); assignmentBlocks().forEach(b->planned.add(b.pos()));
         var result=new LinkedHashMap<BlockPos,BlockState>();
-        for(var block:blueprint.blocks()) for(BlockPos p:BlockPos.betweenClosed(block.pos().offset(-1,-1,-1),block.pos().offset(1,1,1))) {
+        for(BlockPos p:dependencyPositions(false)) {
             if(planned.contains(p))continue;
             if(!level().hasChunkAt(p))throw new IllegalStateException("Assignment dependencies include an unloaded chunk");
             result.put(p.immutable(),level().getBlockState(p));
@@ -220,7 +330,7 @@ final class EngineeringSession implements BuildExecutor {
         if (hasPendingTest()) { claim(ProjectAccess.Permission.BUILD,true);restoreTest();state="PAUSED";detail=!hasPendingTest()?"Interrupted test reconciled; inspect before requesting another test":"Test input still needs restoration; preserve/resolve conflicting edits before resume";manager.release(this);save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
         if(undoRequested)throw new IllegalStateException("Undo was interrupted; use undo to finish its selected operation");
-        MechanismCatalog.contract(blueprint);
+        ComponentTree.validate(blueprint);
         reconcile(); var refreshedDependencies=dependencies.isEmpty()?captureDependencies():dependencies;claim(ProjectAccess.Permission.BUILD,operationKind.equals("REPAIR"));dependencies.putAll(refreshedDependencies);state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
     }
     @Override public void pause(String reason) {
@@ -236,7 +346,7 @@ final class EngineeringSession implements BuildExecutor {
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
         if (blueprint != null && verified.startsWith("passed:") && server.getTickCount()%10==0) {
-            boolean changed=blueprint.blocks().stream().anyMatch(b->!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos())));
+            boolean changed=assignmentBlocks().stream().anyMatch(b->!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(changed){verified="stale: circuit changed or chunks unloaded since test";detail="Functional evidence is stale; inspect and test the current circuit again";state="PAUSED";save();checkpoint();tell(detail);}
         }
         if (state.equals("EXECUTING")) {
@@ -245,7 +355,7 @@ final class EngineeringSession implements BuildExecutor {
                 reconcile();
                 if (server.getTickCount() < nextPlacement) return;
                 nextPlacement=server.getTickCount()+4;
-                for (Blueprint.PlannedBlock b : blueprint.blocks()) {
+                for (Blueprint.PlannedBlock b : assignmentBlocks()) {
                     if(operationKind.equals("REPAIR") && !repairTargets.contains(b.pos()))continue;
                     BlockState actual = level().getBlockState(b.pos());
                     if (Blueprint.matches(b.state(),actual)) continue;
@@ -258,13 +368,13 @@ final class EngineeringSession implements BuildExecutor {
                         if (!actual.isAir() || !b.state().canSurvive(level(), b.pos())) throw new IllegalStateException("Placement blocked at " + b.pos().toShortString());
                         after=b.state();
                     }
-                    journal.add(new Change(b.pos(),actual,after,activeOperation)); pendingPlacement=true;save();
+                    journal.add(new Change(b.pos(),actual,after,activeOperation,activeComponent)); pendingPlacement=true;save();
                     validateMutation();
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save(); return;
                 }
-                state="COMPLETED"; detail=operationKind.equals("REPAIR")?"Supported corrections applied. Functional test still required.":"Geometry matches the blueprint. Functional test still required.";manager.release(this); save(); checkpoint(); tell(detail);
+                state="COMPLETED"; detail=ComponentTree.composite(blueprint)?"Component "+activeComponent+" geometry matches. Functional test still required.":operationKind.equals("REPAIR")?"Supported corrections applied. Functional test still required.":"Geometry matches the blueprint. Functional test still required.";manager.release(this); save(); checkpoint(); tell(detail);
             } catch (RuntimeException e) { pause(e.getMessage()); }
         }
         tickTutorials();
@@ -467,6 +577,13 @@ final class EngineeringSession implements BuildExecutor {
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before undoing world work");
         if(journal.isEmpty() && !undoRequested){tell("No assistant operation to undo.");return;}
         if(state.equals("EXECUTING") || testTick>=0)pause("Undo requested; active execution paused");
+        if(hasPendingTest())throw new IllegalStateException("Reconcile interrupted test inputs with resume before undo");
+        String selectedOperation=undoRequested?undoOperation:journal.getLast().operation();
+        var selected=journal.stream().filter(change->change.operation().equals(selectedOperation)).findFirst();
+        if(selected.isPresent() && !selected.get().component().equals(activeComponent)) {
+            trial.resetEvidence();manager.release(this);clearDiagnoses();activeComponent=selected.get().component();
+            assignments.task(blueprint,activeComponent);
+        }
         claim(ProjectAccess.Permission.UNDO,true);
         try { undoReserved(); } finally { manager.release(this); }
     }
@@ -574,38 +691,41 @@ final class EngineeringSession implements BuildExecutor {
     void tickTest() { trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
-        for (Blueprint.PlannedBlock b:blueprint.blocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
-        Set<BlockPos> planned=new HashSet<>(); blueprint.blocks().forEach(b->planned.add(b.pos()));
-        for (Blueprint.PlannedBlock b:blueprint.blocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {
+        for (Blueprint.PlannedBlock b:assignmentBlocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
+        Set<BlockPos> planned=new HashSet<>(); assignmentBlocks().forEach(b->planned.add(b.pos()));
+        for (Blueprint.PlannedBlock b:assignmentBlocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {
             if (!level().hasChunkAt(p) || (!planned.contains(p) && !level().getBlockState(p).isAir())) throw new IllegalStateException("Test needs a two-block air margin around the floating circuit");
         }
     }
     void checkpoint() {
         if (blueprint==null) return; JsonObject out=new JsonObject(); out.addProperty("worldId",worldId); out.addProperty("dimension",dimension);
-        out.addProperty("projectId",blueprint.projectId());out.addProperty("blueprintRevision",blueprint.revision()); out.addProperty("taskId",blueprint.id()); out.addProperty("status",state); out.addProperty("detail",detail); out.addProperty("verified",verified);
+        out.addProperty("projectId",blueprint.projectId());out.addProperty("blueprintRevision",blueprint.revision()); out.addProperty("taskId",ComponentTree.composite(blueprint)?projectId+":"+activeComponent:blueprint.id()); out.addProperty("status",state); out.addProperty("detail",detail); out.addProperty("verified",verified);
         var observed=new JsonObject();observed.addProperty("controller",controller.toString());
         observed.addProperty("assistantPlacements",journal.stream().filter(change->change.before().isAir()).count());
         observed.addProperty("assistantChanges",journal.size());observed.addProperty("operationID",activeOperation);
+        observed.addProperty("component",activeComponent);var componentTask=assignments.task(blueprint,activeComponent);observed.addProperty("componentBasis",componentTask.basis);observed.addProperty("assignmentGeneration",componentTask.generation);observed.add("componentAssignments",assignments.json());
         observed.addProperty("operationKind",operationKind);observed.addProperty("undoRequested",undoRequested);
         if(undoOperation!=null)observed.addProperty("undoOperation",undoOperation);
         observed.addProperty("tick",level().getGameTime());observed.add("testEvidence",trial.evidence());observed.add("testInputs",trial.inputsSnapshot());out.add("observed",observed);
         lastCheckpoint=Companion.gateway(this,"/v2/checkpoint",out,owner);Companion.report(this,lastCheckpoint);
     }
     void save() {
+        if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
         json.addProperty("projectId",projectId.toString());json.addProperty("projectRevision",projectRevision);json.add("access",access.json());
         json.addProperty("memoryStatus",memoryStatus);
         json.addProperty("controller",controller.toString());json.addProperty("owner",owner.toString()); json.addProperty("status",state); json.addProperty("detail",detail); json.addProperty("stage",cursor(controller).stage); json.addProperty("verified",verified);
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
-        json.addProperty("journalVersion",2);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
+        json.addProperty("journalVersion",3);json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
         JsonArray targetPositions=new JsonArray();repairTargets.forEach(pos->targetPositions.add(Blueprint.jsonPos(pos)));json.add("repairTargets",targetPositions);
         if (corner1!=null) json.add("corner1",Blueprint.jsonPos(corner1)); if (corner2!=null) json.add("corner2",Blueprint.jsonPos(corner2));
         if (blueprint!=null) json.add("blueprint",blueprint.source()); JsonArray changes=new JsonArray();
+        json.add("componentAssignments",assignments.json());
         trial.write(json);
-        for(Change c:journal) { JsonObject x=new JsonObject(); x.add("pos",Blueprint.jsonPos(c.pos())); x.addProperty("before",Blueprint.describe(c.before())); x.addProperty("after",Blueprint.describe(c.after()));x.addProperty("operation",c.operation()); changes.add(x); }
+        for(Change c:journal) { JsonObject x=new JsonObject(); x.add("pos",Blueprint.jsonPos(c.pos())); x.addProperty("before",Blueprint.describe(c.before())); x.addProperty("after",Blueprint.describe(c.after()));x.addProperty("operation",c.operation());x.addProperty("component",c.component()); changes.add(x); }
         json.add("journal",changes); JsonArray initial=new JsonArray(); baseline.forEach((pos,state)->{JsonObject x=new JsonObject();x.add("pos",Blueprint.jsonPos(pos));x.addProperty("state",Blueprint.describe(state));initial.add(x);});json.add("baseline",initial);
         JsonArray surrounding=new JsonArray();dependencies.forEach((pos,state)->{var item=new JsonObject();item.add("pos",Blueprint.jsonPos(pos));item.addProperty("state",Blueprint.describe(state));surrounding.add(item);});json.add("dependencies",surrounding);
         LocalFiles.write(file,json);
@@ -632,7 +752,6 @@ final class EngineeringSession implements BuildExecutor {
             if(json.has("corner1")) corner1=Blueprint.pos(json.getAsJsonObject("corner1")); if(json.has("corner2")) corner2=Blueprint.pos(json.getAsJsonObject("corner2"));
             if(json.has("blueprint")) blueprint=Blueprint.parse(json.getAsJsonObject("blueprint"),worldId,dimension);
             if(blueprint!=null && (blueprint.revision()!=projectRevision || !blueprint.projectId().equals(projectId.toString())))throw new IllegalStateException("Intended blueprint identity mismatch");
-            trial.load(json);
             stage=json.get("stage").getAsInt();
             if(stage<0 || (blueprint!=null && stage>=blueprint.stages().size())) throw new IllegalStateException("Checkpoint has an invalid tutorial stage");
             for(JsonElement entry:json.getAsJsonArray("tutorials")){var item=entry.getAsJsonObject();var actor=UUID.fromString(item.get("actorId").getAsString());var cursor=cursor(actor);cursor.stage=item.get("stage").getAsBigDecimal().intValueExact();cursor.teaching=false;if(cursor.stage<0 || (blueprint!=null && cursor.stage>=blueprint.stages().size()))throw new IllegalStateException("Invalid personal tutorial stage");}
@@ -641,7 +760,11 @@ final class EngineeringSession implements BuildExecutor {
             pendingPlacement=json.has("pendingPlacement")&&json.get("pendingPlacement").getAsBoolean();undoRequested=json.has("undoRequested")&&json.get("undoRequested").getAsBoolean();
             boolean grouped=json.has("journalVersion");
             if(grouped) {
-                if(json.get("journalVersion").getAsInt()!=2)throw new IllegalStateException("Unsupported operation journal version");
+                int journalVersion=json.get("journalVersion").getAsBigDecimal().intValueExact();
+                if(journalVersion!=2 && journalVersion!=3)throw new IllegalStateException("Unsupported operation journal version");
+                if(journalVersion==3){activeComponent=json.get("activeComponent").getAsString();
+                    if(blueprint!=null)assignments.load(blueprint,json.getAsJsonArray("componentAssignments"));}
+                else if(blueprint!=null)assignments.reconcile(blueprint);
                 activeOperation=operationGroup(json.get("activeOperation").getAsString());
                 operationKind=json.get("operationKind").getAsString();
                 if(!Set.of("BUILD","REPAIR").contains(operationKind))throw new IllegalStateException("Invalid active operation kind");
@@ -656,17 +779,23 @@ final class EngineeringSession implements BuildExecutor {
                 // baseline never authorizes a new diagnosis or repair operation.
                 activeOperation="legacy";operationKind="BUILD";originDiagnosis=null;undoOperation=undoRequested?"legacy":null;repairTargets.clear();
             }
+            trial.load(json);
             for(JsonElement e:json.getAsJsonArray("journal")){
                 JsonObject x=e.getAsJsonObject();String operation=grouped?operationGroup(x.get("operation").getAsString()):"legacy";
-                journal.add(new Change(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("before").getAsString()),Blueprint.state(x.get("after").getAsString()),operation));
+                boolean scoped=grouped && json.get("journalVersion").getAsInt()==3;
+                journal.add(new Change(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("before").getAsString()),Blueprint.state(x.get("after").getAsString()),operation,scoped?x.get("component").getAsString():"root"));
             }
             for(JsonElement e:json.getAsJsonArray("baseline")){JsonObject x=e.getAsJsonObject();baseline.put(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("state").getAsString()));}
             if(json.has("dependencies"))for(JsonElement e:json.getAsJsonArray("dependencies")){JsonObject x=e.getAsJsonObject();dependencies.put(Blueprint.pos(x.getAsJsonObject("pos")),Blueprint.state(x.get("state").getAsString()));}
             if(journal.size()>4096 || baseline.size()>4096 || dependencies.size()>65536 || cursors.size()>128)throw new IllegalStateException("Checkpoint exceeds project limits");
             if(!journal.isEmpty() && (corner1==null || corner2==null))throw new IllegalStateException("Journal has no bounded workspace");
-            Set<String> closedGroups=new HashSet<>();String previousGroup=null;
+            Set<String> closedGroups=new HashSet<>();String previousGroup=null;Map<String,String> groupComponents=new HashMap<>();
             for(Change change:journal) {
                 if(!contains(change.pos()) || change.before().hasBlockEntity() || change.after().hasBlockEntity())throw new IllegalStateException("Journal entry escapes its workspace or includes a block entity");
+                if(blueprint==null || ComponentTree.component(blueprint,change.component()).blocks().stream().noneMatch(block->block.pos().equals(change.pos())))
+                    throw new IllegalStateException("Journal entry escaped its recorded component");
+                String priorComponent=groupComponents.putIfAbsent(change.operation(),change.component());
+                if(priorComponent!=null && !priorComponent.equals(change.component()))throw new IllegalStateException("Operation group spans multiple components");
                 if(!change.operation().equals(previousGroup)) {
                     if(closedGroups.contains(change.operation()))throw new IllegalStateException("Operation journal groups are not contiguous");
                     if(previousGroup!=null)closedGroups.add(previousGroup);
@@ -675,18 +804,17 @@ final class EngineeringSession implements BuildExecutor {
             }
             if(repairTargets.size()>4096)throw new IllegalStateException("Too many repair targets");
             if(blueprint!=null) {
-                Set<BlockPos> planned=new HashSet<>();blueprint.blocks().forEach(block->planned.add(block.pos()));
+                Set<BlockPos> planned=new HashSet<>();assignmentBlocks().forEach(block->planned.add(block.pos()));
                 if(!planned.containsAll(baseline.keySet()))throw new IllegalStateException("Baseline escaped the canonical blueprint");
                 if(dependencies.keySet().stream().anyMatch(planned::contains))throw new IllegalStateException("Dependency overlaps a planned write target");
+                Set<BlockPos> allowedDependencies=dependencyPositions(true);
                 for(BlockPos dependency:dependencies.keySet()) {
-                    boolean adjacent=planned.stream().anyMatch(pos->Math.abs(pos.getX()-dependency.getX())<=2
-                            && Math.abs(pos.getY()-dependency.getY())<=2 && Math.abs(pos.getZ()-dependency.getZ())<=2);
-                    if(!adjacent)throw new IllegalStateException("Dependency escaped the bounded mechanism read margin");
+                    if(!allowedDependencies.contains(dependency))throw new IllegalStateException("Dependency escaped the bounded component read assumptions");
                 }
             }
             if(operationKind.equals("REPAIR")) {
                 if(originDiagnosis==null || repairTargets.isEmpty() || blueprint==null)throw new IllegalStateException("Repair operation identity or targets are incomplete");
-                Set<BlockPos> planned=new HashSet<>();blueprint.blocks().forEach(block->planned.add(block.pos()));
+                Set<BlockPos> planned=new HashSet<>();assignmentBlocks().forEach(block->planned.add(block.pos()));
                 if(!planned.containsAll(repairTargets))throw new IllegalStateException("Repair target escaped the canonical blueprint");
             } else if(originDiagnosis!=null || !repairTargets.isEmpty())throw new IllegalStateException("Build operation contains repair-only metadata");
             if(pendingPlacement && (journal.isEmpty() || !journal.getLast().operation().equals(activeOperation)))throw new IllegalStateException("Pending placement has no matching operation entry");

@@ -34,9 +34,9 @@ and combined signed-in model/game acceptance. Phase 2 remains all six features
 in #4. Shared multi-user subscription eligibility remains unproven; planning is
 still limited to the configured account-owning operator, never a public AI API.
 
-## Next build � component collaboration (#2)
+## Next build - component collaboration (#2)
 
-Decision � 2026-10-27: keep one server-owned project with a bounded component
+Decision - 2026-10-27: keep one server-owned project with a bounded component
 tree and separate persisted assignments. Containers group work; physical leaves
 are regenerated from trusted catalog geometry. Existing designs migrate as one
 root leaf. Keep one active AI task per project until phase 2 multiple builders.
@@ -67,16 +67,16 @@ pinned Minecraft APIs before deciding the access/retention implementation.
 
 Outcomes:
 
-- C1 � Work on a shared multi-component project: the player builds B while the
+- C1 - Work on a shared multi-component project: the player builds B while the
   assistant completes A. Proof: real dedicated native flow with disjoint edits
   that do not pause A, plus a shared support/port edit that does pause dependent
   work. Show hierarchy, interfaces, prerequisites, resources and assignments.
-- C2 � Take over and delegate back without losing progress. Proof: preserve
+- C2 - Take over and delegate back without losing progress. Proof: preserve
   journal/groups and observed progress through handoffs, game and companion
   restart. Reject old connections, revoked grants, stale assignment generations
   and changed component bases before any mutation. Migrate an existing root
   design without changing its intended geometry or journal.
-- C3 � Inspect the actual surroundings and available materials. Proof: targeted
+- C3 - Inspect the actual surroundings and available materials. Proof: targeted
   player/view/block/support/connection/inventory observations, missing/extra and
   changed-state reports, unloaded chunks rejected honestly, and invalidation
   limited to affected components/dependants. Prove private project visibility
@@ -87,7 +87,7 @@ add typed tree/composition validation and assignment ledger (C1/C2); scope live
 execution/reservations/recovery and companion task memory (C1/C2); research and
 implement targeted perception and accessible inventory observation (C3); drive
 native flows plus service/game restarts and independently review new authority
-and data handling before merging (C1�C3). Keep physical execution replaceable.
+and data handling before merging (C1-C3). Keep physical execution replaceable.
 The riskiest assumption is that relevant read dependencies can be scoped without
 missing a real redstone interaction. Probe independent and connected/shared
 support cases in the actual pinned game before claiming that separation works.
@@ -105,6 +105,23 @@ player supports and retains all assistant work. This is only the first C1/C2
 proof; shared-dependency, stale generation, restart and C3 cases still need
 actual proofs before the phase can ship. Runtime commands/composition are not
 implemented yet; the new test should initially fail at the missing command.
+
+Implementation in progress on draft PR #12. Proof-first CI 40532671860 failed
+at the missing component command, while the other four gates passed. Java
+ComponentTree and companion components.ts now regenerate bounded catalog leaf
+geometry, ports, resources and prerequisites; root integrated workers and fixed
+cross-language root-node, ordering, metadata and TypeScript type mismatches.
+The first runtime path adds component add/list/claim/build, per-component
+assignment generations/bases, scoped baselines/dependencies/leases and attributed
+journal entries. Explicit delegate-back captures fresh current assumptions while
+retaining and checking old assistant changes; it never clears the journal.
+Undo selects the recorded component before acquiring its lease. Checkpoints
+persist descriptive assignments, never live authority. Functional trials use the
+selected leaf's trusted oracle and archive its component basis with the project
+intention. Root owns all proofs, including both actual leaf tests and forged
+composition rejection. Local compilation/formatting only; runtime acceptance,
+independent authority review, scoped companion invalidation, additional handoff/
+restart/dependency failures, richer UI and C3 perception are still pending.
 
 ## Proven foundation outcomes
 
