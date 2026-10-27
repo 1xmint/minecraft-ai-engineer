@@ -261,7 +261,8 @@ function content(tree: ComponentTree, wholeAnchor: Position, wholeRotation: Rota
     }
     tests.push({
       id: `${node.id}/functional-vectors`,
-      description: `Run every ${catalog.name} catalog input vector in Minecraft and restore each original input.`,
+      description:
+        "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
     });
   }
   if (blocks.length > 4096)
