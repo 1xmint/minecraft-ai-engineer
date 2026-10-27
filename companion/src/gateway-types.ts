@@ -9,7 +9,8 @@ import {
   position,
   text,
 } from "./types.js";
-import { adaptation } from "./catalog.js";
+import { CATALOG_REVISION, adaptation } from "./catalog.js";
+import { validateComponentBlueprint } from "./components.js";
 
 export interface GatewayContext {
   serverId: string;
@@ -209,6 +210,16 @@ export function serverBlueprint(
   const provenance = object(v.provenance);
   if (provenance.kind !== "curated" || provenance.minecraft !== "26.3")
     throw new RequestError("Unsupported blueprint provenance.");
+  const composite = provenance.template === "composition";
+  if (
+    (composite &&
+      (provenance.catalogRevision !== CATALOG_REVISION ||
+        v.parameters !== undefined ||
+        v.components === undefined)) ||
+    (!composite && v.components !== undefined)
+  )
+    throw new RequestError("Composite blueprint provenance or metadata is invalid.");
+  const componentTruth = composite ? validateComponentBlueprint(v) : undefined;
   if (
     v.ports !== undefined &&
     (!Array.isArray(v.ports) || v.ports.length > 128)
@@ -246,7 +257,7 @@ export function serverBlueprint(
       description: text(expected.description, "test description", 4000),
     };
   });
-  return {
+  const canonical: Blueprint = {
     schemaVersion: 1,
     id: identifier(v.id, "blueprint id"),
     revision: context.projectRevision,
@@ -281,11 +292,26 @@ export function serverBlueprint(
             ),
           }),
     },
-    ...(v.parameters === undefined
+    ...(v.parameters === undefined || composite
       ? {}
       : { parameters: adaptation(String(provenance.template), v.parameters) }),
+    ...(composite ? { components: v.components as Blueprint["components"] } : {}),
     verification: "untested",
   };
+  if (composite) {
+    const truth = componentTruth!;
+    return {
+      ...canonical,
+      blocks: truth.blocks,
+      stages: truth.stages,
+      bounds: truth.bounds,
+      resources: truth.resources,
+      ports: truth.ports,
+      tests: truth.tests,
+      components: truth.components,
+    };
+  }
+  return canonical;
 }
 export function projectSync(value: unknown): ProjectSync {
   const v = object(value),

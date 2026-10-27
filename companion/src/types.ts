@@ -8,6 +8,26 @@ export interface Bounds {
   min: Position;
   max: Position;
 }
+export interface ComponentGroupNode {
+  id: string;
+  parent?: string;
+  kind: "group";
+}
+export interface ComponentMechanismNode {
+  id: string;
+  parent: string;
+  kind: "mechanism";
+  template: Exclude<Plan["template"], "unsupported">;
+  anchor: Position;
+  rotation: Rotation;
+  parameters: { delay: number };
+  dependsOn: string[];
+}
+export type ComponentNode = ComponentGroupNode | ComponentMechanismNode;
+export interface ComponentTree {
+  schemaVersion: 1;
+  nodes: ComponentNode[];
+}
 export interface DesignRequest {
   request: string;
   worldId: string;
@@ -53,6 +73,7 @@ export interface Blueprint {
     minecraft: "26.3";
     catalogRevision?: number;
   };
+  components?: ComponentTree;
   parameters?: { delay: number };
   verification: "untested";
 }
