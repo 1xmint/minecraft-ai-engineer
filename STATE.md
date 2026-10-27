@@ -200,6 +200,21 @@ new random IDs on ACL/restart sync would test an invalid server request. Local
 TypeScript checks and Companion CI 40583311819 pass. Full targeted
 player/view/inventory perception remains separate unfinished work.
 
+## Independent safety review finding (C2)
+
+GPT-6.1-Sol completed focused read-only review on 600b347 and found one confirmed
+P2: componentTest validates full prerequisite/margin closure once, but later
+FunctionalTrial mutations/final observation use validateTestArea, which checks
+only immediate prerequisites and target margins. Empty dependencies during tests
+leave distant margin edits undetected. The post-pass geometry watcher also omits
+margins. No other confirmed finding in the reviewed source. Root wrote a native
+rejection proof before fixing: while C input is ON, occupy B's distant empty
+margin at66,100,0; require paused pending-input recovery, no functional pass or
+unauthorized restore, and unchanged A. Clear it manually, explicitly resume,
+restore the input, then run a fresh actual test. Reuse the full canonical read
+closure for live/final tests and subsequent result invalidation; do not weaken
+margins or restore under invalid assumptions. Proof/fix validation still pending.
+
 ## Targeted perception acceptance (C3, next)
 
 Serves C3. Root wrote proof-first acceptance after CI 40584567109 proved

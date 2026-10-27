@@ -645,6 +645,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
         server.runOnServer(s->check(!session(s,"Alice").level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Fresh cross-project grants and explicit resume safely restore the original input"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        // A distant prerequisite's empty margin is part of C's live read contract too.
+        final var farMargin=new BlockPos(66,100,0);
+        send(context,"engineer test");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.testTick<0 || !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            check(project.level().getBlockState(farMargin).isAir(),"The distant prerequisite margin starts empty");
+            project.level().setBlockAndUpdate(farMargin,Blocks.STONE.defaultBlockState());return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)
+                && !project.verified.startsWith("passed:") && project.assignments.task(project.blueprint,"a").verified.startsWith("passed:"),"A far read-margin edit blocks the next test input mutation/restoration and preserves unrelated a");
+            project.level().setBlockAndUpdate(farMargin,Blocks.AIR.defaultBlockState());});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->check(!session(s,"Alice").level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Explicit fresh recovery restores the input after the distant margin is clear"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         write("components-independent.done","passed");
     }
