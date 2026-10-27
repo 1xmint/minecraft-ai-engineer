@@ -65,9 +65,9 @@ standalone repair as proof that composed-project repair works.
 - Commands: component add/group/depend/list/claim/build. One AI task per project;
   humans can work in independent leaves. ComponentAssignments keeps granting
   actor, executor, generation, intended basis and status separate from authority.
-  Current basis covers own geometry and declared dependency IDs; propagating
-  changed prerequisite intent into dependent bases is still needed before
-  component-local revision support. Assignments are coordination, not a second ACL.
+  Version2 bases include transitive prerequisite intent; v1 records must match
+  the exact old formula before migration. Changed bases advance/stale descriptions.
+  Assignments are coordination, not a second ACL.
 - Builds capture selected-leaf baselines plus relevant support/prerequisite read
   closure. Fresh delegate-back validates old assistant changes, preserves the
   journal and accepts matching player progress. Human conflicts pause work.
@@ -84,11 +84,11 @@ standalone repair as proof that composed-project repair works.
   prerequisite changes stale affected results, retaining unrelated passes.
 - Diagnosis proposals are ephemeral, actor/connection/epoch/revision/ACL/snapshot/
   TTL bound, now also assignment-generation/basis bound. Handoff clears proposals.
-  Root/standalone diagnosis and same-kind allowlisted repair work; composed
-  diagnosis/repair/revision still need implementation and actual acceptance.
+  Root/standalone diagnosis and same-kind allowlisted repair are proven. Composed
+  diagnose/repair/revise/test APIs are integrated; native acceptance is running.
 - Companion tasks use stable projectUUID:component IDs for composites. Scoped
-  checkpoint results exist; observation/revision invalidation is still too broad
-  in GatewayMemory and must become component-aware. All private memory stays
+  checkpoint results exist; component-aware companion invalidation is implemented
+  locally and awaits CI. All private memory stays
   outside repository/world saves. No persisted metadata restores execution authority.
 
 ## Decision and Outcomes for #2
@@ -156,7 +156,7 @@ Root wrote the native acceptance before implementation in a separate project at
 without touching world/journals, preserve a's scope/generation, stale b/c bases,
 reject a stale b snapshot without changing active context, repair only b's relay,
 record v2-scoped actual tests, undo that b group from selected c and keep a valid,
-then prove a no-op revision preserves buffered vectors/scope. Proof-first CI 40549054217 failed at the intended missing component-test command and legacy dependent-basis migration. Runtime APIs are now integrated with v2 bases and captured scopes; combined main/client compilation passes. Acceptance also keeps unaffected a active during b revision and resolves its old immutable pass through actual prior checkpoint vectors. Initialization failure retains captured inputs under their target component for recovery; failed repair leases roll back assignment selection. CI 40551903302 passed four checks but caught new scope/basis fields surviving identity-changing legacy adoption before component acceptance. Conversion now clears scoped results and rebuilds unassigned task descriptions under the adopted identity; new-format interrupted test inputs must recover in their original project. The exact source/backup and world journal remain unchanged. Fresh CI is pending. Independent GPT-6-Luna review hit the account usage limit and did not run; do not claim review complete. Companion-wide invalidation remains a C3 follow-up.
+then prove a no-op revision preserves buffered vectors/scope. Proof-first CI 40549054217 failed at the intended missing component-test command and legacy dependent-basis migration. Runtime APIs are now integrated with v2 bases and captured scopes; combined main/client compilation passes. Acceptance also keeps unaffected a active during b revision and resolves its old immutable pass through actual prior checkpoint vectors. Initialization failure retains captured inputs under their target component for recovery; failed repair leases roll back assignment selection. CI 40551903302 passed four checks but caught new scope/basis fields surviving identity-changing legacy adoption before component acceptance. Conversion now clears scoped results and rebuilds unassigned task descriptions under the adopted identity; new-format interrupted test inputs must recover in their original project. The exact source/backup and world journal remain unchanged. CI 40582347987 then passed the complete native component flow through its markers, but the SQL verifier stopped on a root integration typo (an unrelated earlier repair loop referenced an out-of-scope evidence variable). Root corrected that loop; full data proof remains pending. Independent GPT-6-Luna review hit the account usage limit and did not run; do not claim review complete. Companion-wide invalidation remains a C3 follow-up.
 
 ## Companion invalidation slice (C3)
 
@@ -170,7 +170,18 @@ not reported ownership or model text. No second permission system or persisted
 execution leases. Preserve original row revision and audit vectors, never relabel
 a pass under new intent. Existing v1 gateway tables can remain: each task already
 stores its exact revision, so derive old/new canonical scopes from those records.
-Full targeted player/view/inventory perception remains separate unfinished work.
+CI 40582347987 confirmed the two intended failures: broad invalidation destroyed
+a's row, and a partial a observation hid a later b change. Implementation now
+compares canonical transitive leaf intent and full two-block read closures, merges
+the retained 20-observation coordinate history, and rejects newly observed
+geometry conflicts even without prior coordinate evidence. Auth changes/restarts
+still pause all rows; removed/unscoped tasks and live execution descriptions fail
+closed. No schema rewrite is required. Additional proofs cover removed leaves,
+active descriptions and first-observation conflicts. Root corrected the fixture
+to reuse each immutable blueprint identity when syncing unchanged revisions;
+new random IDs on ACL/restart sync would test an invalid server request. Local
+TypeScript checks pass; actual implementation CI is pending. Full targeted
+player/view/inventory perception remains separate unfinished work.
 
 ## Next proof/build steps
 

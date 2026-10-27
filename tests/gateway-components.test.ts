@@ -12,6 +12,10 @@ function fixture() {
   const db = new DatabaseSync(":memory:");
   db.exec("CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
   let memory = new GatewayMemory(db);
+  const blueprints = new Map<
+    number,
+    ReturnType<typeof makeComponentBlueprint>
+  >();
   let revision = 1,
     authorization = 1,
     sequence = 0;
@@ -38,18 +42,21 @@ function fixture() {
     })),
   ];
   const sync = () => {
-    const blueprint = makeComponentBlueprint(
-      {
-        projectId: "project",
-        worldId: "world",
-        dimension: "minecraft:overworld",
-        request: "Three bounded components",
-        anchor: { x: 0, y: 100, z: 0 },
-        rotation: 0,
-      },
-      nodes,
-    );
+    const blueprint =
+      blueprints.get(revision) ??
+      makeComponentBlueprint(
+        {
+          projectId: "project",
+          worldId: "world",
+          dimension: "minecraft:overworld",
+          request: "Three bounded components",
+          anchor: { x: 0, y: 100, z: 0 },
+          rotation: 0,
+        },
+        nodes,
+      );
     blueprint.revision = revision;
+    blueprints.set(revision, blueprint);
     memory.sync({
       context: context(),
       worldId: "world",
@@ -215,6 +222,54 @@ test("legacy unscoped task rows fail closed when intent or observed geometry cha
     f.pass("a", "legacy-task");
     f.observe(30, "minecraft:stone");
     assert.equal(f.rows()["legacy-task"]!.verified, null);
+  } finally {
+    f.db.close();
+  }
+});
+
+test("a project revision never keeps live execution descriptions even when leaf geometry is unchanged", () => {
+  const f = fixture();
+  try {
+    f.pass("a");
+    f.db
+      .prepare(
+        "UPDATE gateway_tasks SET status='EXECUTING' WHERE task_id='project:a'",
+      )
+      .run();
+    f.revise();
+    assert.equal(f.rows()["project:a"]!.status, "PAUSED");
+    assert.equal(f.rows()["project:a"]!.verified, null);
+    f.pass("c");
+    f.nodes.splice(
+      f.nodes.findIndex((node) => node.id === "c"),
+      1,
+    );
+    f.revise();
+    assert.equal(f.rows()["project:c"]!.status, "PAUSED");
+    assert.equal(
+      f.rows()["project:c"]!.verified,
+      null,
+      "A removed leaf has no current canonical scope",
+    );
+  } finally {
+    f.db.close();
+  }
+});
+
+test("a first observation preserves matching geometry and invalidates newly discovered conflicts only in its closure", () => {
+  const f = fixture();
+  try {
+    for (const id of ["a", "b", "c"]) f.pass(id);
+    assert.equal(f.observe(0, "minecraft:stone").changed, 0);
+    assert.equal(f.rows()["project:a"]!.status, "COMPLETED");
+    assert.equal(
+      f.observe(8, "minecraft:air").changed,
+      0,
+      "No prior coordinate state is invented",
+    );
+    assert.equal(f.rows()["project:a"]!.status, "COMPLETED");
+    assert.equal(f.rows()["project:b"]!.verified, null);
+    assert.equal(f.rows()["project:c"]!.verified, null);
   } finally {
     f.db.close();
   }

@@ -1,4 +1,18 @@
 import type { DatabaseSync } from "node:sqlite";
+import {
+  componentMemoryScopes,
+  expectedWorldStates,
+  geometryState,
+  positionKey,
+  readsPosition,
+} from "./component-memory.js";
+interface TaskRow {
+  task_id: string;
+  project_revision: number;
+  status: string;
+  observed: string | null;
+}
+
 import type { Blueprint, Checkpoint, Observation } from "./types.js";
 import { integer, RequestError } from "./types.js";
 import type {
@@ -253,6 +267,51 @@ export class GatewayMemory {
         reportSequence,
       );
   }
+  private intended(
+    serverId: string,
+    projectId: string,
+    revision: number,
+  ): Blueprint | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(serverId, projectId, revision) as { document: string } | undefined;
+    return row ? (JSON.parse(row.document) as Blueprint) : undefined;
+  }
+  private tasks(serverId: string, projectId: string): TaskRow[] {
+    return this.db
+      .prepare(
+        "SELECT task_id,project_revision,status,observed FROM gateway_tasks WHERE server_id=? AND project_id=?",
+      )
+      .all(serverId, projectId) as unknown as TaskRow[];
+  }
+  private taskComponent(task: TaskRow, projectId: string): string | undefined {
+    if (!task.observed) return undefined;
+    const observed: unknown = JSON.parse(task.observed);
+    if (
+      !observed ||
+      typeof observed !== "object" ||
+      !("component" in observed) ||
+      typeof observed.component !== "string"
+    )
+      return undefined;
+    return task.task_id === `${projectId}:${observed.component}`
+      ? observed.component
+      : undefined;
+  }
+  private invalidate(
+    serverId: string,
+    projectId: string,
+    taskId: string,
+    detail: string,
+  ): void {
+    this.db
+      .prepare(
+        "UPDATE gateway_tasks SET status='PAUSED',detail=?,observed=NULL,verified=NULL WHERE server_id=? AND project_id=? AND task_id=?",
+      )
+      .run(detail, serverId, projectId, taskId);
+  }
   sync(input: ProjectSync): GatewayProject {
     const c = input.context;
     this.assertEpoch(c.serverId, c.serverEpoch);
@@ -344,14 +403,43 @@ export class GatewayMemory {
         );
       if (
         previous &&
-        (previous.project_revision !== c.projectRevision ||
-          previous.authorization_revision !== c.authorizationRevision)
-      )
+        previous.authorization_revision !== c.authorizationRevision
+      ) {
         this.db
           .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Project or authorization revision changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
+            "UPDATE gateway_tasks SET status='PAUSED',detail='Project authorization changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
           )
           .run(c.serverId, c.projectId);
+      } else if (previous && previous.project_revision !== c.projectRevision) {
+        const current = componentMemoryScopes(input.blueprint);
+        const old = new Map<number, ReturnType<typeof componentMemoryScopes>>();
+        for (const task of this.tasks(c.serverId, c.projectId)) {
+          const component = this.taskComponent(task, c.projectId);
+          if (!old.has(task.project_revision))
+            old.set(
+              task.project_revision,
+              componentMemoryScopes(
+                this.intended(c.serverId, c.projectId, task.project_revision),
+              ),
+            );
+          const before =
+            component && old.get(task.project_revision)?.get(component);
+          const after = component && current.get(component);
+          if (
+            !before ||
+            !after ||
+            before.intention !== after.intention ||
+            ["EXECUTING", "VERIFYING", "PLANNING"].includes(task.status)
+          )
+            this.invalidate(
+              c.serverId,
+              c.projectId,
+              task.task_id,
+              "Component or prerequisite intent changed; reconcile before resuming.",
+            );
+          // An unchanged row retains its original revision, scope and evidence verbatim.
+        }
+      }
       this.audit(c.serverId, c.projectId, "project-sync", input);
       return this.publicProject(this.row(c.serverId, c.projectId)!);
     });
@@ -450,22 +538,41 @@ export class GatewayMemory {
       );
     return this.atomic(() => {
       this.claimReport(context, reportSequence, "observe");
-      const previous = this.db
+      const history = this.db
         .prepare(
-          "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id DESC LIMIT 1",
+          "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id DESC LIMIT 20",
         )
-        .get(context.serverId, context.projectId) as
-        { document: string } | undefined;
-      const old = previous
-        ? (JSON.parse(previous.document) as Observation)
-        : undefined;
-      const oldStates = new Map(
-        old?.blocks.map((b) => [`${b.pos.x},${b.pos.y},${b.pos.z}`, b.state]),
+        .all(context.serverId, context.projectId) as { document: string }[];
+      const oldStates = new Map<string, string>();
+      let previousTick: number | null = null;
+      for (const row of history) {
+        const previous = JSON.parse(row.document) as Observation;
+        previousTick ??= previous.tick;
+        for (const block of previous.blocks) {
+          const key = positionKey(block.pos);
+          if (!oldStates.has(key)) oldStates.set(key, block.state);
+        }
+      }
+      const changedBlocks = observation.blocks.filter((block) => {
+        const old = oldStates.get(positionKey(block.pos));
+        return old !== undefined && old !== block.state;
+      });
+      const changed = changedBlocks.length;
+      const intended = this.intended(
+        context.serverId,
+        context.projectId,
+        context.projectRevision,
       );
-      const changed = observation.blocks.filter((b) => {
-        const key = `${b.pos.x},${b.pos.y},${b.pos.z}`;
-        return oldStates.has(key) && oldStates.get(key) !== b.state;
-      }).length;
+      const scopes = componentMemoryScopes(intended),
+        expected = expectedWorldStates(intended);
+      // Previously uncovered/expired coordinates also stale relevant results when they contradict geometry.
+      const conflicting = observation.blocks.filter(
+        (block) =>
+          !oldStates.has(positionKey(block.pos)) &&
+          geometryState(block.state) !==
+            (expected.get(positionKey(block.pos)) ??
+              geometryState("minecraft:air")),
+      );
       this.db
         .prepare(
           "INSERT INTO gateway_observations(server_id,project_id,document) VALUES(?,?,?)",
@@ -481,13 +588,24 @@ export class GatewayMemory {
           context.serverId,
           context.projectId,
         );
-      if (changed)
-        this.db
-          .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Observed world changes invalidate functional evidence.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
+      if (changed || conflicting.length)
+        for (const task of this.tasks(context.serverId, context.projectId)) {
+          const component = this.taskComponent(task, context.projectId);
+          const scope = component && scopes.get(component);
+          if (
+            !scope ||
+            [...changedBlocks, ...conflicting].some((block) =>
+              readsPosition(scope, block.pos),
+            )
           )
-          .run(context.serverId, context.projectId);
-      return { changed, previousTick: old?.tick ?? null };
+            this.invalidate(
+              context.serverId,
+              context.projectId,
+              task.task_id,
+              "Observed component or prerequisite changes invalidate functional evidence.",
+            );
+        }
+      return { changed, previousTick };
     });
   }
   context(context: GatewayContext): string {

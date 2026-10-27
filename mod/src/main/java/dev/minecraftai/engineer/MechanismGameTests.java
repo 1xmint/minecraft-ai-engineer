@@ -28,6 +28,9 @@ public final class MechanismGameTests {
         helper.assertTrue(migrated.task(project,"a").generation==7 && migrated.task(project,"b").generation==7,"Unchanged independent v1 bases keep their generations");
         helper.assertTrue(migrated.task(project,"c").generation==8 && migrated.task(project,"c").verified.startsWith("stale:"),"Adding prerequisite intention to a v1 basis advances and stales only its dependent task");
         for(var entry:migrated.json())helper.assertTrue(entry.getAsJsonObject().get("basisVersion").getAsInt()==2 && entry.getAsJsonObject().get("status").getAsString().equals("PAUSED"),"Migration emits versioned paused descriptions, never resumed authority");
+        var untested=legacy.deepCopy();untested.get(2).getAsJsonObject().addProperty("verified","untested");
+        var migratedUntested=new ComponentAssignments();migratedUntested.load(project,untested);
+        helper.assertTrue(migratedUntested.task(project,"c").generation==8 && migratedUntested.task(project,"c").verified.startsWith("stale:"),"A migrated dependency remains explicitly stale even without an old pass label");
         var corrupt=legacy.deepCopy();corrupt.get(2).getAsJsonObject().addProperty("basis","0".repeat(64));
         reject(helper,()->new ComponentAssignments().load(project,corrupt),"A legacy record must match its old formula before it can be migrated");
         var unknown=legacy.deepCopy();unknown.get(0).getAsJsonObject().addProperty("basisVersion",99);

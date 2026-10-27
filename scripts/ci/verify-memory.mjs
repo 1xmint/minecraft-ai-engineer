@@ -131,7 +131,7 @@ try {
     assert.equal(design.provenance.template, "signal-lamp");
     testedDelays.add(design.parameters.delay);
     assert.ok(report.checkpoint.observed.testEvidence.length >= 3);
-    for (const vector of evidence)
+    for (const vector of report.checkpoint.observed.testEvidence)
       assert.equal(vector.outputs.light, vector.inputs.enable);
   }
   assert.deepEqual(

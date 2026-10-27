@@ -27,7 +27,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/claim/build, inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/claim/build/diagnose/repair/revise/test, inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();

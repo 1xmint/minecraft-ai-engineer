@@ -127,7 +127,7 @@ final class ComponentAssignments {
                         || scope.get("blueprintRevision").getAsLong()>project.revision())throw new IllegalStateException("Historical pass belongs to another project, component or future revision");
                 task.lastPassedScope=scope;
             }
-            task.status="PAUSED";task.verified=item.get("verified").getAsString();
+            task.status="PAUSED";if(!migrated)task.verified=item.get("verified").getAsString();
             if(task.verified.startsWith("passed:"))task.verified="stale: restored component needs observation and testing";
         }
         if(seen.size()!=tasks.size())throw new IllegalStateException("Component assignment checkpoint is incomplete");
