@@ -191,8 +191,9 @@ it does not establish this multiplayer entitlement.
    lessons, private SQLite memory and bounded operator-only planning. Five CI
    gates are required. Offline CI identities and overlay opt-out do not prove
    production Mojang authentication or a separate vanilla-client binary.
-2. **Next: remaining phase 1.** Validated mechanisms (#1), component
-   dependencies/ownership and perception (#2), deeper debugging/richer teaching
+2. **Building: remaining phase 1.** Mechanism library and targeted repair (#1)
+   are proven and merged. Next: component dependencies/ownership and perception
+   (#2), deeper debugging/richer teaching
    and combined live-model acceptance (#3), in that order. Public CI stays
    credential-free; any live operator probe is separate evidence. Resolve
    documented eligibility before enabling shared multi-user subscription work.
@@ -212,6 +213,6 @@ combined live-model/game flow. All automated tests stay on GitHub CI; only
 scoped compilation/formatting runs locally. Existing game/toolchain pins remain.
 
 Release: https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
-Next build: https://github.com/1xmint/minecraft-ai-engineer/issues/1
-Current reference supports only the signal lamp. Larger designs, inventories,
+Next build: https://github.com/1xmint/minecraft-ai-engineer/issues/2
+The published alpha reference supports only the signal lamp. Larger designs, inventories,
 general debugging, textured previews and the full phase 1 remain unfinished.
