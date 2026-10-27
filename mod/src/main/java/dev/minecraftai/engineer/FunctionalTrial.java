@@ -14,19 +14,23 @@ final class FunctionalTrial {
     private final EngineeringSession session;
     private final Map<String,Input> inputs=new LinkedHashMap<>();
     private JsonArray evidence=new JsonArray();
+    private JsonObject evidenceScope,evidenceBlueprint;
     private MechanismCatalog.Contract contract;
     private int vector,nextTick;
     FunctionalTrial(EngineeringSession session){this.session=session;}
     boolean pending(){return !inputs.isEmpty();}
     JsonArray evidence(){return evidence.deepCopy();}
-    void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();contract=null;}
+    JsonObject scope(){return evidenceScope==null?null:evidenceScope.deepCopy();}
+    void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();evidenceScope=null;evidenceBlueprint=null;contract=null;}
     private void archiveEvidence(){
         if(evidence.isEmpty())return;var s=session;
-        if(s.blueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
-        var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);history.addProperty("projectId",s.projectId.toString());
-        history.addProperty("blueprintId",s.blueprint.id());history.addProperty("blueprintRevision",s.revision());history.addProperty("verificationAtArchive",s.verified);
+        if(evidenceScope==null || evidenceBlueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
+        var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);
+        history.addProperty("projectId",evidenceScope.get("projectId").getAsString());
+        history.addProperty("blueprintId",evidenceScope.get("blueprintId").getAsString());history.addProperty("blueprintRevision",evidenceScope.get("blueprintRevision").getAsLong());history.addProperty("verificationAtArchive",s.verified);
         history.addProperty("archivedAtTick",s.level().getGameTime());history.add("cases",evidence.deepCopy());
-        history.add("blueprint",s.blueprint.source().deepCopy());history.addProperty("component",s.activeComponent);history.addProperty("componentBasis",ComponentAssignments.basis(s.blueprint,s.activeComponent));
+        history.add("blueprint",evidenceBlueprint.deepCopy());history.addProperty("component",evidenceScope.get("component").getAsString());history.addProperty("componentBasis",evidenceScope.get("basis").getAsString());
+        history.addProperty("componentBasisVersion",evidenceScope.get("basisVersion").getAsInt());history.add("functionalScope",evidenceScope.deepCopy());
         LocalFiles.write(s.file.resolveSibling(s.projectId+".evidence-"+UUID.randomUUID()+".json"),history);
     }
 
@@ -42,7 +46,9 @@ final class FunctionalTrial {
             captured.put(port.name(),new Input(port.name(),port.pos(),actual,actual,actual,false));
         }
         archiveEvidence();s.claim(ProjectAccess.Permission.BUILD,true);
-        contract=candidate;inputs.putAll(captured);evidence=new JsonArray();vector=-1;nextTick=contract.settleTicks();
+        contract=candidate;inputs.putAll(captured);evidence=new JsonArray();
+        evidenceScope=makeScope(s.blueprint,s.activeComponent,ComponentAssignments.BASIS_VERSION);
+        evidenceBlueprint=s.blueprint.source().deepCopy();vector=-1;nextTick=contract.settleTicks();
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+" truth table running";
         s.save();s.checkpoint();
         s.tell(s.detail);
@@ -61,6 +67,8 @@ final class FunctionalTrial {
                     int elapsed=s.testTick;restore();
                     if(pending())throw new IllegalStateException("Inputs still need safe restoration; no functional pass was recorded");
                     s.verified="passed:"+contract.template()+":"+evidence.size()+" vectors@"+elapsed;
+                    ComponentAssignments.Task task=s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString());
+                    task.lastPassedScope=evidenceScope.deepCopy();
                     s.state="COMPLETED";s.detail="Actual Minecraft functional test passed: "+evidence.size()+" input vectors over "+elapsed+" ticks";
                     s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);return;
                 }
@@ -131,12 +139,26 @@ final class FunctionalTrial {
     }
     void write(JsonObject json){
         json.add("testInputs",inputsSnapshot());json.add("functionalEvidence",evidence.deepCopy());
+        if(evidenceScope!=null)json.add("functionalScope",evidenceScope.deepCopy());
         // Readable legacy alias for the first remaining input; the array owns recovery.
         if(pending()){var first=inputs.values().iterator().next();json.addProperty("testOriginal",Blueprint.describe(first.original()));json.addProperty("testLast",Blueprint.describe(first.last()));}
     }
     void load(JsonObject json){
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
+        validateCases(evidence);
+        evidenceScope=null;evidenceBlueprint=null;
+        if(json.has("functionalScope")) {
+            evidenceScope=validateHistoricalScope(json.getAsJsonObject("functionalScope"));
+            validateCurrentScope(evidenceScope);
+            evidenceBlueprint=session.blueprint.source().deepCopy();
+        } else if(!evidence.isEmpty() || (json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty()) || json.has("testOriginal")) {
+            // Old buffers predate explicit scope. Bind them only to the exact saved intent,
+            // and preserve the old v1 identity through archive instead of relabeling as v2.
+            evidenceScope=makeScope(session.blueprint,session.activeComponent,1);
+            evidenceBlueprint=session.blueprint.source().deepCopy();
+            if(session.blueprint==null)throw new IllegalStateException("Legacy functional evidence has no intended blueprint");
+        }
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;
         if(entries!=null && entries.isEmpty()){if(json.has("testOriginal"))throw new IllegalStateException("Conflicting test recovery formats");return;}
@@ -149,6 +171,47 @@ final class FunctionalTrial {
         }else{
             if(entries.size()>32)throw new IllegalStateException("Too many test inputs");
             for(var value:entries){var entry=value.getAsJsonObject();putLoaded(new Input(entry.get("name").getAsString(),Blueprint.pos(entry.getAsJsonObject("pos")),Blueprint.state(entry.get("original").getAsString()),Blueprint.state(entry.get("last").getAsString()),Blueprint.state(entry.get("before").getAsString()),entry.get("pending").getAsBoolean()));}
+        }
+    }
+
+    private JsonObject makeScope(Blueprint blueprint,String component,int version) {
+        if(blueprint==null)throw new IllegalStateException("Functional evidence needs its intended blueprint");
+        String basis=version==1?ComponentAssignments.legacyBasis(blueprint,component):ComponentAssignments.basis(blueprint,component);
+        JsonObject scope=new JsonObject();scope.addProperty("projectId",blueprint.projectId());scope.addProperty("blueprintId",blueprint.id());
+        scope.addProperty("blueprintRevision",blueprint.revision());scope.addProperty("component",component);scope.addProperty("basis",basis);scope.addProperty("basisVersion",version);
+        return scope;
+    }
+    static JsonObject validateHistoricalScope(JsonObject saved) {
+        if(saved==null || !saved.keySet().equals(Set.of("projectId","blueprintId","blueprintRevision","component","basis","basisVersion")))
+            throw new IllegalStateException("Invalid functional evidence scope fields");
+        try {
+            UUID.fromString(saved.get("projectId").getAsString());
+            String blueprint=saved.get("blueprintId").getAsString(),component=saved.get("component").getAsString(),basis=saved.get("basis").getAsString();
+            long revision=saved.get("blueprintRevision").getAsBigDecimal().longValueExact();int version=saved.get("basisVersion").getAsBigDecimal().intValueExact();
+            if(blueprint.isBlank() || blueprint.length()>128 || !component.matches("[a-z][a-z0-9_-]{0,31}") || !basis.matches("[0-9a-f]{64}") || revision<1 || (version!=1 && version!=ComponentAssignments.BASIS_VERSION))
+                throw new IllegalStateException("Invalid functional evidence scope values");
+            return saved.deepCopy();
+        } catch(RuntimeException bad) { if(bad instanceof IllegalStateException e)throw e;throw new IllegalStateException("Invalid functional evidence scope",bad); }
+    }
+    private void validateCurrentScope(JsonObject scope) {
+        var s=session;Blueprint blueprint=s.blueprint;String component=scope.get("component").getAsString();int version=scope.get("basisVersion").getAsBigDecimal().intValueExact();
+        if(blueprint==null || !scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())
+                || scope.get("blueprintRevision").getAsLong()!=blueprint.revision() || !component.equals(s.activeComponent))
+            throw new IllegalStateException("Functional evidence scope does not match the exact loaded intent");
+        String expected=version==1?ComponentAssignments.legacyBasis(blueprint,component):ComponentAssignments.basis(blueprint,component);
+        if(!expected.equals(scope.get("basis").getAsString()))throw new IllegalStateException("Functional evidence basis disagrees with its intended component");
+    }
+    private static void validateCases(JsonArray cases) {
+        for(JsonElement value:cases) {
+            if(!value.isJsonObject())throw new IllegalStateException("Invalid functional evidence case");JsonObject row=value.getAsJsonObject();
+            if(!row.has("case") || !row.has("tick") || !row.has("elapsedTicks") || !row.has("inputs") || !row.has("outputs")
+                    || !row.get("inputs").isJsonObject() || !row.get("outputs").isJsonObject())throw new IllegalStateException("Invalid functional evidence case fields");
+            try {
+                if(row.get("case").getAsInt()<0 || row.get("tick").getAsLong()<0 || row.get("elapsedTicks").getAsInt()<0
+                        || row.getAsJsonObject("inputs").size()>32 || row.getAsJsonObject("outputs").size()>32)throw new IllegalStateException("Invalid functional evidence case values");
+                for(JsonObject ports:List.of(row.getAsJsonObject("inputs"),row.getAsJsonObject("outputs")))for(var entry:ports.entrySet())
+                    if(entry.getKey().length()>128 || !entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid functional evidence port value");
+            }catch(RuntimeException bad){if(bad instanceof IllegalStateException e)throw e;throw new IllegalStateException("Invalid functional evidence case values",bad);}
         }
     }
     private void putLoaded(Input input){
