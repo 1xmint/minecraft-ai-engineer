@@ -673,6 +673,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Keep the unaffected leaf active so revision must archive its buffer without relabelling it.
         MESSAGES.clear();send(context,"engineer component test a");expectChat(context,"truth table running");
         server.waitFor(s->session(s,"Alice").activeComponent.equals("a") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        MESSAGES.clear();send(context,"engineer component info b");expectChat(context,"Materials for this component");expectChat(context,"Port enable (input)");
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
         var beforeA=server.computeOnServer(s->assignment(session(s,"Alice"),"a").deepCopy());
         var beforeB=server.computeOnServer(s->assignment(session(s,"Alice"),"b").deepCopy());
@@ -712,6 +713,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String projectId=read("components-project");
         send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
+        // This third boot starts near the origin, beyond this project's read margin.
+        // Load the positive recovery fixture through an actual nearby player, never a production read.
+        server.runCommand("tp Alice 73 108 15 180 25");
+        server.waitFor(s->{var project=session(s,"Alice");return project.dependencyPositions(true).stream().allMatch(pos->project.level().hasChunkAt(pos));});
         long previousGeneration=server.computeOnServer(s->{var project=session(s,"Alice");
             check(project.delegation==null && project.delegationConnection==null,"Component assignments never import a connection or execution lease on restart");
             check(project.journal.size()==16 && project.activeComponent.equals("c"),"Restart retains the exact component operation journal and selected scope");

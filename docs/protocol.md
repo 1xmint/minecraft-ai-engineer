@@ -111,6 +111,25 @@ revocation and fresh checkpoints clear stale functional evidence while audit
 records remain. Request IDs for mutating operations are one-use, even after
 restart. A retry must be a new explicit operation, not replayed authority.
 
+Composite checkpoint task IDs are `projectUUID:component`. Their observed payload
+includes the component, basis/version, assignment generation and descriptive
+assignments. `testScope` identifies captured vectors by project, exact blueprint
+id/revision, component and basis/version. `lastPassedScope` may point to an older
+immutable revision when an unrelated component changed; empty current vectors
+are never a new test. Historical audit records keep their original identity.
+These fields describe work; none grants a Minecraft execution lease.
+
+On intent sync, the companion derives leaf geometry and transitive prerequisites
+from canonical stored blueprints. It preserves unchanged historical task rows,
+pauses changed/removed/unscoped tasks and never carries live execution across a
+project revision. Authorization changes and service/server registration pause
+all tasks. World observations compare coordinate history across the retained 20
+snapshots and invalidate only intersecting component/read closures; each closure
+includes a two-block margin. Newly covered coordinates that contradict canonical
+geometry also invalidate affected results. Legacy unscoped rows fail closed.
+The comparison fingerprint is local to companion invalidation and is not the
+Fabric assignment basis or an execution credential.
+
 POST `/v2/project/read` accepts context and returns the authorized project and
 current blueprint. GET `/v2/projects?serverId=...&serverEpoch=...&actorId=...&worldId=...`
 returns only that actor's current project memberships. Equal project UUIDs in

@@ -42,15 +42,15 @@ Inspect before explicitly resuming or undoing. Other players, copied paths,
 and arbitrary file imports are not silently adopted. Restart expires all
 delegations, and multiple owned projects require an explicit `project use`.
 
-## Mechanism-library development branch
+## Mechanism library in current source
 
-PR #11 adds `/engineer catalog` and `reference <mechanism> [delay]` for a
+Merged PR #11 adds `/engineer catalog` and `reference <mechanism> [delay]` for a
 signal lamp, inverter (`not-gate`) and two-input `or-gate`. Repeater delays are
 1-4 redstone ticks; the inverter accepts 1. Each mechanism has actual input
 vectors and a separate functional test. Choose a region large enough for its
 preview, keeping the floating circuit's two-block isolation margin clear.
 
-The targeted repair workflow on this branch is under acceptance testing:
+The targeted repair workflow uses the real loaded world:
 
 1. `/engineer diagnose` identifies missing supports, incorrect repeater input
    direction/delay, or supported lever/torch attachment mistakes. It reads the
@@ -72,6 +72,53 @@ Player-built supports and current lever power are retained. A player toggle
 pauses active repair, and revocation/disconnect expires its authority. A restart
 retains journals and evidence, while requiring fresh explicit authority. This
 slice does not yet support arbitrary circuit rewrites or component relayout.
+
+## Component collaboration in draft PR #12
+
+The development branch adds a bounded project tree. Set a workspace before
+adding components; give each physical leaf enough room for its circuit and
+keep its two-block isolation margin clear. Use absolute world coordinates:
+
+```text
+/engineer project new
+/engineer select1 100 100 0
+/engineer select2 118 101 0
+/engineer component add a root signal-lamp 100 100 0
+/engineer component add b root signal-lamp 108 100 0
+/engineer component add c root signal-lamp 116 100 0
+/engineer component depend c b
+/engineer component list
+/engineer component info b
+```
+
+The owner defines the tree and prerequisites before construction. Groups organize
+leaves; they place no blocks. A prerequisite means the other component must be
+present and remains a read dependency. It does not create a wire or prove an
+electrical connection. The preview and `info` show catalog ports/materials;
+materials describe the design, not items the assistant has gathered.
+
+A member with build permission can `component claim b` to work on B while
+`component build a` delegates A to the assistant. There is one active AI task
+per project. Delegate B back with `component build b`; matching player progress
+is retained, and edits to recorded AI work require reconciliation. Claiming a
+component does not grant project permissions or a construction lease.
+
+Use `component diagnose b` for a read-only report about B without selecting it
+or pausing another component. After reviewing the exact snapshot, explicitly
+`component repair b`. The snapshot expires with a world edit, handoff, grant or
+connection change. `component test b` runs the leaf's actual truth table.
+A geometry match or completed repair is not a functional pass.
+
+`component revise b 4` changes only B's intended delay, retaining existing world
+blocks and undo groups. B and its dependants need fresh tests; an unchanged A
+retains its original test revision. Diagnose, repair and test B to bring the
+world into line. Repeating an identical revision changes no intention/evidence.
+Undo targets the latest operation's component even if another component is
+selected. After a restart, select the project explicitly and request fresh
+authority; persisted assignments never resume construction automatically.
+
+This draft is still undergoing broader perception and final safety acceptance.
+It is not a new release or completion of phase 1.
 
 ## Published alpha
 
@@ -183,8 +230,9 @@ authentication and the full combined Codex-to-game player experience need
 separate evidence. Do not label the full product shipped from these checks.
 
 The preview currently uses colored translucent block bounds with labels, not
-textured ghost block models. General design generation, large component
-hierarchies, neighboring circuit analysis, accessible inventory inspection,
-world change event indexing, general circuit debugging, interface contracts,
-project-wide revision propagation, and full player-flow acceptance remain to
-be built and proved. The exact source brief remains in product-brief.md.
+textured ghost block models. Draft PR #12 adds bounded hierarchies and scoped
+revisions described above. General design generation, deeper neighboring-circuit
+analysis, accessible inventory inspection, world change event indexing, general
+circuit debugging, physical interface verification and full model-to-game
+acceptance still need implementation/proof. The exact source brief remains in
+product-brief.md.

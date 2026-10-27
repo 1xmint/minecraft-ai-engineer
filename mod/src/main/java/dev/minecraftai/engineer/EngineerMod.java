@@ -27,7 +27,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/claim/build/diagnose/repair/revise/test, inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -77,6 +77,7 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("component")
                     .then(Commands.literal("list").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::componentList)))
+                    .then(Commands.literal("info").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.componentInfo(StringArgumentType.getString(ctx,"component"))))))
                     .then(Commands.literal("diagnose").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.componentDiagnose(StringArgumentType.getString(ctx,"component"))))))
                     .then(Commands.literal("repair").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentRepair(StringArgumentType.getString(ctx,"component"))))))
                     .then(Commands.literal("test").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentTest(StringArgumentType.getString(ctx,"component"))))))

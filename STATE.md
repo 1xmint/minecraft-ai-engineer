@@ -11,42 +11,40 @@ restart recovery, three catalog mechanisms and snapshot-bound repair. The old
 published v0.1.0-alpha.1 remains a solo reference, not the current source build.
 Neither full phase 1 nor phase 2 is complete.
 
-Building #2 on **phase/4-component-collaboration**, draft PR #12. HEAD runtime
-09d0d06 passed all five protected checks in CI 40539445528. Earlier C1 run
-40536897959 passed on b158881. Root inspected native logs, completion markers,
-SQLite proof and actual preview/constructed screenshots (an initial artifact
-503 resolved on normal retry). Actual native clients proved nested composition,
-independent human/AI work, handoff, prerequisite conflicts, distant cross-project
-revocation/restoration during testing, separate a/b/c truth-table passes, and
-selection/handoff/testing of the composed project after the third server boot.
-The 16-entry operation journal survived; restored metadata granted no lease or
-connection. Later player removal of a recorded block blocked delegate-back.
-All tests ran on GitHub; locally only scoped compilation and formatting ran.
+Building #2 on **phase/4-component-collaboration**, draft PR #12. Current pushed
+runtime a544251 passed four checks including new scoped-memory proofs. Dedicated
+CI 40583311819 passed the new revision flow but timed out at third-boot legacy
+component recovery: test refused its isolation margin. Client had stayed at the
+origin, outside this old project's margin loading range. Root now moves the
+actual player back and waits for its full read footprint to load before positive
+recovery; production refusal is unchanged and now distinguishes unloaded from
+occupied margins. Native proof/SQL must run again. Local work also adds read-only
+component info, native message acceptance and user/protocol docs; compilation passes.
+No merge/release for #2; final independent review and full C3 perception remain.
 
-No merge/release for #2 yet. Proof-first CI 40543178771 reached the actual
-companion-restart.request barrier while B was handed to the player. With no
-handler, Alice waited and Bob eventually timed out waiting for finish; retained
-logs/request confirm this expected missing-harness failure. scripts/ci/multiplayer.sh
-now stops/waits for the actual companion child, checks its exit, starts a distinct
-PID on the same private SQLite/config directory, waits for a new readiness line,
-and atomically acknowledges the request. Dedicated CI 40544912152 passed the
-actual service restart: retained marker/logs show old PID3131 terminated and new
-PID4385 reached readiness; native checkpointing/handoff recovery and SQL verifier
-passed. Four checks passed; the integrated client stopped before gameplay during
-a graphics-package setup timeout (exit124); the same download stalled again on
-its one failed-job retry. Root extracted a common CI-only graphics helper with
-bounded signed-APT attempts over official archive/Azure endpoints, full installed
-state checks for all four required packages, and unchanged game/backend checks.
-GPT-6-Luna challenged the fix. Primary docs checked 2026-10-27:
-https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html and
-https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
-CI 40549054217 proved revised graphics setup in both jobs; integrated gameplay passed. No local package/test execution.
-Local bash -n passes. Never replace process proof with a marker-only fake. Next:
-Then complete C2 service restart and component-scoped
-diagnosis/repair/delay revisions with propagated dependency bases; then finish C3
-perception and scoped companion invalidation. Broader stale-assignment/revision
-proofs, resources/ownership UX and final independent review remain. Do not treat
-standalone repair as proof that composed-project repair works.
+C1: all five protected checks passed in CI 40539445528 (09d0d06) and 40536897959
+(b158881). Root inspected actual screenshots/logs/SQLite: nested composition,
+independent human/AI work, handoff, far prerequisite grant revocation/restoration,
+separate a/b/c truth-table passes and third-boot composed-project recovery. The
+16-entry journal survived; restored descriptions granted no lease/connection.
+A later player removal blocked delegate-back rather than being overwritten.
+
+C2: actual private companion restart passed dedicated CI 40544912152 with distinct
+old/new PIDs and native recovery/SQL proof. CI 40582347987 then passed all native
+component revision/repair/test/recovery markers, but its SQL verifier stopped on
+a root loop-variable typo. The verifier correction is in a544251; full data proof remains pending after the third-boot margin refusal above.
+That run also proved the updated graphics setup and integrated compatibility.
+All tests run on GitHub; locally only compilation, formatting and bash -n ran.
+
+The CI graphics helper uses bounded signed-APT attempts over official archive/
+Azure endpoints, checks all four required installed packages, and leaves gameplay
+checks intact. GPT-6-Luna challenged the fix after two old download timeouts.
+Sources checked 2026-10-27: https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html
+and https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
+
+Next: prove current C2/scoped-memory data, ship component info/docs, then implement
+C3 typed player/view/block/support observations and private accessible-inventory
+inspection. Preserve the full #3 and phase 2 roadmap below.
 
 ## Current implementation and limits
 
@@ -62,7 +60,9 @@ standalone repair as proof that composed-project repair works.
   service's safe identifier format). Both composers use matching DFS dependency
   order and canonical metadata. Ports are real leaf interfaces; metadata does
   not create or prove physical inter-module wires.
-- Commands: component add/group/depend/list/claim/build. One AI task per project;
+- Commands: component add/group/depend/list/claim/build/diagnose/repair/revise/test.
+  Read-only info (materials, actual port coordinates, assignment/test identity) is
+  locally integrated and awaiting native acceptance. One AI task per project;
   humans can work in independent leaves. ComponentAssignments keeps granting
   actor, executor, generation, intended basis and status separate from authority.
   Version2 bases include transitive prerequisite intent; v1 records must match
@@ -151,12 +151,23 @@ before identity replacement, invalidates edited/dependent tasks and preserves
 unaffected results. No-op revisions keep identity/evidence. component test <id>
 explicitly tests an idle trusted leaf. Single-root compatibility remains.
 
-Root wrote the native acceptance before implementation in a separate project at
-100..118: test a/b/c, diagnose a during b construction without pausing b, revise b4
-without touching world/journals, preserve a's scope/generation, stale b/c bases,
-reject a stale b snapshot without changing active context, repair only b's relay,
-record v2-scoped actual tests, undo that b group from selected c and keep a valid,
-then prove a no-op revision preserves buffered vectors/scope. Proof-first CI 40549054217 failed at the intended missing component-test command and legacy dependent-basis migration. Runtime APIs are now integrated with v2 bases and captured scopes; combined main/client compilation passes. Acceptance also keeps unaffected a active during b revision and resolves its old immutable pass through actual prior checkpoint vectors. Initialization failure retains captured inputs under their target component for recovery; failed repair leases roll back assignment selection. CI 40551903302 passed four checks but caught new scope/basis fields surviving identity-changing legacy adoption before component acceptance. Conversion now clears scoped results and rebuilds unassigned task descriptions under the adopted identity; new-format interrupted test inputs must recover in their original project. The exact source/backup and world journal remain unchanged. CI 40582347987 then passed the complete native component flow through its markers, but the SQL verifier stopped on a root integration typo (an unrelated earlier repair loop referenced an out-of-scope evidence variable). Root corrected that loop; full data proof remains pending. Independent GPT-6-Luna review hit the account usage limit and did not run; do not claim review complete. Companion-wide invalidation remains a C3 follow-up.
+Native acceptance uses a separate project at 100..118: a/b/c tests, diagnose a
+mid-b construction without pausing b, revise b4 without world/journal changes,
+retain a's generation/original pass, stale b/c bases, reject a stale repair without
+selection change, repair just b's relay, v2-scoped actual vectors, undo b from c,
+and no-op identity/vector preservation. Keeping a active during b revision also
+proves archive/reference handling without relabelling old vectors.
+
+Proof-first CI 40549054217 failed at the intended missing command/legacy migration.
+New runtime compiles. Start failure retains pending input recovery under its target
+component; failed repair leases restore selection/assignment. CI 40551903302 caught
+scope/basis fields surviving identity-changing legacy adoption. Conversion now
+clears results and rebuilds unassigned descriptions, preserving original source/
+backup/journal. New-format pending inputs must recover in their original project.
+Migration keeps changed bases stale even if their old label was only untested.
+CI 40582347987 native markers passed; CI 40583311819 reached third-boot recovery but refused an isolation margin. The positive fixture now awaits loaded chunks with a nearby actual player; full data proof remains pending.
+Independent GPT-6-Luna review hit the account usage limit and did not run; do not
+claim final review complete or merge before it is available.
 
 ## Companion invalidation slice (C3)
 
@@ -180,15 +191,14 @@ closed. No schema rewrite is required. Additional proofs cover removed leaves,
 active descriptions and first-observation conflicts. Root corrected the fixture
 to reuse each immutable blueprint identity when syncing unchanged revisions;
 new random IDs on ACL/restart sync would test an invalid server request. Local
-TypeScript checks pass; actual implementation CI is pending. Full targeted
+TypeScript checks and Companion CI 40583311819 pass. Full targeted
 player/view/inventory perception remains separate unfinished work.
 
 ## Next proof/build steps
 
-1. C2: restart the actual private companion during native project work; reconcile
-   durable task state without importing authority. Add component-targeted bounded
-   intent revision, diagnosis and repair. Propagate changed dependency intent into
-   dependent task bases; preserve unaffected components and old operation groups.
+1. C2: finish current native/SQL acceptance for component revision/repair/test and
+   actual companion restart. Inspect immutable a history and fresh b/c vectors.
+   Ship info/docs only after the corresponding native response proof passes.
 2. C3: define typed targeted perception and inventory requests/results, write
    rejection/privacy/side-effect proofs first, then implement the read-only API.
    Make companion observations/checkpoints invalidate affected component tasks,

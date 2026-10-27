@@ -240,6 +240,27 @@ final class EngineeringSession implements BuildExecutor {
             tell("Component "+node.id()+" | parent="+node.parent()+" | "+node.template()+" | "+task.executor+" | actor="+task.actor+" | "+task.status+" | prerequisites="+node.dependsOn());
         }
     }
+    void componentInfo(String id) {
+        access.require(actor(),ProjectAccess.Permission.VIEW);
+        if(blueprint==null)throw new IllegalStateException("Add or select a mechanism first");
+        Blueprint selected=ComponentTree.component(blueprint,id);
+        var task=assignments.task(blueprint,id);var contract=MechanismCatalog.contract(selected);
+        String assignee="unassigned";
+        if(task.actor!=null) {
+            var connected=server.getPlayerList().getPlayer(task.actor);
+            assignee=connected==null?"offline player "+task.actor:connected.getName().getString();
+        }
+        tell("Component "+id+": "+contract.template()+" | "+task.executor+" | assigned by "+assignee+" | "+task.status);
+        var node=ComponentTree.nodes(blueprint).stream().filter(value->value.id().equals(id)).findFirst().orElseThrow();
+        tell("Prerequisites: "+(node.dependsOn().isEmpty()?"none":String.join(", ",node.dependsOn())));
+        var materials=new ArrayList<String>();
+        for(var entry:selected.source().getAsJsonObject("resources").entrySet())
+            materials.add(entry.getValue().getAsInt()+" "+entry.getKey().replace("minecraft:",""));
+        tell("Materials for this component: "+String.join(", ",materials));
+        for(var port:contract.ports())tell("Port "+port.name()+" ("+(port.input()?"input":"output")+") at "+port.pos().toShortString());
+        tell("Functional result: "+task.verified);
+        if(task.lastPassedScope!=null)tell("Last passing test used design revision "+task.lastPassedScope.get("blueprintRevision").getAsInt()+"; current project revision "+revision()+". Port labels alone do not prove wiring between components.");
+    }
     void componentClaim(String id) {
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(blueprint==null)throw new IllegalStateException("No component project");
@@ -890,7 +911,8 @@ final class EngineeringSession implements BuildExecutor {
         for (Blueprint.PlannedBlock b:assignmentBlocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
         Set<BlockPos> planned=new HashSet<>(); assignmentBlocks().forEach(b->planned.add(b.pos()));
         for (Blueprint.PlannedBlock b:assignmentBlocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {
-            if (!level().hasChunkAt(p) || (!planned.contains(p) && !level().getBlockState(p).isAir())) throw new IllegalStateException("Test needs a two-block air margin around the floating circuit");
+            if (!level().hasChunkAt(p))throw new IllegalStateException("Test stopped: isolation margin is unloaded at "+p.toShortString());
+            if (!planned.contains(p) && !level().getBlockState(p).isAir())throw new IllegalStateException("Test needs a two-block air margin around the floating circuit; occupied at "+p.toShortString());
         }
     }
     void checkpoint() {
