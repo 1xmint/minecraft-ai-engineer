@@ -16,7 +16,11 @@ public final class MechanismGameTests {
     @GameTest(maxTicks=65) public void rotatedTwoInputOr(GameTestHelper helper){or(helper,Rotation.CLOCKWISE_90);}
     private static BlockPos at(int x,int y,int z,Rotation rotation){return new BlockPos(x,y,z).rotate(rotation).offset(4,2,4);}
     private static void block(GameTestHelper helper,int x,int y,int z,String state,Rotation rotation){helper.setBlock(at(x,y,z,rotation),Blueprint.state(state).rotate(rotation));}
-    private static void input(GameTestHelper helper,int x,int y,int z,boolean on,Rotation rotation){block(helper,x,y,z,"minecraft:lever[face=floor,facing=east,powered="+on+"]",rotation);}
+    private static void input(GameTestHelper helper,int x,int y,int z,boolean on,Rotation rotation){
+        BlockPos pos=at(x,y,z,rotation);BlockState current=helper.getLevel().getBlockState(helper.absolutePos(pos));
+        if(!current.is(Blocks.LEVER))block(helper,x,y,z,"minecraft:lever[face=floor,facing=east,powered="+on+"]",rotation);
+        else if(current.getValue(BlockStateProperties.POWERED)!=on)helper.pullLever(pos);
+    }
     private static void inverter(GameTestHelper helper,Rotation rotation){
         block(helper,0,0,0,"minecraft:stone",rotation);
         input(helper,0,1,0,false,rotation);

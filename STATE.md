@@ -35,6 +35,16 @@ Pending: Java catalog consumer/geometry guard, generalized multi-input functiona
 trial and durable restoration, diagnosis/targeted correction preserving players,
 native dedicated acceptance, final review and green CI. No new mechanism release.
 
+CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
+now lights correctly, but raw lever block-state replacement omitted vanilla's
+attached-support neighbor notification and left the torch on. Pinned 26.3
+LeverBlock.pull bytecode explicitly updates both the lever and attached block;
+GameTestHelper.pullLever invokes that path. Root changed the probe to pull an
+existing lever as a player would, keeping every truth-table assertion. The
+production functional tester must use the same vanilla activation after its
+write-ahead checkpoint, not only setBlockAndUpdate. Packaging assertion follows
+the physical GameTests and remains unproven until that job passes.
+
 Decision — 2026-10-26 (N1/N2): use one immutable catalog and bounded model
 adaptations. Keeping the sole lamp fails the requested engineering scope;
 separate hardcoded templates duplicate contracts and drift; arbitrary model
