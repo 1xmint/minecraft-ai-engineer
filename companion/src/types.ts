@@ -16,6 +16,8 @@ export interface DesignRequest {
   rotation: Rotation;
   projectId?: string;
   maxSize?: Position;
+  /** Server-derived bound for a revision of an existing canonical design. */
+  revision?: { template: string; rotation: Rotation };
 }
 export interface Blueprint {
   schemaVersion: 1;

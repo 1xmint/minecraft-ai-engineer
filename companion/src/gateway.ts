@@ -185,6 +185,7 @@ export class ServerGateway {
         "Only explicit operator-owned planning is currently enabled. Shared-subscription eligibility is not established.",
         403,
       );
+    const revisionOnly = optionalBoolean(v.revisionOnly, "revisionOnly");
     const input = validateDesignRequest({ ...v, projectId: context.projectId });
     if (
       input.worldId !== project.worldId ||
@@ -195,6 +196,19 @@ export class ServerGateway {
         "Design belongs to a different project/world.",
         409,
       );
+    if (revisionOnly) {
+      const current = memory.blueprint(context);
+      if (!current)
+        throw new RequestError(
+          "A mechanism revision requires the current canonical blueprint.",
+          409,
+        );
+      input.revision = {
+        template: current.provenance.template,
+        rotation: current.rotation,
+      };
+      input.rotation = current.rotation;
+    }
     fittingMechanisms(input); // Fit validation before spending quota.
     if (context.projectRevision >= Number.MAX_SAFE_INTEGER)
       throw new RequestError("Project revision exhausted.", 409);

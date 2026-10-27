@@ -198,6 +198,14 @@ export function makeMechanismBlueprint(
   const m = mechanism(plan.template),
     delay = adaptation(m.id, plan.parameters ?? { delay: 1 }).delay,
     rotation = plan.rotation ?? input.rotation;
+  if (
+    input.revision &&
+    (m.id !== input.revision.template || rotation !== input.revision.rotation)
+  )
+    throw new RequestError(
+      "A revision must keep the current mechanism and rotation.",
+      422,
+    );
   if (![0, 90, 180, 270].includes(rotation))
     throw new RequestError("Unsupported mechanism rotation.");
   const blocks = m.blocks.map((b) => ({
@@ -287,20 +295,34 @@ export function fittingMechanisms(
   input: DesignRequest,
 ): { template: Mechanism["id"]; rotation: Rotation; maxDelay: number }[] {
   const fits: ReturnType<typeof fittingMechanisms> = [];
-  for (const m of MECHANISMS)
-    for (const rotation of [0, 90, 180, 270] as const) {
-      try {
-        makeMechanismBlueprint(input, {
+  const candidates = input.revision
+    ? [
+        {
+          template: input.revision.template,
+          rotation: input.revision.rotation,
+        },
+      ]
+    : MECHANISMS.flatMap((m) =>
+        ([0, 90, 180, 270] as const).map((rotation) => ({
           template: m.id,
-          explanation: m.explanation,
           rotation,
-        });
-        fits.push({ template: m.id, rotation, maxDelay: m.maxDelay });
-      } catch (error) {
-        if (!(error instanceof RequestError) || error.status !== 422)
-          throw error;
-      }
+        })),
+      );
+  for (const candidate of candidates) {
+    const m = mechanism(candidate.template),
+      rotation = candidate.rotation;
+    try {
+      makeMechanismBlueprint(input, {
+        template: m.id,
+        explanation: m.explanation,
+        rotation,
+      });
+      fits.push({ template: m.id, rotation, maxDelay: m.maxDelay });
+    } catch (error) {
+      if (!(error instanceof RequestError) || error.status !== 422)
+        throw error;
     }
+  }
   if (!fits.length)
     throw new RequestError(
       "No supported mechanism fits the selected dimensions.",
