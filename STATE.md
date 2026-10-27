@@ -11,7 +11,7 @@ adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
 checkpoints plus before-build/after-restart inspections. The released
 v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
-Building #1 on phase/3-mechanism-library, draft PR #11. Step: N1 proven, N2 next. Add inverter,
+Building #1 on phase/3-mechanism-library, draft PR #11. Step: N2 proofs first. Add inverter,
 two-input OR and configurable repeater delay to one catalog consumed by both
 Java resources and TypeScript. Root owns the proofs and implementation. No
 unmerged helper changes. The GPT-6-Luna challenge recovered after the verified
@@ -58,6 +58,8 @@ adopted projects. Keep private offline history if the companion is unavailable;
 never relabel old vectors as observations of a different design. Native proof
 now checks undo retains player inputs and replacement creates that scoped archive;
 SQLite verification binds each functional pass to its immutable blueprint revision.
+That fix passed all five checks in CI 40450944060 on cd95bb8. N1 is proven with
+scoped private history as well as actual circuit/recovery behavior.
 
 Next N2 work: a read-only diagnosis should capture exact proposed correction
 targets, then explicit repair must reject any intervening player edit. Delay
@@ -66,6 +68,30 @@ operation journals so undo affects only the last delegated section, including a
 persisted undo target that cannot spill into an older operation after a crash.
 Challenge this design before adding its new mutation paths; do not use blanket
 undo/rebuild to satisfy the preservation requirement.
+
+N2 decision — 2026-10-27: the GPT-6-Luna independent challenge confirmed snapshot-
+bound local diagnosis plus grouped write-ahead operations. Full undo/rebuild
+breaks preservation; ad-hoc repair using a flat global undo can erase earlier
+work. Use exact actor/connection/epoch/revision/authorization snapshots (TTL1200),
+AIR or same-kind allowlisted corrections only, preserved dynamic values and
+strict lever-power checks during execution. Unsupported types/inventories or
+occupied isolation margins block the entire repair. No model chooses safety.
+Every undo persists its selected operation before writing and cannot spill into
+an older group after a crash. Old untagged journals migrate as one legacy group.
+Expected execution state overlays only the active operation on its fresh baseline.
+The diagnosis TTL never grants a lease; repair/resume still acquires fresh live
+authority and reconciles before each mutation. Bounded delay intent revisions and
+SDK revisions must share the same same-template/same-footprint validation path.
+
+Read-only Diagnosis.java is integrated from worker a973061/448f097 (root a081ec4/
+cda6323). Root corrected its initial repeater-facing explanation to mean INPUT
+side and added unique snapshot IDs/non-actionable geometry-match handling.
+New native N2 proofs are written before runtime integration: stale player edits,
+wrong kinds/inventories, occupied margins, cross-player/revoked diagnoses, a human
+input toggle mid-repair, targeted delay revision, last-operation undo, and actual
+third dedicated restart with a fault-injected completed-undo boundary. Root owns
+proofs; no tests run locally. Runtime operation metadata, repair/revise commands,
+SDK revision path and final independent review are still pending.
 
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's

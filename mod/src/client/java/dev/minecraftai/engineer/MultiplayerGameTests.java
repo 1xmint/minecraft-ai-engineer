@@ -40,6 +40,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
     private static final long WAIT_MILLIS = 240_000;
+    private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
 
     @Override public void runTest(ClientGameTestContext context) {
         String role = System.getenv("MCE_MP_ROLE");
@@ -241,6 +242,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // The public builder creates a fresh world. For restart, use the pinned
         // Fabric test launcher directly; it invokes the actual dedicated Main
         // against the same saved level without regenerating or deleting it.
+        RepairRecovery recovery;
         try (TestDedicatedServerContext server = new TestDedicatedServerContextImpl(context,
                 DedicatedServerImplUtil.start(context, properties));
              TestDedicatedServerConnection connection = server.connect()) {
@@ -273,6 +275,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(project.level().getBlockState(LAMP).is(Blocks.REDSTONE_LAMP), "Dedicated reconciliation builds the real lamp");
             });
             catalogFlow(context,server);
+            recovery=repairFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -281,6 +284,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
+        }
+        // Fault injection models a crash after the last selected undo entry was
+        // flushed, before its completion flag. Boot the actual saved server again.
+        LocalFiles.write(recovery.file(),recovery.checkpoint());
+        try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
+            TestDedicatedServerConnection connection=server.connect()){
+            publishServer(server,3);
+            send(context,"engineer project use "+recovery.project());
+            server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.undoRequested,"Restart imports the undo target, never an execution lease");});
+            send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==recovery.retained(),"Finishing an already-empty undo operation cannot consume an older operation");check(project.level().getBlockState(new BlockPos(21,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1,"Crash recovery preserves the older operation's repeater");check(project.level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Crash recovery preserves earlier construction");});
+            MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
+            write("repair-recovery.done","passed");
+            send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));inspectPersisted(context,server);
+            server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
         }
     }
 
@@ -448,6 +467,53 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").lastObservation!=previous);
         var receipt=server.computeOnServer(s->session(s,"Alice").lastObservation).get(30,java.util.concurrent.TimeUnit.SECONDS);
         check(receipt.get("protocol").getAsInt()==2,"Actual dedicated-world observations must reach the private companion");
+    }
+    private static JsonObject saved(EngineeringSession project){try{return JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(java.io.IOException error){throw new AssertionError(error);}}
+    private static void expectChat(ClientGameTestContext context,String text){
+        long deadline=System.currentTimeMillis()+20_000;
+        while(System.currentTimeMillis()<deadline){if(MESSAGES.stream().anyMatch(message->message.contains(text)))return;context.waitTicks(1);}
+        throw new AssertionError("Expected native command response: "+text+"; received "+MESSAGES);
+    }
+    private static void diagnoseReady(ClientGameTestContext context){MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");}
+    private static RepairRecovery repairFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        final var relay=new BlockPos(21,101,0);final var input=new BlockPos(20,101,0);
+        server.runCommand("tp Alice 21 102 3 180 20");
+        diagnoseReady(context);
+        server.runCommand("setblock 21 100 0 minecraft:glass");
+        MESSAGES.clear();send(context,"engineer repair");expectChat(context,"World changed");
+        server.runOnServer(s->check(session(s,"Alice").journal.isEmpty() && session(s,"Alice").level().getBlockState(new BlockPos(21,100,0)).is(Blocks.GLASS),"A later player block invalidates the exact diagnosis without a repair write"));
+        MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair blocked");
+        MESSAGES.clear();send(context,"engineer repair");expectChat(context,"Repair blocked");
+        server.runCommand("setblock 21 100 0 minecraft:air");server.runCommand("setblock 21 101 0 minecraft:chest");
+        MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"protected block entity");
+        MESSAGES.clear();send(context,"engineer repair");expectChat(context,"Repair blocked");
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(relay).is(Blocks.CHEST) && session(s,"Alice").journal.isEmpty(),"Diagnosis does not authorize replacing an inventory"));
+        server.runCommand("setblock 21 101 0 minecraft:air");server.runCommand("setblock 20 99 -1 minecraft:stone");
+        MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Occupied isolation margin");
+        server.runCommand("setblock 20 99 -1 minecraft:air");
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        diagnoseReady(context);
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer repair");check(project.journal.isEmpty(),"Bob cannot consume Alice's diagnosis");commandAs(s,"Bob","engineer diagnose");commandAs(s,"Alice","engineer project revoke Bob");commandAs(s,"Bob","engineer repair");check(project.journal.isEmpty(),"Revoked diagnosis cannot delegate a correction");});
+        diagnoseReady(context);send(context,"engineer repair");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.journal.isEmpty())return false;var actual=project.level().getBlockState(input);((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),input,player(s,"Alice"));return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==1 && !session(s,"Alice").level().getBlockState(input).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"A human input toggle pauses repair before the next target and remains OFF"));
+        diagnoseReady(context);send(context,"engineer repair");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==5,"Repair changes only missing/incorrect parts and retains the earlier partial operation");check(project.level().getBlockState(new BlockPos(20,100,0)).is(Blocks.STONE) && !project.level().getBlockState(input).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Player support and latest input state are preserved");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        send(context,"engineer revise 4");server.waitFor(s->session(s,"Alice").revision()==revision+1);
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1 && session(s,"Alice").journal.size()==5,"A bounded intent revision preserves all actual blocks until explicit correction"));
+        diagnoseReady(context);expectChat(context,"required delay is 4");send(context,"engineer repair");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==6 && session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==4,"Delay revision corrects only its repeater"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==5);
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1 && session(s,"Alice").level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Undo reverses just the last repair, preserving earlier construction"));
+        diagnoseReady(context);send(context,"engineer repair");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        String target=server.computeOnServer(s->{var journal=saved(session(s,"Alice")).getAsJsonArray("journal");return journal.get(journal.size()-1).getAsJsonObject().get("operation").getAsString();});
+        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==5);
+        var recovery=server.computeOnServer(s->{var project=session(s,"Alice");var checkpoint=saved(project);checkpoint.addProperty("undoRequested",true);checkpoint.addProperty("undoOperation",target);return new RepairRecovery(project.file,checkpoint,project.projectId.toString(),project.journal.size());});
+        write("repair-project",recovery.project());return recovery;
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {
