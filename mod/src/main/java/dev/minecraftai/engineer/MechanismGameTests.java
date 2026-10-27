@@ -20,8 +20,8 @@ public final class MechanismGameTests {
     private static void inverter(GameTestHelper helper,Rotation rotation){
         block(helper,0,0,0,"minecraft:stone",rotation);
         input(helper,0,1,0,false,rotation);
-        block(helper,1,0,0,"minecraft:redstone_wall_torch[facing=east,lit=true]",rotation);
         block(helper,2,0,0,"minecraft:redstone_lamp[lit=false]",rotation);
+        block(helper,1,0,0,"minecraft:redstone_wall_torch[facing=east,lit=true]",rotation);
         var output=at(2,0,0,rotation);
         helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);input(helper,0,1,0,true,rotation);});
         helper.runAtTickTime(20,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);input(helper,0,1,0,false,rotation);});

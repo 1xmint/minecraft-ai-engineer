@@ -1,4 +1,4 @@
-import { makeReferenceBlueprint } from "./blueprint.js";
+import { fittingMechanisms, makeMechanismBlueprint } from "./catalog.js";
 import { GatewayMemory } from "./gateway-memory.js";
 import {
   actorId,
@@ -195,7 +195,7 @@ export class ServerGateway {
         "Design belongs to a different project/world.",
         409,
       );
-    makeReferenceBlueprint(input); // Fit validation before spending quota.
+    fittingMechanisms(input); // Fit validation before spending quota.
     if (context.projectRevision >= Number.MAX_SAFE_INTEGER)
       throw new RequestError("Project revision exhausted.", 409);
     memory.claim(context, "design");
@@ -229,13 +229,13 @@ export class ServerGateway {
             );
           this.requireEpoch(context);
           memory.assertCurrent(context, "plan");
-          if (plan.template !== "signal-lamp")
+          if (plan.template === "unsupported")
             throw new RequestError(
               plan.explanation || "Unsupported mechanism.",
               422,
             );
           const blueprint = {
-            ...makeReferenceBlueprint(input, plan.explanation),
+            ...makeMechanismBlueprint(input, plan),
             revision: context.projectRevision + 1,
           };
           // The proposal is an audit record, not an accepted revision. Fabric must

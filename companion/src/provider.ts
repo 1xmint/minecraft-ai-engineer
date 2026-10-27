@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { preparePlannerLauncher } from "./launcher.js";
+import { MECHANISMS, adaptation, fittingMechanisms } from "./catalog.js";
 import {
   type DesignRequest,
   type Plan,
@@ -10,6 +11,7 @@ import {
   RequestError,
   object,
   text,
+  integer,
 } from "./types.js";
 
 export const PLANNER_CONFIG: NonNullable<CodexOptions["config"]> = {
@@ -48,10 +50,20 @@ export const PLANNER_CONFIG: NonNullable<CodexOptions["config"]> = {
 export const PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["template", "explanation"],
+  required: ["template", "explanation", "parameters", "rotation"],
   properties: {
-    template: { type: "string", enum: ["signal-lamp", "unsupported"] },
+    template: {
+      type: "string",
+      enum: [...MECHANISMS.map((m) => m.id), "unsupported"],
+    },
     explanation: { type: "string" },
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["delay"],
+      properties: { delay: { type: "integer", minimum: 1, maximum: 4 } },
+    },
+    rotation: { type: "integer", enum: [0, 90, 180, 270] },
   },
 };
 // Template selection is focused classification; use the efficient Codex model
@@ -59,12 +71,24 @@ export const PLAN_SCHEMA = {
 export const DEFAULT_PLANNER_MODEL = "gpt-6-luna";
 export function validatePlan(value: unknown): Plan {
   const v = object(value);
-  if (v.template !== "signal-lamp" && v.template !== "unsupported")
+  if (
+    v.template !== "unsupported" &&
+    !MECHANISMS.some((m) => m.id === v.template)
+  )
     throw new RequestError("Planner returned an unsupported template.", 502);
-  return {
-    template: v.template,
+  const plan: Plan = {
+    template: v.template as Plan["template"],
     explanation: text(v.explanation, "planner explanation", 4000),
   };
+  if (v.parameters !== undefined && plan.template !== "unsupported")
+    plan.parameters = adaptation(plan.template, v.parameters);
+  if (v.rotation !== undefined) {
+    const rotation = integer(v.rotation, "rotation", 0, 270);
+    if (![0, 90, 180, 270].includes(rotation))
+      throw new RequestError("Unsupported adaptation rotation.");
+    plan.rotation = rotation as NonNullable<Plan["rotation"]>;
+  }
+  return plan;
 }
 export function plannerEnvironment(
   binary: string,
@@ -138,7 +162,7 @@ export class CodexPlanningProvider implements PlanningProvider {
         webSearchMode: "disabled",
         modelReasoningEffort: "low",
       });
-      const prompt = `Choose a template for the user's complete engineering request. Available template: signal-lamp, a manually designed lever -> one-tick repeater -> redstone lamp, 3x2x1 blocks before rotation, three teaching stages. It can demonstrate a delayed lamp, simple switch-controlled light, or explain that circuit. It cannot implement doors, clocks, memory, arithmetic, piston mechanisms, arbitrary circuitry, or optimize unprovided designs. Never pretend this template can satisfy those requests. No template has been functionally verified for this world yet. Return only the structured decision.\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
+      const prompt = `Choose one catalog mechanism satisfying the user's entire request. Only listed template/rotation combinations fit the delegated region. Delay is repeater redstone ticks (2 game ticks each), from 1 through the listed maximum; the inverter only accepts 1. Do not invent blocks, wiring, commands or verification. These mechanisms implement a delayed lamp, boolean NOT, or two-input OR. They cannot implement doors, clocks, memory, arithmetic, piston mechanisms, arbitrary circuitry, or optimize unprovided designs: return unsupported for unmet requirements. No mechanism has been functionally verified in this world yet. Return only the structured decision.\nTRUSTED_CATALOG_JSON=${JSON.stringify(MECHANISMS.map((m) => ({ template: m.id, name: m.name, explanation: m.explanation, maxDelay: m.maxDelay })))}\nTRUSTED_FITTING_OPTIONS_JSON=${JSON.stringify(fittingMechanisms(input))}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
       const run = await thread.runStreamed(prompt, {
         outputSchema: PLAN_SCHEMA,
         signal: controller.signal,

@@ -11,13 +11,29 @@ adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
 checkpoints plus before-build/after-restart inspections. The released
 v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
-Building #1 on phase/3-mechanism-library. Step: proofs first. Add inverter,
+Building #1 on phase/3-mechanism-library, draft PR #11. Step: catalog integration. Add inverter,
 two-input OR and configurable repeater delay to one catalog consumed by both
 Java resources and TypeScript. Root owns the proofs and implementation. No
-unmerged helper changes; the GPT-6-Luna challenge hit quota. Root's fresh review
-traced the duplicated hardcoded templates, single-input test state and planner
-selection gates before deciding below. Independent review of new mutation paths
-is still required before merge; continue useful implementation while unavailable.
+unmerged helper changes. The GPT-6-Luna challenge recovered after the verified
+quota reset and confirmed the multi-input journal, canonical geometry validation,
+packaging and targeted-revision requirements below. A final independent review
+of new mutation paths is still required before merge.
+
+Proof-first CI 40446458619: new planner tests failed as expected against the
+single-template selector. Actual OR truth-table tests passed in both orientations.
+Inverter tests exposed direct-placement initialization: placing an unlit lamp
+after a lit torch does not recompute its state. The catalog already orders lamp
+before torch; root corrected the physical probe's fixture order without weakening
+its truth-table assertions. Retained dedicated/client checks passed.
+
+Implemented on this branch: canonical catalog data, immutable typed Node loader,
+bounded delay/rotation decisions, region-aware orientation/anchor expansion,
+typed ports/prerequisites/material counts, v2 proposal generation and explicit
+jar/compiled-service packaging checks. Older immutable blueprint mirrors retain
+their original optional metadata; v1 clients reject unsupported adaptations.
+Pending: Java catalog consumer/geometry guard, generalized multi-input functional
+trial and durable restoration, diagnosis/targeted correction preserving players,
+native dedicated acceptance, final review and green CI. No new mechanism release.
 
 Decision — 2026-10-26 (N1/N2): use one immutable catalog and bounded model
 adaptations. Keeping the sole lamp fails the requested engineering scope;

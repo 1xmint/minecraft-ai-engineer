@@ -35,12 +35,23 @@ export interface Blueprint {
     component: string;
     prerequisites: string[];
   }[];
-  stages: { id: string; title: string; explanation: string }[];
+  stages: {
+    id: string;
+    title: string;
+    explanation: string;
+    prerequisites?: string[];
+  }[];
   bounds: Bounds;
   resources: Record<string, number>;
   ports: { name: string; pos: Position; kind: "input" | "output" }[];
   tests: { id: string; description: string }[];
-  provenance: { kind: "curated"; template: string; minecraft: "26.3" };
+  provenance: {
+    kind: "curated";
+    template: string;
+    minecraft: "26.3";
+    catalogRevision?: number;
+  };
+  parameters?: { delay: number };
   verification: "untested";
 }
 export const TASK_STATES = [
@@ -75,8 +86,10 @@ export interface Checkpoint {
   verified?: unknown;
 }
 export interface Plan {
-  template: "signal-lamp" | "unsupported";
+  template: "signal-lamp" | "not-gate" | "or-gate" | "unsupported";
   explanation: string;
+  parameters?: { delay: number };
+  rotation?: Rotation;
 }
 export interface PlanningProvider {
   plan(
