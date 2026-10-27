@@ -271,6 +271,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(project.level().getBlockState(REPEATER).is(Blocks.REPEATER), "Dedicated reconciliation builds the real repeater");
                 check(project.level().getBlockState(LAMP).is(Blocks.REDSTONE_LAMP), "Dedicated reconciliation builds the real lamp");
             });
+            catalogFlow(context,server);
+            send(context,"engineer project use "+projectId);
+            server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
             awaitFile(context, "bob.done");
             server.waitFor(s -> s.getPlayerList().getPlayerCount() == 1, 12_000);
@@ -318,6 +321,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context, "engineer status");
         await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's membership after server restart");
         write("bob-reconnected", "ready");
+        awaitFile(context,"or-test");
+        send(context,"engineer project use "+read("or-test"));
+        await(context,()->view(context)!=null && view(context).projectId().equals(read("or-test")),"Bob's authorized OR mechanism");
+        send(context,"engineer test");
+        awaitFile(context,"or-revoked");
+        await(context,()->view(context)==null,"Revocation clears OR metadata during a multi-input trial");
+        write("bob-or-revoked","ready");
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -383,6 +393,36 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(checkpoint!=null,"The actual functional pass must generate a project checkpoint");
         var receipt=checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS);
         check(receipt.get("protocol").getAsInt()==2,"The real companion gateway must acknowledge the functional result");
+    }
+    private static void catalogFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project new");send(context,"engineer select1 10 100 0");send(context,"engineer select2 12 101 2");
+        send(context,"engineer reference or-gate 4");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.blocks().size()==10);
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer project share Bob editor");
+        server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        write("or-test",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        server.waitFor(s->{
+            var project=session(s,"Alice");var actual=project.level().getBlockState(new BlockPos(10,101,2));
+            if(!project.state.equals("VERIFYING") || !actual.is(Blocks.LEVER) || !actual.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            commandAs(s,"Alice","engineer project revoke Bob");return true;
+        });
+        server.runOnServer(s->{
+            var project=session(s,"Alice");
+            try {var checkpoint=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();
+                check(project.state.equals("PAUSED") && checkpoint.getAsJsonArray("testInputs").size()==2,"Revocation retains both input originals without authority to restore them");
+            }catch(java.io.IOException error){throw new AssertionError(error);}
+        });
+        write("or-revoked","ready");awaitFile(context,"bob-or-revoked");
+        send(context,"engineer resume");
+        server.waitFor(s->{try{return !JsonParser.parseString(Files.readString(session(s,"Alice").file)).getAsJsonObject().has("testOriginal");}catch(java.io.IOException error){throw new AssertionError(error);}});
+        server.runOnServer(s->{for(BlockPos p:java.util.List.of(new BlockPos(10,101,2),new BlockPos(12,101,0)))check(!session(s,"Alice").level().getBlockState(p).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Explicit takeover restores each original OR input");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        send(context,"engineer project new");send(context,"engineer select1 20 100 0");send(context,"engineer select2 22 101 2");
+        send(context,"engineer reference not-gate");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.blocks().size()==4);
+        send(context,"engineer rotate 90");send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
     }
     private static void inspectPersisted(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         var previous=server.computeOnServer(s->session(s,"Alice").lastObservation);
