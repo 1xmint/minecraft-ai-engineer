@@ -1,38 +1,52 @@
 # Now
 
-2026-10-26: **Multiplayer-first, single-player-compatible is the approved target.**
-The active goal remains **complete all milestones**, including remaining phase 1
-and all six phase 2 capabilities. Foundation #8 is on
-`phase/2-multiplayer-foundation`, PR #10. No multiplayer release has shipped;
-v0.1.0-alpha.1 remains single-player-only.
+2026-10-26: Active goal: **complete all milestones**, including all remaining
+phase 1 and six phase 2 capabilities. Multiplayer-first remains the target.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Implemented: server-owned private projects/grants, personal lessons, stable
-world/server identity, fenced construction/reservations, optional recipient-filtered
-overlays, private v2 companion memory and bounded operator-only planning.
-Explicit operator/self legacy adoption preserves per-attempt backups and journals
-with private paused ownership. Independent Java/gateway review is complete;
-identified authorization, recovery, report-ordering and stale-boot defects are fixed.
-Blueprint integers/text and overlay packet budgets are bounded.
+Foundation #8 merged through PR #10 at ae90741, closed. Main CI 40419651640
+passed all five required checks. The real dedicated/integrated flows prove
+private grants, independent lessons, revocation/conflicts/reservations, backed-up
+adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
+checkpoints plus before-build/after-restart inspections. The released
+v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
-CI run 40418092324 passed all five checks, including Dedicated multiplayer and
-the retained integrated Minecraft client. The real dedicated proof passed two
-functional off/on/off runs (before/after restart), independent lessons, denied
-Eve, overlay-disabled text teaching, live/cross-project revocation, conflict
-preservation, overlapping work, backed-up adoption and ambiguous target rejection.
-All four native client roles finished. The real SQLite verifier recorded the
-intended six-block blueprint, functional checkpoint history and two exact world
-inspections (empty before building and built after restart). Native libraries
-are isolated per client; disconnected test clients return to the title screen.
-Dedicated multiplayer is now a required main-branch check alongside the other four.
+Building #1 on phase/3-mechanism-library. Step: proofs first. Add inverter,
+two-input OR and configurable repeater delay to one catalog consumed by both
+Java resources and TypeScript. Root owns the proofs and implementation. No
+unmerged helper changes; the GPT-6-Luna challenge hit quota. Root's fresh review
+traced the duplicated hardcoded templates, single-input test state and planner
+selection gates before deciding below. Independent review of new mutation paths
+is still required before merge; continue useful implementation while unavailable.
 
-Foundation acceptance is proven; #8 is ready to close through PR #10 after final
-documentation checks. Next is the validated mechanism library (#1), followed by
-component collaboration (#2) and deeper teaching/debugging (#3). Neither milestone
-is complete. Shared multi-user subscription inference remains blocked; only the
-configured account-owning operator can request model work.
-Worker commits from work/multiplayer-network and work/multiplayer-companion are
-integrated. Automated tests run on GitHub only; local compile/format checks pass.
+Decision — 2026-10-26 (N1/N2): use one immutable catalog and bounded model
+adaptations. Keeping the sole lamp fails the requested engineering scope;
+separate hardcoded templates duplicate contracts and drift; arbitrary model
+geometry lacks a functional oracle. The shared catalog gives reproducible ports,
+prerequisites/resources and tick-based truth tables, at the cost of strict schema
+validation and resource packaging. This slice expands the library; it does not
+replace the larger-project, debugging or phase 2 requirements.
+
+Challenge corrections: template names/provenance alone cannot authorize testing;
+match actual geometry and parameters to a known catalog revision. Capture every
+input in a write-ahead restoration journal and recheck all authority/footprints
+before every input change/restoration. Preserve unchanged player components when
+revising. Prove the catalog is included in the actual jar and compiled companion.
+Keep unknown top-level model fields ignored as in existing safety tests; reject
+unknown adaptation fields that could change design semantics.
+
+Riskiest assumption/probe: proposed inverter and isolated two-repeater OR layouts
+really implement their truth tables, including rotation, in Minecraft 26.3.
+Actual GameTests are written first; if they fail, correct geometry before product
+integration. Planner adaptation tests should initially fail on the old selector.
+All tests run on GitHub; locally only scoped compilation/formatting.
+
+Sources checked 2026-10-26: Gradle's Java plugin and ProcessResources documentation
+(https://docs.gradle.org/current/userguide/java_plugin.html and
+https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html)
+confirm resource inclusion. Mojang issue MC-59044 describes attachment-block torch
+inversion (https://bugs.mojang.com/browse/MC/issues/MC-59044); actual pinned-game
+truth-table tests, not prose or the model, decide circuit correctness.
 
 ## Outcomes for the next build — mechanism library (#1)
 
