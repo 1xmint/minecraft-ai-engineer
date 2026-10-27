@@ -301,6 +301,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==recovery.retained(),"Finishing an already-empty undo operation cannot consume an older operation");check(project.level().getBlockState(new BlockPos(21,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1,"Crash recovery preserves the older operation's repeater");check(project.level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Crash recovery preserves earlier construction");});
             MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
             write("repair-recovery.done","passed");
+            componentRecoveryFlow(context,server);
             send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));inspectPersisted(context,server);
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
         }
@@ -549,10 +550,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(rejected,"Unloaded player construction cannot be classified as an empty design");
             }finally{project.blueprint=original;project.corner1=first;project.corner2=second;}
         });
+        diagnoseReady(context);
+        MESSAGES.clear();send(context,"engineer component claim root");expectChat(context,"Component root assigned to you");
+        MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
+        server.runOnServer(s->check(session(s,"Alice").journal.isEmpty() && session(s,"Alice").level().getBlockState(new BlockPos(41,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1,"Handoff invalidates an unchanged-world repair proposal without placing anything"));
     }
 
     private static void componentFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
-        server.runCommand("tp Alice 64 103 4 180 20");
+        server.runCommand("tp Alice 69 108 15 180 25");
         var previous=server.computeOnServer(s->session(s,"Alice").projectId);
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         send(context,"engineer select1 60 100 0");send(context,"engineer select2 78 101 0");
@@ -562,6 +567,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer component add c wing signal-lamp 76 100 0");expectChat(context,"Added component c");
         MESSAGES.clear();send(context,"engineer component depend c b");expectChat(context,"Component c requires b");
         server.runOnServer(s->check(session(s,"Alice").blueprint.blocks().size()==18,"A nested project contains all three actual mechanism geometries"));
+        String composedId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        await(context,()->view(context)!=null && view(context).projectId().equals(composedId) && view(context).blocks().size()==18,"The actual composed-project preview contains every leaf");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-components-shared-preview");
         MESSAGES.clear();send(context,"engineer component build c");expectChat(context,"Required component b is incomplete");
         server.runOnServer(s->check(session(s,"Alice").journal.isEmpty(),"Missing prerequisite blocks delegation before any write"));
         MESSAGES.clear();send(context,"engineer component claim b");expectChat(context,"Component b assigned to you");
@@ -611,12 +619,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer component build c");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->check(session(s,"Alice").journal.size()==16,"Fresh delegation retains the partial operation while finishing only c"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        await(context,()->view(context)!=null && view(context).blocks().size()==18 && view(context).blocks().stream().allMatch(ProjectView.Ghost::matches),"All composed geometry is visibly complete");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-components-constructed");
         // Only the distant prerequisite footprint intersects Bob's workspace.
         server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer project new");
-            commandAs(s,"Bob","engineer select1 68 100 0");commandAs(s,"Bob","engineer select2 70 101 0");commandAs(s,"Bob","engineer project share Alice editor");});
+            commandAs(s,"Bob","engineer select1 68 100 0");commandAs(s,"Bob","engineer select2 70 101 0");commandAs(s,"Bob","engineer project share Alice editor");
+            var bobProject=session(s,"Bob");check(bobProject.owner.equals(player(s,"Bob").getUUID()) && bobProject.contains(new BlockPos(68,100,0)) && bobProject.access.allows(player(s,"Alice").getUUID(),ProjectAccess.Permission.BUILD),"Distant prerequisite workspace is actually owned by Bob and initially grants Alice build rights");});
         send(context,"engineer test");
         server.waitFor(s->{var project=session(s,"Alice");if(project.testTick<0 || !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
-            commandAs(s,"Bob","engineer project revoke Alice");return true;});
+            commandAs(s,"Bob","engineer project revoke Alice");check(!session(s,"Bob").access.allows(player(s,"Alice").getUUID(),ProjectAccess.Permission.BUILD),"The dependency grant was actually revoked");return true;});
         server.waitFor(s->session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").hasPendingTest());
         server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Revoked distant dependency grant prevents further input changes, including restoration under expired authority");commandAs(s,"Bob","engineer project share Alice editor");});
         send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
@@ -624,6 +635,35 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         write("components-independent.done","passed");
+    }
+
+    private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String projectId=read("components-project");
+        send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
+        long previousGeneration=server.computeOnServer(s->{var project=session(s,"Alice");
+            check(project.delegation==null && project.delegationConnection==null,"Component assignments never import a connection or execution lease on restart");
+            check(project.journal.size()==16 && project.activeComponent.equals("c"),"Restart retains the exact component operation journal and selected scope");
+            boolean denied=false;try{project.validateMutation();}catch(IllegalStateException noLease){denied=true;}
+            check(denied,"Persisted component metadata cannot authorize another world write");
+            return project.assignments.task(project.blueprint,"c").generation;
+        });
+        long unaffectedGeneration=server.computeOnServer(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"a").generation);
+        MESSAGES.clear();send(context,"engineer component claim c");expectChat(context,"Component c assigned to you");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.assignments.task(project.blueprint,"c").generation==previousGeneration+1
+                && project.assignments.task(project.blueprint,"a").generation==unaffectedGeneration,"Fresh handoff advances only its component generation");
+            project.level().setBlockAndUpdate(new BlockPos(78,101,0),Blocks.AIR.defaultBlockState());
+        });
+        MESSAGES.clear();send(context,"engineer component build c");expectChat(context,"recorded assistant component block changed");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==16 && project.level().getBlockState(new BlockPos(78,101,0)).isAir(),"Delegate-back rejects a later player edit without clearing history or replacing it");
+            var lamp=project.blueprint.blocks().stream().filter(block->block.pos().equals(new BlockPos(78,101,0))).findFirst().orElseThrow();
+            project.level().setBlockAndUpdate(lamp.pos(),lamp.state());
+        });
+        send(context,"engineer component build c");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==16,"Reconciled complete geometry does not fabricate new assistant placements"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        write("components-recovery.done","passed");
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {

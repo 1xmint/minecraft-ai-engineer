@@ -130,7 +130,24 @@ of that human edit, and unrelated component evidence remaining valid. Targeted
 bounded geometry checks stale only affected component/prerequisite results.
 CI 40535547169 exposed the slash namespace conflicting with the service's safe
 identifier format; root changed canonical stage/port/test namespaces to colon
-in both composers, preserving the identifier safety rule. Local compilation/formatting only; runtime acceptance,
+in both composers, preserving the identifier safety rule. CI 40536897959 then
+passed all five gates on b158881. Retained SQLite proof contains actual a/b/c
+functional passes as separate component tasks, together with the existing
+OR/NOT, delay repair and grouped-undo evidence. The native prerequisite conflict
+and distant cross-project revocation/restoration cases passed. This proves the
+first C1 path, not the whole #2 issue. Added explicit preview/constructed native
+screenshots and saved-project selection/handoff proof await the next run. The next native proof also selects the saved composed project after the third
+actual server boot, rejects mutation without a fresh lease, checks component-only
+generation advancement, preserves a later player edit through rejected delegation,
+then explicitly reconciles/tests the component under the new epoch. Service
+restart and broader stale assignment/revision cases remain pending, including
+component-local intention revisions with dependency-basis propagation.
+Read-only follow-up review found no new authority regression in the restart,
+distant-grant, or proposal-handoff changes. Public handoff invalidates cached
+diagnoses; Proposal.validate also checks assignment generation/basis defensively.
+Composed projects still need component-scoped diagnosis, repair and delay revision;
+do not treat standalone mechanism support as proof those composite flows work.
+Local compilation/formatting only; latest recovery runtime acceptance,
 independent authority review, scoped companion invalidation, additional handoff/
 restart/dependency failures, richer UI and C3 perception are still pending.
 

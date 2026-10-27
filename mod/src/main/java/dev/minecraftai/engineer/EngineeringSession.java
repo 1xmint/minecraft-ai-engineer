@@ -243,7 +243,7 @@ final class EngineeringSession implements BuildExecutor {
         var task=assignments.task(blueprint,id);
         if(state.equals("PLANNING") || pendingPlacement || undoRequested || hasPendingTest())throw new IllegalStateException("Reconcile active planning, placement, undo or test before handoff");
         if(id.equals(activeComponent))pause("Component handed to the player; journal retained");
-        task.assign(actor(),"player");forgetDiagnosis(actor());save();checkpoint();tell("Component "+id+" assigned to you");
+        task.assign(actor(),"player");clearDiagnoses();save();checkpoint();tell("Component "+id+" assigned to you");
     }
     void componentBuild(String id) {
         requireCreative();access.require(actor(),ProjectAccess.Permission.BUILD);

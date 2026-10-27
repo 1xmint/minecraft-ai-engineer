@@ -26,7 +26,8 @@ final class Diagnosis {
     }
 
     record Proposal(UUID snapshotId, UUID actor, net.minecraft.server.network.ServerGamePacketListenerImpl connection,
-                    UUID epoch, UUID projectId, int revision, long authorization, long expiresAtTick,
+                    UUID epoch, UUID projectId, int revision, long authorization, String component,
+                    long assignmentGeneration, String componentBasis, long expiresAtTick,
                     Map<BlockPos, BlockState> observed, List<Target> targets, List<String> messages,
                     boolean repairable) {
         Proposal {
@@ -56,6 +57,9 @@ final class Diagnosis {
             if (now >= expiresAtTick || expiresAtTick > now + MAX_TTL_TICKS || !EngineerMod.current(s.manager))
                 throw new IllegalStateException("Diagnosis expired; diagnose again");
             s.access.require(actor, ProjectAccess.Permission.BUILD);
+            var assignment=s.assignments.task(s.blueprint,component);
+            if(!component.equals(s.activeComponent) || assignment.generation!=assignmentGeneration || !assignment.basis.equals(componentBasis))
+                throw new IllegalStateException("Component assignment changed; diagnose again");
             if (!s.dimension.equals(player.level().dimension().identifier().toString()))
                 throw new IllegalStateException("Return to the project dimension and diagnose again");
 
@@ -164,8 +168,10 @@ final class Diagnosis {
         else if (!targets.isEmpty())
             messages.add("Some differences are supported, but automatic repair is blocked until every unsupported condition is resolved.");
 
+        var assignment=s.assignments.task(s.blueprint,s.activeComponent);
         return new Proposal(UUID.randomUUID(), actor, player.connection, s.manager.epoch, s.projectId, s.revision(),
-                s.access.revision(), s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
+                s.access.revision(),s.activeComponent,assignment.generation,assignment.basis,
+                s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
     }
 
     static BlockState corrected(BlockState intended, BlockState observed) {

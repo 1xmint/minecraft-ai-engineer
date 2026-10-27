@@ -156,6 +156,20 @@ try {
     `${coordination}/components-project`,
     "utf8",
   ).trim();
+  assert.equal(
+    readFileSync(`${coordination}/components-recovery.done`, "utf8").trim(),
+    "passed",
+  );
+  const restoredComponents = db
+    .prepare(
+      "SELECT synced_epoch FROM gateway_projects WHERE server_id=? AND project_id=?",
+    )
+    .get(server.serverId, componentProject);
+  assert.equal(
+    restoredComponents.synced_epoch,
+    server.serverEpoch,
+    "Actual composed project was selected and synchronized after the third server boot",
+  );
   for (const component of ["a", "b", "c"]) {
     const entry = db
       .prepare(

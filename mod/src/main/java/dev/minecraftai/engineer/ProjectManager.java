@@ -174,6 +174,7 @@ final class ProjectManager {
         return new ProjectView(player.getUUID(), worldId, project.dimension, project.projectId.toString(), epoch.toString(), ++sequence,
                 project.revision(), project.access.revision(), cursor.stage,
                 project.blueprint.name()+" | "+project.blueprint.stages().get(cursor.stage).title()+" | "+project.state
+                    +(ComponentTree.composite(project.blueprint)?" | active component "+project.activeComponent:"")
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
