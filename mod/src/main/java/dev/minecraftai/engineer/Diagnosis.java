@@ -25,11 +25,12 @@ final class Diagnosis {
         }
     }
 
-    record Proposal(UUID actor, net.minecraft.server.network.ServerGamePacketListenerImpl connection,
+    record Proposal(UUID snapshotId, UUID actor, net.minecraft.server.network.ServerGamePacketListenerImpl connection,
                     UUID epoch, UUID projectId, int revision, long authorization, long expiresAtTick,
                     Map<BlockPos, BlockState> observed, List<Target> targets, List<String> messages,
                     boolean repairable) {
         Proposal {
+            Objects.requireNonNull(snapshotId);
             Objects.requireNonNull(actor);
             Objects.requireNonNull(connection);
             Objects.requireNonNull(epoch);
@@ -153,14 +154,17 @@ final class Diagnosis {
             messages.add("Occupied isolation margin at " + entry.getKey().toShortString() + " contains "
                     + description + "; move/remove it yourself before automatic repair.");
         }
-        if (targets.isEmpty() && messages.isEmpty())
+        if (targets.isEmpty() && messages.isEmpty()) {
+            repairable = false;
             messages.add("Geometry matches the canonical mechanism; a functional test is still required.");
-        else if (!targets.isEmpty() && repairable)
+        } else if (targets.isEmpty()) {
+            repairable = false;
+        } else if (repairable)
             messages.add("Found " + targets.size() + " supported correction(s); review them and explicitly request repair.");
         else if (!targets.isEmpty())
             messages.add("Some differences are supported, but automatic repair is blocked until every unsupported condition is resolved.");
 
-        return new Proposal(actor, player.connection, s.manager.epoch, s.projectId, s.revision(),
+        return new Proposal(UUID.randomUUID(), actor, player.connection, s.manager.epoch, s.projectId, s.revision(),
                 s.access.revision(), s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
     }
 
@@ -238,6 +242,6 @@ final class Diagnosis {
     }
 
     private static Direction inputSide(BlockState repeater) {
-        return repeater.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
+        return repeater.getValue(BlockStateProperties.HORIZONTAL_FACING);
     }
 }
