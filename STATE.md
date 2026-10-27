@@ -29,9 +29,19 @@ handler, Alice waited and Bob eventually timed out waiting for finish; retained
 logs/request confirm this expected missing-harness failure. scripts/ci/multiplayer.sh
 now stops/waits for the actual companion child, checks its exit, starts a distinct
 PID on the same private SQLite/config directory, waits for a new readiness line,
-and atomically acknowledges the request. Local bash -n passes; actual service
-restart remains unproven until the next CI run passes. Never replace it with a
-marker-only fake. Next:
+and atomically acknowledges the request. Dedicated CI 40544912152 passed the
+actual service restart: retained marker/logs show old PID3131 terminated and new
+PID4385 reached readiness; native checkpointing/handoff recovery and SQL verifier
+passed. Four checks passed; the integrated client stopped before gameplay during
+a graphics-package setup timeout (exit124); the same download stalled again on
+its one failed-job retry. Root extracted a common CI-only graphics helper with
+bounded signed-APT attempts over official archive/Azure endpoints, full installed
+state checks for all four required packages, and unchanged game/backend checks.
+GPT-6-Luna challenged the fix. Primary docs checked 2026-10-27:
+https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html and
+https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
+Actual revised setup still needs CI proof; no local package/test execution.
+Local bash -n passes. Never replace process proof with a marker-only fake. Next:
 Then complete C2 service restart and component-scoped
 diagnosis/repair/delay revisions with propagated dependency bases; then finish C3
 perception and scoped companion invalidation. Broader stale-assignment/revision
@@ -116,6 +126,38 @@ fresh-grant restoration; CI passed. Follow-up review found no further confirmed
 C1/C2 authority bypass. It noted cached-proposal clearing, rather than the new
 defensive Proposal.validate branch, is the public handoff rejection path. Final
 phase review is still required after remaining C2/C3 code.
+
+## Component revision decision (C2, 2026-10-27)
+
+GPT-6-Luna independently challenged scoped revision/diagnosis/repair and confirmed
+versioned transitive bases as the smallest safe choice. Globally invalidating all
+tasks fails unaffected-work preservation; silently changing the hash formula
+mislabels older evidence. Use basisVersion2 with memoized transitive prerequisite
+hashes, preserve identical no-dependency/root hashes, verify old v1 records against
+an explicit legacy formula before migration and increment/stale changed tasks.
+Capture a FunctionalTrial scope at start (project, exact blueprint id/revision,
+component, basis/version); persist/archive that captured scope. Keep lastPassedScope
+on each task under its original immutable revision; never copy old vectors into a
+new whole-project intention. Old archives remain untouched and implicitly v1.
+
+API contract: component diagnose <id> is read-only VIEW and cannot select/pause
+another active task. It snapshots the explicit trusted leaf and full lease read
+closure, including prerequisite geometry, while retaining strict target isolation.
+component repair <id> requires matching actor proposal, no unresolved/active world
+work, revalidates before changing selection, then explicitly delegates only that
+leaf under a fresh BUILD isolation lease/group. component revise <id> <delay>
+changes only that node's bounded delay, keeps all world blocks/journals, archives
+before identity replacement, invalidates edited/dependent tasks and preserves
+unaffected results. No-op revisions keep identity/evidence. component test <id>
+explicitly tests an idle trusted leaf. Single-root compatibility remains.
+
+Root wrote the native acceptance before implementation in a separate project at
+100..118: test a/b/c, diagnose a during b construction without pausing b, revise b4
+without touching world/journals, preserve a's scope/generation, stale b/c bases,
+reject a stale b snapshot without changing active context, repair only b's relay,
+record v2-scoped actual tests, undo that b group from selected c and keep a valid,
+then prove a no-op revision preserves buffered vectors/scope. New API/runtime work
+is not implemented yet. Companion-wide invalidation is still a known C3 follow-up.
 
 ## Next proof/build steps
 

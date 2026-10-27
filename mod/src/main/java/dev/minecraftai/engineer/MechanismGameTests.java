@@ -10,6 +10,30 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Physical feasibility proofs independent of catalog generation or LLM output. */
 public final class MechanismGameTests {
+    @GameTest public void legacyComponentBasesMigrateWithoutInventingAuthority(GameTestHelper helper) {
+        var nodes=com.google.gson.JsonParser.parseString("""
+            [{"id":"root","kind":"group"},
+             {"id":"a","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":0,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]},
+             {"id":"b","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":8,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]},
+             {"id":"c","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":16,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":["b"]}]
+            """).getAsJsonArray();
+        var project=ComponentTree.compose("test","minecraft:overworld",BlockPos.ZERO,0,nodes);
+        // Fixed records from the original v1 wire formula, independent of the new migrator.
+        var legacy=com.google.gson.JsonParser.parseString("""
+            [{"id":"a","basis":"6e9a74a4b4dea19658edadc25a1386cfd3d4e69d3862b823a7f1ff9345598344","generation":7,"executor":"assistant","actor":"11111111-1111-4111-8111-111111111111","status":"COMPLETED","verified":"passed:signal-lamp:3 vectors@32"},
+             {"id":"b","basis":"fd42feaf6eec8324bf24b32b938570273f62e22b00f68af43ffe3156a4b16bdf","generation":7,"executor":"assistant","actor":"11111111-1111-4111-8111-111111111111","status":"COMPLETED","verified":"passed:signal-lamp:3 vectors@32"},
+             {"id":"c","basis":"6aeb6aba6ae2e7bf61d3b5afdf8b60efbb94778626445a9d91f2e6976769ec7e","generation":7,"executor":"assistant","actor":"11111111-1111-4111-8111-111111111111","status":"COMPLETED","verified":"passed:signal-lamp:3 vectors@32"}]
+            """).getAsJsonArray();
+        var migrated=new ComponentAssignments();migrated.load(project,legacy);
+        helper.assertTrue(migrated.task(project,"a").generation==7 && migrated.task(project,"b").generation==7,"Unchanged independent v1 bases keep their generations");
+        helper.assertTrue(migrated.task(project,"c").generation==8 && migrated.task(project,"c").verified.startsWith("stale:"),"Adding prerequisite intention to a v1 basis advances and stales only its dependent task");
+        for(var entry:migrated.json())helper.assertTrue(entry.getAsJsonObject().get("basisVersion").getAsInt()==2 && entry.getAsJsonObject().get("status").getAsString().equals("PAUSED"),"Migration emits versioned paused descriptions, never resumed authority");
+        var corrupt=legacy.deepCopy();corrupt.get(2).getAsJsonObject().addProperty("basis","0".repeat(64));
+        reject(helper,()->new ComponentAssignments().load(project,corrupt),"A legacy record must match its old formula before it can be migrated");
+        var unknown=legacy.deepCopy();unknown.get(0).getAsJsonObject().addProperty("basisVersion",99);
+        reject(helper,()->new ComponentAssignments().load(project,unknown),"Unknown task-basis versions fail closed");
+        helper.succeed();
+    }
     @GameTest public void catalogCompositionRejectsForgedGeometry(GameTestHelper helper) {
         var nodes=com.google.gson.JsonParser.parseString("""
             [

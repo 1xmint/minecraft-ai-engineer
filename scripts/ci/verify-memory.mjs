@@ -210,6 +210,53 @@ try {
     for (const vector of vectors)
       assert.equal(vector.outputs.light, vector.inputs.enable);
   }
+  assert.equal(
+    readFileSync(`${coordination}/component-revisions.done`, "utf8").trim(),
+    "passed",
+  );
+  const revisionProject = readFileSync(
+    `${coordination}/component-revisions-project`,
+    "utf8",
+  ).trim();
+  for (const component of ["a", "b", "c"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')=? AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, revisionProject, component);
+    assert.ok(
+      entry,
+      `Actual revision-project component ${component} must have functional evidence`,
+    );
+    const report = JSON.parse(entry.document),
+      scope = report.checkpoint.observed.testScope;
+    assert.equal(scope.projectId, revisionProject);
+    assert.equal(scope.component, component);
+    assert.equal(scope.basisVersion, 2);
+    assert.equal(scope.blueprintRevision, report.context.projectRevision);
+    assert.match(scope.basis, /^[a-f0-9]{64}$/u);
+    const intended = JSON.parse(
+      db
+        .prepare(
+          "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+        )
+        .get(server.serverId, revisionProject, scope.blueprintRevision)
+        .document,
+    );
+    assert.equal(scope.blueprintId, intended.id);
+    const leaf = intended.components.nodes.find(
+      (node) => node.id === component,
+    );
+    assert.equal(leaf.template, "signal-lamp");
+    if (component === "b") {
+      assert.equal(leaf.parameters.delay, 4);
+      assert.ok(
+        report.checkpoint.observed.testEvidence.at(-1).elapsedTicks >= 56,
+      );
+    }
+    for (const vector of report.checkpoint.observed.testEvidence)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -222,6 +269,7 @@ try {
       repairedDelays: [...testedDelays].sort(),
       recoveredRepairProject: repairProject,
       testedProjectComponents: ["a", "b", "c"],
+      revisedComponent: "b:delay4",
     }),
   );
 } finally {

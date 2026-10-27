@@ -278,6 +278,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             recovery=repairFlow(context,server);
             legacyRevisionFlow(context,server);
             componentFlow(context,server);
+            componentRevisionFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -644,6 +645,64 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         write("components-independent.done","passed");
+    }
+
+    private static JsonObject assignment(EngineeringSession project,String id) {
+        return project.assignments.json().asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals(id)).findFirst().orElseThrow();
+    }
+    private static void componentRevisionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 113 108 15 180 25");
+        var previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        send(context,"engineer select1 100 100 0");send(context,"engineer select2 118 101 0");
+        for(var spec:java.util.List.of("a root signal-lamp 100 100 0","b root signal-lamp 108 100 0","c root signal-lamp 116 100 0")) {
+            MESSAGES.clear();send(context,"engineer component add "+spec);expectChat(context,"Added component "+spec.charAt(0));
+        }
+        MESSAGES.clear();send(context,"engineer component depend c b");expectChat(context,"Component c requires b");
+        for(String id:java.util.List.of("a","b","c")) {
+            MESSAGES.clear();send(context,"engineer component build "+id);
+            if(id.equals("b"))server.waitFor(s->{var project=session(s,"Alice");if(!project.activeComponent.equals("b") || project.journal.size()<=6)return false;
+                commandAs(s,"Alice","engineer component diagnose a");
+                check(project.activeComponent.equals("b") && project.state.equals("EXECUTING"),"Read-only diagnosis of a cannot change or pause active b");return true;});
+            if(id.equals("b"))expectChat(context,"Geometry matches");
+            server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").state.equals("COMPLETED"));
+            MESSAGES.clear();send(context,"engineer component test "+id);expectChat(context,"truth table running");
+            server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        }
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        var beforeA=server.computeOnServer(s->assignment(session(s,"Alice"),"a").deepCopy());
+        var beforeB=server.computeOnServer(s->assignment(session(s,"Alice"),"b").deepCopy());
+        var beforeC=server.computeOnServer(s->assignment(session(s,"Alice"),"c").deepCopy());
+        var worldBefore=server.computeOnServer(s->{var states=new java.util.LinkedHashMap<BlockPos,net.minecraft.world.level.block.state.BlockState>();var project=session(s,"Alice");for(var block:project.blueprint.blocks())states.put(block.pos(),project.level().getBlockState(block.pos()));return states;});
+        send(context,"engineer component revise b 4");server.waitFor(s->session(s,"Alice").revision()==revision+1);
+        server.runOnServer(s->{var project=session(s,"Alice");var aTask=assignment(project,"a");var bTask=assignment(project,"b");var cTask=assignment(project,"c");
+            check(project.journal.size()==18 && worldBefore.entrySet().stream().allMatch(entry->project.level().getBlockState(entry.getKey()).equals(entry.getValue())),"Component intent revision preserves all world blocks and prior operations");
+            check(aTask.get("basis").equals(beforeA.get("basis")) && aTask.get("generation").equals(beforeA.get("generation")) && aTask.get("verified").getAsString().startsWith("passed:"),"Unchanged a retains its basis, generation and functional result");
+            check(aTask.getAsJsonObject("lastPassedScope").equals(beforeA.getAsJsonObject("lastPassedScope")) && aTask.getAsJsonObject("lastPassedScope").get("blueprintRevision").getAsInt()==revision,"Unchanged a retains its original immutable test scope instead of relabelling vectors");
+            check(!bTask.get("basis").equals(beforeB.get("basis")) && bTask.get("generation").getAsLong()>beforeB.get("generation").getAsLong(),"Revised b gets a fresh task basis and generation");
+            check(!cTask.get("basis").equals(beforeC.get("basis")) && cTask.get("generation").getAsLong()>beforeC.get("generation").getAsLong() && cTask.get("verified").getAsString().startsWith("stale:"),"Changed prerequisite intent propagates into dependent c without changing its blocks");
+        });
+        String selected=server.computeOnServer(s->session(s,"Alice").activeComponent);
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");
+        final var relay=new BlockPos(109,101,0);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals(selected),"Diagnosis does not select a different execution component");project.level().setBlockAndUpdate(relay,project.level().getBlockState(relay).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,2));});
+        MESSAGES.clear();send(context,"engineer component repair b");expectChat(context,"World changed");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals(selected) && project.journal.size()==18 && project.level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==2,"A stale repair proposal neither selects b nor writes over the later player edit");});
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");send(context,"engineer component repair b");
+        server.waitFor(s->session(s,"Alice").activeComponent.equals("b") && session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==19 && session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==4,"Explicit component repair corrects only b's repeater"));
+        MESSAGES.clear();send(context,"engineer component test b");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");var scope=saved(project).getAsJsonObject("functionalScope");check(scope!=null && scope.get("component").getAsString().equals("b") && scope.get("basisVersion").getAsInt()==2 && scope.get("basis").getAsString().equals(project.assignments.task(project.blueprint,"b").basis) && scope.get("blueprintRevision").getAsInt()==project.revision(),"New truth vectors have an explicit v2 basis and exact intended revision");});
+        MESSAGES.clear();send(context,"engineer component test c");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").activeComponent.equals("c") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==18);
+        server.waitFor(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"c").verified.startsWith("stale:"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals("b") && project.level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==2 && project.assignments.task(project.blueprint,"a").verified.startsWith("passed:"),"Undo from selected c reserves/reverts just b's latest group and retains unrelated a");});
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");send(context,"engineer component repair b");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        MESSAGES.clear();send(context,"engineer component test b");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        var noOp=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer component revise b 4");expectChat(context,"already matches");
+        server.runOnServer(s->{var current=saved(session(s,"Alice"));check(current.get("projectRevision").equals(noOp.get("projectRevision")) && current.getAsJsonArray("functionalEvidence").equals(noOp.getAsJsonArray("functionalEvidence")) && current.getAsJsonObject("functionalScope").equals(noOp.getAsJsonObject("functionalScope")),"A no-op component revision keeps intention identity and buffered evidence untouched");});
+        write("component-revisions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("component-revisions.done","passed");
     }
 
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
