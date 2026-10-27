@@ -478,6 +478,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static RepairRecovery repairFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         final var relay=new BlockPos(21,101,0);final var input=new BlockPos(20,101,0);
         server.runCommand("tp Alice 21 102 3 180 20");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.hasBuiltStructure(),"Player construction constrains revisions even without any assistant journal");});
         diagnoseReady(context);
         server.runCommand("setblock 21 100 0 minecraft:glass");
         MESSAGES.clear();send(context,"engineer repair");expectChat(context,"World changed");

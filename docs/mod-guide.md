@@ -42,6 +42,37 @@ Inspect before explicitly resuming or undoing. Other players, copied paths,
 and arbitrary file imports are not silently adopted. Restart expires all
 delegations, and multiple owned projects require an explicit `project use`.
 
+## Mechanism-library development branch
+
+PR #11 adds `/engineer catalog` and `reference <mechanism> [delay]` for a
+signal lamp, inverter (`not-gate`) and two-input `or-gate`. Repeater delays are
+1�4 redstone ticks; the inverter accepts 1. Each mechanism has actual input
+vectors and a separate functional test. Choose a region large enough for its
+preview, keeping the floating circuit's two-block isolation margin clear.
+
+The targeted repair workflow on this branch is under acceptance testing:
+
+1. `/engineer diagnose` identifies missing supports, incorrect repeater input
+   direction/delay, or supported lever/torch attachment mistakes. It reads the
+   actual loaded world and explains each proposed correction without editing.
+2. Review the messages, then `/engineer repair` explicitly delegates those
+   corrections. A fresh diagnosis belongs to your current connection and
+   project revision. Any intervening world edit requires another diagnosis.
+   Wrong block kinds, inventories and occupied margins require manual action.
+3. `/engineer test` runs the mechanism's real truth table and restores inputs.
+   Repair completion alone records no functional pass.
+4. `/engineer revise 4` changes the intended repeater delay while retaining the
+   world. Diagnose and explicitly repair that difference, then test again.
+   Model planning on existing construction uses the same bounded revision path.
+5. `/engineer undo` reverses the latest assistant operation, retaining earlier
+   construction groups. Later player edits can block undo. An interrupted undo
+   retains its selected group across restart; it cannot spill into older work.
+
+Player-built supports and current lever power are retained. A player toggle
+pauses active repair, and revocation/disconnect expires its authority. A restart
+retains journals and evidence, while requiring fresh explicit authority. This
+slice does not yet support arbitrary circuit rewrites or component relayout.
+
 ## Published alpha
 
 The current implementation is the first reference circuit, not the entire

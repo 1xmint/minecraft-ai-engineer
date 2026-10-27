@@ -13,8 +13,7 @@ v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
 Building #1 on phase/3-mechanism-library, draft PR #11. Step: N2 proofs first. Add inverter,
 two-input OR and configurable repeater delay to one catalog consumed by both
-Java resources and TypeScript. Root owns the proofs and implementation. No
-unmerged helper changes. The GPT-6-Luna challenge recovered after the verified
+Java resources and TypeScript. Root owns the proofs and integration. Runtime helper changes are integrated. The GPT-6-Luna challenge recovered after the verified
 quota reset and confirmed the multi-input journal, canonical geometry validation,
 packaging and targeted-revision requirements below. A final independent review
 of new mutation paths is still required before merge.
@@ -99,8 +98,10 @@ repair and bounded revise, invalidates ephemeral proposals on disconnect/grant
 changes, and routes model proposals through the same bounded revision validator.
 The companion derives revision constraints from canonical memory, ignoring forged
 client hints. Scoped TypeScript compilation passes; new HTTP and catalog proofs
-await CI. EngineeringSession grouped runtime integration is still in its isolated
-worktree and must land before the commands can compile or this slice can ship.
+await CI. EngineeringSession grouped runtime is integrated from worker 000bb54 as 82964a2.
+Combined main/client Java compilation passes. A fresh GPT-6-Luna safety review
+is running. Actual repair/revision/restart acceptance remains unproven until the
+new CI run passes; no local tests ran.
 
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's
