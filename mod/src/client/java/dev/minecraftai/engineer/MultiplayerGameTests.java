@@ -224,6 +224,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         check(!adopted.projectId.equals(original.projectId) && adopted.state.equals("PAUSED") && adopted.delegation==null,"Explicit legacy adoption never imports execution authority");
                         check(adopted.journal.size()==original.journal.size() && adopted.access.members().size()==1,"Adoption preserves the recovery journal with private ownership");
                         check(adopted.trial.evidence().isEmpty(),"An adopted project's new identity cannot inherit unscoped functional evidence");
+                        check(adopted.trial.scope()==null && adopted.assignments.tasks.values().stream().allMatch(task->task.lastPassedScope==null && task.executor.equals("unassigned")),"Adopted descriptive tasks and test scope carry no old identity or assignment");
                         try(var backups=Files.walk(LocalFiles.configDir().resolve("legacy-backups").resolve(adopted.projectId.toString()))) {
                             Path preserved=backups.filter(path->path.getFileName().toString().equals(name)).findFirst().orElseThrow();
                             check(Files.readString(source).equals(before) && Files.readString(preserved).equals(before),"The exact legacy source is preserved and backed up before adoption");
