@@ -90,12 +90,22 @@ export const TASK_STATES = [
   "CANCELLED",
 ] as const;
 export type TaskState = (typeof TASK_STATES)[number];
+export interface TargetedPerception {
+  schemaVersion: 1;
+  kind: "block" | "view";
+  actorId: string;
+  player: { position: Position; eye: Position; look: Position };
+  target: Position;
+  face?: "north" | "south" | "east" | "west" | "up" | "down";
+  differences: { missing: number; changed: number; unplanned: number };
+}
 export interface Observation {
   worldId: string;
   dimension: string;
   region: Bounds;
   blocks: { pos: Position; state: string }[];
   tick: number;
+  perception?: TargetedPerception;
 }
 export interface Checkpoint {
   worldId: string;
@@ -224,6 +234,112 @@ export function validateDesignRequest(value: unknown): DesignRequest {
   }
   return result;
 }
+function perceptionKeys(
+  value: Record<string, unknown>,
+  allowed: string[],
+): void {
+  if (Object.keys(value).some((key) => !allowed.includes(key)))
+    throw new RequestError("Unknown targeted perception field.");
+}
+function finiteVector(value: unknown, maximum: number): Position {
+  const v = object(value);
+  perceptionKeys(v, ["x", "y", "z"]);
+  for (const axis of ["x", "y", "z"] as const)
+    if (
+      typeof v[axis] !== "number" ||
+      !Number.isFinite(v[axis]) ||
+      Math.abs(v[axis]) > maximum
+    )
+      throw new RequestError("Invalid perception vector.");
+  return { x: v.x as number, y: v.y as number, z: v.z as number };
+}
+function validatePerception(
+  value: unknown,
+  region: Bounds,
+  blocks: Observation["blocks"],
+): TargetedPerception {
+  const v = object(value);
+  perceptionKeys(v, [
+    "schemaVersion",
+    "kind",
+    "actorId",
+    "player",
+    "target",
+    "face",
+    "differences",
+  ]);
+  if (v.schemaVersion !== 1 || (v.kind !== "block" && v.kind !== "view"))
+    throw new RequestError("Unsupported targeted perception schema or kind.");
+  const actor = text(v.actorId, "perception actor", 36).toLowerCase();
+  if (
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u.test(
+      actor,
+    )
+  )
+    throw new RequestError("Invalid perception actor UUID.");
+  const self = object(v.player);
+  perceptionKeys(self, ["position", "eye", "look"]);
+  const player = {
+    position: finiteVector(self.position, 29_999_984),
+    eye: finiteVector(self.eye, 29_999_984),
+    look: finiteVector(self.look, 1),
+  };
+  if (
+    Math.abs(player.position.y) > 2048 ||
+    Math.abs(player.eye.y) > 2052 ||
+    Math.abs(player.position.x - player.eye.x) > 0.01 ||
+    Math.abs(player.position.z - player.eye.z) > 0.01 ||
+    player.eye.y - player.position.y < 0 ||
+    player.eye.y - player.position.y > 4 ||
+    Math.abs(Math.hypot(player.look.x, player.look.y, player.look.z) - 1) > 0.01
+  )
+    throw new RequestError(
+      "Invalid actual player pose or normalized view direction.",
+    );
+  perceptionKeys(object(v.target), ["x", "y", "z"]);
+  const target = position(v.target);
+  if (
+    !inside(target, region) ||
+    blocks.length > 7 ||
+    !blocks.some(
+      (block) =>
+        block.pos.x === target.x &&
+        block.pos.y === target.y &&
+        block.pos.z === target.z,
+    )
+  )
+    throw new RequestError(
+      "Perception target must be in its bounded state sample.",
+    );
+  const raw = object(v.differences);
+  perceptionKeys(raw, ["missing", "changed", "unplanned"]);
+  const differences = {
+    missing: integer(raw.missing, "missing", 0, blocks.length),
+    changed: integer(raw.changed, "changed", 0, blocks.length),
+    unplanned: integer(raw.unplanned, "unplanned", 0, blocks.length),
+  };
+  if (
+    differences.missing + differences.changed + differences.unplanned >
+    blocks.length
+  )
+    throw new RequestError("Perception difference counts exceed the sample.");
+  const faces = ["north", "south", "east", "west", "up", "down"];
+  if (
+    v.kind === "view" ? !faces.includes(String(v.face)) : v.face !== undefined
+  )
+    throw new RequestError("Invalid observed hit face.");
+  return {
+    schemaVersion: 1,
+    kind: v.kind,
+    actorId: actor,
+    player,
+    target,
+    differences,
+    ...(v.kind === "view"
+      ? { face: v.face as NonNullable<TargetedPerception["face"]> }
+      : {}),
+  };
+}
 export function validateObservation(value: unknown): Observation {
   const v = object(value),
     region = bounds(v.region);
@@ -250,6 +366,9 @@ export function validateObservation(value: unknown): Observation {
     region,
     blocks,
     tick: integer(v.tick, "tick", 0, Number.MAX_SAFE_INTEGER),
+    ...(v.perception === undefined
+      ? {}
+      : { perception: validatePerception(v.perception, region, blocks) }),
   };
 }
 export function validateCheckpoint(value: unknown): Checkpoint {

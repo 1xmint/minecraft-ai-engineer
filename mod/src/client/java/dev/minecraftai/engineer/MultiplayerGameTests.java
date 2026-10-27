@@ -658,6 +658,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
         server.runOnServer(s->check(!session(s,"Alice").level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Explicit fresh recovery restores the input after the distant margin is clear"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(farMargin,Blocks.STONE.defaultBlockState()));
+        server.waitFor(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"b").verified.startsWith("stale:")
+                && session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"c").verified.startsWith("stale:"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.assignments.task(project.blueprint,"a").verified.startsWith("passed:")
+                && !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"An idle distant-margin edit stales only B/C without changing inputs");
+            project.level().setBlockAndUpdate(farMargin,Blocks.AIR.defaultBlockState());});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         write("components-independent.done","passed");
     }

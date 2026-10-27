@@ -396,7 +396,7 @@ final class EngineeringSession implements BuildExecutor {
         if (testTick>=0) { tickTest(); return; }
         if(blueprint!=null && ComponentTree.composite(blueprint) && server.getTickCount()%10==0) {
             boolean changed=false;
-            for(var task:assignments.tasks.values())if(task.verified.startsWith("passed:") && !componentGeometryMatches(task.id,new HashSet<>())) {
+            for(var task:assignments.tasks.values())if(task.verified.startsWith("passed:") && !componentGeometryMatches(task.id)) {
                 task.verified="stale: component or prerequisite geometry changed";task.status="PAUSED";changed=true;
                 if(task.id.equals(activeComponent)){verified=task.verified;state="PAUSED";detail=task.verified;manager.release(this);}
             }
@@ -436,13 +436,10 @@ final class EngineeringSession implements BuildExecutor {
         }
         tickTutorials();
     }
-    private boolean componentGeometryMatches(String id,Set<String> visited) {
-        if(!visited.add(id))return true;
-        for(var block:ComponentTree.component(blueprint,id).blocks())
-            if(!level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),level().getBlockState(block.pos())))return false;
-        for(var node:ComponentTree.nodes(blueprint))if(node.id().equals(id))for(String dependency:node.dependsOn())
-            if(!componentGeometryMatches(dependency,visited))return false;
-        return true;
+    private boolean componentGeometryMatches(String id) {
+        // A prior pass also depends on loaded, clear prerequisite isolation margins.
+        try { validateComponentTestArea(id);return true; }
+        catch(RuntimeException changed){return false;}
     }
     void tickTutorials() {
         if(blueprint==null || server.getTickCount()%10!=0)return;
@@ -907,6 +904,9 @@ final class EngineeringSession implements BuildExecutor {
     void tickTest() { trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
+        if(blueprint!=null && ComponentTree.composite(blueprint)) {
+            validateComponentTestArea(activeComponent);return;
+        }
         validateDeclaredPrerequisites();
         for (Blueprint.PlannedBlock b:assignmentBlocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
         Set<BlockPos> planned=new HashSet<>(); assignmentBlocks().forEach(b->planned.add(b.pos()));

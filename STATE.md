@@ -21,12 +21,15 @@ The positive recovery fixture now returns the player to the project and awaits
 loaded read dependencies; production refuses unknown margins and distinguishes
 unloaded from occupied coordinates. No safety check was relaxed.
 
-New uncommitted C3 proof-first work adds typed perception validation, actor-binding
-HTTP rejection, native block/view/unloaded acceptance and SQL metadata retention.
-Commands/DTOs are not implemented yet. No merge/release for #2; full perception,
+The later independent review found a real live read-margin gap in that green
+runtime; the rejection proof and local fix are below. Latest source now implements
+full-closure live/final verification and typed block/view perception; actual new
+CI validation is pending. Proof-first tests cover DTO/actor binding, real view ray,
+loaded refusal and SQL metadata retention. No merge/release for #2; full perception,
 inventory and final independent review remain. GPT-6-Luna could not run the review
-because of the usage limit; GPT-6.1-Sol fallback is now reviewing only the proven
-C2/scoped-memory source. Do not claim final review complete before its result.
+because of the usage limit. GPT-6.1-Sol completed the focused C2/scoped-memory
+review and found the read-margin gap below. The broader final phase review is
+still pending perception/inventory completion.
 
 C1: all five protected checks passed in CI 40539445528 (09d0d06) and 40536897959
 (b158881). Root inspected actual screenshots/logs/SQLite: nested composition,
@@ -213,7 +216,13 @@ margin at66,100,0; require paused pending-input recovery, no functional pass or
 unauthorized restore, and unchanged A. Clear it manually, explicitly resume,
 restore the input, then run a fresh actual test. Reuse the full canonical read
 closure for live/final tests and subsequent result invalidation; do not weaken
-margins or restore under invalid assumptions. Proof/fix validation still pending.
+margins or restore under invalid assumptions. CI 40585762989 proved the rejection missing: C continued to a pass after B's
+margin was occupied, then the native wait for pause/recovery timed out at the
+new assertion. Root now routes validateTestArea for composites and the post-pass
+watcher through the existing full transitive area validator. The same live/final
+contract applies before input changes/restoration; invalid margins retain WAL
+inputs. Extra native proof checks idle B/C invalidation while A stays passed.
+Scoped compilation passes; actual corrected runtime CI is pending.
 
 ## Targeted perception acceptance (C3, next)
 
@@ -226,7 +235,16 @@ invalid vectors and actual unloaded chunks without force-loading or guessed air.
 Native flow samples B's actual delay4 repeater plus six support/connection neighbors,
 drives a real server view ray and proves snapshots/journals stay unchanged on
 outside refusal. SQLite must retain both typed samples; plain observations stay
-wire-compatible. These commands/DTOs are not implemented yet; no acceptance claim.
+wire-compatible. Proof-first Companion CI 40585406958 and 40585762989 failed metadata preservation,
+malformed input rejection and actor mismatch as intended. WorldPerception now
+captures exactly seven states on the logical server, preflights the bounded ray
+and shape neighbors before pick, checks loaded/world/project-view rights, and
+persists no partial sample on refusal. DTO validation preserves actual pose/target/
+hit-face/difference facts, rejects unknown fields and misattributed actors before
+claiming sequence, and keeps legacy observations compatible. Pinned javap verified
+Entity pick/getEyePosition/getViewVector and BlockHitResult APIs. Main/client Java,
+TypeScript and formatting checks pass. Native/HTTP/SQL implementation proof is
+pending; no acceptance claim yet.
 Inventory remains a later explicit, authenticated, read-only natural-container
 request with no names/NBT or automatic private-data sharing; final policy/API
 and independent review still need completion before claiming all of C3.

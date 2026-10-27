@@ -536,6 +536,14 @@ export class GatewayMemory {
         "Observation belongs to a different world/dimension.",
         409,
       );
+    if (
+      observation.perception &&
+      observation.perception.actorId !== context.actorId
+    )
+      throw new RequestError(
+        "Targeted perception must describe its authenticated requesting actor.",
+        403,
+      );
     return this.atomic(() => {
       this.claimReport(context, reportSequence, "observe");
       const history = this.db
