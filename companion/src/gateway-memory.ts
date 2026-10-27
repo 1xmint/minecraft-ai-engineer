@@ -46,11 +46,14 @@ export interface GatewayProject {
 
 /** Server assertions are mirrored for stale/privacy checks, never issued here. */
 export class GatewayMemory {
-  private readonly inventories = new Map<string, {
-    context: GatewayContext;
-    snapshot: InventorySnapshot;
-    recordedAt: number;
-  }>();
+  private readonly inventories = new Map<
+    string,
+    {
+      context: GatewayContext;
+      snapshot: InventorySnapshot;
+      recordedAt: number;
+    }
+  >();
   constructor(private readonly db: DatabaseSync) {
     db.exec(`
       INSERT OR IGNORE INTO metadata VALUES('gateway_schema_version','1');
@@ -451,9 +454,12 @@ export class GatewayMemory {
       this.audit(c.serverId, c.projectId, "project-sync", input);
       return this.publicProject(this.row(c.serverId, c.projectId)!);
     });
-    if (before && (before.project_revision !== c.projectRevision ||
+    if (
+      before &&
+      (before.project_revision !== c.projectRevision ||
         before.authorization_revision !== c.authorizationRevision ||
-        before.synced_epoch !== c.serverEpoch))
+        before.synced_epoch !== c.serverEpoch)
+    )
       this.clearInventories(c.serverId, c.projectId);
     return result;
   }
@@ -630,12 +636,18 @@ export class GatewayMemory {
     });
   }
   private inventoryKey(context: GatewayContext): string {
-    return JSON.stringify([context.serverId, context.projectId, context.actorId]);
+    return JSON.stringify([
+      context.serverId,
+      context.projectId,
+      context.actorId,
+    ]);
   }
   private clearInventories(serverId: string, projectId?: string): void {
     for (const [key, entry] of this.inventories)
-      if (entry.context.serverId === serverId &&
-          (projectId === undefined || entry.context.projectId === projectId))
+      if (
+        entry.context.serverId === serverId &&
+        (projectId === undefined || entry.context.projectId === projectId)
+      )
         this.inventories.delete(key);
   }
   private expireInventories(now: number): void {
@@ -651,12 +663,24 @@ export class GatewayMemory {
   ): void {
     // Validate again for direct callers; no rejection may claim report ordering.
     const snapshot = validateInventory(input);
-    if (!context.connectionId || snapshot.actorId !== context.actorId ||
-        snapshot.connectionId !== context.connectionId)
-      throw new RequestError("Inventory must match its authenticated actor and connection.", 403);
+    if (
+      !context.connectionId ||
+      snapshot.actorId !== context.actorId ||
+      snapshot.connectionId !== context.connectionId
+    )
+      throw new RequestError(
+        "Inventory must match its authenticated actor and connection.",
+        403,
+      );
     const project = this.assertCurrent(context);
-    if (snapshot.worldId !== project.worldId || snapshot.dimension !== project.dimension)
-      throw new RequestError("Inventory belongs to a different world/dimension.", 409);
+    if (
+      snapshot.worldId !== project.worldId ||
+      snapshot.dimension !== project.dimension
+    )
+      throw new RequestError(
+        "Inventory belongs to a different world/dimension.",
+        409,
+      );
     this.atomic(() => this.claimReport(context, reportSequence, "inventory"));
     const now = Date.now();
     this.expireInventories(now);
@@ -679,13 +703,19 @@ export class GatewayMemory {
     this.expireInventories(now);
     if (!context.connectionId) return null;
     const entry = this.inventories.get(this.inventoryKey(context));
-    if (!entry || entry.context.connectionId !== context.connectionId ||
-        entry.context.serverEpoch !== context.serverEpoch ||
-        entry.context.projectRevision !== context.projectRevision ||
-        entry.context.authorizationRevision !== context.authorizationRevision ||
-        entry.snapshot.actorId !== context.actorId)
+    if (
+      !entry ||
+      entry.context.connectionId !== context.connectionId ||
+      entry.context.serverEpoch !== context.serverEpoch ||
+      entry.context.projectRevision !== context.projectRevision ||
+      entry.context.authorizationRevision !== context.authorizationRevision ||
+      entry.snapshot.actorId !== context.actorId
+    )
       return null;
-    return { snapshot: structuredClone(entry.snapshot), ageMs: now - entry.recordedAt };
+    return {
+      snapshot: structuredClone(entry.snapshot),
+      ageMs: now - entry.recordedAt,
+    };
   }
   /** Private advice only. Never pass this to shared blueprint planning. */
   privateContext(context: GatewayContext): string {

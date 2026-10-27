@@ -29,21 +29,40 @@ function keys(value: Record<string, unknown>, allowed: string[]): void {
 /** Accept only bounded registry IDs and counts, never names, NBT or text. */
 export function validateInventory(value: unknown): InventorySnapshot {
   const v = object(value);
-  keys(v, ["schemaVersion", "worldId", "dimension", "actorId", "connectionId",
-    "source", "slots", "tick", "containers", "items"]);
-  if (v.schemaVersion !== 1 || (v.source !== "player" && v.source !== "container"))
+  keys(v, [
+    "schemaVersion",
+    "worldId",
+    "dimension",
+    "actorId",
+    "connectionId",
+    "source",
+    "slots",
+    "tick",
+    "containers",
+    "items",
+  ]);
+  if (
+    v.schemaVersion !== 1 ||
+    (v.source !== "player" && v.source !== "container")
+  )
     throw new RequestError("Invalid private inventory schema or source.");
   const slots = integer(v.slots, "slots", 1, 128);
-  if (!Array.isArray(v.containers) ||
-      (v.source === "player" ? v.containers.length !== 0 :
-        v.containers.length < 1 || v.containers.length > 2))
+  if (
+    !Array.isArray(v.containers) ||
+    (v.source === "player"
+      ? v.containers.length !== 0
+      : v.containers.length < 1 || v.containers.length > 2)
+  )
     throw new RequestError("Invalid inventory backing positions.");
   const containers = v.containers.map((entry) => {
     const p = object(entry);
     keys(p, ["x", "y", "z"]);
     return position(p);
   });
-  if (new Set(containers.map((p) => `${p.x},${p.y},${p.z}`)).size !== containers.length)
+  if (
+    new Set(containers.map((p) => `${p.x},${p.y},${p.z}`)).size !==
+    containers.length
+  )
     throw new RequestError("Duplicate inventory backing position.");
   if (!Array.isArray(v.items) || v.items.length > slots)
     throw new RequestError("Invalid inventory item totals.");
@@ -52,8 +71,12 @@ export function validateInventory(value: unknown): InventorySnapshot {
   const items = v.items.map((entry) => {
     const item = object(entry);
     keys(item, ["id", "count"]);
-    if (typeof item.id !== "string" || item.id.length > 128 ||
-        !/^[a-z0-9_.-]+:[a-z0-9_./-]+$/u.test(item.id) || seen.has(item.id))
+    if (
+      typeof item.id !== "string" ||
+      item.id.length > 128 ||
+      !/^[a-z0-9_.-]+:[a-z0-9_./-]+$/u.test(item.id) ||
+      seen.has(item.id)
+    )
       throw new RequestError("Invalid or duplicate inventory item ID.");
     seen.add(item.id);
     const count = integer(item.count, "item count", 1, slots * 2_147_483_647);

@@ -163,6 +163,14 @@ existing shared design context lets model explanations leak them; instead expose
 private read/context for private material checks and the later #3 private advice
 flow. Shared planning must never receive the snapshot. Raw facts are observations,
 not live resource/permission proof. All world mutations still recheck authority.
+Proof-first Companion CI40589585065 failed the missing routes (404 vs200/403),
+while the four existing checks passed. GPT-6.1-Sol worker1ee545f was integrated as
+e1fe550, source-only: strict private DTO/routes, in-memory cache, connection nonce
+field and privateContext; shared context unchanged. Combined TypeScript/formatting
+checks pass. Root native proof now drives own stacks with a private custom name,
+a real double-chest packet/menu, duplicate-free totals and unchanged components,
+selection/expiry refusal, and Bob's private reply under Alice's project controller.
+Minecraft commands are not implemented yet; native proof must fail before code.
 Callback records target metadata only, returns PASS, never creates a menu or calls
 item getters. After the user's independent vanilla open, require exact new menu/
 backings and null loot tables before stillValid/item access. First natural loot

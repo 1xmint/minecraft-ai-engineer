@@ -281,6 +281,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentFlow(context,server);
             componentRevisionFlow(context,server);
             targetedPerceptionFlow(context,server);
+            inventoryFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -355,6 +356,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         awaitFile(context,"or-revoked");
         await(context,()->view(context)==null,"Revocation clears OR metadata during a multi-input trial");
         write("bob-or-revoked","ready");
+        awaitFile(context,"inventory-bob-project");
+        MESSAGES.clear();send(context,"engineer project use "+read("inventory-bob-project"));
+        send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"diamond=4");
+        check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private inspection never reads custom item names");
+        write("inventory-bob-private.done","passed");
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -766,6 +772,68 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer inspect block 20000000 100 0");expectChat(context,"unloaded");
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.level().hasChunkAt(new BlockPos(20_000_000,100,0)) && project.lastObservation==null,"A refused observation neither loads chunks nor sends guessed air to memory");});
         write("targeted-perception.done","passed");
+    }
+
+    private static java.util.List<net.minecraft.world.item.ItemStack> inventoryCopies(net.minecraft.world.Container container) {
+        var copy=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+        for(int i=0;i<container.getContainerSize();i++)copy.add(container.getItem(i).copy());return copy;
+    }
+    private static void naturalStorageOpen(ClientGameTestContext context,TestDedicatedServerContext server,BlockPos target) throws Exception {
+        context.runOnClient(client->{client.player.closeContainer();client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(target),net.minecraft.core.Direction.UP,target,false));});
+        server.waitFor(s->player(s,"Alice").containerMenu!=player(s,"Alice").inventoryMenu);
+    }
+    private static void inventoryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var old=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(old));
+        send(context,"engineer select1 140 100 0");send(context,"engineer select2 149 101 0");
+        send(context,"engineer component add lamp root signal-lamp 147 100 0");
+        String inventoryProject=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("inventory-project",inventoryProject);
+        server.runCommand("tp Alice 140.5 101 3 180 25");
+        server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(141,100,0)));
+        server.runCommand("setblock 140 100 0 minecraft:chest[facing=north,type=left]");
+        server.runCommand("setblock 141 100 0 minecraft:chest[facing=north,type=right]");
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getInventory().clearContent();
+            var own=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,7);
+            own.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));actor.getInventory().setItem(0,own);
+            var first=(net.minecraft.world.level.block.entity.ChestBlockEntity)actor.level().getBlockEntity(new BlockPos(140,100,0));
+            var second=(net.minecraft.world.level.block.entity.ChestBlockEntity)actor.level().getBlockEntity(new BlockPos(141,100,0));
+            first.setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,5));
+            second.setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,11));
+        });
+        var ownBefore=server.computeOnServer(s->inventoryCopies(player(s,"Alice").getInventory()));
+        MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
+        server.runOnServer(s->check(net.minecraft.world.item.ItemStack.listMatches(ownBefore,inventoryCopies(player(s,"Alice").getInventory())),"Private own-inventory observation preserves every stack/component"));
+        check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private facts exclude custom names/NBT");
+        MESSAGES.clear();send(context,"engineer materials");expectChat(context,"Private materials");
+        var chestBefore=server.computeOnServer(s->{var out=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));return out;});
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(140,100,0));expectChat(context,"Private inventory remembered");expectChat(context,"stone=16");
+        server.runOnServer(s->{check(player(s,"Alice").containerMenu instanceof net.minecraft.world.inventory.ChestMenu chest && chest.getRowCount()==6,"The player actually opened the real double-chest menu");
+            var after=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));
+            check(net.minecraft.world.item.ItemStack.listMatches(chestBefore,after),"Natural storage inspection keeps every backing stack unchanged and does not double-count player slots");});
+        context.runOnClient(client->client.player.closeContainer());
+        // A queued request cannot follow the actor into another selected project.
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        send(context,"engineer project use "+old);server.waitFor(s->!session(s,"Alice").projectId.toString().equals(inventoryProject));
+        naturalStorageOpen(context,server,new BlockPos(140,100,0));context.waitTicks(5);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Changed project cancels the container request before item sampling/delivery");
+        context.runOnClient(client->client.player.closeContainer());send(context,"engineer project use "+inventoryProject);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(inventoryProject));
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        int expiresAfter=server.computeOnServer(s->s.getTickCount()+401);server.runCommand("tick sprint 410");server.waitFor(s->s.getTickCount()>expiresAfter);
+        naturalStorageOpen(context,server,new BlockPos(140,100,0));context.waitTicks(5);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Expired natural-container request reads and sends no items");
+        context.runOnClient(client->client.player.closeContainer());
+        send(context,"engineer project share Bob viewer");server.runOnServer(s->{var bob=player(s,"Bob");bob.getInventory().clearContent();
+            var item=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND,4);item.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));bob.getInventory().setItem(0,item);});
+        MESSAGES.clear();write("inventory-bob-project",inventoryProject);awaitFile(context,"inventory-bob-private.done");context.waitTicks(3);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered") || message.contains("diamond=4")),"Bob's private result is not sent to the project controller Alice");
+        write("inventory-native.done","passed");
     }
 
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
