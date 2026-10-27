@@ -349,6 +349,45 @@ try {
         ),
       );
   }
+  for (const marker of [
+    "inventory-native.done",
+    "inventory-bob-private.done",
+    "inventory-recovery.done",
+  ])
+    assert.equal(
+      readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+      "passed",
+    );
+  const inventoryCaptures = db
+    .prepare(
+      "SELECT count(*) AS count FROM gateway_requests WHERE server_id=? AND kind='inventory'",
+    )
+    .get(server.serverId).count;
+  assert.ok(
+    inventoryCaptures >= 5,
+    "Actual private own/double-chest/crafter/other-actor/restart captures must reach the companion",
+  );
+  for (const table of db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    )
+    .all()) {
+    for (const persisted of db
+      .prepare(
+        'SELECT * FROM "' + String(table.name).replaceAll('"', '""') + '"',
+      )
+      .all()) {
+      const data = JSON.stringify(persisted);
+      assert.ok(
+        !data.includes("minecraft:diamond"),
+        "The real other-actor private item ID cannot enter durable project data",
+      );
+      assert.ok(
+        !data.includes("inventory-private-secret"),
+        "Custom item names never enter companion payloads or persistence",
+      );
+    }
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -363,6 +402,7 @@ try {
       testedProjectComponents: ["a", "b", "c"],
       revisedComponent: "b:delay4",
       targetedPerception: ["block", "view"],
+      ephemeralPrivateInventories: inventoryCaptures,
     }),
   );
 } finally {

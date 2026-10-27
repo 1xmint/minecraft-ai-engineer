@@ -171,6 +171,22 @@ checks pass. Root native proof now drives own stacks with a private custom name,
 a real double-chest packet/menu, duplicate-free totals and unchanged components,
 selection/expiry refusal, and Bob's private reply under Alice's project controller.
 Minecraft commands are not implemented yet; native proof must fail before code.
+Native proof CI40590485264 failed at the missing inspect-inventory command as
+intended. Companion implementation hit a root fixture error: second valid report
+reused a one-use request ID; each test write now has a fresh ID while sequence
+assertions remain. GPT-6.1-Sol reviewed actual inventory source and found one P2:
+CrafterMenu's known NonInteractiveResultSlot/ResultContainer was rejected. Root
+now skips that exact virtual preview without getters and adds a native crafter
+open/count proof. Reviewer found no further confirmed auth/data issue, including
+post-natural-open loot guards. Full implemented native/data CI remains pending.
+InventoryPerception and command/lifecycle hooks are implemented locally and compile:
+own snapshots, natural exact vanilla storage menus, both double-chest halves,
+physical processing inventories with known virtual preview skipped, private
+remember/material callbacks and actor connection stamps. Pending requests expire
+on 400 worldticks or20 monotonic seconds; no frames/snapshots enter world/project
+saves. New native proof also requires private cache absence after the third actual
+server boot, fresh recapture, and zero private diamond/custom-name data anywhere
+in SQLite. No Minecraft implementation runtime proof yet; CI must prove it.
 Callback records target metadata only, returns PASS, never creates a menu or calls
 item getters. After the user's independent vanilla open, require exact new menu/
 backings and null loot tables before stillValid/item access. First natural loot

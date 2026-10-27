@@ -1147,7 +1147,7 @@ test("private inventory validation and actor identity reject before report order
     const c = inventoryContext();
     const post = (changes: Record<string, unknown>, seq = 1) =>
       f.post("/v2/inventory", {
-        context: c,
+        context: { ...c, requestId: randomUUID() },
         reportSequence: seq,
         ...inventoryReport(),
         ...changes,

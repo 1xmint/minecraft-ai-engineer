@@ -20,6 +20,16 @@ final class ProjectManager {
     final Map<UUID, UUID> selections = new HashMap<>();
     final Set<UUID> creators = new HashSet<>();
     private long sequence;
+    final InventoryPerception inventories=new InventoryPerception(this);
+    private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
+    private final Map<UUID,ConnectionStamp> connectionIds=new HashMap<>();
+    String connectionId(ServerPlayer player) {
+        if(!server.isSameThread() || server.getPlayerList().getPlayer(player.getUUID())!=player || player.hasDisconnected())throw new IllegalStateException("Inventory connection is no longer current");
+        var previous=connectionIds.get(player.getUUID());
+        if(previous==null || previous.connection()!=player.connection){previous=new ConnectionStamp(player.connection,UUID.randomUUID().toString());connectionIds.put(player.getUUID(),previous);}
+        return previous.id();
+    }
+
 
     ProjectManager(MinecraftServer server) {
         this.server = server; serverId = LocalFiles.serverId(); worldId = LocalFiles.worldId(server);
@@ -150,6 +160,8 @@ final class ProjectManager {
         }
     }
     void tick() {
+        inventories.tick();
+        connectionIds.entrySet().removeIf(entry->{var current=server.getPlayerList().getPlayer(entry.getKey());return current==null || current.connection!=entry.getValue().connection();});
         for (EngineeringSession project : projects.values()) project.tick();
         if (server.getTickCount() % 5 != 0) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -178,6 +190,7 @@ final class ProjectManager {
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
+        inventories.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

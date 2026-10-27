@@ -306,6 +306,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
             write("repair-recovery.done","passed");
             componentRecoveryFlow(context,server);
+            send(context,"engineer project use "+read("inventory-project"));
+            server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
+            MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
+            MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
+            write("inventory-recovery.done","passed");
             send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));inspectPersisted(context,server);
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
         }
@@ -793,7 +798,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(141,100,0)));
         server.runCommand("setblock 140 100 0 minecraft:chest[facing=north,type=left]");
         server.runCommand("setblock 141 100 0 minecraft:chest[facing=north,type=right]");
-        server.runOnServer(s->{var actor=player(s,"Alice");actor.getInventory().clearContent();
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();actor.getInventory().clearContent();
             var own=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,7);
             own.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));actor.getInventory().setItem(0,own);
             var first=(net.minecraft.world.level.block.entity.ChestBlockEntity)actor.level().getBlockEntity(new BlockPos(140,100,0));
@@ -816,6 +821,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
             after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));
             check(net.minecraft.world.item.ItemStack.listMatches(chestBefore,after),"Natural storage inspection keeps every backing stack unchanged and does not double-count player slots");});
+        context.runOnClient(client->client.player.closeContainer());
+        server.runCommand("setblock 142 100 0 minecraft:crafter");
+        server.runOnServer(s->((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(142,100,0))).setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,2)));
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(142,100,0));expectChat(context,"Private inventory remembered");expectChat(context,"redstone=2");
+        server.runOnServer(s->check(player(s,"Alice").containerMenu instanceof net.minecraft.world.inventory.CrafterMenu && ((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(142,100,0))).getItem(0).getCount()==2,"The real crafter keeps its physical inventory; the virtual result slot is excluded"));
         context.runOnClient(client->client.player.closeContainer());
         // A queued request cannot follow the actor into another selected project.
         MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
