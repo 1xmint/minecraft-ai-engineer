@@ -557,7 +557,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void componentFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
-        server.runCommand("tp Alice 69 108 15 180 25");
+        server.runCommand("tp Alice 73 108 15 180 25");
         var previous=server.computeOnServer(s->session(s,"Alice").projectId);
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         send(context,"engineer select1 60 100 0");send(context,"engineer select2 78 101 0");
@@ -597,6 +597,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             project.level().setBlockAndUpdate(next.pos(),next.state());
             check(project.journal.size()==retained,"Human takeover retains every assistant journal entry");
         });
+        assertPersisted(server);
+        write("companion-restart.request","ready");awaitFile(context,"companion-restart.done");
+        var restart=JsonParser.parseString(read("companion-restart.done")).getAsJsonObject();
+        check(restart.get("oldPid").getAsInt()>0 && restart.get("newPid").getAsInt()>0 && restart.get("oldPid").getAsInt()!=restart.get("newPid").getAsInt(),"Harness must stop the actual companion and start a distinct process");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==retained && project.delegation==null && project.assignments.task(project.blueprint,"b").executor.equals("player"),"Companion restart preserves paused handoff progress without granting authority");
+            project.checkpoint();
+        });
+        assertPersisted(server);write("companion-recovery.done","passed");
         send(context,"engineer component build b");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");
             check(project.level().getBlockState(new BlockPos(70,101,0)).is(Blocks.REDSTONE_LAMP)

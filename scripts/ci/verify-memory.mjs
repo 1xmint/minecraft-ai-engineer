@@ -152,6 +152,10 @@ try {
     readFileSync(`${coordination}/components-independent.done`, "utf8").trim(),
     "passed",
   );
+  assert.equal(
+    readFileSync(`${coordination}/companion-recovery.done`, "utf8").trim(),
+    "passed",
+  );
   const componentProject = readFileSync(
     `${coordination}/components-project`,
     "utf8",

@@ -1,277 +1,202 @@
 # Now
 
-2026-10-27: Active goal: **complete all milestones**, including all remaining
-phase 1 and all six phase 2 capabilities. Multiplayer-first remains the target.
+2026-10-27: Active goal: **complete all milestones**: remaining phase 1 and all
+six phase 2 capabilities. Keep the multiplayer-first target and original scope.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Foundation #8 merged through PR #10 at ae90741. Mechanism library and targeted
-repair #1 merged through PR #11 at 28301e5, issue closed. All five protected
-checks passed in CI 40531124499 on ecd420a. Root inspected the retained native
-logs, completion markers, SQLite proof and rendered screenshot. Actual OR/NOT
-truth tables, three world inspections, repaired delays1/4 and third-boot grouped
-undo recovery are proven. The separate native legacy-lamp revision and unloaded
-construction checks passed too. Independent GPT-6-Luna review found two gaps
-(unloaded construction classified as empty, legacy delay aliases rejected);
-both were fixed and re-reviewed with no further blocking finding. All tests ran
-on GitHub; only scoped compilation/formatting ran locally. Working branch is
-now phase/4-component-collaboration from merged main.
+Foundation #8 merged through PR #10 at ae90741. Mechanism library/targeted repair
+#1 merged through PR #11 at 28301e5; #1 is closed. Main's source includes dedicated
+and integrated execution, private grants, independent lessons, safe conflict/
+restart recovery, three catalog mechanisms and snapshot-bound repair. The old
+published v0.1.0-alpha.1 remains a solo reference, not the current source build.
+Neither full phase 1 nor phase 2 is complete.
 
-The canonical mechanism catalog is shared by Java resources and TypeScript.
-Model geometry is never authority. Functional testing uses vanilla input
-activation, per-input write-ahead restoration, actual vectors and private
-immutable revision-scoped evidence archives. Read-only diagnoses are bound to
-actor/connection/epoch/project/authorization/snapshot/TTL. Explicit repair
-corrects only AIR or allowlisted same-kind structural differences, preserves
-live dynamics, and pauses on player edits. Undo persists one selected operation
-before writing; it cannot spill into earlier groups after restart. SDK revisions
-of existing construction use the same bounded delay validator. Arbitrary circuit
-rewrites and component relayout remain unsupported until the next slice.
+Building #2 on **phase/4-component-collaboration**, draft PR #12. HEAD runtime
+09d0d06 passed all five protected checks in CI 40539445528. Earlier C1 run
+40536897959 passed on b158881. Root inspected native logs, completion markers,
+SQLite proof and actual preview/constructed screenshots (an initial artifact
+503 resolved on normal retry). Actual native clients proved nested composition,
+independent human/AI work, handoff, prerequisite conflicts, distant cross-project
+revocation/restoration during testing, separate a/b/c truth-table passes, and
+selection/handoff/testing of the composed project after the third server boot.
+The 16-entry operation journal survived; restored metadata granted no lease or
+connection. Later player removal of a recorded block blocked delegate-back.
+All tests ran on GitHub; locally only scoped compilation and formatting ran.
 
-Neither full phase 1 nor phase 2 is complete. The published v0.1.0-alpha.1 is
-still the older solo reference; there is no new mechanism release yet. Remaining
-phase 1: #2 component collaboration/perception, then #3 richer debugging/teaching
-and combined signed-in model/game acceptance. Phase 2 remains all six features
-in #4. Shared multi-user subscription eligibility remains unproven; planning is
-still limited to the configured account-owning operator, never a public AI API.
+No merge/release for #2 yet. A proof-first native service-restart request is now
+written: while B is handed to the player, it asks the CI harness to stop the
+actual companion, start a distinct PID on the same private database/config, then
+confirms HTTP checkpointing and retained progress without authority. The harness
+does not handle this request yet, so the first run should time out at
+companion-restart.done. Next action: implement that bounded actual process
+restart in scripts/ci/multiplayer.sh; never replace it with a marker-only fake.
+Then complete C2 service restart and component-scoped
+diagnosis/repair/delay revisions with propagated dependency bases; then finish C3
+perception and scoped companion invalidation. Broader stale-assignment/revision
+proofs, resources/ownership UX and final independent review remain. Do not treat
+standalone repair as proof that composed-project repair works.
 
-## Next build - component collaboration (#2)
+## Current implementation and limits
 
-Decision - 2026-10-27: keep one server-owned project with a bounded component
-tree and separate persisted assignments. Containers group work; physical leaves
-are regenerated from trusted catalog geometry. Existing designs migrate as one
-root leaf. Keep one active AI task per project until phase 2 multiple builders.
-Scope its before-state, write lease and read dependencies to the assigned work.
-A human can work in an independent component concurrently. A changed shared
-support or port must still pause every dependent task; a nominal component box
-cannot hide a real redstone dependency.
+- One catalog JSON is bundled in the Fabric jar and compiled Node service.
+  Signal lamp, inverter and two-input OR have bounded delay/rotation choices,
+  real ports/resources/prerequisites and actual Minecraft truth vectors. Java
+  checks geometry against the catalog; model provenance alone grants nothing.
+- ComponentTree.java and companion/components.ts regenerate composites from
+  trusted leaf recipes. Tree schema1: root group, organizational groups and
+  mechanism leaves with relative pivot/rotation, delay and dependency DAG.
+  Limits: 64 nodes, 16 leaves, depth8, 64 relative extent, 64 stages, 4096 blocks.
+  Component stage/port/test namespaces use colon (slash was rejected by the
+  service's safe identifier format). Both composers use matching DFS dependency
+  order and canonical metadata. Ports are real leaf interfaces; metadata does
+  not create or prove physical inter-module wires.
+- Commands: component add/group/depend/list/claim/build. One AI task per project;
+  humans can work in independent leaves. ComponentAssignments keeps granting
+  actor, executor, generation, intended basis and status separate from authority.
+  Current basis covers own geometry and declared dependency IDs; propagating
+  changed prerequisite intent into dependent bases is still needed before
+  component-local revision support. Assignments are coordination, not a second ACL.
+- Builds capture selected-leaf baselines plus relevant support/prerequisite read
+  closure. Fresh delegate-back validates old assistant changes, preserves the
+  journal and accepts matching player progress. Human conflicts pause work.
+  Isolation leases recheck the same distant read footprint used at acquire.
+  Live connection/epoch/project/auth/assignment fences are checked before writes.
+- Journal version3 attributes contiguous operation groups to components. Old flat
+  journals become one legacy/root operation; version2 root journals still load.
+  Undo reserves the selected group's component and persists its target before
+  writing; an already-empty recovered target cannot spill into older work.
+- FunctionalTrial uses the selected leaf's catalog oracle, vanilla lever
+  activation and per-input write-ahead restoration. Private archives retain exact
+  intended project, component basis and vectors. Task-level results remain separate;
+  only the live trial buffer is single-active-component. Component geometry and
+  prerequisite changes stale affected results, retaining unrelated passes.
+- Diagnosis proposals are ephemeral, actor/connection/epoch/revision/ACL/snapshot/
+  TTL bound, now also assignment-generation/basis bound. Handoff clears proposals.
+  Root/standalone diagnosis and same-kind allowlisted repair work; composed
+  diagnosis/repair/revision still need implementation and actual acceptance.
+- Companion tasks use stable projectUUID:component IDs for composites. Scoped
+  checkpoint results exist; observation/revision invalidation is still too broad
+  in GatewayMemory and must become component-aware. All private memory stays
+  outside repository/world saves. No persisted metadata restores execution authority.
 
-Options: doing nothing preserves whole-blueprint conflicts and fails concurrent
-work. Separate projects lose shared hierarchy, interfaces and dependencies.
-Replacing the scheduler with a general worker swarm adds unnecessary recovery
-and authority complexity before the physical/multiple-builder phases. The bounded
-tree reuses current server grants, operation journals and leases, at the cost of
-explicit task bases and scoped invalidation. GPT-6-Luna independently challenged
-this choice against the actual Blueprint, EngineeringSession, ProjectManager,
-RegionReservations and GatewayMemory interfaces and confirmed this boundary.
+## Decision and Outcomes for #2
 
-Important corrections from that challenge: component assignment is not a second
-ACL. Record the authenticated granting actor separately from the assistant
-executor. Handoff revokes the old lease, preserves the journal and reconciles
-before fresh authority. Persist component/assignment generation and intended
-node basis, never a live connection/lease. Server and companion currently both
-invalidate whole-project tasks, so fix both. Define real supports/ports/read
-assumptions in the catalog; do not claim inter-module wires work merely because
-metadata links output names. Regenerate and test actual composed geometry.
-Accessible inventory inspection is read-only and explicitly scoped; inspect the
-pinned Minecraft APIs before deciding the access/retention implementation.
+Decision, 2026-10-27: keep one server-owned project with a bounded component tree
+and separate persisted assignments. A general worker swarm adds recovery/authority
+complexity before phase 2; separate projects lose shared contracts/dependencies;
+whole-blueprint work prevents independent collaboration. The bounded tree reuses
+server grants, journals and leases, at the cost of explicit task bases and scoped
+invalidation. GPT-6-Luna challenged this against the actual interfaces.
 
-Outcomes:
+Challenge safeguards: preserve journals through handoff, revoke old leases and
+reconcile before issuing new authority. Record granting actor separately from
+executor. Reserve real supports/ports/read assumptions, not nominal boxes. Change
+both Fabric and companion invalidation. Never infer physical wiring correctness
+from linked names. Keep inventories read-only and explicitly authorized.
 
-- C1 - Work on a shared multi-component project: the player builds B while the
-  assistant completes A. Proof: real dedicated native flow with disjoint edits
-  that do not pause A, plus a shared support/port edit that does pause dependent
-  work. Show hierarchy, interfaces, prerequisites, resources and assignments.
-- C2 - Take over and delegate back without losing progress. Proof: preserve
-  journal/groups and observed progress through handoffs, game and companion
-  restart. Reject old connections, revoked grants, stale assignment generations
-  and changed component bases before any mutation. Migrate an existing root
-  design without changing its intended geometry or journal.
-- C3 - Inspect the actual surroundings and available materials. Proof: targeted
-  player/view/block/support/connection/inventory observations, missing/extra and
-  changed-state reports, unloaded chunks rejected honestly, and invalidation
-  limited to affected components/dependants. Prove private project visibility
-  and inventory access rejection paths; never mutate or expose secret NBT.
+- C1: player builds B while assistant completes A; show hierarchy, ports,
+  prerequisites, resources and assignment. Proof: native disjoint edit does not
+  pause A; changed prerequisite port pauses C and preserves the edit. First path
+  and actual a/b/c tests proven in CI above. More resource/ownership UX remains.
+- C2: take over/delegate back without losing progress. Proof: journals and
+  generations survive game and service restart; reject old connections/grants/
+  assignments/bases before mutations. Initial handoff/game-restart path is proven.
+  Service restart, component-local revisions and further stale-basis proofs remain.
+- C3: targeted actual player/view/block/support/connection/inventory observations,
+  missing/extra/changed-state reports and unloaded rejection. Invalidate only
+  affected work/dependants. Prove inventory access rejection/private visibility;
+  never mutate inventories or expose secret NBT. Not implemented yet.
 
-Tasks: write actual component collaboration/handoff failure cases first (C1/C2);
-add typed tree/composition validation and assignment ledger (C1/C2); scope live
-execution/reservations/recovery and companion task memory (C1/C2); research and
-implement targeted perception and accessible inventory observation (C3); drive
-native flows plus service/game restarts and independently review new authority
-and data handling before merging (C1-C3). Keep physical execution replaceable.
-The riskiest assumption is that relevant read dependencies can be scoped without
-missing a real redstone interaction. Probe independent and connected/shared
-support cases in the actual pinned game before claiming that separation works.
+Independent GPT-6-Luna authority review found a real gap: test acquire included
+far prerequisites, but per-write cross-project grant validation initially did
+not. Root fixed it and added actual revoke-while-input-ON, retained recovery and
+fresh-grant restoration; CI passed. Follow-up review found no further confirmed
+C1/C2 authority bypass. It noted cached-proposal clearing, rather than the new
+defensive Proposal.validate branch, is the public handoff rejection path. Final
+phase review is still required after remaining C2/C3 code.
 
-Proof-first command contract for C1/C2: `component add <id> <parent> <mechanism>
-<x y z>` composes trusted catalog geometry inside the selected workspace (root
-is the initial container); `component list` shows the tree/assignments;
-`component claim <id>` hands that component to the authenticated player and
-revokes its active AI lease; `component build <id>` explicitly delegates/reconciles
-only that component. Optional bounded rotation/delay can follow later without
-changing these meanings. Root's native proof creates two actual lamps eight
-blocks apart: the player adds b's support during a's execution, then takes b
-over mid-build and delegates it back. Expected journal count excludes both
-player supports and retains all assistant work. This is only the first C1/C2
-proof; shared-dependency, stale generation, restart and C3 cases still need
-actual proofs before the phase can ship. Runtime commands/composition are not
-implemented yet; the new test should initially fail at the missing command.
+## Next proof/build steps
 
-Implementation in progress on draft PR #12. Proof-first CI 40532671860 failed
-at the missing component command, while the other four gates passed. Java
-ComponentTree and companion components.ts now regenerate bounded catalog leaf
-geometry, ports, resources and prerequisites; root integrated workers and fixed
-cross-language root-node, ordering, metadata and TypeScript type mismatches.
-The first runtime path adds component add/list/claim/build, per-component
-assignment generations/bases, scoped baselines/dependencies/leases and attributed
-journal entries. Explicit delegate-back captures fresh current assumptions while
-retaining and checking old assistant changes; it never clears the journal.
-Undo selects the recorded component before acquiring its lease. Checkpoints
-persist descriptive assignments, never live authority. Functional trials use the
-selected leaf's trusted oracle and archive its component basis with the project
-intention. Root owns all proofs, including actual leaf tests and forged
-composition rejection. Early independent GPT-6-Luna authority review found one
-concrete gap: test leases acquired distant prerequisite read footprints, but
-cross-project grant validation rechecked only the selected leaf's nearby region.
-Root fixed validation to use that same read footprint and added a native
-revoke-during-test case where only the distant prerequisite intersects Bob's
-workspace. Nested group/depend commands and a third leaf now prove prerequisite
-blocking, a changed prerequisite input pausing dependent construction, preservation
-of that human edit, and unrelated component evidence remaining valid. Targeted
-bounded geometry checks stale only affected component/prerequisite results.
-CI 40535547169 exposed the slash namespace conflicting with the service's safe
-identifier format; root changed canonical stage/port/test namespaces to colon
-in both composers, preserving the identifier safety rule. CI 40536897959 then
-passed all five gates on b158881. Retained SQLite proof contains actual a/b/c
-functional passes as separate component tasks, together with the existing
-OR/NOT, delay repair and grouped-undo evidence. The native prerequisite conflict
-and distant cross-project revocation/restoration cases passed. This proves the
-first C1 path, not the whole #2 issue. Added explicit preview/constructed native
-screenshots and saved-project selection/handoff proof await the next run. The next native proof also selects the saved composed project after the third
-actual server boot, rejects mutation without a fresh lease, checks component-only
-generation advancement, preserves a later player edit through rejected delegation,
-then explicitly reconciles/tests the component under the new epoch. Service
-restart and broader stale assignment/revision cases remain pending, including
-component-local intention revisions with dependency-basis propagation.
-Read-only follow-up review found no new authority regression in the restart,
-distant-grant, or proposal-handoff changes. Public handoff invalidates cached
-diagnoses; Proposal.validate also checks assignment generation/basis defensively.
-Composed projects still need component-scoped diagnosis, repair and delay revision;
-do not treat standalone mechanism support as proof those composite flows work.
-Local compilation/formatting only; latest recovery runtime acceptance,
-independent authority review, scoped companion invalidation, additional handoff/
-restart/dependency failures, richer UI and C3 perception are still pending.
+1. C2: restart the actual private companion during native project work; reconcile
+   durable task state without importing authority. Add component-targeted bounded
+   intent revision, diagnosis and repair. Propagate changed dependency intent into
+   dependent task bases; preserve unaffected components and old operation groups.
+2. C3: define typed targeted perception and inventory requests/results, write
+   rejection/privacy/side-effect proofs first, then implement the read-only API.
+   Make companion observations/checkpoints invalidate affected component tasks,
+   with schema migration and old root compatibility.
+3. C1-C3: drive actual dedicated/integrated/service restart flows, inspect retained
+   screenshots/data, review new authority/data handling independently and merge
+   only when all five checks pass. Keep physical execution replaceable.
 
-## Proven foundation outcomes
+Pinned inventory API research (GPT-6-Luna, 2026-10-27) used javap on
+mod/.gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-common-7e9a32a5b8/26.3/minecraft-common-7e9a32a5b8-26.3.jar.
+Player exposes inventoryMenu, containerMenu and getInventory(); AbstractContainerMenu
+has slots/stillValid; Slot exposes container/getContainerSlot/getItem. Deduplicate
+by backing container identity and container slot. ItemStack item/count plus
+BuiltInRegistries.ITEM.getKey supplies safe IDs/counts; do not read names/NBT.
+RandomizableContainerBlockEntity.getItem invokes unpackLootTable(null), so check
+public getLootTable()==null before any item getter. CompoundContainer has contains
+but no backing getters; resolve exactly two already-loaded vanilla chest halves
+from a known interaction target, verify contains and both loot getters, or reject
+ambiguity. BlockEntity has position/level/isRemoved; do not force-load chunks or
+force open/create a menu. Proposed request queues the next naturally opened
+storage menu, binds actor/connection/epoch/project/intent/grants/TTL, and rechecks
+same menu plus stillValid immediately before reading. Exclude player inventory,
+ender chest, crafting/result and unknown/custom backing slots from shared data.
+Exact view-target and final access/retention DTOs still need implementation/review.
 
-- M1 — Play alone on a local dedicated Fabric server, then invite a friend
-  without moving project authority to a client. Proof: boot the real dedicated
-  server, perform the reference handoff with two clients, restart and reconcile;
-  retain the same core flow in integrated single-player. No client classes may
-  be required by the server.
-- M2 — Project members share blueprints and construction progress, with personal
-  tutorial steps. Proof: owner/editor can collaborate, a third player cannot
-  read project metadata or receive overlays, one player's Next does not move
-  another's step, and a client without the overlay retains commands/text teaching.
-- M3 — Nobody silently overwrites another's work. Proof: overlapping AI jobs
-  serialize, adjacent test dependencies are protected, human edits pause affected
-  work, and unauthorized assistant edits/undo are rejected. Revocation, disconnect,
-  restart, stale packets and late model replies cannot renew execution authority.
-- M4 — One operator-owned companion serves the server within explicit account
-  and quota boundaries. Proof: one bounded model call at a time, fair capped
-  requests, denied users spend no quota, outage/cancellation is clean, and no
-  client receives the companion token or Codex credentials. A personal SDK
-  probe does not prove eligibility for shared multi-user subscription use.
+## Proven foundation and prior decisions
 
-## Architecture decision — 2026-10-26
+M1-M4: dedicated-first/integrated-compatible execution; authenticated server
+identity/project grants; private shared previews and independent lessons;
+reservations/conflicts/revocation/disconnect/restart/adoption recovery; one bounded
+operator-owned private companion with SQLite. PR #10/main CI 40419651640 proved
+those technical controls with actual native players and HTTP/SQLite. Offline CI
+identities and overlay opt-out do not prove production Mojang auth or a separate
+vanilla-client binary. Keep production online-mode=true.
 
-Keep Fabric + Node 24 TypeScript + SQLite. Develop on a dedicated server first,
-initially on Josh's PC; no hosting purchase, public exposure or port forwarding
-is implied. Solo play uses that server, and integrated single-player uses the
-same logical-server core. The extra JVM/setup is a cost on this slow PC.
+Architecture decision, 2026-10-26: Fabric + Java25, Node24 TypeScript + SQLite,
+one private companion alongside the dedicated server on Josh's PC. Integrated
+single-player uses the same logical-server core. No hosting purchase, port
+forwarding, public AI endpoint, credential sharing or paid API fallback. World
+state is authoritative; intended/observed/verified data stay separate. Server
+owns permissions and mutations; companion owns durable records, not authority.
+Stable world/server IDs, backed-up explicit legacy adoption, private default
+projects and permission-filtered client payloads are proven. Physical vanilla
+blocks remain visible normally; project ACLs do not hide world geometry.
 
-Authority is server-side. Fabric derives actor UUIDs from authenticated
-Minecraft connections, owns grants, immutable delegations, reservations,
-write-ahead journals, observations and functional evidence. The companion on
-the server machine is the canonical durable project/blueprint/decision store.
-It receives requests only through Fabric's private gateway and cannot grant
-permissions or authorize mutations. Avoid two independent copies of authority.
-Every accepted task/result is fenced by server epoch, project/blueprint revision
-and authorization revision; validate again when execution reaches each write.
+One configured account-owning operator initiates model work. Shared multi-user
+subscription eligibility is not established; a personal SDK probe does not prove
+it. Do not enable shared access without documented eligibility or add paid APIs.
+Primary sources checked 2026-10-26: https://docs.fabricmc.net/develop/networking,
+https://wiki.fabricmc.net/tutorial:side, https://learn.chatgpt.com/docs/auth.
+Independent earlier GPT-6 challenge added epoch/revision fences, read reservations,
+per-player cursors, clone policy, privacy limits and disconnect defaults.
 
-Projects default private. Store owner/editor/viewer membership, with separate
-rights for delegation, removal/undo and requesting model work; project access
-does not automatically grant use of the operator's quota. Online-mode identity
-is the normal multiplayer deployment baseline; offline CI profiles do not prove
-production authentication. Server admins control global policy/emergency stop.
+#1's immutable shared catalog beat ad-hoc model geometry and duplicated templates.
+Snapshot repair plus grouped undo beat blanket rebuild (which erases player work)
+and flat undo (which can erase earlier operations). CI 40531124499 on ecd420a
+proved actual OR/NOT truth tables, three inspections, repaired delays1/4, legacy
+intent migration, unloaded-construction rejection and third-boot undo recovery.
+Independent review caught fail-open unloaded detection and legacy alias rejection;
+both were fixed and re-reviewed before PR #11 merged.
 
-Reserve write regions plus relevant support, read and test-isolation footprints,
-scoped to world/dimension. Serialize overlapping AI operations. Do not prohibit
-ordinary human building: detect changes and pause/reconcile affected work.
-Testing, input restoration and undo obey the same authority and conflict rules.
-Initially pause on the responsible player's disconnect; another authorized
-member can explicitly take over after reconciliation. Restart expires leases
-and execution authority; ownership and task history persist.
+## Remaining roadmap and release
 
-Replace path/player-derived project identity with a persisted nonsecret world
-UUID plus a server namespace. Define moves, clone/fork/import and duplicate-ID
-handling explicitly. Back up and explicitly adopt legacy projects/journals;
-never auto-grant old client data authority on a shared server. Keep secrets and
-the project database in private server-owned storage outside saves/repository.
+1. Foundation #8 and mechanism/repair #1: proven/merged.
+2. Remaining phase 1: #2 current component collaboration/perception, then #3 deeper
+   debugging, richer teaching/textured visualization and combined signed-in
+   model-to-game acceptance. Public CI stays credential-free; live operator
+   acceptance is separate evidence. Full product brief is docs/product-brief.md.
+3. Phase 2 #4: voice conversation, physical NPC companion, survival gathering,
+   schematic import/export, advanced design optimization and multiple builders.
+   All remain in the active goal; no phase 2 capability is claimed complete.
 
-Replace the single static preview with capability-negotiated Fabric payloads,
-sent only to current project members. Use bounded snapshots/deltas with epoch,
-revision and ordering checks; clear cached views on revoke, world change and
-disconnect. Separate shared observed progress from player/project tutorial
-cursors. Vanilla world blocks remain visible according to Minecraft's normal
-replication; project ACLs do not make physical builds invisible.
-
-## Options, challenge and provider gate
-
-Staying single-player-first postpones changes already visible in the code:
-player-keyed sessions, a static preview, path-derived identity and no membership
-schema. Removing the guards alone is unsafe. A separate hosted/cloud product
-adds cost, credentials and operation before the core works. Choose the existing
-stack with a server-first migration and explicit multiplayer proofs.
-
-Independent GPT-6 challenge confirmed the direction and added revision/epoch
-fencing, read-dependency reservations, per-player lesson cursors, clone policy,
-privacy limits and disconnect defaults. Those requirements are included above.
-
-One private companion runs beside the operator's server. Preserve the current
-tool restrictions, no API-key fallback and no public Codex endpoint. Initially
-planning is operator-initiated/approved for authorized work, with bounded queue,
-per-player/server caps and no cross-project context leaks. This is a technical
-boundary, not proof that one personal subscription may serve arbitrary players.
-Verify documented eligibility for the intended shared usage before enabling it;
-if unsupported, keep that capability blocked rather than add paid services.
-
-Sources checked 2026-10-26:
-[Fabric networking](https://docs.fabricmc.net/develop/networking) and
-[logical sides](https://wiki.fabricmc.net/tutorial:side) support a shared
-logical-server core. [Official Codex authentication](https://learn.chatgpt.com/docs/auth)
-documents subscription login and cautions against untrusted/public execution;
-it does not establish this multiplayer entitlement.
-
-## Build sequence
-
-1. **Proven foundation (#8, M1–M4 technical controls).** Dedicated/integrated
-   logical-server execution, private grants, stable identity, backed-up migration,
-   reservations, revocation/restart recovery, optional shared overlays, personal
-   lessons, private SQLite memory and bounded operator-only planning. Five CI
-   gates are required. Offline CI identities and overlay opt-out do not prove
-   production Mojang authentication or a separate vanilla-client binary.
-2. **Building: remaining phase 1.** Mechanism library and targeted repair (#1)
-   are proven and merged. Next: component dependencies/ownership and perception
-   (#2), deeper debugging/richer teaching
-   and combined live-model acceptance (#3), in that order. Public CI stays
-   credential-free; any live operator probe is separate evidence. Resolve
-   documented eligibility before enabling shared multi-user subscription work.
-3. **Phase 2 unchanged (#4).** Voice, physical NPC, survival gathering,
-   schematics, advanced optimization and multiple independent builders.
-
-## Preserved release and proof
-
-v0.1.0-alpha.1 at 168ac190daddd066957ecaebd50a807e7926167c shipped through PR #5;
-PR #7 records its screenshots and limits. Its four required checks passed:
-https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40367902860
-(attempt 2 recovered a graphics package download timeout).
-The actual client flow proved reference teaching, delegation, save/reopen,
-conflict handling, safe undo and tick-based testing. The official SDK/CLI 0.164.0
-ChatGPT probe passed with gpt-6-luna. These do not prove multiplayer or the
-combined live-model/game flow. All automated tests stay on GitHub CI; only
-scoped compilation/formatting runs locally. Existing game/toolchain pins remain.
-
+Published v0.1.0-alpha.1 at 168ac190daddd066957ecaebd50a807e7926167c shipped via
+PR #5; PR #7 records screenshots/limits. Four release gates passed in CI
+40367902860 (attempt2 recovered a graphics download timeout). Actual solo flow
+proved teaching/delegation/save-reopen/conflict/undo/tick testing. Official
+SDK/CLI0.164.0 ChatGPT probe with gpt-6-luna passed; not combined model/game proof.
 Release: https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
-Next build: https://github.com/1xmint/minecraft-ai-engineer/issues/2
-The published alpha reference supports only the signal lamp. Larger designs, inventories,
-general debugging, textured previews and the full phase 1 remain unfinished.
+Current work: https://github.com/1xmint/minecraft-ai-engineer/pull/12
