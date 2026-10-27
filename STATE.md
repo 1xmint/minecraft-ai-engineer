@@ -103,6 +103,22 @@ Combined main/client Java compilation passes. A fresh GPT-6-Luna safety review
 is running. Actual repair/revision/restart acceptance remains unproven until the
 new CI run passes; no local tests ran.
 
+Fresh GPT-6-Luna review found two concrete compatibility gaps: unloaded planned
+player construction was classified as empty, and legacy signal-lamp delay
+revisions rejected the absent delay=1 metadata/relay alias despite catalog
+acceptance. Root now fails closed on unknown in-workspace chunks and normalizes
+only fully validated historical geometry for comparison. A separate native
+player-built legacy project proves intent migration preserves world blocks;
+an actual unloaded coordinate proves unknown construction is rejected. Scoped
+main/client compilation passes. CI 40529474522 passed Fabric, Windows and integrated-client checks. All native
+multiplayer roles and the third-boot recovery completed; the added SQLite
+verifier then incorrectly included the same project's earlier inverter pass
+among lamp-delay evidence. Root restricted that query to actual signal-lamp
+pass records, still binding each to its immutable blueprint revision. Companion
+stopped at a formatting error, now fixed. Fresh review confirmed both safety
+fixes and their proofs, with no further blocking finding. The latest revision
+still requires all five green checks before merging.
+
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's
 attached-support neighbor notification and left the torch on. Pinned 26.3

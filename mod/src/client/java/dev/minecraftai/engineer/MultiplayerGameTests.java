@@ -276,11 +276,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             });
             catalogFlow(context,server);
             recovery=repairFlow(context,server);
+            legacyRevisionFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
             awaitFile(context, "bob.done");
             server.waitFor(s -> s.getPlayerList().getPlayerCount() == 1, 12_000);
+            server.runCommand("tp Alice 1 102 6 180 20");
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
@@ -515,6 +517,35 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==5);
         var recovery=server.computeOnServer(s->{var project=session(s,"Alice");var checkpoint=saved(project);checkpoint.addProperty("undoRequested",true);checkpoint.addProperty("undoOperation",target);return new RepairRecovery(project.file,checkpoint,project.projectId.toString(),project.journal.size());});
         write("repair-project",recovery.project());return recovery;
+    }
+
+    private static void legacyRevisionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 41 102 3 180 20");
+        send(context,"engineer project new");send(context,"engineer select1 40 100 0");send(context,"engineer select2 42 101 0");
+        send(context,"engineer reference signal-lamp");server.waitFor(s->session(s,"Alice").blueprint!=null);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            var source=project.blueprint.source().deepCopy();source.remove("parameters");source.getAsJsonObject("provenance").remove("catalogRevision");
+            source.getAsJsonArray("blocks").get(4).getAsJsonObject().addProperty("component","output");
+            project.commandActor=player(s,"Alice").getUUID();
+            try{project.accept(Blueprint.parse(source,project.worldId,project.dimension));}finally{project.commandActor=null;}
+            for(var block:project.blueprint.blocks())project.level().setBlockAndUpdate(block.pos(),block.state());
+            check(project.journal.isEmpty() && project.hasBuiltStructure(),"Historical player-built lamp is construction without assistant edits");
+        });
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        send(context,"engineer revise 4");server.waitFor(s->session(s,"Alice").revision()==revision+1);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.blueprint.source().getAsJsonObject("parameters").get("delay").getAsInt()==4
+                && project.level().getBlockState(new BlockPos(41,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1
+                && project.journal.isEmpty(),"Legacy delay revision migrates intent while preserving all player blocks");
+            var original=project.blueprint;var first=project.corner1;var second=project.corner2;
+            var far=new BlockPos(20_000_000,100,0);check(!project.level().hasChunkAt(far),"Unknown construction fixture must actually be unloaded");
+            try{
+                project.blueprint=MechanismCatalog.create("signal-lamp",project.worldId,project.dimension,far,0,1);
+                project.corner1=far;project.corner2=far.offset(2,1,0);
+                boolean rejected=false;try{project.hasBuiltStructure();}catch(IllegalStateException unknown){rejected=true;}
+                check(rejected,"Unloaded player construction cannot be classified as an empty design");
+            }finally{project.blueprint=original;project.corner1=first;project.corner2=second;}
+        });
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {

@@ -319,8 +319,7 @@ export function fittingMechanisms(
       });
       fits.push({ template: m.id, rotation, maxDelay: m.maxDelay });
     } catch (error) {
-      if (!(error instanceof RequestError) || error.status !== 422)
-        throw error;
+      if (!(error instanceof RequestError) || error.status !== 422) throw error;
     }
   }
   if (!fits.length)

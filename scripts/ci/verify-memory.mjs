@@ -120,7 +120,7 @@ try {
     .map((entry) => JSON.parse(entry.document));
   const testedDelays = new Set();
   for (const report of repairReports.filter((entry) =>
-    entry.checkpoint.verified.startsWith("passed:"),
+    entry.checkpoint.verified.startsWith("passed:signal-lamp:"),
   )) {
     const intended = db
       .prepare(

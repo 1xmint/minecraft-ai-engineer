@@ -361,7 +361,8 @@ final class EngineeringSession implements BuildExecutor {
         for(var block:blueprint.blocks()) {
             // An unbuilt preview may extend beyond the selected workspace. Do
             // not inspect those coordinates while deciding whether a layout exists.
-            if(!contains(block.pos()) || !level().hasChunkAt(block.pos()))continue;
+            if(!contains(block.pos()))continue;
+            if(!level().hasChunkAt(block.pos()))throw new IllegalStateException("Cannot choose a replacement design while planned construction is unloaded");
             if(!level().getBlockState(block.pos()).isAir())return true;
         }
         return false;
@@ -384,7 +385,15 @@ final class EngineeringSession implements BuildExecutor {
                 || !blueprint.anchor().equals(candidate.anchor()) || blueprint.rotation()!=candidate.rotation())
             throw new IllegalArgumentException("A built mechanism can only revise its bounded delay at the same template, anchor and rotation");
         if(sameIntendedStates(blueprint,candidate))return false;
-        if(!onlyDelayChanged(blueprint,candidate))
+        MechanismCatalog.contract(blueprint);
+        // Compare historical references through the same validated catalog.
+        // This normalizes only their absent delay=1 metadata and relay alias;
+        // the original geometry must already pass the full contract above.
+        JsonObject priorParameters=blueprint.source().getAsJsonObject("parameters");
+        Blueprint comparison=priorParameters==null
+                ?MechanismCatalog.create(catalogTemplate(blueprint),worldId,dimension,blueprint.anchor(),blueprint.rotation(),1)
+                :blueprint;
+        if(!onlyDelayChanged(comparison,candidate))
             throw new IllegalArgumentException("A built mechanism can only revise its bounded repeater delay; layout changes need a separate component operation");
         boolean changed=false;int firstChangedStage=Integer.MAX_VALUE;
         Map<BlockPos,Blueprint.PlannedBlock> next=new HashMap<>();candidate.blocks().forEach(block->next.put(block.pos(),block));
