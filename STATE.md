@@ -1,196 +1,96 @@
 # Now
 
 2026-10-27: Active goal: **complete all milestones**, including all remaining
-phase 1 and six phase 2 capabilities. Multiplayer-first remains the target.
+phase 1 and all six phase 2 capabilities. Multiplayer-first remains the target.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Foundation #8 merged through PR #10 at ae90741, closed. Main CI 40419651640
-passed all five required checks. The real dedicated/integrated flows prove
-private grants, independent lessons, revocation/conflicts/reservations, backed-up
-adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
-checkpoints plus before-build/after-restart inspections. The released
-v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
+Foundation #8 merged through PR #10 at ae90741. Mechanism library and targeted
+repair #1 merged through PR #11 at 28301e5, issue closed. All five protected
+checks passed in CI 40531124499 on ecd420a. Root inspected the retained native
+logs, completion markers, SQLite proof and rendered screenshot. Actual OR/NOT
+truth tables, three world inspections, repaired delays1/4 and third-boot grouped
+undo recovery are proven. The separate native legacy-lamp revision and unloaded
+construction checks passed too. Independent GPT-6-Luna review found two gaps
+(unloaded construction classified as empty, legacy delay aliases rejected);
+both were fixed and re-reviewed with no further blocking finding. All tests ran
+on GitHub; only scoped compilation/formatting ran locally. Working branch is
+now phase/4-component-collaboration from merged main.
 
-Building #1 on phase/3-mechanism-library, draft PR #11. Step: N2 proofs first. Add inverter,
-two-input OR and configurable repeater delay to one catalog consumed by both
-Java resources and TypeScript. Root owns the proofs and integration. Runtime helper changes are integrated. The GPT-6-Luna challenge recovered after the verified
-quota reset and confirmed the multi-input journal, canonical geometry validation,
-packaging and targeted-revision requirements below. A final independent review
-of new mutation paths is still required before merge.
+The canonical mechanism catalog is shared by Java resources and TypeScript.
+Model geometry is never authority. Functional testing uses vanilla input
+activation, per-input write-ahead restoration, actual vectors and private
+immutable revision-scoped evidence archives. Read-only diagnoses are bound to
+actor/connection/epoch/project/authorization/snapshot/TTL. Explicit repair
+corrects only AIR or allowlisted same-kind structural differences, preserves
+live dynamics, and pauses on player edits. Undo persists one selected operation
+before writing; it cannot spill into earlier groups after restart. SDK revisions
+of existing construction use the same bounded delay validator. Arbitrary circuit
+rewrites and component relayout remain unsupported until the next slice.
 
-Proof-first CI 40446458619: new planner tests failed as expected against the
-single-template selector. Actual OR truth-table tests passed in both orientations.
-Inverter tests exposed direct-placement initialization: placing an unlit lamp
-after a lit torch does not recompute its state. The catalog already orders lamp
-before torch; root corrected the physical probe's fixture order without weakening
-its truth-table assertions. Retained dedicated/client checks passed.
+Neither full phase 1 nor phase 2 is complete. The published v0.1.0-alpha.1 is
+still the older solo reference; there is no new mechanism release yet. Remaining
+phase 1: #2 component collaboration/perception, then #3 richer debugging/teaching
+and combined signed-in model/game acceptance. Phase 2 remains all six features
+in #4. Shared multi-user subscription eligibility remains unproven; planning is
+still limited to the configured account-owning operator, never a public AI API.
 
-Implemented on this branch: canonical catalog data, immutable typed Node loader,
-bounded delay/rotation decisions, region-aware orientation/anchor expansion,
-typed ports/prerequisites/material counts, v2 proposal generation and explicit
-jar/compiled-service packaging checks. Older immutable blueprint mirrors retain
-their original optional metadata; v1 clients reject unsupported adaptations.
-Java catalog consumer/geometry guard is integrated from helper commit a54d61a
-(cherry-picked as efac539). The new functional trial journals every input before
-vanilla activation/restoration, pauses on lost authority/player edits, preserves
-ambiguous crash windows and reads old scalar recovery safely. Test-start and
-functional evidence/input snapshots reach the companion. A fresh GPT-6-Luna
-read-only review found no blocking defect; runtime proof is still required.
-Scoped Java main/client compilation passes. Pending: native acceptance of the
-latest evidence-history fix, diagnosis/targeted correction preserving players
-(N2), and final green CI/review before merging #11. No new mechanism release;
-do not close #1 yet.
+## Next build � component collaboration (#2)
 
-N1 proof: CI 40449837064 passed all five checks on 38b3a7e. Actual native players
-proved OR delay4, role revocation retaining both inputs, explicit fresh-authority
-restoration, safe deserialization without imported authority, and rotated NOT
-testing that restores a player's originally ON lever/support. All four client
-roles finished. SQLite contains actual OR/NOT truth vectors and both original
-world inspections. Headless tests cover every orientation, maximum repeater
-delay and forged geometry/ports/parameters. Independent GPT-6-Luna review found
-no blocking safety defect; compilation and formatting pass locally.
+Decision � 2026-10-27: keep one server-owned project with a bounded component
+tree and separate persisted assignments. Containers group work; physical leaves
+are regenerated from trusted catalog geometry. Existing designs migrate as one
+root leaf. Keep one active AI task per project until phase 2 multiple builders.
+Scope its before-state, write lease and read dependencies to the assigned work.
+A human can work in an independent component concurrently. A changed shared
+support or port must still pause every dependent task; a nominal component box
+cannot hide a real redstone dependency.
 
-Latest small fix under new CI: archive prior vectors with their exact intended
-blueprint/revision before another test or design replaces them, clear current
-evidence on a new intended identity, and clear inherited evidence in newly
-adopted projects. Keep private offline history if the companion is unavailable;
-never relabel old vectors as observations of a different design. Native proof
-now checks undo retains player inputs and replacement creates that scoped archive;
-SQLite verification binds each functional pass to its immutable blueprint revision.
-That fix passed all five checks in CI 40450944060 on cd95bb8. N1 is proven with
-scoped private history as well as actual circuit/recovery behavior.
+Options: doing nothing preserves whole-blueprint conflicts and fails concurrent
+work. Separate projects lose shared hierarchy, interfaces and dependencies.
+Replacing the scheduler with a general worker swarm adds unnecessary recovery
+and authority complexity before the physical/multiple-builder phases. The bounded
+tree reuses current server grants, operation journals and leases, at the cost of
+explicit task bases and scoped invalidation. GPT-6-Luna independently challenged
+this choice against the actual Blueprint, EngineeringSession, ProjectManager,
+RegionReservations and GatewayMemory interfaces and confirmed this boundary.
 
-Next N2 work: a read-only diagnosis should capture exact proposed correction
-targets, then explicit repair must reject any intervening player edit. Delay
-revisions should preserve unchanged player-built structure. Investigate grouped
-operation journals so undo affects only the last delegated section, including a
-persisted undo target that cannot spill into an older operation after a crash.
-Challenge this design before adding its new mutation paths; do not use blanket
-undo/rebuild to satisfy the preservation requirement.
+Important corrections from that challenge: component assignment is not a second
+ACL. Record the authenticated granting actor separately from the assistant
+executor. Handoff revokes the old lease, preserves the journal and reconciles
+before fresh authority. Persist component/assignment generation and intended
+node basis, never a live connection/lease. Server and companion currently both
+invalidate whole-project tasks, so fix both. Define real supports/ports/read
+assumptions in the catalog; do not claim inter-module wires work merely because
+metadata links output names. Regenerate and test actual composed geometry.
+Accessible inventory inspection is read-only and explicitly scoped; inspect the
+pinned Minecraft APIs before deciding the access/retention implementation.
 
-N2 decision — 2026-10-27: the GPT-6-Luna independent challenge confirmed snapshot-
-bound local diagnosis plus grouped write-ahead operations. Full undo/rebuild
-breaks preservation; ad-hoc repair using a flat global undo can erase earlier
-work. Use exact actor/connection/epoch/revision/authorization snapshots (TTL1200),
-AIR or same-kind allowlisted corrections only, preserved dynamic values and
-strict lever-power checks during execution. Unsupported types/inventories or
-occupied isolation margins block the entire repair. No model chooses safety.
-Every undo persists its selected operation before writing and cannot spill into
-an older group after a crash. Old untagged journals migrate as one legacy group.
-Expected execution state overlays only the active operation on its fresh baseline.
-The diagnosis TTL never grants a lease; repair/resume still acquires fresh live
-authority and reconciles before each mutation. Bounded delay intent revisions and
-SDK revisions must share the same same-template/same-footprint validation path.
+Outcomes:
 
-Read-only Diagnosis.java is integrated from worker a973061/448f097 (root a081ec4/
-cda6323). Root corrected its initial repeater-facing explanation to mean INPUT
-side and added unique snapshot IDs/non-actionable geometry-match handling.
-New native N2 proofs are written before runtime integration: stale player edits,
-wrong kinds/inventories, occupied margins, cross-player/revoked diagnoses, a human
-input toggle mid-repair, targeted delay revision, last-operation undo, and actual
-third dedicated restart with a fault-injected completed-undo boundary. Root owns
-proofs; no tests run locally. Runtime operation metadata, repair/revise commands,
-SDK revision path and final independent review are still pending.
+- C1 � Work on a shared multi-component project: the player builds B while the
+  assistant completes A. Proof: real dedicated native flow with disjoint edits
+  that do not pause A, plus a shared support/port edit that does pause dependent
+  work. Show hierarchy, interfaces, prerequisites, resources and assignments.
+- C2 � Take over and delegate back without losing progress. Proof: preserve
+  journal/groups and observed progress through handoffs, game and companion
+  restart. Reject old connections, revoked grants, stale assignment generations
+  and changed component bases before any mutation. Migrate an existing root
+  design without changing its intended geometry or journal.
+- C3 � Inspect the actual surroundings and available materials. Proof: targeted
+  player/view/block/support/connection/inventory observations, missing/extra and
+  changed-state reports, unloaded chunks rejected honestly, and invalidation
+  limited to affected components/dependants. Prove private project visibility
+  and inventory access rejection paths; never mutate or expose secret NBT.
 
-Proof-first CI 40453452724 failed exactly at the missing native diagnose command;
-all other checks passed. The root command/planning integration now adds diagnose,
-repair and bounded revise, invalidates ephemeral proposals on disconnect/grant
-changes, and routes model proposals through the same bounded revision validator.
-The companion derives revision constraints from canonical memory, ignoring forged
-client hints. Scoped TypeScript compilation passes; new HTTP and catalog proofs
-await CI. EngineeringSession grouped runtime is integrated from worker 000bb54 as 82964a2.
-Combined main/client Java compilation passes. A fresh GPT-6-Luna safety review
-is running. Actual repair/revision/restart acceptance remains unproven until the
-new CI run passes; no local tests ran.
-
-Fresh GPT-6-Luna review found two concrete compatibility gaps: unloaded planned
-player construction was classified as empty, and legacy signal-lamp delay
-revisions rejected the absent delay=1 metadata/relay alias despite catalog
-acceptance. Root now fails closed on unknown in-workspace chunks and normalizes
-only fully validated historical geometry for comparison. A separate native
-player-built legacy project proves intent migration preserves world blocks;
-an actual unloaded coordinate proves unknown construction is rejected. Scoped
-main/client compilation passes. CI 40529474522 passed Fabric, Windows and integrated-client checks. All native
-multiplayer roles and the third-boot recovery completed; the added SQLite
-verifier then incorrectly included the same project's earlier inverter pass
-among lamp-delay evidence. Root restricted that query to actual signal-lamp
-pass records, still binding each to its immutable blueprint revision. Companion
-stopped at a formatting error, now fixed. Fresh review confirmed both safety
-fixes and their proofs, with no further blocking finding. CI 40530261307 passed the other four checks and repeated the repair flow,
-but the added legacy fixture read the old selected project before its queued
-new-project command arrived. It consequently tried to label the delay4 design
-as historical delay1; production catalog validation correctly rejected it.
-The fixture now waits for the actual selected project to change and its new
-anchor to arrive before preparing the historical design. The latest revision
-still requires all five green checks before merging.
-
-CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
-now lights correctly, but raw lever block-state replacement omitted vanilla's
-attached-support neighbor notification and left the torch on. Pinned 26.3
-LeverBlock.pull bytecode explicitly updates both the lever and attached block;
-GameTestHelper.pullLever invokes that path. Root changed the probe to pull an
-existing lever as a player would, keeping every truth-table assertion. The
-production functional tester must use the same vanilla activation after its
-write-ahead checkpoint, not only setBlockAndUpdate. Packaging assertion follows
-the physical GameTests. CI 40447614933 then passed all five checks, including the
-physical inverter/OR probes and both packaging assertions, before Java catalog
-consumption and the generalized trial were integrated.
-
-Proof-first CI 40448252050: the new native catalog/revocation flow failed at the
-missing runtime command path; the other four checks passed. The implementation
-now adds reference <mechanism> [delay] and catalog commands, strict catalog checks
-before accepting/building/testing, a startup settle period, per-vector actual
-port evidence, per-input durable recovery, and player wall-torch undo protection.
-The new native proof exercises OR delay4, revokes Bob with two inputs captured,
-loads that checkpoint without importing authority, explicitly restores inputs,
-and tests a rotated inverter while preserving a player's originally ON lever.
-Inverter vectors use OFF/ON/OFF, matching the physical proof and the recipe's
-initial lit output; both boolean cases and the reset remain asserted. Additional
-GameTests cover all four rotations, maximum repeater delay and forged contracts.
-
-Decision — 2026-10-26 (N1/N2): use one immutable catalog and bounded model
-adaptations. Keeping the sole lamp fails the requested engineering scope;
-separate hardcoded templates duplicate contracts and drift; arbitrary model
-geometry lacks a functional oracle. The shared catalog gives reproducible ports,
-prerequisites/resources and tick-based truth tables, at the cost of strict schema
-validation and resource packaging. This slice expands the library; it does not
-replace the larger-project, debugging or phase 2 requirements.
-
-Challenge corrections: template names/provenance alone cannot authorize testing;
-match actual geometry and parameters to a known catalog revision. Capture every
-input in a write-ahead restoration journal and recheck all authority/footprints
-before every input change/restoration. Preserve unchanged player components when
-revising. Prove the catalog is included in the actual jar and compiled companion.
-Keep unknown top-level model fields ignored as in existing safety tests; reject
-unknown adaptation fields that could change design semantics.
-
-Riskiest assumption/probe: proposed inverter and isolated two-repeater OR layouts
-really implement their truth tables, including rotation, in Minecraft 26.3.
-Actual GameTests are written first; if they fail, correct geometry before product
-integration. Planner adaptation tests should initially fail on the old selector.
-All tests run on GitHub; locally only scoped compilation/formatting.
-
-Sources checked 2026-10-26: Gradle's Java plugin and ProcessResources documentation
-(https://docs.gradle.org/current/userguide/java_plugin.html and
-https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html)
-confirm resource inclusion. Mojang issue MC-59044 describes attachment-block torch
-inversion (https://bugs.mojang.com/browse/MC/issues/MC-59044); actual pinned-game
-truth-table tests, not prose or the model, decide circuit correctness.
-
-## Outcomes for the next build — mechanism library (#1)
-
-- N1 — Choose useful mechanisms beyond a signal lamp. Proof: actual Minecraft
-  truth-table/timing tests, including rotated layouts, plus the same native
-  server teach/delegate/test flow. Unsupported designs fail before world edits.
-- N2 — Understand and correct a mistake in those mechanisms. Proof: introduce
-  wrong wiring/orientation, identify the relevant component and cause, preserve
-  player changes, explicitly delegate a correction and run the functional test.
-
-Next tasks: define mechanism contracts and failing actual-game cases first
-(N1/N2); implement bounded registry-validated templates and test routines (N1);
-connect the supported catalog to planning, lessons and diagnoses (N1/N2); drive
-the actual dedicated/integrated flow and independently review new mutation paths
-before merge (N1/N2). Keep physical execution replaceable for phase 2.
+Tasks: write actual component collaboration/handoff failure cases first (C1/C2);
+add typed tree/composition validation and assignment ledger (C1/C2); scope live
+execution/reservations/recovery and companion task memory (C1/C2); research and
+implement targeted perception and accessible inventory observation (C3); drive
+native flows plus service/game restarts and independently review new authority
+and data handling before merging (C1�C3). Keep physical execution replaceable.
+The riskiest assumption is that relevant read dependencies can be scoped without
+missing a real redstone interaction. Probe independent and connected/shared
+support cases in the actual pinned game before claiming that separation works.
 
 ## Proven foundation outcomes
 
