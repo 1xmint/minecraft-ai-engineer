@@ -120,6 +120,21 @@ authority; persisted assignments never resume construction automatically.
 This draft is still undergoing broader perception and final safety acceptance.
 It is not a new release or completion of phase 1.
 
+## Targeted inspection in draft PR #12
+
+`/engineer inspect block 109 101 0` reads that actual block and its six immediate
+neighbors in the current project. `/engineer inspect view` uses your real server
+view direction to select a block within six blocks. The target must be inside
+your selected workspace. All sampled/ray-neighbor chunks must already be loaded;
+world limits and neighboring projects' view permissions apply. Refusal saves no
+partial snapshot and never loads a chunk to replace unknown data with air.
+
+The private snapshot records the requesting player's actual position/view, target
+and hit face, exact block states, and missing/changed/unplanned counts for those
+seven samples. Orientation and power properties provide support/connection context;
+this is not proof of electrical behavior. No sign text, names, NBT or inventory
+contents are read. Ordinary `/engineer inspect` still exports the selected region.
+
 ## Published alpha
 
 The current implementation is the first reference circuit, not the entire

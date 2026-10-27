@@ -1,335 +1,193 @@
 # Now
 
 2026-10-27: Active goal: **complete all milestones**: remaining phase 1 and all
-six phase 2 capabilities. Keep the multiplayer-first target and original scope.
+six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Foundation #8 merged through PR #10 at ae90741. Mechanism library/targeted repair
-#1 merged through PR #11 at 28301e5; #1 is closed. Main's source includes dedicated
-and integrated execution, private grants, independent lessons, safe conflict/
-restart recovery, three catalog mechanisms and snapshot-bound repair. The old
-published v0.1.0-alpha.1 remains a solo reference, not the current source build.
-Neither full phase 1 nor phase 2 is complete.
+Building #2 on **phase/4-component-collaboration**, draft PR #12:
+https://github.com/1xmint/minecraft-ai-engineer/pull/12
+Current runtime **e3bc4b1 passed all five checks in CI 40586816662**. Root
+inspected retained native logs/markers and SQLite proof: live far-margin rejection,
+explicit WAL recovery, idle B/C staleness with A preserved, actual block/view
+samples and unloaded refusal passed. SQLite retained both typed samples and exact
+original/fresh component test scopes. All tests run on GitHub; locally only scoped Java/TypeScript compilation,
+formatting and bash -n. Source is pushed; no implementation is left uncommitted.
 
-Building #2 on **phase/4-component-collaboration**, draft PR #12. Runtime
-**600b347 passed all five protected checks in CI 40584567109**. Root inspected
-actual native logs/markers, SQL proof and the constructed-component screenshot.
-Component info showed real materials/ports/test revision; component b4 revision,
-scoped repair/undo/testing, unaffected a's original vectors, service restart
-(PID3123 ->4352), legacy identity migration and third-boot recovery all passed.
-The positive recovery fixture now returns the player to the project and awaits
-loaded read dependencies; production refuses unknown margins and distinguishes
-unloaded from occupied coordinates. No safety check was relaxed.
+Earlier all-five-green source: **600b347 / CI 40584567109**. Root inspected actual
+native logs, markers, SQLite proof and the constructed-component screenshot:
+component info/materials/ports, b4 revision, scoped repair/undo/testing, unaffected
+a's original vectors, actual service restart (PID3123 ->4352), legacy identity
+migration and third-boot recovery all passed. Independent review later found a
+live read-margin gap in this green source; its proof/fix is described below.
 
-The later independent review found a real live read-margin gap in that green
-runtime; the rejection proof and local fix are below. Latest source now implements
-full-closure live/final verification and typed block/view perception; actual new
-CI validation is pending. Proof-first tests cover DTO/actor binding, real view ray,
-loaded refusal and SQL metadata retention. No merge/release for #2; full perception,
-inventory and final independent review remain. GPT-6-Luna could not run the review
-because of the usage limit. GPT-6.1-Sol completed the focused C2/scoped-memory
-review and found the read-margin gap below. The broader final phase review is
-still pending perception/inventory completion.
+**Do not merge/release #2 yet.** Finish current native/data acceptance, C3 inventory
+and broader final phase review. Core phase 1 #3 and all phase 2 features remain.
+GPT-6-Luna review could not run because of the usage limit. GPT-6.1-Sol completed
+focused C2 and new perception-boundary reviews; the former found the margin gap,
+the follow-up confirmed its full-closure fix and no further confirmed data/auth
+issue. This does not replace the final review after inventory work.
 
-C1: all five protected checks passed in CI 40539445528 (09d0d06) and 40536897959
-(b158881). Root inspected actual screenshots/logs/SQLite: nested composition,
-independent human/AI work, handoff, far prerequisite grant revocation/restoration,
-separate a/b/c truth-table passes and third-boot composed-project recovery. The
-16-entry journal survived; restored descriptions granted no lease/connection.
-A later player removal blocked delegate-back rather than being overwritten.
+## Outcomes for #2
 
-C2: actual private companion restart passed dedicated CI 40544912152 with distinct
-old/new PIDs and native recovery/SQL proof. CI 40582347987 then passed all native
-component revision/repair/test/recovery markers, but its SQL verifier stopped on
-a root loop-variable typo. The verifier correction and positive recovery fixture passed in 600b347 / CI 40584567109.
-That run also proved the updated graphics setup and integrated compatibility.
-All tests run on GitHub; locally only compilation, formatting and bash -n ran.
+- C1: player builds B while assistant completes A. Show hierarchy, actual ports,
+  prerequisites, material totals and assignments. Native C1 proof passed in
+  40539445528/09d0d06 and 40536897959/b158881, and the fuller 40584567109 run.
+- C2: handoff/delegate-back retains journals and generations across game/service
+  restart; stale connection/grant/assignment/basis cannot authorize writes. Scoped
+  revise/diagnose/repair/test and original test identities are implemented/proven
+  above; additional live-margin rejection/fix passed native CI 40586816662.
+- C3: targeted actual player/view/block/support/connection observations and read-only
+  accessible inventory, with loaded rejection/privacy. Invalidate only affected
+  tasks/dependants. Scoped companion memory proofs pass; typed block/view source
+  passed native/HTTP/SQL acceptance. Inventory is not implemented.
 
-The CI graphics helper uses bounded signed-APT attempts over official archive/
-Azure endpoints, checks all four required installed packages, and leaves gameplay
-checks intact. GPT-6-Luna challenged the fix after two old download timeouts.
-Sources checked 2026-10-27: https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html
-and https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
+## Implementation and decisions
 
-Next: prove current C2/scoped-memory data, ship component info/docs, then implement
-C3 typed player/view/block/support observations and private accessible-inventory
-inspection. Preserve the full #3 and phase 2 roadmap below.
-
-## Current implementation and limits
-
-- One catalog JSON is bundled in the Fabric jar and compiled Node service.
-  Signal lamp, inverter and two-input OR have bounded delay/rotation choices,
-  real ports/resources/prerequisites and actual Minecraft truth vectors. Java
-  checks geometry against the catalog; model provenance alone grants nothing.
-- ComponentTree.java and companion/components.ts regenerate composites from
-  trusted leaf recipes. Tree schema1: root group, organizational groups and
-  mechanism leaves with relative pivot/rotation, delay and dependency DAG.
-  Limits: 64 nodes, 16 leaves, depth8, 64 relative extent, 64 stages, 4096 blocks.
-  Component stage/port/test namespaces use colon (slash was rejected by the
-  service's safe identifier format). Both composers use matching DFS dependency
-  order and canonical metadata. Ports are real leaf interfaces; metadata does
-  not create or prove physical inter-module wires.
-- Commands: component add/group/depend/list/claim/build/diagnose/repair/revise/test.
-  Read-only info shows materials, actual port coordinates and assignment/test
-  identity; native response acceptance passed in CI 40584567109. One AI task per project;
-  humans can work in independent leaves. ComponentAssignments keeps granting
-  actor, executor, generation, intended basis and status separate from authority.
-  Version2 bases include transitive prerequisite intent; v1 records must match
-  the exact old formula before migration. Changed bases advance/stale descriptions.
-  Assignments are coordination, not a second ACL.
-- Builds capture selected-leaf baselines plus relevant support/prerequisite read
-  closure. Fresh delegate-back validates old assistant changes, preserves the
-  journal and accepts matching player progress. Human conflicts pause work.
-  Isolation leases recheck the same distant read footprint used at acquire.
-  Live connection/epoch/project/auth/assignment fences are checked before writes.
-- Journal version3 attributes contiguous operation groups to components. Old flat
-  journals become one legacy/root operation; version2 root journals still load.
-  Undo reserves the selected group's component and persists its target before
-  writing; an already-empty recovered target cannot spill into older work.
-- FunctionalTrial uses the selected leaf's catalog oracle, vanilla lever
-  activation and per-input write-ahead restoration. Private archives retain exact
-  intended project, component basis and vectors. Task-level results remain separate;
-  only the live trial buffer is single-active-component. Component geometry and
-  prerequisite changes stale affected results, retaining unrelated passes.
-- Diagnosis proposals are ephemeral, actor/connection/epoch/revision/ACL/snapshot/
-  TTL bound, now also assignment-generation/basis bound. Handoff clears proposals.
-  Root/standalone diagnosis and same-kind allowlisted repair are proven. Composed
-  diagnose/repair/revise/test APIs passed native/SQL acceptance in CI 40584567109.
-- Companion tasks use stable projectUUID:component IDs for composites. Scoped
-  checkpoint results exist; component-aware companion invalidation is implemented
-  and proven in CI 40584567109. All private memory stays
-  outside repository/world saves. No persisted metadata restores execution authority.
-
-## Decision and Outcomes for #2
-
-Decision, 2026-10-27: keep one server-owned project with a bounded component tree
-and separate persisted assignments. A general worker swarm adds recovery/authority
-complexity before phase 2; separate projects lose shared contracts/dependencies;
-whole-blueprint work prevents independent collaboration. The bounded tree reuses
-server grants, journals and leases, at the cost of explicit task bases and scoped
-invalidation. GPT-6-Luna challenged this against the actual interfaces.
-
-Challenge safeguards: preserve journals through handoff, revoke old leases and
-reconcile before issuing new authority. Record granting actor separately from
-executor. Reserve real supports/ports/read assumptions, not nominal boxes. Change
-both Fabric and companion invalidation. Never infer physical wiring correctness
-from linked names. Keep inventories read-only and explicitly authorized.
-
-- C1: player builds B while assistant completes A; show hierarchy, ports,
-  prerequisites, resources and assignment. Proof: native disjoint edit does not
-  pause A; changed prerequisite port pauses C and preserves the edit. First path
-  and actual a/b/c tests proven in CI above. More resource/ownership UX remains.
-- C2: take over/delegate back without losing progress. Proof: journals and
-  generations survive game and service restart; reject old connections/grants/
-  assignments/bases before mutations. Initial handoff/game-restart path is proven.
-  Service restart, component-local revisions and further stale-basis proofs remain.
-- C3: targeted actual player/view/block/support/connection/inventory observations,
-  missing/extra/changed-state reports and unloaded rejection. Invalidate only
-  affected work/dependants. Prove inventory access rejection/private visibility;
-  never mutate inventories or expose secret NBT. Not implemented yet.
-
-Independent GPT-6-Luna authority review found a real gap: test acquire included
-far prerequisites, but per-write cross-project grant validation initially did
-not. Root fixed it and added actual revoke-while-input-ON, retained recovery and
-fresh-grant restoration; CI passed. Follow-up review found no further confirmed
-C1/C2 authority bypass. It noted cached-proposal clearing, rather than the new
-defensive Proposal.validate branch, is the public handoff rejection path. Final
-phase review is still required after remaining C2/C3 code.
-
-## Component revision decision (C2, 2026-10-27)
-
-GPT-6-Luna independently challenged scoped revision/diagnosis/repair and confirmed
-versioned transitive bases as the smallest safe choice. Globally invalidating all
-tasks fails unaffected-work preservation; silently changing the hash formula
-mislabels older evidence. Use basisVersion2 with memoized transitive prerequisite
-hashes, preserve identical no-dependency/root hashes, verify old v1 records against
-an explicit legacy formula before migration and increment/stale changed tasks.
-Capture a FunctionalTrial scope at start (project, exact blueprint id/revision,
-component, basis/version); persist/archive that captured scope. Keep lastPassedScope
-on each task under its original immutable revision; never copy old vectors into a
-new whole-project intention. Old archives remain untouched and implicitly v1.
-
-API contract: component diagnose <id> is read-only VIEW and cannot select/pause
-another active task. It snapshots the explicit trusted leaf and full lease read
-closure, including prerequisite geometry, while retaining strict target isolation.
-component repair <id> requires matching actor proposal, no unresolved/active world
-work, revalidates before changing selection, then explicitly delegates only that
-leaf under a fresh BUILD isolation lease/group. component revise <id> <delay>
-changes only that node's bounded delay, keeps all world blocks/journals, archives
-before identity replacement, invalidates edited/dependent tasks and preserves
-unaffected results. No-op revisions keep identity/evidence. component test <id>
-explicitly tests an idle trusted leaf. Single-root compatibility remains.
-
-Native acceptance uses a separate project at 100..118: a/b/c tests, diagnose a
-mid-b construction without pausing b, revise b4 without world/journal changes,
-retain a's generation/original pass, stale b/c bases, reject a stale repair without
-selection change, repair just b's relay, v2-scoped actual vectors, undo b from c,
-and no-op identity/vector preservation. Keeping a active during b revision also
-proves archive/reference handling without relabelling old vectors.
-
-Proof-first CI 40549054217 failed at the intended missing command/legacy migration.
-New runtime compiles. Start failure retains pending input recovery under its target
-component; failed repair leases restore selection/assignment. CI 40551903302 caught
-scope/basis fields surviving identity-changing legacy adoption. Conversion now
-clears results and rebuilds unassigned descriptions, preserving original source/
-backup/journal. New-format pending inputs must recover in their original project.
-Migration keeps changed bases stale even if their old label was only untested.
-CI 40582347987 native markers passed; CI 40583311819 reached third-boot recovery but refused an isolation margin. Returning the actual player and awaiting loaded dependencies fixed the positive fixture; CI 40584567109 then passed full native/data proof.
-Independent GPT-6-Luna review hit the account usage limit and did not run; do not
-claim final review complete or merge before it is available.
-
-## Companion invalidation slice (C3)
-
-Serves C1/C3: preserve independent task results while world/intention changes stale
-only the affected components and transitive dependants. Root wrote companion
-proofs first: revised b preserves a's exact historical row, stales b/c; partial
-observations retain coordinate history and invalidate b/c for a changed b block
-or its two-block read margin; ACL changes, restarts and unscoped legacy rows fail
-closed. Derive membership/intent/read closure from immutable canonical blueprints,
-not reported ownership or model text. No second permission system or persisted
-execution leases. Preserve original row revision and audit vectors, never relabel
-a pass under new intent. Existing v1 gateway tables can remain: each task already
-stores its exact revision, so derive old/new canonical scopes from those records.
-CI 40582347987 confirmed the two intended failures: broad invalidation destroyed
-a's row, and a partial a observation hid a later b change. Implementation now
-compares canonical transitive leaf intent and full two-block read closures, merges
-the retained 20-observation coordinate history, and rejects newly observed
-geometry conflicts even without prior coordinate evidence. Auth changes/restarts
-still pause all rows; removed/unscoped tasks and live execution descriptions fail
-closed. No schema rewrite is required. Additional proofs cover removed leaves,
-active descriptions and first-observation conflicts. Root corrected the fixture
-to reuse each immutable blueprint identity when syncing unchanged revisions;
-new random IDs on ACL/restart sync would test an invalid server request. Local
-TypeScript checks and Companion CI 40583311819 pass. Full targeted
-player/view/inventory perception remains separate unfinished work.
-
-## Independent safety review finding (C2)
-
-GPT-6.1-Sol completed focused read-only review on 600b347 and found one confirmed
-P2: componentTest validates full prerequisite/margin closure once, but later
-FunctionalTrial mutations/final observation use validateTestArea, which checks
-only immediate prerequisites and target margins. Empty dependencies during tests
-leave distant margin edits undetected. The post-pass geometry watcher also omits
-margins. No other confirmed finding in the reviewed source. Root wrote a native
-rejection proof before fixing: while C input is ON, occupy B's distant empty
-margin at66,100,0; require paused pending-input recovery, no functional pass or
-unauthorized restore, and unchanged A. Clear it manually, explicitly resume,
-restore the input, then run a fresh actual test. Reuse the full canonical read
-closure for live/final tests and subsequent result invalidation; do not weaken
-margins or restore under invalid assumptions. CI 40585762989 proved the rejection missing: C continued to a pass after B's
-margin was occupied, then the native wait for pause/recovery timed out at the
-new assertion. Root now routes validateTestArea for composites and the post-pass
-watcher through the existing full transitive area validator. The same live/final
-contract applies before input changes/restoration; invalid margins retain WAL
-inputs. Extra native proof checks idle B/C invalidation while A stays passed.
-Scoped compilation passes; actual corrected runtime CI is pending.
-
-## Targeted perception acceptance (C3, next)
-
-Serves C3. Root wrote proof-first acceptance after CI 40584567109 proved
-600b347. New proofs require block/view observations to retain actual
-self-player position/eye/look, actor UUID, target/hit face and sampled geometry
-differences across the private server/companion protocol. Reject unknown fields,
-wrong actor attribution before claiming report order, uncovered/outside targets,
-invalid vectors and actual unloaded chunks without force-loading or guessed air.
-Native flow samples B's actual delay4 repeater plus six support/connection neighbors,
-drives a real server view ray and proves snapshots/journals stay unchanged on
-outside refusal. SQLite must retain both typed samples; plain observations stay
-wire-compatible. Proof-first Companion CI 40585406958 and 40585762989 failed metadata preservation,
-malformed input rejection and actor mismatch as intended. WorldPerception now
-captures exactly seven states on the logical server, preflights the bounded ray
-and shape neighbors before pick, checks loaded/world/project-view rights, and
-persists no partial sample on refusal. DTO validation preserves actual pose/target/
-hit-face/difference facts, rejects unknown fields and misattributed actors before
-claiming sequence, and keeps legacy observations compatible. Pinned javap verified
-Entity pick/getEyePosition/getViewVector and BlockHitResult APIs. Main/client Java,
-TypeScript and formatting checks pass. Native/HTTP/SQL implementation proof is
-pending; no acceptance claim yet.
-Inventory remains a later explicit, authenticated, read-only natural-container
-request with no names/NBT or automatic private-data sharing; final policy/API
-and independent review still need completion before claiming all of C3.
-
-## Next proof/build steps
-
-1. C2: finish current native/SQL acceptance for component revision/repair/test and
-   actual companion restart. Inspect immutable a history and fresh b/c vectors.
-   Ship info/docs only after the corresponding native response proof passes.
-2. C3: define typed targeted perception and inventory requests/results, write
-   rejection/privacy/side-effect proofs first, then implement the read-only API.
-   Make companion observations/checkpoints invalidate affected component tasks,
-   with schema migration and old root compatibility.
-3. C1-C3: drive actual dedicated/integrated/service restart flows, inspect retained
-   screenshots/data, review new authority/data handling independently and merge
-   only when all five checks pass. Keep physical execution replaceable.
-
-Pinned inventory API research (GPT-6-Luna, 2026-10-27) used javap on
-mod/.gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-common-7e9a32a5b8/26.3/minecraft-common-7e9a32a5b8-26.3.jar.
-Player exposes inventoryMenu, containerMenu and getInventory(); AbstractContainerMenu
-has slots/stillValid; Slot exposes container/getContainerSlot/getItem. Deduplicate
-by backing container identity and container slot. ItemStack item/count plus
-BuiltInRegistries.ITEM.getKey supplies safe IDs/counts; do not read names/NBT.
-RandomizableContainerBlockEntity.getItem invokes unpackLootTable(null), so check
-public getLootTable()==null before any item getter. CompoundContainer has contains
-but no backing getters; resolve exactly two already-loaded vanilla chest halves
-from a known interaction target, verify contains and both loot getters, or reject
-ambiguity. BlockEntity has position/level/isRemoved; do not force-load chunks or
-force open/create a menu. Proposed request queues the next naturally opened
-storage menu, binds actor/connection/epoch/project/intent/grants/TTL, and rechecks
-same menu plus stillValid immediately before reading. Exclude player inventory,
-ender chest, crafting/result and unknown/custom backing slots from shared data.
-Exact view-target and final access/retention DTOs still need implementation/review.
-
-## Proven foundation and prior decisions
-
-M1-M4: dedicated-first/integrated-compatible execution; authenticated server
-identity/project grants; private shared previews and independent lessons;
-reservations/conflicts/revocation/disconnect/restart/adoption recovery; one bounded
-operator-owned private companion with SQLite. PR #10/main CI 40419651640 proved
-those technical controls with actual native players and HTTP/SQLite. Offline CI
-identities and overlay opt-out do not prove production Mojang auth or a separate
-vanilla-client binary. Keep production online-mode=true.
-
-Architecture decision, 2026-10-26: Fabric + Java25, Node24 TypeScript + SQLite,
-one private companion alongside the dedicated server on Josh's PC. Integrated
-single-player uses the same logical-server core. No hosting purchase, port
-forwarding, public AI endpoint, credential sharing or paid API fallback. World
-state is authoritative; intended/observed/verified data stay separate. Server
-owns permissions and mutations; companion owns durable records, not authority.
-Stable world/server IDs, backed-up explicit legacy adoption, private default
-projects and permission-filtered client payloads are proven. Physical vanilla
-blocks remain visible normally; project ACLs do not hide world geometry.
-
-One configured account-owning operator initiates model work. Shared multi-user
-subscription eligibility is not established; a personal SDK probe does not prove
-it. Do not enable shared access without documented eligibility or add paid APIs.
-Primary sources checked 2026-10-26: https://docs.fabricmc.net/develop/networking,
+2026-10-26: dedicated Fabric server first, integrated-compatible logical-server
+core; Java25/Fabric/Minecraft26.3, Node24 TypeScript and SQLite. One private
+operator-owned companion alongside Josh's server/PC. No hosting purchase, public
+AI endpoint, credential sharing or separately billed API. One configured
+account-owning operator starts inference. General shared subscription eligibility
+remains unproven; do not infer it from the old solo SDK probe. World is authority,
+companion records are descriptions. AGENTS.md holds the enduring constraints.
+Sources: https://docs.fabricmc.net/develop/networking,
 https://wiki.fabricmc.net/tutorial:side, https://learn.chatgpt.com/docs/auth.
-Independent earlier GPT-6 challenge added epoch/revision fences, read reservations,
-per-player cursors, clone policy, privacy limits and disconnect defaults.
 
-#1's immutable shared catalog beat ad-hoc model geometry and duplicated templates.
-Snapshot repair plus grouped undo beat blanket rebuild (which erases player work)
-and flat undo (which can erase earlier operations). CI 40531124499 on ecd420a
-proved actual OR/NOT truth tables, three inspections, repaired delays1/4, legacy
-intent migration, unloaded-construction rejection and third-boot undo recovery.
-Independent review caught fail-open unloaded detection and legacy alias rejection;
-both were fixed and re-reviewed before PR #11 merged.
+2026-10-27: choose a bounded component tree in one project instead of separate
+projects, a whole-blueprint worker or a general swarm. It preserves shared
+contracts and grants while permitting independent work. GPT-6-Luna challenged
+actual interfaces: retain journals through handoff; revoke leases and reconcile;
+reserve full support/port/read closure; propagate invalidation in both services;
+never infer electrical correctness from port names; keep inventory read-only.
 
-## Remaining roadmap and release
+- ComponentTree.java and companion/components.ts generate matching canonical
+  catalog composites. Limits: 64 nodes, 16 mechanism leaves, depth8, extent64,
+  64 stages, 4096 blocks. Groups organize; leaves are signal-lamp/not-gate/or-gate.
+  Namespaced stages/ports/tests use colon. Labels do not create physical wires.
+- Commands: component add/group/depend/list/info/claim/build/diagnose/repair/revise/
+  test. Info shows materials, absolute ports, assignment and original test revision.
+  Tree edits precede construction. One active AI per project; humans work disjoint
+  leaves. Assignments record actor/executor/generation/status, never a second ACL.
+- Server-owned private grants, authenticated actors/connections, world/server epoch,
+  project/auth revision, assignment generation/basis and region reservations fence
+  mutation. Distant read grants are rechecked before every mutation. Grant revocation,
+  disconnect, human conflicts and restart stop work; persisted metadata grants no lease.
+- Build/repair capture selected-leaf geometry and prerequisite reads. Delegate-back
+  preserves journal/player progress and rejects changed recorded AI blocks. Journalv3
+  attributes contiguous operation groups to components; flat/v2 migrate to root.
+  Undo selects the latest group's component before lease/save and cannot spill into
+  an older group after interrupted completion.
+- Diagnosis is read-only VIEW, explicit leaf, actor/connection/epoch/revision/ACL/TTL/
+  exact-world snapshot/generation/basis bound. It never selects or pauses another task.
+  Repair revalidates, explicitly delegates one leaf under a fresh BUILD isolation lease,
+  and rolls selection/assignment back on lease failure. Only trusted bounded corrections.
+- Delay revision changes one node's intention, leaves world/journals intact, and keeps
+  unaffected task results. No-op keeps identity/vectors. Test explicitly selects an
+  idle leaf; failed initialization retains captured pending inputs under that leaf.
 
-1. Foundation #8 and mechanism/repair #1: proven/merged.
-2. Remaining phase 1: #2 current component collaboration/perception, then #3 deeper
-   debugging, richer teaching/textured visualization and combined signed-in
-   model-to-game acceptance. Public CI stays credential-free; live operator
-   acceptance is separate evidence. Full product brief is docs/product-brief.md.
-3. Phase 2 #4: voice conversation, physical NPC companion, survival gathering,
-   schematic import/export, advanced design optimization and multiple builders.
-   All remain in the active goal; no phase 2 capability is claimed complete.
+### Evidence identity and migration
 
-Published v0.1.0-alpha.1 at 168ac190daddd066957ecaebd50a807e7926167c shipped via
-PR #5; PR #7 records screenshots/limits. Four release gates passed in CI
-40367902860 (attempt2 recovered a graphics download timeout). Actual solo flow
-proved teaching/delegation/save-reopen/conflict/undo/tick testing. Official
-SDK/CLI0.164.0 ChatGPT probe with gpt-6-luna passed; not combined model/game proof.
-Release: https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
-Current work: https://github.com/1xmint/minecraft-ai-engineer/pull/12
+Use **basisVersion2** with memoized transitive prerequisite intent. Preserve exact
+old hashes for dependency-free/root tasks. Verify a v1 record against its explicit
+legacy formula before migration; changed bases increment/stale even old untested
+labels. Unknown/corrupt versions fail closed. GPT-6-Luna challenged this against
+silently rehashing evidence or globally invalidating unrelated work.
+
+FunctionalTrial captures project, exact blueprint id/revision, component, basis/
+version before vectors. Persist/archive that scope plus original intention;
+lastPassedScope retains the original revision for unaffected work. Empty new
+buffers are never relabelled vectors. Live tests use actual vanilla lever pulls,
+per-input write-ahead restoration and catalog truth tables. Pending recovery
+never restores under expired authority or invalid geometry. Legacy identity
+adoption clears scopes/results, rebuilds unassigned descriptions and preserves
+exact source/backup/journal; new-format pending inputs recover in their original
+project. Proof-first 40549054217 failed missing component APIs/v1 migration;
+40551903302 caught inherited adoption scopes, fixed before 40584567109 passed.
+
+### Live read-footprint review/fix
+
+GPT-6.1-Sol found that componentTest preflighted full closure, but later trial
+transitions checked only immediate prerequisites/target margin. Proof-first
+**40585762989** showed C reaching a pass after B's far margin at66,100,0 became
+occupied; waiting for pause/pending recovery timed out. e3bc4b1 reuses the full
+canonical transitive area validator before all live/final transitions and for
+post-pass invalidation. Native proof requires ON input retained with paused WAL,
+no pass, unrelated A preserved, explicit clear/resume/restoration and fresh test.
+An idle margin edit must stale B/C only. Reviewer confirmed the reuse fixes the
+finding; actual corrected native proof passed in 40586816662.
+
+### Companion invalidation and typed perception
+
+Stable composite tasks use projectUUID:component. Derive membership/intent/read
+closure from immutable canonical blueprints, not reported ownership. Preserve
+unchanged historical rows/revisions, pause changed/removed/unscoped/live tasks.
+Auth changes and registration pause all rows. Compare coordinate history across
+20 retained observations; invalidate intersecting full two-block read closures,
+including newly observed geometry conflicts. No schema rewrite/hash relabelling:
+existing rows already identify immutable revisions; local comparison fingerprints
+are not Fabric bases or credentials. Proof-first 40582347987 failed broad invalidation
+and lost partial-coordinate history; implementation proofs passed in40584567109.
+
+WorldPerception captures seven actual states (target +six support/connection
+neighbors), actual self position/eye/look and hit face, plus sampled geometry
+differences. Explicit block/view commands require connected actor VIEW, own
+workspace target, loaded/world bounds and foreign-project read rights. Preflight
+the bounded six-block ray +two-block shape margin before vanilla pick. No sign
+text, NBT, names or inventory contents; no partial snapshot on refusal. DTOs reject
+unknown fields, invalid vectors/uncovered targets and mismatched actors before
+claiming report order. Plain observations remain compatible. Pinned javap verified
+Entity/BlockHitResult APIs. Proof-first companion40585406958/40585762989 failed
+preservation/rejection/actor binding; implementation Companion40586816662 passed.
+Native real-ray/unloaded/refusal and SQLite metadata retention passed in40586816662.
+Focused GPT-6.1-Sol review found no further confirmed issue at this boundary.
+
+## Next slices
+
+1. Current C2/scoped-memory/block-view proofs are green; do not repeat without new
+   source/failures. Full #2 is incomplete until inventory and final review land.
+2. C3 inventory: explicit authenticated read-only request bound to connection, epoch,
+   project/intent/grants/TTL and the next naturally opened vanilla storage menu.
+   Recheck same menu/stillValid/current project/loaded backing blocks/grants. Start
+   with requester-private safe item IDs/counts; never names/NBT or automatic sharing.
+   Final policy/DTO, native privacy/side-effect rejection proofs and implementation
+   remain. Do not force menus/chunks or unpack loot tables to inspect.
+3. Final #2 review and all five checks, then merge. Keep physical executor replaceable.
+4. #3: deeper debugging, richer teaching/textured visualization, combined signed-in
+   model-to-game acceptance. Public CI stays credential-free; actual operator
+   acceptance is separate proof. Read docs/product-brief.md for the full brief.
+5. Phase2 #4: voice conversation, physical NPC companion, survival gathering,
+   schematic import/export, design optimization and multiple builders. All unstarted
+   capabilities remain in the active goal; do not substitute smaller features.
+
+Pinned inventory javap research: Player.inventoryMenu/containerMenu/getInventory;
+AbstractContainerMenu.slots/stillValid; Slot.container/getContainerSlot/getItem;
+ItemStack.getItem/getCount; BuiltInRegistries.ITEM.getKey. Deduplicate backing
+identity +container slot, not menu index. RandomizableContainerBlockEntity.getItem
+unpacks loot: require getLootTable()==null first. CompoundContainer exposes contains,
+not inner getters; resolve exactly two loaded vanilla chest halves from known
+interaction target and verify both loot tables, or reject ambiguity. Exclude
+player/ender/crafting/result/unknown custom storage from shared data. BlockEntity
+provides position/level/isRemoved. Research is not an implemented inventory feature.
+
+## Proven foundation/release
+
+Foundation #8 merged PR#10 atae90741; mechanism/repair #1 merged PR#11 at28301e5.
+Dedicated/integrated execution, private grants/shared authorized previews/personal
+lessons, conflicts/revocation/restart/clone/adoption recovery and three real catalog
+oracles are in main. CI40419651640 proved foundation; CI40531124499 proved real OR/
+NOT, delay1/4 repairs and third-boot grouped undo. Offline identities/overlay opt-out
+are not production Mojang auth or a separate vanilla binary. Keep online-mode=true.
+
+Published v0.1.0-alpha.1 at168ac190 is still the old solo reference, not current source.
+PR#5/CI40367902860 proved its actual solo handoff/save/reopen/conflict/undo/test.
+Official SDK/CLI0.164.0 signed-in gpt-6-luna probe passed separately; never claim it
+as combined model/game or shared-account eligibility proof. Release:
+https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1
+
+CI-only graphics setup uses bounded signed APT archive/Azure fallbacks after two
+old download timeouts; updated setup proved integrated/native gameplay. GPT-6-Luna
+challenged it. Sources: https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html
+and https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
+Retained proof folders under work/: component-proof-40584567109, margin-red-40585762989, perception-proof-40586816662.
+Integrated clean worker checkouts component-bases/corrections were removed after
+status/cherry confirmed all work landed; their branches remain recoverable.

@@ -130,6 +130,17 @@ geometry also invalidate affected results. Legacy unscoped rows fail closed.
 The comparison fingerprint is local to companion invalidation and is not the
 Fabric assignment basis or an execution credential.
 
+A targeted observation may include `perception` schema1 with kind `block` or
+`view`, authenticated `actorId`, self `player` position/eye/look vectors, integer
+`target`, optional view `face`, and integer `differences` counts (missing, changed,
+unplanned). Its target must be present in the at-most-seven sampled blocks.
+Pose values are finite and view direction normalized; unknown fields, arbitrary
+inventory payloads and wrong actor attribution are rejected. The actor must match
+the request context before report ordering is claimed. The companion preserves
+these typed facts in the private observation record. Observations without this
+optional object remain compatible. This route never reads Minecraft itself or
+grants permission to access a new world region.
+
 POST `/v2/project/read` accepts context and returns the authorized project and
 current blueprint. GET `/v2/projects?serverId=...&serverEpoch=...&actorId=...&worldId=...`
 returns only that actor's current project memberships. Equal project UUIDs in
