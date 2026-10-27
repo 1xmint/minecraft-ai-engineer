@@ -20,6 +20,7 @@ export interface GatewayContext {
   projectRevision: number;
   authorizationRevision: number;
   requestId: string;
+  connectionId?: string;
 }
 export interface ProjectMember {
   actorId: string;
@@ -65,6 +66,9 @@ export function gatewayContext(value: unknown): GatewayContext {
       Number.MAX_SAFE_INTEGER,
     ),
     requestId: identifier(v.requestId, "requestId"),
+    ...(v.connectionId === undefined
+      ? {}
+      : { connectionId: actorId(v.connectionId) }),
   };
 }
 export function projectMembers(value: unknown): ProjectMember[] {

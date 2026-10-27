@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { validateInventory, type InventorySnapshot } from "./inventory.js";
 import {
   componentMemoryScopes,
   expectedWorldStates,
@@ -45,6 +46,11 @@ export interface GatewayProject {
 
 /** Server assertions are mirrored for stale/privacy checks, never issued here. */
 export class GatewayMemory {
+  private readonly inventories = new Map<string, {
+    context: GatewayContext;
+    snapshot: InventorySnapshot;
+    recordedAt: number;
+  }>();
   constructor(private readonly db: DatabaseSync) {
     db.exec(`
       INSERT OR IGNORE INTO metadata VALUES('gateway_schema_version','1');
@@ -161,6 +167,7 @@ export class GatewayMemory {
         .run(serverId);
       this.audit(serverId, undefined, "server-open", { serverEpoch: epoch });
     });
+    if (refresh) this.clearInventories(serverId);
   }
   assertEpoch(serverId: string, epoch: string): void {
     const row = this.db
@@ -315,7 +322,8 @@ export class GatewayMemory {
   sync(input: ProjectSync): GatewayProject {
     const c = input.context;
     this.assertEpoch(c.serverId, c.serverEpoch);
-    return this.atomic(() => {
+    const before = this.row(c.serverId, c.projectId);
+    const result = this.atomic(() => {
       const previous = this.row(c.serverId, c.projectId),
         members = JSON.stringify(input.members);
       if (previous) {
@@ -443,6 +451,11 @@ export class GatewayMemory {
       this.audit(c.serverId, c.projectId, "project-sync", input);
       return this.publicProject(this.row(c.serverId, c.projectId)!);
     });
+    if (before && (before.project_revision !== c.projectRevision ||
+        before.authorization_revision !== c.authorizationRevision ||
+        before.synced_epoch !== c.serverEpoch))
+      this.clearInventories(c.serverId, c.projectId);
+    return result;
   }
   projects(
     serverId: string,
@@ -615,6 +628,68 @@ export class GatewayMemory {
         }
       return { changed, previousTick };
     });
+  }
+  private inventoryKey(context: GatewayContext): string {
+    return JSON.stringify([context.serverId, context.projectId, context.actorId]);
+  }
+  private clearInventories(serverId: string, projectId?: string): void {
+    for (const [key, entry] of this.inventories)
+      if (entry.context.serverId === serverId &&
+          (projectId === undefined || entry.context.projectId === projectId))
+        this.inventories.delete(key);
+  }
+  private expireInventories(now: number): void {
+    for (const [key, entry] of this.inventories) {
+      const age = now - entry.recordedAt;
+      if (age < 0 || age >= 60_000) this.inventories.delete(key);
+    }
+  }
+  inventory(
+    context: GatewayContext,
+    input: InventorySnapshot,
+    reportSequence: number,
+  ): void {
+    // Validate again for direct callers; no rejection may claim report ordering.
+    const snapshot = validateInventory(input);
+    if (!context.connectionId || snapshot.actorId !== context.actorId ||
+        snapshot.connectionId !== context.connectionId)
+      throw new RequestError("Inventory must match its authenticated actor and connection.", 403);
+    const project = this.assertCurrent(context);
+    if (snapshot.worldId !== project.worldId || snapshot.dimension !== project.dimension)
+      throw new RequestError("Inventory belongs to a different world/dimension.", 409);
+    this.atomic(() => this.claimReport(context, reportSequence, "inventory"));
+    const now = Date.now();
+    this.expireInventories(now);
+    const key = this.inventoryKey(context);
+    this.inventories.delete(key);
+    if (this.inventories.size >= 256)
+      this.inventories.delete(this.inventories.keys().next().value!);
+    this.inventories.set(key, {
+      context: { ...context },
+      snapshot: structuredClone(snapshot),
+      recordedAt: now,
+    });
+  }
+  readInventory(context: GatewayContext): {
+    snapshot: InventorySnapshot;
+    ageMs: number;
+  } | null {
+    this.assertCurrent(context);
+    const now = Date.now();
+    this.expireInventories(now);
+    if (!context.connectionId) return null;
+    const entry = this.inventories.get(this.inventoryKey(context));
+    if (!entry || entry.context.connectionId !== context.connectionId ||
+        entry.context.serverEpoch !== context.serverEpoch ||
+        entry.context.projectRevision !== context.projectRevision ||
+        entry.context.authorizationRevision !== context.authorizationRevision ||
+        entry.snapshot.actorId !== context.actorId)
+      return null;
+    return { snapshot: structuredClone(entry.snapshot), ageMs: now - entry.recordedAt };
+  }
+  /** Private advice only. Never pass this to shared blueprint planning. */
+  privateContext(context: GatewayContext): string {
+    return JSON.stringify({ inventory: this.readInventory(context) });
   }
   context(context: GatewayContext): string {
     const project = this.assertCurrent(context, "plan");
