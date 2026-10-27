@@ -61,8 +61,8 @@ test("composed mechanisms preserve pivot geometry, dependency order and canonica
   assert.equal(project.blocks.length, 10);
   assert.equal(project.blocks[0]?.component, "a");
   assert.deepEqual(
-    project.stages.find((stage) => stage.id === "b/foundation")?.prerequisites,
-    ["a/output"],
+    project.stages.find((stage) => stage.id === "b:foundation")?.prerequisites,
+    ["a:output"],
   );
   assert.deepEqual(project.resources, {
     "minecraft:stone": 4,
@@ -72,7 +72,7 @@ test("composed mechanisms preserve pivot geometry, dependency order and canonica
     "minecraft:redstone_torch": 1,
   });
   assert.ok(
-    project.ports.some((port) => port.name === "b/enable" && port.pos.x === 8),
+    project.ports.some((port) => port.name === "b:enable" && port.pos.x === 8),
   );
   assert.deepEqual(
     serverBlueprint(project, context, input.worldId, input.dimension),

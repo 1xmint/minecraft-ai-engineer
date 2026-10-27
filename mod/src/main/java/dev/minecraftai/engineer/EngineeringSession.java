@@ -192,11 +192,36 @@ final class EngineeringSession implements BuildExecutor {
                 nodes.add(original);
             }
         }
-        BlockPos relative=position.subtract(pivot).rotate(Blueprint.rotation((360-turn)%360));
-        nodes.add(componentNode(id,parent,template,relative,(360-turn)%360,1));
+        if(template==null) {
+            if(blueprint==null)throw new IllegalStateException("Add a mechanism before organizing it into groups");
+            JsonObject group=new JsonObject();group.addProperty("id",id);group.addProperty("parent",parent);group.addProperty("kind","group");nodes.add(group);
+        } else {
+            BlockPos relative=position.subtract(pivot).rotate(Blueprint.rotation((360-turn)%360));
+            nodes.add(componentNode(id,parent,template,relative,(360-turn)%360,1));
+        }
         Blueprint candidate=ComponentTree.compose(worldId,dimension,pivot,turn,nodes);
         for(var block:candidate.blocks())if(!contains(block.pos()))throw new IllegalStateException("Component geometry escaped the selected workspace");
         accept(candidate);checkpoint();tell("Added component "+id);
+    }
+    void componentDepend(String id,String prerequisite) {
+        access.require(actor(),ProjectAccess.Permission.EDIT);
+        if(!owner.equals(actor()) || blueprint==null || !ComponentTree.composite(blueprint))throw new IllegalStateException("Only the owner can edit a composed project's prerequisites");
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || !journal.isEmpty() || pendingPlacement || undoRequested)
+            throw new IllegalStateException("Reconcile current work before changing component dependencies");
+        JsonArray nodes=blueprint.source().getAsJsonObject("components").getAsJsonArray("nodes").deepCopy();boolean found=false;
+        for(var entry:nodes)if(entry.getAsJsonObject().get("id").getAsString().equals(id)) {
+            var node=entry.getAsJsonObject();if(!node.get("kind").getAsString().equals("mechanism"))throw new IllegalArgumentException("Assign prerequisites to a mechanism leaf");
+            node.getAsJsonArray("dependsOn").add(prerequisite);found=true;
+        }
+        if(!found)throw new IllegalArgumentException("Unknown component");
+        accept(ComponentTree.compose(worldId,dimension,blueprint.anchor(),blueprint.rotation(),nodes));checkpoint();tell("Component "+id+" requires "+prerequisite);
+    }
+    void validateDeclaredPrerequisites() {
+        if(blueprint==null)return;
+        for(var node:ComponentTree.nodes(blueprint))if(node.id().equals(activeComponent))for(String prerequisite:node.dependsOn())
+            for(var block:ComponentTree.component(blueprint,prerequisite).blocks())
+                if(!level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),level().getBlockState(block.pos())))
+                    throw new IllegalStateException("Required component "+prerequisite+" is incomplete or unloaded");
     }
     private static JsonObject componentNode(String id,String parent,String template,BlockPos anchor,int rotation,int delay) {
         JsonObject node=new JsonObject();node.addProperty("id",id);node.addProperty("parent",parent);node.addProperty("kind","mechanism");
@@ -345,6 +370,14 @@ final class EngineeringSession implements BuildExecutor {
     @Override public void tick() {
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
+        if(blueprint!=null && ComponentTree.composite(blueprint) && server.getTickCount()%10==0) {
+            boolean changed=false;
+            for(var task:assignments.tasks.values())if(task.verified.startsWith("passed:") && !componentGeometryMatches(task.id,new HashSet<>())) {
+                task.verified="stale: component or prerequisite geometry changed";task.status="PAUSED";changed=true;
+                if(task.id.equals(activeComponent)){verified=task.verified;state="PAUSED";detail=task.verified;manager.release(this);}
+            }
+            if(changed){save();checkpoint();}
+        }
         if (blueprint != null && verified.startsWith("passed:") && server.getTickCount()%10==0) {
             boolean changed=assignmentBlocks().stream().anyMatch(b->!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(changed){verified="stale: circuit changed or chunks unloaded since test";detail="Functional evidence is stale; inspect and test the current circuit again";state="PAUSED";save();checkpoint();tell(detail);}
@@ -378,6 +411,14 @@ final class EngineeringSession implements BuildExecutor {
             } catch (RuntimeException e) { pause(e.getMessage()); }
         }
         tickTutorials();
+    }
+    private boolean componentGeometryMatches(String id,Set<String> visited) {
+        if(!visited.add(id))return true;
+        for(var block:ComponentTree.component(blueprint,id).blocks())
+            if(!level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),level().getBlockState(block.pos())))return false;
+        for(var node:ComponentTree.nodes(blueprint))if(node.id().equals(id))for(String dependency:node.dependsOn())
+            if(!componentGeometryMatches(dependency,visited))return false;
+        return true;
     }
     void tickTutorials() {
         if(blueprint==null || server.getTickCount()%10!=0)return;
@@ -691,6 +732,7 @@ final class EngineeringSession implements BuildExecutor {
     void tickTest() { trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
+        validateDeclaredPrerequisites();
         for (Blueprint.PlannedBlock b:assignmentBlocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
         Set<BlockPos> planned=new HashSet<>(); assignmentBlocks().forEach(b->planned.add(b.pos()));
         for (Blueprint.PlannedBlock b:assignmentBlocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {

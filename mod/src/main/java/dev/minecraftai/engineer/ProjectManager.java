@@ -120,17 +120,12 @@ final class ProjectManager {
         reservations.validate(scope(project), project.delegation, project.controller, project.revision(), project.access.revision(), server.getTickCount());
         // Other owners can revoke a cross-project grant while this task runs.
         // Its own authorization revision alone cannot fence that dependency.
+        Set<BlockPos> permissionFootprint=new HashSet<>();
+        project.assignmentBlocks().forEach(block->permissionFootprint.add(block.pos()));
+        if(project.isolationLease)permissionFootprint.addAll(project.dependencyPositions(true));
         for(var other:projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
-            boolean intersects=false;
-            for(var block:project.assignmentBlocks()) {
-                int margin=project.isolationLease?2:0;
-                BlockPos a=block.pos().offset(-margin,-margin,-margin),b=block.pos().offset(margin,margin,margin);
-                intersects=Math.max(a.getX(),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(b.getX(),Math.max(other.corner1.getX(),other.corner2.getX()))
-                        && Math.max(a.getY(),Math.min(other.corner1.getY(),other.corner2.getY()))<=Math.min(b.getY(),Math.max(other.corner1.getY(),other.corner2.getY()))
-                        && Math.max(a.getZ(),Math.min(other.corner1.getZ(),other.corner2.getZ()))<=Math.min(b.getZ(),Math.max(other.corner1.getZ(),other.corner2.getZ()));
-                if(intersects)break;
-            }
+            boolean intersects=permissionFootprint.stream().anyMatch(other::contains);
             if(intersects && !other.access.allows(project.controller,project.delegation.action()))throw new IllegalStateException("A required cross-project workspace grant was revoked; execution paused");
         }
     }

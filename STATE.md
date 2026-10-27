@@ -118,8 +118,19 @@ retaining and checking old assistant changes; it never clears the journal.
 Undo selects the recorded component before acquiring its lease. Checkpoints
 persist descriptive assignments, never live authority. Functional trials use the
 selected leaf's trusted oracle and archive its component basis with the project
-intention. Root owns all proofs, including both actual leaf tests and forged
-composition rejection. Local compilation/formatting only; runtime acceptance,
+intention. Root owns all proofs, including actual leaf tests and forged
+composition rejection. Early independent GPT-6-Luna authority review found one
+concrete gap: test leases acquired distant prerequisite read footprints, but
+cross-project grant validation rechecked only the selected leaf's nearby region.
+Root fixed validation to use that same read footprint and added a native
+revoke-during-test case where only the distant prerequisite intersects Bob's
+workspace. Nested group/depend commands and a third leaf now prove prerequisite
+blocking, a changed prerequisite input pausing dependent construction, preservation
+of that human edit, and unrelated component evidence remaining valid. Targeted
+bounded geometry checks stale only affected component/prerequisite results.
+CI 40535547169 exposed the slash namespace conflicting with the service's safe
+identifier format; root changed canonical stage/port/test namespaces to colon
+in both composers, preserving the identifier safety rule. Local compilation/formatting only; runtime acceptance,
 independent authority review, scoped companion invalidation, additional handoff/
 restart/dependency failures, richer UI and C3 perception are still pending.
 

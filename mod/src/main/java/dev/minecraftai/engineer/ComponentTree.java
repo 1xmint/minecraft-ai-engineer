@@ -95,12 +95,12 @@ public final class ComponentTree {
             localResources.entrySet().forEach(e -> resourceCounts.merge(e.getKey(), integer(e.getValue()), Integer::sum));
             for (JsonElement p : mechanism.source().getAsJsonArray("ports")) {
                 JsonObject port = p.getAsJsonObject().deepCopy();
-                port.addProperty("name", leaf.id() + "/" + text(port.get("name"), 128));
+                port.addProperty("name", leaf.id() + ":" + text(port.get("name"), 128));
                 port.add("pos", Blueprint.jsonPos(Blueprint.pos(port.getAsJsonObject("pos")).rotate(Blueprint.rotation(leaf.rotation())).offset(leaf.anchor())));
                 ports.add(port);
             }
             for (JsonElement t : mechanism.source().getAsJsonArray("tests")) {
-                JsonObject test = t.getAsJsonObject().deepCopy(); test.addProperty("id", leaf.id() + "/" + text(test.get("id"), 128)); tests.add(test);
+                JsonObject test = t.getAsJsonObject().deepCopy(); test.addProperty("id", leaf.id() + ":" + text(test.get("id"), 128)); tests.add(test);
             }
         }
         // Explicit leaf dependencies serialize whole mechanisms; their first stage follows the prerequisite leaf's final stage.
@@ -256,7 +256,7 @@ public final class ComponentTree {
         JsonObject out = new JsonObject(); out.addProperty("kind", "curated"); out.addProperty("template", "composition");
         out.addProperty("minecraft", "26.3"); out.addProperty("catalogRevision", 1); return out;
     }
-    private static String stageId(String component, String stage) { return component + "/" + stage; }
+    private static String stageId(String component, String stage) { return component + ":" + stage; }
     private static JsonObject stageById(JsonArray stages, String id) {
         for (JsonElement e : stages) if (e.getAsJsonObject().get("id").getAsString().equals(id)) return e.getAsJsonObject();
         throw new IllegalArgumentException("Catalog stage is missing");

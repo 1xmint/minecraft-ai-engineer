@@ -156,7 +156,7 @@ try {
     `${coordination}/components-project`,
     "utf8",
   ).trim();
-  for (const component of ["a", "b"]) {
+  for (const component of ["a", "b", "c"]) {
     const entry = db
       .prepare(
         "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')=? AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC LIMIT 1",
@@ -203,7 +203,7 @@ try {
       recordedCatalogMechanisms: catalogEvidence,
       repairedDelays: [...testedDelays].sort(),
       recoveredRepairProject: repairProject,
-      independentlyBuiltComponents: ["a", "b"],
+      testedProjectComponents: ["a", "b", "c"],
     }),
   );
 } finally {

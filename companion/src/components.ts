@@ -211,11 +211,11 @@ function content(
     const catalog = mechanism(node.template),
       delay = adaptation(catalog.id, node.parameters).delay,
       leafStages = catalog.stages.map((stage) => ({
-        id: `${node.id}/${stage.id}`,
+        id: `${node.id}:${stage.id}`,
         title: stage.title,
         explanation: stage.explanation,
         prerequisites: [
-          ...stage.prerequisites.map((id) => `${node.id}/${id}`),
+          ...stage.prerequisites.map((id) => `${node.id}:${id}`),
           ...(stage.id === catalog.stages[0]!.id
             ? node.dependsOn.map((id) => finalStages.get(id)!)
             : []),
@@ -230,11 +230,11 @@ function content(
           y: node.anchor.y + rotated.y,
           z: node.anchor.z + rotated.z,
         }),
-        stage = `${node.id}/${block.stage}`,
+        stage = `${node.id}:${block.stage}`,
         prerequisites = [
           ...catalog.stages
             .find((s) => s.id === block.stage)!
-            .prerequisites.map((id) => `${node.id}/${id}`),
+            .prerequisites.map((id) => `${node.id}:${id}`),
           ...(block.stage === catalog.stages[0]!.id
             ? node.dependsOn.map((id) => finalStages.get(id)!)
             : []),
@@ -267,7 +267,7 @@ function content(
     for (const port of catalog.ports) {
       const rotated = rotatePosition(port.pos, node.rotation);
       ports.push({
-        name: `${node.id}/${port.name}`,
+        name: `${node.id}:${port.name}`,
         pos: position({
           x: node.anchor.x + rotated.x,
           y: node.anchor.y + rotated.y,
@@ -277,7 +277,7 @@ function content(
       });
     }
     tests.push({
-      id: `${node.id}/functional-vectors`,
+      id: `${node.id}:functional-vectors`,
       description:
         "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
     });
