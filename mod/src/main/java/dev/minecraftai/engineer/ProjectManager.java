@@ -141,6 +141,7 @@ final class ProjectManager {
     void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
+        project.clearDiagnoses();
         EngineerMod.cancelPlan(project);
         reservations.revoke(scope(project)); project.delegation = null;
         if (project.state.equals("EXECUTING") || project.testTick >= 0 || project.state.equals("PLANNING")) project.pause("Project permissions or intended state changed; explicit reconciliation required");

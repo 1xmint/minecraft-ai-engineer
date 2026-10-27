@@ -148,6 +148,38 @@ test("compiled companion carries its canonical mechanism data", () => {
   );
 });
 
+test("placed-project model revisions stay in their canonical template and orientation", () => {
+  const constrained = {
+    ...input,
+    revision: { template: "signal-lamp", rotation: 90 as const },
+  };
+  assert.deepEqual(fittingMechanisms(constrained), [
+    { template: "signal-lamp", rotation: 90, maxDelay: 4 },
+  ]);
+  const changed = makeMechanismBlueprint(constrained, {
+    template: "signal-lamp",
+    explanation: "Increase only the existing repeater delay.",
+    parameters: { delay: 4 },
+    rotation: 90,
+  });
+  assert.equal(changed.rotation, 90);
+  assert.equal(changed.parameters?.delay, 4);
+  assert.throws(() =>
+    makeMechanismBlueprint(constrained, {
+      template: "or-gate",
+      explanation: "Replace existing player construction.",
+      rotation: 90,
+    }),
+  );
+  assert.throws(() =>
+    makeMechanismBlueprint(constrained, {
+      template: "signal-lamp",
+      explanation: "Move the existing layout.",
+      rotation: 180,
+    }),
+  );
+});
+
 test("model adaptations cannot override geometry and reject invalid delays or rotations", () => {
   const base = {
     template: "signal-lamp",

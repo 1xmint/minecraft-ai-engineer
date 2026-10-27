@@ -26,17 +26,20 @@ import net.minecraft.server.level.ServerPlayer;
 public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
-    private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
             ProjectManager manager=MANAGERS.get(server);if(manager==null)return;
-            for(var project:manager.projects.values())if(project.controller.equals(handler.player.getUUID())
+            for(var project:manager.projects.values()) {
+                project.forgetDiagnosis(handler.player.getUUID());
+                if(project.controller.equals(handler.player.getUUID())
                     && (project.state.equals("EXECUTING") || project.state.equals("PLANNING") || project.testTick>=0)) {
                 cancelPlan(project);manager.reservations.revoke(manager.scope(project));project.delegation=null;project.delegationConnection=null;
                 project.pause("Controller disconnected; another authorized connection must explicitly resume");
+            }
             }
             manager.selections.remove(handler.player.getUUID());
         });
@@ -73,6 +76,9 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect)))
+                .then(Commands.literal("diagnose").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::diagnose)))
+                .then(Commands.literal("repair").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::repair)))
+                .then(Commands.literal("revise").then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.revise(IntegerArgumentType.getInteger(ctx,"delay"))))))
                 .then(Commands.literal("reference")
                     .executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(Blueprint.reference(s.worldId,s.dimension,s.anchor(),0))))
                     .then(Commands.argument("mechanism",StringArgumentType.word())
@@ -98,8 +104,8 @@ public final class EngineerMod implements ModInitializer {
             for(var entry:new ArrayList<>(PLANS.entrySet())) {
                 var s=entry.getKey();var request=entry.getValue();if(s.server!=server)continue;
                 ServerPlayer actor=server.getPlayerList().getPlayer(request.actor());
-                if(actor==null || actor.connection!=request.connection() || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
-                    cancelPlan(s);s.pause("Planning controller disconnected or lost authority; request cancelled");
+                if(!s.state.equals("PLANNING") || actor==null || actor.connection!=request.connection() || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
+                    cancelPlan(s);s.pause("Planning context changed; request cancelled");
                 }
             }
             ProjectManager manager=MANAGERS.get(server);if(manager!=null)manager.tick();
@@ -150,24 +156,27 @@ public final class EngineerMod implements ModInitializer {
     private static void plan(EngineeringSession s,String request) {
         if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
         if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
-        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || !s.journal.isEmpty())throw new IllegalStateException("Stop and reconcile existing work before replacing the plan");
+        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || s.pendingPlacement || s.undoRequested)throw new IllegalStateException("Stop and reconcile active work before planning");
         UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
-        JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(s.anchor()));body.addProperty("rotation",0);body.addProperty("projectId",s.projectId.toString());
-        JsonObject size=new JsonObject();size.addProperty("x",Math.abs(s.corner1.getX()-s.corner2.getX())+1);size.addProperty("y",Math.abs(s.corner1.getY()-s.corner2.getY())+1);size.addProperty("z",Math.abs(s.corner1.getZ()-s.corner2.getZ())+1);body.add("maxSize",size);
+        boolean built=s.hasBuiltStructure();BlockPos origin=s.planningAnchor();String previousState=s.state;
+        JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(origin));body.addProperty("rotation",built?s.blueprint.rotation():0);body.addProperty("revisionOnly",built);body.addProperty("projectId",s.projectId.toString());
+        JsonObject size=new JsonObject();size.addProperty("x",Math.max(s.corner1.getX(),s.corner2.getX())-origin.getX()+1);size.addProperty("y",Math.max(s.corner1.getY(),s.corner2.getY())-origin.getY()+1);size.addProperty("z",Math.max(s.corner1.getZ(),s.corner2.getZ())-origin.getZ()+1);body.add("maxSize",size);
         body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
         s.state="PLANNING";s.detail="One bounded operator-owned planning request";s.save();s.tell(s.detail);
         CompletableFuture<JsonObject> future=Companion.gateway(s,"/v2/design",body,actor);
-        var pending=new PlanRequest(actor,s.manager.epoch,revision,authorization,s.player().connection,future);PLANS.put(s,pending);
+        var pending=new PlanRequest(actor,s.manager.epoch,revision,authorization,s.player().connection,future,previousState);PLANS.put(s,pending);
         future.whenComplete((result,error)->s.server.execute(()->{
             if(PLANS.get(s)!=pending)return;PLANS.remove(s);
-            if(MANAGERS.get(s.server)!=s.manager || !pending.epoch().equals(s.manager.epoch) || s.revision()!=pending.revision()
+            if(!s.state.equals("PLANNING") || MANAGERS.get(s.server)!=s.manager || !pending.epoch().equals(s.manager.epoch) || s.revision()!=pending.revision()
                     || s.access.revision()!=pending.authorization() || !s.access.allows(actor,ProjectAccess.Permission.PLAN)
                     || s.server.getPlayerList().getPlayer(actor)==null || s.server.getPlayerList().getPlayer(actor).connection!=pending.connection() || !s.manager.operator(s.server.getPlayerList().getPlayer(actor))){s.pause("Planning authority changed; late result discarded");return;}
             s.commandActor=actor;
             try {
                 if(error!=null)throw new IllegalStateException(safe(error));
-                s.state="READY";s.accept(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension));s.tell(result.get("message").getAsString());
-            }catch(Exception rejected){s.state="BLOCKED";s.detail="Plan unavailable or rejected: "+safe(rejected);s.save();s.tell(s.detail);}
+                s.state="READY";
+                if(!s.reviseProposal(Blueprint.parse(result.getAsJsonObject("blueprint"),s.worldId,s.dimension))){s.state=pending.previousState();s.save();}
+                s.tell(result.get("message").getAsString());
+            }catch(Exception rejected){s.state=s.blueprint==null?"BLOCKED":pending.previousState();s.detail="Plan unavailable or rejected; "+(s.blueprint==null?"no design accepted: ":"existing design kept: ")+safe(rejected);s.save();s.tell(s.detail);}
             finally{s.commandActor=null;}
         }));
     }

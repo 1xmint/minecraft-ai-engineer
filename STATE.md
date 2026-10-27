@@ -93,6 +93,15 @@ third dedicated restart with a fault-injected completed-undo boundary. Root owns
 proofs; no tests run locally. Runtime operation metadata, repair/revise commands,
 SDK revision path and final independent review are still pending.
 
+Proof-first CI 40453452724 failed exactly at the missing native diagnose command;
+all other checks passed. The root command/planning integration now adds diagnose,
+repair and bounded revise, invalidates ephemeral proposals on disconnect/grant
+changes, and routes model proposals through the same bounded revision validator.
+The companion derives revision constraints from canonical memory, ignoring forged
+client hints. Scoped TypeScript compilation passes; new HTTP and catalog proofs
+await CI. EngineeringSession grouped runtime integration is still in its isolated
+worktree and must land before the commands can compile or this slice can ship.
+
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's
 attached-support neighbor notification and left the torch on. Pinned 26.3

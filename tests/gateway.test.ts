@@ -362,6 +362,49 @@ test("model proposals cannot advance authority until Fabric accepts a new revisi
   }
 });
 
+test("revision planning derives its constraints from canonical memory, ignoring client hints", async () => {
+  const provider: PlanningProvider = {
+    async plan(input) {
+      assert.deepEqual(input.revision, {
+        template: "signal-lamp",
+        rotation: 0,
+      });
+      assert.equal(input.rotation, 0);
+      return {
+        template: "signal-lamp",
+        explanation: "Keep construction and increase its repeater delay.",
+        parameters: { delay: 4 },
+      };
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const response = await f.post("/v2/design", {
+      context: context(),
+      ...design,
+      rotation: 180,
+      revision: { template: "or-gate", rotation: 180 },
+      revisionOnly: true,
+      modelAuthorized: true,
+      isOperator: true,
+    });
+    assert.equal(response.status, 200);
+    const result = await json<{ blueprint: Blueprint }>(response);
+    assert.equal(result.blueprint.provenance.template, "signal-lamp");
+    assert.equal(result.blueprint.rotation, 0);
+    assert.equal(result.blueprint.parameters?.delay, 4);
+    const stored = await json<{ blueprint: Blueprint }>(
+      await f.post("/v2/project/read", { context: context() }),
+    );
+    assert.equal(stored.blueprint.revision, 1);
+    assert.equal(stored.blueprint.parameters?.delay, 1);
+  } finally {
+    await f.close();
+  }
+});
+
 test("revocation cancels active inference and rejects its late reply", async () => {
   let entered!: () => void,
     release!: () => void,
