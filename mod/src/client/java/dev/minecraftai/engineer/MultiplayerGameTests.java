@@ -307,6 +307,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
             write("repair-recovery.done","passed");
             componentRecoveryFlow(context,server);
+            undoContextRecoveryFlow(context,server);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
@@ -918,8 +919,38 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Undo blocked by later edit");
         server.runOnServer(s->{commandAs(s,"Alice","engineer next");var project=session(s,"Alice");assertUndoContextUnchanged(project,preflightBefore);check(project.journal.size()==12 && project.delegation==null,"Failed preflight releases fresh authority without changing either component");
             var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,1));});
-        write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("undo-context-failure.done","passed");
+        write("undo-context-failure.done","passed");
+        // Re-delegating an already complete A retains A's baseline without adding a journal group.
+        send(context,"engineer component build a");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(!project.baseline.isEmpty() && project.journal.size()==12 && project.journal.getLast().component().equals("b"),"Undo recovery starts with A's baseline but B's latest journal");
+            check(project.beginUndo(),"Production undo prepares a durable operation before any world write");
+            check(project.activeComponent.equals("b") && project.verified.equals("untested") && project.undoRequested && project.journal.size()==12,"Prepared undo selects only B and retains its journal until execution");
+            check(project.baseline.isEmpty() && project.dependencies.isEmpty() && project.repairTargets.isEmpty() && project.originDiagnosis==null && !project.pendingPlacement,"Target WAL never inherits A's recovery context");
+            check(assignment(project,"a").get("verified").getAsString().startsWith("passed:"),"Switching undo preserves A's original functional result");
+            var wal=saved(project);check(wal.get("activeComponent").getAsString().equals("b") && wal.get("undoRequested").getAsBoolean() && wal.getAsJsonArray("baseline").isEmpty(),"Real persisted WAL identifies B with an empty baseline");
+        });
+        write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+
+    private static void undoContextRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("undo-context-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runCommand("tp Alice 185 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos().offset(2,0,2))));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.activeComponent.equals("b") && project.undoRequested && project.journal.size()==12,"Actual restart loads B's interrupted undo and exact journals");
+            check(project.delegation==null && project.delegationConnection==null && project.baseline.isEmpty() && project.dependencies.isEmpty(),"Restart imports no authority or A baseline");
+            check(!project.verified.startsWith("passed:") && assignment(project,"a").get("verified").getAsString().startsWith("passed:"),"Recovered B is untested while A retains its own pass");
+        });
+        send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==6 && project.journal.stream().allMatch(change->change.component().equals("a")),"Recovered undo cannot spill into A's older operation");
+            for(var block:project.blueprint.blocks())check(block.pos().getX()<188?Blueprint.matches(block.state(),project.level().getBlockState(block.pos())):project.level().getBlockState(block.pos()).isAir(),"Recovered undo removes B and preserves A's actual blocks");
+        });
+        write("undo-context-recovery.done","passed");
     }
 
     private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

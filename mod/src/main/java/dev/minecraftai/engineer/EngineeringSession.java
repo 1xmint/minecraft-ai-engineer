@@ -784,21 +784,73 @@ final class EngineeringSession implements BuildExecutor {
         }
         return true;
     }
+    /** Descriptive execution frame only: rollback never restores a lease/connection. */
+    private static final class UndoContext {
+        final String component,state,detail,verified,operation,kind,undo;
+        final UUID controller,origin;final boolean placement,requested;
+        final Map<BlockPos,BlockState> baseline,dependencies;final Set<BlockPos> targets;
+        final JsonObject trial=new JsonObject();
+        UndoContext(EngineeringSession s) {
+            component=s.activeComponent;state=s.state;detail=s.detail;verified=s.verified;controller=s.controller;
+            operation=s.activeOperation;kind=s.operationKind;undo=s.undoOperation;origin=s.originDiagnosis;
+            placement=s.pendingPlacement;requested=s.undoRequested;
+            baseline=new LinkedHashMap<>(s.baseline);dependencies=new LinkedHashMap<>(s.dependencies);targets=new LinkedHashSet<>(s.repairTargets);
+            s.trial.write(trial);
+        }
+        void restore(EngineeringSession s) {
+            s.activeComponent=component;s.state=state;s.detail=detail;s.verified=verified;s.controller=controller;
+            s.activeOperation=operation;s.operationKind=kind;s.undoOperation=undo;s.originDiagnosis=origin;
+            s.pendingPlacement=placement;s.undoRequested=requested;
+            s.baseline.clear();s.baseline.putAll(baseline);s.dependencies.clear();s.dependencies.putAll(dependencies);
+            s.repairTargets.clear();s.repairTargets.addAll(targets);s.trial.load(trial);
+            s.delegationComponent=null;s.delegationBasis=null;s.delegationGeneration=-1;s.isolationLease=false;
+        }
+    }
     void undo() {
-        requireCreative();
-        access.require(actor(),ProjectAccess.Permission.UNDO);
+        if(!beginUndo())return;
+        try { undoReserved(); } finally { manager.release(this); }
+    }
+    /** Real production prepare/WAL phase; completion may resume after interruption. */
+    boolean beginUndo() {
+        requireCreative();access.require(actor(),ProjectAccess.Permission.UNDO);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before undoing world work");
-        if(journal.isEmpty() && !undoRequested){tell("No assistant operation to undo.");return;}
+        if(journal.isEmpty() && !undoRequested){tell("No assistant operation to undo.");return false;}
         if(state.equals("EXECUTING") || testTick>=0)pause("Undo requested; active execution paused");
         if(hasPendingTest())throw new IllegalStateException("Reconcile interrupted test inputs with resume before undo");
-        String selectedOperation=undoRequested?undoOperation:journal.getLast().operation();
+        UndoContext previous=new UndoContext(this);boolean committing=false;
+        String selectedOperation=operationGroup(undoRequested?undoOperation:journal.getLast().operation());
         var selected=journal.stream().filter(change->change.operation().equals(selectedOperation)).findFirst();
-        if(selected.isPresent() && !selected.get().component().equals(activeComponent)) {
-            trial.resetEvidence();manager.release(this);clearDiagnoses();activeComponent=selected.get().component();
+        manager.release(this);
+        try {
+            if(selected.isPresent())activeComponent=selected.get().component();
             assignments.task(blueprint,activeComponent);
+            claim(ProjectAccess.Permission.UNDO,true);
+            preflightUndo(undoBatch(selectedOperation),journalPositions(),plannedPositions());
+            // Keep the old buffer's original label while archiving its captured scope.
+            var oldTask=assignments.task(blueprint,previous.component);oldTask.status=previous.state;oldTask.verified=previous.verified;
+            trial.resetEvidence();
+            baseline.clear();dependencies.clear();repairTargets.clear();originDiagnosis=null;pendingPlacement=false;clearDiagnoses();
+            activeOperation=selectedOperation;operationKind="BUILD";verified="untested";
+            state="PAUSED";detail="Undo requested for operation "+selectedOperation;undoRequested=true;undoOperation=selectedOperation;
+            // A failed checkpoint can have persisted: retain this safe target frame after the attempt.
+            committing=true;save();return true;
+        }catch(RuntimeException failure) {
+            manager.release(this);
+            if(!committing)previous.restore(this);
+            throw failure;
         }
-        claim(ProjectAccess.Permission.UNDO,true);
-        try { undoReserved(); } finally { manager.release(this); }
+    }
+    private Set<BlockPos> journalPositions(){var result=new HashSet<BlockPos>();journal.forEach(change->result.add(change.pos()));return result;}
+    private Set<BlockPos> plannedPositions(){var result=new HashSet<BlockPos>();if(blueprint!=null)blueprint.blocks().forEach(block->result.add(block.pos()));return result;}
+    private void preflightUndo(List<Change> batch,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
+        for(Change change:batch) {
+            validateTarget(change.pos());BlockState actual=level().getBlockState(change.pos());
+            if((undoRequested || (pendingPlacement && journal.getLast().equals(change))) && actual.equals(change.before()))continue;
+            if(!undoAfterMatches(change,actual))throw new IllegalStateException("Undo blocked by later edit at "+change.pos().toShortString());
+            validateUndoNeighbors(change,assistantPositions,plannedPositions);
+            if(!change.before().isAir() && (change.before().hasBlockEntity() || !change.before().canSurvive(level(),change.pos())))
+                throw new IllegalStateException("Undo cannot safely restore the recorded block at "+change.pos().toShortString());
+        }
     }
     void undoReserved() {
         if (hasPendingTest()) restoreTest();
@@ -807,19 +859,9 @@ final class EngineeringSession implements BuildExecutor {
         if(targetOperation==null) { manager.release(this);return; }
         List<Change> batch=undoBatch(targetOperation);
         if(batch.isEmpty()) { finishUndo();return; }
-        // Preflight only the selected contiguous operation. Older operations remain untouched.
-        Set<BlockPos> assistantPositions=new HashSet<>();journal.forEach(c->assistantPositions.add(c.pos()));
-        Set<BlockPos> plannedPositions=new HashSet<>();if(blueprint!=null)blueprint.blocks().forEach(b->plannedPositions.add(b.pos()));
-        for (Change c : batch) {
-            validateTarget(c.pos());
-            BlockState actual=level().getBlockState(c.pos());
-            if((undoRequested || (pendingPlacement && journal.getLast().equals(c))) && actual.equals(c.before()))continue; // Crash after a journaled write, before its flush.
-            if(!undoAfterMatches(c,actual))throw new IllegalStateException("Undo blocked by later edit at " + c.pos().toShortString());
-            validateUndoNeighbors(c,assistantPositions,plannedPositions);
-            if(!c.before().isAir() && (c.before().hasBlockEntity() || !c.before().canSurvive(level(),c.pos())))
-                throw new IllegalStateException("Undo cannot safely restore the recorded block at "+c.pos().toShortString());
-        }
-        state="PAUSED"; detail="Undo requested for operation "+targetOperation;undoRequested=true;undoOperation=targetOperation;save();
+        // Repeat preflight after the durable target intent, then validate every actual mutation.
+        Set<BlockPos> assistantPositions=journalPositions(),plannedPositions=plannedPositions();
+        preflightUndo(batch,assistantPositions,plannedPositions);
         while (!journal.isEmpty() && journal.getLast().operation().equals(targetOperation)) {
             Change c = journal.getLast();
             if(!level().hasChunkAt(c.pos()))throw new IllegalStateException("Undo target chunk unloaded; journal retained");

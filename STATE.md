@@ -226,6 +226,20 @@ WAL before writes. Never roll back after commit-attempt, including ambiguous sav
 failure. A production beginUndo interruption followed by actual third server boot
 will prove isolated durable recovery. Implementation/proof still pending.
 
+Undo rejection proof **608bf78 / CI40597951925** failed exactly at denied undo
+selecting B while retaining A's pass. Transactional beginUndo is now implemented;
+GPT-6.1-Sol reviewed the actual fix and found no concrete blocker. New native
+acceptance interrupts the real production prepare/WAL phase (no fabricated save),
+then requires the third actual server boot to load B without A baseline/authority,
+remove only B's six blocks and retain A's six blocks/journal/pass. Java main/client
+compile passed; final runtime acceptance is pending the next CI.
+
+Inventory implementation **fdd03d7 / CI40595380532 passed all five checks**.
+Retained native logs, private capture markers and SQLite proof were inspected:
+own/double chest/crafter, actual 20s expiry, independent vanilla seeded loot,
+private Bob receipt, revocation rejection and cache absence on third boot passed.
+The cache remains ephemeral and absent from shared model context and SQLite.
+
 ## Next slices
 
 1. Current C2/scoped-memory/block-view proofs are green; do not repeat without new

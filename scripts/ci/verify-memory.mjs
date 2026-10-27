@@ -354,6 +354,8 @@ try {
     "inventory-bob-private.done",
     "inventory-revocation.done",
     "inventory-recovery.done",
+    "undo-context-failure.done",
+    "undo-context-recovery.done",
   ])
     assert.equal(
       readFileSync(`${coordination}/${marker}`, "utf8").trim(),
