@@ -200,6 +200,14 @@ export function createCompanionServer(options: ServerOptions) {
                 "This request needs a mechanism that is not supported yet.",
               422,
             );
+          if (
+            (plan.parameters && plan.parameters.delay !== 1) ||
+            (plan.rotation !== undefined && plan.rotation !== input.rotation)
+          )
+            throw new RequestError(
+              "This legacy client does not support mechanism adaptations. Update the mod and use its v2 gateway.",
+              422,
+            );
           const blueprint = options.store.saveDesign(
             input,
             makeReferenceBlueprint(input, plan.explanation),

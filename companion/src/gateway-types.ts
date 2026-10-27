@@ -9,6 +9,7 @@ import {
   position,
   text,
 } from "./types.js";
+import { adaptation } from "./catalog.js";
 
 export interface GatewayContext {
   serverId: string;
@@ -125,10 +126,26 @@ export function serverBlueprint(
       id = identifier(s.id, "stage id");
     if (stageIds.has(id)) throw new RequestError("Duplicate blueprint stage.");
     stageIds.add(id);
+    const prerequisites = s.prerequisites;
+    if (
+      prerequisites !== undefined &&
+      (!Array.isArray(prerequisites) ||
+        prerequisites.length > 64 ||
+        prerequisites.some(
+          (p) => typeof p !== "string" || p === id || !stageIds.has(p),
+        ) ||
+        new Set(prerequisites).size !== prerequisites.length)
+    )
+      throw new RequestError(
+        "Stage prerequisites must reference unique earlier stages.",
+      );
     return {
       id,
       title: text(s.title, "stage title", 256),
       explanation: text(s.explanation, "stage explanation", 4000),
+      ...(prerequisites === undefined
+        ? {}
+        : { prerequisites: prerequisites as string[] }),
     };
   });
   if (!Array.isArray(v.blocks) || v.blocks.length < 1 || v.blocks.length > 4096)
@@ -161,7 +178,11 @@ export function serverBlueprint(
     )
       throw new RequestError("Invalid placement prerequisites.");
     seen.add(key);
-    const name = state.split("[", 1)[0]!;
+    const kind = state.split("[", 1)[0]!,
+      name =
+        kind === "minecraft:redstone_wall_torch"
+          ? "minecraft:redstone_torch"
+          : kind;
     resources[name] = (resources[name] ?? 0) + 1;
     return {
       pos,
@@ -249,7 +270,20 @@ export function serverBlueprint(
       kind: "curated",
       template: identifier(provenance.template, "template"),
       minecraft: "26.3",
+      ...(provenance.catalogRevision === undefined
+        ? {}
+        : {
+            catalogRevision: integer(
+              provenance.catalogRevision,
+              "catalogRevision",
+              1,
+              Number.MAX_SAFE_INTEGER,
+            ),
+          }),
     },
+    ...(v.parameters === undefined
+      ? {}
+      : { parameters: adaptation(String(provenance.template), v.parameters) }),
     verification: "untested",
   };
 }

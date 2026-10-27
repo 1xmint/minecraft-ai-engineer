@@ -107,7 +107,7 @@ final class ProjectManager {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || (test && reads.stream().anyMatch(other::contains));
             if(touches && !other.access.allows(actor,action))throw new IllegalStateException("The assignment intersects a workspace that has not granted the required permission");
-            if (other.testOriginal == null || other.blueprint == null) continue;
+            if (!other.hasPendingTest() || other.blueprint == null) continue;
             for (Blueprint.PlannedBlock b : other.blueprint.blocks()) for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-2,-2,-2), b.pos().offset(2,2,2)))
                 if (reads.contains(p) || writes.contains(p)) throw new IllegalStateException("An interrupted neighboring test must be safely reconciled first");
         }
@@ -141,6 +141,7 @@ final class ProjectManager {
     void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
+        project.clearDiagnoses();
         EngineerMod.cancelPlan(project);
         reservations.revoke(scope(project)); project.delegation = null;
         if (project.state.equals("EXECUTING") || project.testTick >= 0 || project.state.equals("PLANNING")) project.pause("Project permissions or intended state changed; explicit reconciliation required");

@@ -8,7 +8,7 @@
   "entrypoints": {
     "main": ["dev.minecraftai.engineer.EngineerMod"],
     "client": ["dev.minecraftai.engineer.client.EngineerClient"],
-    "fabric-gametest": ["dev.minecraftai.engineer.EngineerGameTests"],
+    "fabric-gametest": ["dev.minecraftai.engineer.EngineerGameTests", "dev.minecraftai.engineer.MechanismGameTests"],
     "fabric-client-gametest": ["dev.minecraftai.engineer.EngineerClientGameTests", "dev.minecraftai.engineer.MultiplayerGameTests"]
   },
   "depends": { "fabricloader": ">=0.20.1", "minecraft": "26.3", "java": ">=25", "fabric-api": "*" }

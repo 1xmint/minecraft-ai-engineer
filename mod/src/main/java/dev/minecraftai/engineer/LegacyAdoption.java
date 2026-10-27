@@ -55,6 +55,7 @@ final class LegacyAdoption {
         if(revision<1)throw new IllegalArgumentException("Invalid legacy revision");
         out.addProperty("projectRevision",revision);out.add("access",new ProjectAccess(owner).json());out.addProperty("controller",owner.toString());
         out.add("tutorials",new JsonArray());out.add("dependencies",new JsonArray());
+        out.add("functionalEvidence",new JsonArray());
         out.addProperty("status","PAUSED");out.addProperty("verified","untested: adopted legacy project requires observation and a fresh test");
         out.addProperty("detail","Adopted with a backup and private ownership. Inspect and explicitly resume or undo; no execution authority was imported.");
         return out;

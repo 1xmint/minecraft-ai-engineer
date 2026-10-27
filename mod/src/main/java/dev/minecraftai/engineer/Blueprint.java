@@ -47,7 +47,7 @@ public record Blueprint(String id, String projectId, int revision, String worldI
             if (!seen.add(absolute) || !stageIds.contains(stage)) throw new IllegalArgumentException("Duplicate position or unknown stage");
             BlockState state = state(b.get("state").getAsString()).rotate(rotation);
             if (state.isAir() || state.hasBlockEntity()) throw new IllegalArgumentException("Air and block entities cannot be built");
-            if (!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP).contains(state.getBlock()))
+            if (!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP,Blocks.REDSTONE_WALL_TORCH).contains(state.getBlock()))
                 throw new IllegalArgumentException("Block is outside the supported safe circuit library");
             blocks.add(new PlannedBlock(absolute, state, stage, text(b.get("component"),128)));
         }
@@ -96,23 +96,7 @@ public record Blueprint(String id, String projectId, int revision, String worldI
         return parse(json, worldId, dimension);
     }
     public static Blueprint reference(String world, String dimension, BlockPos anchor, int degrees) {
-        JsonObject json = JsonParser.parseString(REFERENCE).getAsJsonObject();
-        json.addProperty("id", UUID.randomUUID().toString()); json.addProperty("projectId", UUID.randomUUID().toString());
-        json.addProperty("worldId", world); json.addProperty("dimension", dimension); json.add("anchor", jsonPos(anchor)); json.addProperty("rotation", degrees);
-        return parse(json, world, dimension);
+        return MechanismCatalog.create("signal-lamp", world, dimension, anchor, degrees, 1);
     }
-    private static final String REFERENCE = """
-        {"schemaVersion":1,"revision":1,"name":"Signal lamp","blocks":[
-        {"pos":{"x":0,"y":0,"z":0},"state":"minecraft:stone","stage":"foundation","component":"support"},
-        {"pos":{"x":1,"y":0,"z":0},"state":"minecraft:stone","stage":"foundation","component":"support"},
-        {"pos":{"x":2,"y":0,"z":0},"state":"minecraft:stone","stage":"foundation","component":"support"},
-        {"pos":{"x":0,"y":1,"z":0},"state":"minecraft:lever[face=floor,facing=east,powered=false]","stage":"input","component":"input"},
-        {"pos":{"x":1,"y":1,"z":0},"state":"minecraft:repeater[facing=west,delay=1,locked=false,powered=false]","stage":"output","component":"output"},
-        {"pos":{"x":2,"y":1,"z":0},"state":"minecraft:redstone_lamp[lit=false]","stage":"output","component":"output"}],
-        "stages":[{"id":"foundation","title":"Support the circuit","explanation":"Place three stone supports in a row. These hold the lever and repeater."},
-        {"id":"input","title":"Add the input","explanation":"Place a floor lever on the first support. Its facing arrow points toward the repeater."},
-        {"id":"output","title":"Carry the signal","explanation":"Place a repeater pointing toward the lamp (state facing=west) on the middle support and a lamp above the last support. The repeater isolates and delays the signal."}],
-        "provenance":{"kind":"curated","template":"signal-lamp","minecraft":"26.3"},"verification":"untested"}
-        """;
 }
 

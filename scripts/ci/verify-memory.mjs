@@ -58,6 +58,96 @@ try {
       .blocks.some((block) => block.state.startsWith("minecraft:repeater")),
     "Restart inspection must contain the real built repeater",
   );
+  const catalogEvidence = [];
+  for (const template of ["or-gate", "not-gate"]) {
+    const row = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE ? ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, `passed:${template}:%`);
+    assert.ok(row, `Actual ${template} functional evidence must reach SQLite`);
+    const report = JSON.parse(row.document);
+    const intended = db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(
+        server.serverId,
+        report.context.projectId,
+        report.context.projectRevision,
+      );
+    assert.equal(
+      JSON.parse(intended.document).provenance.template,
+      template,
+      "Evidence belongs to the exact immutable mechanism revision that was tested",
+    );
+    const vectors = report.checkpoint.observed.testEvidence;
+    assert.ok(vectors.length >= 3);
+    for (const [index, vector] of vectors.entries()) {
+      assert.equal(
+        vector.outputs.light,
+        template === "or-gate"
+          ? Boolean(vector.inputs.a || vector.inputs.b)
+          : !vector.inputs.enable,
+      );
+      if (index) assert.ok(vector.tick > vectors[index - 1].tick);
+    }
+    assert.equal(
+      new Set(
+        vectors.map((v) =>
+          template === "or-gate"
+            ? `${v.inputs.a}${v.inputs.b}`
+            : String(v.inputs.enable),
+        ),
+      ).size,
+      template === "or-gate" ? 4 : 2,
+    );
+    catalogEvidence.push(template);
+  }
+  assert.equal(
+    readFileSync(`${coordination}/repair-recovery.done`, "utf8").trim(),
+    "passed",
+  );
+  const repairProject = readFileSync(
+    `${coordination}/repair-project`,
+    "utf8",
+  ).trim();
+  const repairReports = db
+    .prepare(
+      "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' ORDER BY id",
+    )
+    .all(server.serverId, repairProject)
+    .map((entry) => JSON.parse(entry.document));
+  const testedDelays = new Set();
+  for (const report of repairReports.filter((entry) =>
+    entry.checkpoint.verified.startsWith("passed:signal-lamp:"),
+  )) {
+    const intended = db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(server.serverId, repairProject, report.context.projectRevision);
+    const design = JSON.parse(intended.document);
+    assert.equal(design.provenance.template, "signal-lamp");
+    testedDelays.add(design.parameters.delay);
+    assert.ok(report.checkpoint.observed.testEvidence.length >= 3);
+    for (const vector of report.checkpoint.observed.testEvidence)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
+  assert.deepEqual(
+    [...testedDelays].sort(),
+    [1, 4],
+    "Both repaired delay revisions have actual immutable functional evidence",
+  );
+  assert.ok(
+    repairReports.some(
+      (report) =>
+        report.context.serverEpoch === server.serverEpoch &&
+        report.checkpoint.observed.assistantChanges === 5 &&
+        report.checkpoint.observed.undoRequested === false,
+    ),
+    "Third server boot records the completed undo without erasing earlier operation groups",
+  );
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -66,6 +156,9 @@ try {
       revision: row.project_revision,
       recordedFunctionalPasses: passes.count,
       recordedWorldInspections: observations.length,
+      recordedCatalogMechanisms: catalogEvidence,
+      repairedDelays: [...testedDelays].sort(),
+      recoveredRepairProject: repairProject,
     }),
   );
 } finally {

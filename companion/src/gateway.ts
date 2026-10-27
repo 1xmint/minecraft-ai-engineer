@@ -1,4 +1,4 @@
-import { makeReferenceBlueprint } from "./blueprint.js";
+import { fittingMechanisms, makeMechanismBlueprint } from "./catalog.js";
 import { GatewayMemory } from "./gateway-memory.js";
 import {
   actorId,
@@ -185,6 +185,7 @@ export class ServerGateway {
         "Only explicit operator-owned planning is currently enabled. Shared-subscription eligibility is not established.",
         403,
       );
+    const revisionOnly = optionalBoolean(v.revisionOnly, "revisionOnly");
     const input = validateDesignRequest({ ...v, projectId: context.projectId });
     if (
       input.worldId !== project.worldId ||
@@ -195,7 +196,20 @@ export class ServerGateway {
         "Design belongs to a different project/world.",
         409,
       );
-    makeReferenceBlueprint(input); // Fit validation before spending quota.
+    if (revisionOnly) {
+      const current = memory.blueprint(context);
+      if (!current)
+        throw new RequestError(
+          "A mechanism revision requires the current canonical blueprint.",
+          409,
+        );
+      input.revision = {
+        template: current.provenance.template,
+        rotation: current.rotation,
+      };
+      input.rotation = current.rotation;
+    }
+    fittingMechanisms(input); // Fit validation before spending quota.
     if (context.projectRevision >= Number.MAX_SAFE_INTEGER)
       throw new RequestError("Project revision exhausted.", 409);
     memory.claim(context, "design");
@@ -229,13 +243,13 @@ export class ServerGateway {
             );
           this.requireEpoch(context);
           memory.assertCurrent(context, "plan");
-          if (plan.template !== "signal-lamp")
+          if (plan.template === "unsupported")
             throw new RequestError(
               plan.explanation || "Unsupported mechanism.",
               422,
             );
           const blueprint = {
-            ...makeReferenceBlueprint(input, plan.explanation),
+            ...makeMechanismBlueprint(input, plan),
             revision: context.projectRevision + 1,
           };
           // The proposal is an audit record, not an accepted revision. Fabric must

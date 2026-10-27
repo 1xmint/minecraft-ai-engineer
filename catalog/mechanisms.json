@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "minecraft": "26.3",
+  "revision": 1,
+  "mechanisms": [
+    {
+      "id": "signal-lamp",
+      "name": "Signal lamp",
+      "explanation": "A lever drives a repeater and lamp. The repeater isolates the output and sets a configurable delay.",
+      "maxDelay": 4,
+      "stages": [
+        {
+          "id": "foundation",
+          "title": "Support the circuit",
+          "explanation": "Place three stone supports in a row.",
+          "prerequisites": []
+        },
+        {
+          "id": "input",
+          "title": "Add the inputs",
+          "explanation": "Place an off floor lever above the first support.",
+          "prerequisites": ["foundation"]
+        },
+        {
+          "id": "output",
+          "title": "Carry the signal",
+          "explanation": "Place a repeater reading from the lever (state facing=west), then a lamp at its output. Set the repeater delay as specified.",
+          "prerequisites": ["foundation", "input"]
+        }
+      ],
+      "blocks": [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+          "stage": "input",
+          "component": "input"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+          "stage": "output",
+          "component": "relay"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:redstone_lamp[lit=false]",
+          "stage": "output",
+          "component": "output"
+        }
+      ],
+      "ports": [
+        {
+          "name": "enable",
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "input"
+        },
+        {
+          "name": "light",
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "output"
+        }
+      ],
+      "cases": [
+        {
+          "inputs": {
+            "enable": false
+          },
+          "outputs": {
+            "light": false
+          }
+        },
+        {
+          "inputs": {
+            "enable": true
+          },
+          "outputs": {
+            "light": true
+          }
+        },
+        {
+          "inputs": {
+            "enable": false
+          },
+          "outputs": {
+            "light": false
+          }
+        }
+      ],
+      "settleTicks": 8
+    },
+    {
+      "id": "not-gate",
+      "name": "NOT gate",
+      "explanation": "A lever powers its support block. A torch attached to that block inverts the signal: input off lights the lamp, input on extinguishes it.",
+      "maxDelay": 1,
+      "stages": [
+        {
+          "id": "foundation",
+          "title": "Support the circuit",
+          "explanation": "Place the stone that the input lever will power.",
+          "prerequisites": []
+        },
+        {
+          "id": "input",
+          "title": "Add the inputs",
+          "explanation": "Place an off floor lever on top of the support.",
+          "prerequisites": ["foundation"]
+        },
+        {
+          "id": "output",
+          "title": "Carry the signal",
+          "explanation": "Place the output lamp two blocks east of the support. Attach a wall torch to the support's east face, between support and lamp. Keep the lamp out of direct lever range.",
+          "prerequisites": ["foundation", "input"]
+        }
+      ],
+      "blocks": [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+          "stage": "input",
+          "component": "input"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:redstone_lamp[lit=false]",
+          "stage": "output",
+          "component": "output"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+          "stage": "output",
+          "component": "inverter"
+        }
+      ],
+      "ports": [
+        {
+          "name": "enable",
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "input"
+        },
+        {
+          "name": "light",
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "kind": "output"
+        }
+      ],
+      "cases": [
+        {
+          "inputs": {
+            "enable": false
+          },
+          "outputs": {
+            "light": true
+          }
+        },
+        {
+          "inputs": {
+            "enable": true
+          },
+          "outputs": {
+            "light": false
+          }
+        },
+        {
+          "inputs": {
+            "enable": false
+          },
+          "outputs": {
+            "light": true
+          }
+        }
+      ],
+      "settleTicks": 12
+    },
+    {
+      "id": "or-gate",
+      "name": "Two-input OR gate",
+      "explanation": "Two independent lever/repeater branches drive one lamp. Either input, or both, lights it; only both off extinguishes it. Repeaters prevent branch backfeed.",
+      "maxDelay": 4,
+      "stages": [
+        {
+          "id": "foundation",
+          "title": "Support the circuit",
+          "explanation": "Place five stone supports in two arms meeting at a corner.",
+          "prerequisites": []
+        },
+        {
+          "id": "input",
+          "title": "Add the inputs",
+          "explanation": "Place off levers at the two outer ends.",
+          "prerequisites": ["foundation"]
+        },
+        {
+          "id": "output",
+          "title": "Carry the signal",
+          "explanation": "Place repeaters reading west and north into the shared lamp. Their output arrows meet at the lamp; neither branch points toward the other lever.",
+          "prerequisites": ["foundation", "input"]
+        }
+      ],
+      "blocks": [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 2
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 2
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+          "stage": "input",
+          "component": "input-a"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+          "stage": "input",
+          "component": "input-b"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 2
+          },
+          "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+          "stage": "output",
+          "component": "relay-a"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 1
+          },
+          "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+          "stage": "output",
+          "component": "relay-b"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "state": "minecraft:redstone_lamp[lit=false]",
+          "stage": "output",
+          "component": "output"
+        }
+      ],
+      "ports": [
+        {
+          "name": "a",
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "kind": "input"
+        },
+        {
+          "name": "b",
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "input"
+        },
+        {
+          "name": "light",
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "kind": "output"
+        }
+      ],
+      "cases": [
+        {
+          "inputs": {
+            "a": false,
+            "b": false
+          },
+          "outputs": {
+            "light": false
+          }
+        },
+        {
+          "inputs": {
+            "a": true,
+            "b": false
+          },
+          "outputs": {
+            "light": true
+          }
+        },
+        {
+          "inputs": {
+            "a": false,
+            "b": true
+          },
+          "outputs": {
+            "light": true
+          }
+        },
+        {
+          "inputs": {
+            "a": true,
+            "b": true
+          },
+          "outputs": {
+            "light": true
+          }
+        },
+        {
+          "inputs": {
+            "a": false,
+            "b": false
+          },
+          "outputs": {
+            "light": false
+          }
+        }
+      ],
+      "settleTicks": 12
+    }
+  ]
+}
