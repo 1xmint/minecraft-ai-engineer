@@ -141,6 +141,33 @@ preservation/rejection/actor binding; implementation Companion40586816662 passed
 Native real-ray/unloaded/refusal and SQLite metadata retention passed in40586816662.
 Focused GPT-6.1-Sol review found no further confirmed issue at this boundary.
 
+## Inventory slice decision and Outcomes (C3, 2026-10-27)
+
+I1: explicit own-inventory inspection gives private item/material totals from the
+real actor's inventory. Proof: counts match actual stacks and full item state is
+unchanged; another player receives no private message or facts.
+I2: explicit container request observes the next naturally opened vanilla backing,
+including both loaded double-chest halves. Proof: native click/menu path, deduped
+counts, unchanged stacks, and refusal on stale actor/project/grant/TTL, unknown
+backing, unload or unresolved loot. No forced menu/chunk and no item mutation.
+I3: private facts remain available to the engineering service without leaking into
+shared blueprints/audits. Proof: one latest in-memory actor snapshot, connection
+nonce/epoch/revision/ACL/60s TTL checks; private read/context only, no SQLite item
+payloads; shared context/proposals exclude facts. Service restart drops cache.
+
+GPT-6.1-Sol challenged unsafe BE scans, accessor mixins and local-only cosmetic
+summaries. Public menu/slot APIs suffice. Choose a separate strict private route,
+latest in-memory snapshot and server-generated per-connection nonce. No inventory
+persistence/migration is needed. Root identified that inserting private facts in
+existing shared design context lets model explanations leak them; instead expose
+private read/context for private material checks and the later #3 private advice
+flow. Shared planning must never receive the snapshot. Raw facts are observations,
+not live resource/permission proof. All world mutations still recheck authority.
+Callback records target metadata only, returns PASS, never creates a menu or calls
+item getters. After the user's independent vanilla open, require exact new menu/
+backings and null loot tables before stillValid/item access. First natural loot
+opening may generate loot through vanilla; inspection must never do so itself.
+
 ## Next slices
 
 1. Current C2/scoped-memory/block-view proofs are green; do not repeat without new
