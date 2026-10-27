@@ -19,6 +19,16 @@ final class FunctionalTrial {
     FunctionalTrial(EngineeringSession session){this.session=session;}
     boolean pending(){return !inputs.isEmpty();}
     JsonArray evidence(){return evidence.deepCopy();}
+    void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();contract=null;}
+    private void archiveEvidence(){
+        if(evidence.isEmpty())return;var s=session;
+        if(s.blueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
+        var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);history.addProperty("projectId",s.projectId.toString());
+        history.addProperty("blueprintId",s.blueprint.id());history.addProperty("blueprintRevision",s.revision());history.addProperty("verificationAtArchive",s.verified);
+        history.addProperty("archivedAtTick",s.level().getGameTime());history.add("cases",evidence.deepCopy());
+        history.add("blueprint",s.blueprint.source().deepCopy());
+        LocalFiles.write(s.file.resolveSibling(s.projectId+".evidence-"+UUID.randomUUID()+".json"),history);
+    }
 
     void start(){
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
@@ -31,7 +41,7 @@ final class FunctionalTrial {
             if(!actual.is(Blocks.LEVER))throw new IllegalStateException("Catalog input is not a lever");
             captured.put(port.name(),new Input(port.name(),port.pos(),actual,actual,actual,false));
         }
-        s.claim(ProjectAccess.Permission.BUILD,true);
+        archiveEvidence();s.claim(ProjectAccess.Permission.BUILD,true);
         contract=candidate;inputs.putAll(captured);evidence=new JsonArray();vector=-1;nextTick=contract.settleTicks();
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+" truth table running";
         s.save();s.checkpoint();

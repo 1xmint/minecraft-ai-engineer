@@ -113,7 +113,9 @@ final class EngineeringSession implements BuildExecutor {
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo the previous assignment before replacing its blueprint");
         JsonObject intended=value.source().deepCopy();
         intended.addProperty("projectId",projectId.toString()); intended.addProperty("revision",Math.addExact(projectRevision,1));
-        blueprint=Blueprint.parse(intended,worldId,dimension); projectRevision=blueprint.revision();
+        Blueprint candidate=Blueprint.parse(intended,worldId,dimension);
+        trial.resetEvidence();
+        blueprint=candidate; projectRevision=blueprint.revision();
         baseline.clear(); dependencies.clear(); cursors.clear(); stage = 0; teaching = true; verified = "untested"; state = "READY";
         manager.changed(this);
         save(); explain();

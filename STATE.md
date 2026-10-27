@@ -11,7 +11,7 @@ adoption, restart recovery, two actual functional runs and durable HTTP/SQLite
 checkpoints plus before-build/after-restart inspections. The released
 v0.1.0-alpha.1 remains the older solo reference. Neither milestone is complete.
 
-Building #1 on phase/3-mechanism-library, draft PR #11. Step: runtime acceptance. Add inverter,
+Building #1 on phase/3-mechanism-library, draft PR #11. Step: N1 proven, N2 next. Add inverter,
 two-input OR and configurable repeater delay to one catalog consumed by both
 Java resources and TypeScript. Root owns the proofs and implementation. No
 unmerged helper changes. The GPT-6-Luna challenge recovered after the verified
@@ -38,8 +38,34 @@ ambiguous crash windows and reads old scalar recovery safely. Test-start and
 functional evidence/input snapshots reach the companion. A fresh GPT-6-Luna
 read-only review found no blocking defect; runtime proof is still required.
 Scoped Java main/client compilation passes. Pending: native acceptance of the
-new trial, diagnosis/targeted correction preserving players (N2), and final green
-CI/review before merging #11. No new mechanism release; do not close #1 yet.
+latest evidence-history fix, diagnosis/targeted correction preserving players
+(N2), and final green CI/review before merging #11. No new mechanism release;
+do not close #1 yet.
+
+N1 proof: CI 40449837064 passed all five checks on 38b3a7e. Actual native players
+proved OR delay4, role revocation retaining both inputs, explicit fresh-authority
+restoration, safe deserialization without imported authority, and rotated NOT
+testing that restores a player's originally ON lever/support. All four client
+roles finished. SQLite contains actual OR/NOT truth vectors and both original
+world inspections. Headless tests cover every orientation, maximum repeater
+delay and forged geometry/ports/parameters. Independent GPT-6-Luna review found
+no blocking safety defect; compilation and formatting pass locally.
+
+Latest small fix under new CI: archive prior vectors with their exact intended
+blueprint/revision before another test or design replaces them, clear current
+evidence on a new intended identity, and clear inherited evidence in newly
+adopted projects. Keep private offline history if the companion is unavailable;
+never relabel old vectors as observations of a different design. Native proof
+now checks undo retains player inputs and replacement creates that scoped archive;
+SQLite verification binds each functional pass to its immutable blueprint revision.
+
+Next N2 work: a read-only diagnosis should capture exact proposed correction
+targets, then explicit repair must reject any intervening player edit. Delay
+revisions should preserve unchanged player-built structure. Investigate grouped
+operation journals so undo affects only the last delegated section, including a
+persisted undo target that cannot spill into an older operation after a crash.
+Challenge this design before adding its new mutation paths; do not use blanket
+undo/rebuild to satisfy the preservation requirement.
 
 CI 40447399224: catalog/planner/packaged-companion tests pass. Inverter startup
 now lights correctly, but raw lever block-state replacement omitted vanilla's

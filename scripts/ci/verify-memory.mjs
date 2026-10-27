@@ -66,7 +66,22 @@ try {
       )
       .get(server.serverId, `passed:${template}:%`);
     assert.ok(row, `Actual ${template} functional evidence must reach SQLite`);
-    const vectors = JSON.parse(row.document).checkpoint.observed.testEvidence;
+    const report = JSON.parse(row.document);
+    const intended = db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(
+        server.serverId,
+        report.context.projectId,
+        report.context.projectRevision,
+      );
+    assert.equal(
+      JSON.parse(intended.document).provenance.template,
+      template,
+      "Evidence belongs to the exact immutable mechanism revision that was tested",
+    );
+    const vectors = report.checkpoint.observed.testEvidence;
     assert.ok(vectors.length >= 3);
     for (const [index, vector] of vectors.entries()) {
       assert.equal(

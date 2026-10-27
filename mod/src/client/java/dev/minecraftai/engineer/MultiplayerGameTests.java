@@ -222,6 +222,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         var adopted=session(s,"Alice");
                         check(!adopted.projectId.equals(original.projectId) && adopted.state.equals("PAUSED") && adopted.delegation==null,"Explicit legacy adoption never imports execution authority");
                         check(adopted.journal.size()==original.journal.size() && adopted.access.members().size()==1,"Adoption preserves the recovery journal with private ownership");
+                        check(adopted.trial.evidence().isEmpty(),"An adopted project's new identity cannot inherit unscoped functional evidence");
                         try(var backups=Files.walk(LocalFiles.configDir().resolve("legacy-backups").resolve(adopted.projectId.toString()))) {
                             Path preserved=backups.filter(path->path.getFileName().toString().equals(name)).findFirst().orElseThrow();
                             check(Files.readString(source).equals(before) && Files.readString(preserved).equals(before),"The exact legacy source is preserved and backed up before adoption");
@@ -431,6 +432,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(session(s,"Alice").journal.size()==2,"Inverter handoff preserves the player's support and initially powered lever"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->check(session(s,"Alice").level().getBlockState(new BlockPos(20,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Functional testing restores the player's original ON input"));
+        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        send(context,"engineer reference signal-lamp");server.waitFor(s->session(s,"Alice").blueprint.blocks().size()==6);
+        server.runOnServer(s->check(session(s,"Alice").trial.evidence().isEmpty() && session(s,"Alice").verified.equals("untested"),"A new intended revision cannot relabel the preceding mechanism's functional evidence"));
+        server.runOnServer(s->{var project=session(s,"Alice");try(var files=Files.list(project.file.getParent())){
+            var archived=files.filter(path->path.getFileName().toString().startsWith(project.projectId+".evidence-")).findFirst().orElseThrow();
+            var data=JsonParser.parseString(Files.readString(archived)).getAsJsonObject();
+            check(data.get("blueprintRevision").getAsInt()<project.revision() && data.getAsJsonArray("cases").size()==3,"Previous test vectors remain privately archived under their original intended revision");
+            check(data.getAsJsonObject("blueprint").getAsJsonObject("provenance").get("template").getAsString().equals("not-gate"),"Offline history retains the actual tested blueprint, not only an unresolvable revision number");
+        }catch(java.io.IOException error){throw new AssertionError(error);}});
     }
     private static void inspectPersisted(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         var previous=server.computeOnServer(s->session(s,"Alice").lastObservation);
