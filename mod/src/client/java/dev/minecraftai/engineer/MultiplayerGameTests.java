@@ -226,6 +226,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         String name=oldWorld+"-"+original.owner+"-"+original.dimension.replace(':','_')+".json";
                         Path source=LocalFiles.configDir().resolve("sessions").resolve(name);
                         var legacy=com.google.gson.JsonParser.parseString(Files.readString(original.file)).getAsJsonObject();
+                        // A pre-v4 save has no immutable scope metadata to rewrite across identities.
+                        legacy.addProperty("journalVersion",3);legacy.remove("operationScopes");
                         legacy.addProperty("schemaVersion",1);legacy.addProperty("worldId",oldWorld);legacy.getAsJsonObject("blueprint").addProperty("worldId",oldWorld);
                         LocalFiles.write(source,legacy);String before=Files.readString(source);
                         commandAs(s,"Alice","engineer project adopt-legacy");

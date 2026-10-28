@@ -353,3 +353,12 @@ operation without journal entries; native corrupt-document proof added. Reviewer
 accepted remaining auth/recovery lifecycle and old position-only migration;
 focused verification of the cache fix follows. No changed-state hardening was
 added to legacy journals because that would invent original intended semantics.
+
+Reviewer verified the cache fix closes P2 and preserves private immutable sources.
+CI40712303720 onaf5219f passed Fabric/client/data gates, then old adoption fixture
+failed because it synthesized schema1 by copying newv4 scopes and rewriting only
+top-level world identity. Root corrected this pre-v4 fixture to journalv3 without
+operationScopes. LegacyAdoption now explicitly refuses mixed schema1/v4 immutable
+history rather than silently relabelling it; native unit rejection added. Genuine
+old save adoption and exact source backup still require combined CI proof.
+Source5551b62 CI40712975481 superseded by this necessary fixture/version fix.

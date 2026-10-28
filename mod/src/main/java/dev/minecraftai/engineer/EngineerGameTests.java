@@ -28,6 +28,8 @@ public final class EngineerGameTests {
         helper.assertTrue(source.get("worldId").getAsString().equals("old") && source.get("status").getAsString().equals("EXECUTING"),"Conversion leaves the recovery source unchanged");
         reject(helper,()->LegacyAdoption.convert(source,"old","new","minecraft:overworld",java.util.UUID.randomUUID(),id),"Another player's checkpoint cannot be claimed");
         reject(helper,()->LegacyAdoption.convert(source,"different","new","minecraft:overworld",owner,id),"Another world path cannot be silently adopted");
+        var mixed=source.deepCopy();mixed.addProperty("journalVersion",4);mixed.add("operationScopes",new com.google.gson.JsonObject());
+        reject(helper,()->LegacyAdoption.convert(mixed,"old","new","minecraft:overworld",owner,id),"Immutable v4 history cannot be silently relabelled by legacy identity adoption");
         helper.succeed();
     }
     @GameTest
