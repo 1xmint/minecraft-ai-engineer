@@ -339,7 +339,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         send(context,"engineer project new");
         send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
-        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
+        server.waitFor(s->session(s,"Alice").blueprint==null && session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
         String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("generated-project",id);
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
         String request="engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
@@ -363,7 +363,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
         var correct=server.computeOnServer(s->session(s,"Alice").blueprint.source().deepCopy());
         send(context,"engineer project new");send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
-        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
+        server.waitFor(s->session(s,"Alice").blueprint==null && session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
         server.runOnServer(s->{var project=session(s,"Alice");var intent=new BehaviorSpec(10,16);correct.add("behavior",intent.json());correct.getAsJsonObject("provenance").addProperty("behaviorDigest",intent.digest());var test=correct.getAsJsonArray("tests").get(0).getAsJsonObject();test.addProperty("description",test.get("description").getAsString().replace("rising 12","rising 10"));project.commandActor=player(s,"Alice").getUUID();try{project.accept(Blueprint.parse(correct,project.worldId,project.dimension));}finally{project.commandActor=null;}});
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("failed:"));
         server.runOnServer(s->{var project=session(s,"Alice");var cases=saved(project).getAsJsonArray("functionalEvidence");var trace=cases.get(1).getAsJsonObject().getAsJsonObject("trace");check(trace.get("expectedGameTicks").getAsInt()==10 && trace.get("transitionTick").getAsInt()==12 && trace.get("verdict").getAsString().equals("failed"),"Matching physical geometry fails when actual timing differs from independently accepted intent");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Failure is behavioral even though all declared blocks match");check(!project.hasPendingTest() && project.delegation==null,"Failed generated test restores its input before releasing authority");});
