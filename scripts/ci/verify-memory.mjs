@@ -404,6 +404,9 @@ try {
     for (const name of [
       "generated-confirmation.done",
       "player-generated-section.done",
+      "workspace-expanded.done",
+      "workspace-bob-denied.done",
+      "workspace-busy-expansion.done",
       "generated-confirmation-recovery.done",
       "generated-wrong-timing.done",
       "generated-confirmation-save-failure.done",

@@ -365,9 +365,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
         var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Generated memory is read after an actual companion process restart");
         server.runOnServer(s->session(s,"Alice").checkpoint());assertPersisted(server);
+        workspaceExpansionFlow(context,server);
         send(context,"engineer project share Bob viewer");
         server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
         write("generated-shared","ready");awaitFile(context,"generated-bob.done");
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.EDIT));write("workspace-bob-editable","ready");awaitFile(context,"workspace-bob-denied.done");
+        server.runOnServer(s->check(session(s,"Alice").corner2.equals(new BlockPos(204,101,0)),"A non-owner with edit permission cannot expand the delegated region"));
         send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
         if(LIVE_GENERATED){write("live-generated-model.done","passed");write("generated-confirmation.done","passed");return;}
         var correct=server.computeOnServer(s->session(s,"Alice").blueprint.source().deepCopy());
@@ -378,7 +381,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");var cases=saved(project).getAsJsonArray("functionalEvidence");var trace=cases.get(1).getAsJsonObject().getAsJsonObject("trace");check(trace.get("expectedGameTicks").getAsInt()==10 && trace.get("transitionTick").getAsInt()==12 && trace.get("verdict").getAsString().equals("failed"),"Matching physical geometry fails when actual timing differs from independently accepted intent");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Failure is behavioral even though all declared blocks match");check(!project.hasPendingTest() && project.delegation==null,"Failed generated test restores its input before releasing authority");});
         write("generated-wrong-timing.done","passed");
         generatedConfirmationSaveFailure(context,server,request);
+        workspaceBusyExpansionFlow(context,server);
         write("generated-confirmation.done","passed");
+    }
+    private static void workspaceExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String originalId=server.computeOnServer(s->session(s,"Alice").blueprint.id());int revision=server.computeOnServer(s->session(s,"Alice").revision());int journal=server.computeOnServer(s->session(s,"Alice").journal.size());
+        MESSAGES.clear();send(context,"engineer expand 200 100 0 204 101 0");expectChat(context,"Workspace expanded");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.corner1.equals(new BlockPos(200,100,0)) && project.corner2.equals(new BlockPos(204,101,0)),"Owner explicitly expands the existing workspace without clearing its first corner");check(project.blueprint.id().equals(originalId) && project.revision()==revision && project.journal.size()==journal && project.delegation==null,"Workspace expansion retains original intent/history and grants no execution");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Expansion alone changes no circuit blocks");});
+        MESSAGES.clear();send(context,"engineer expand 201 100 0 204 101 0");expectChat(context,"retain the entire previous workspace");
+        server.runOnServer(s->check(session(s,"Alice").corner1.equals(new BlockPos(200,100,0)) && session(s,"Alice").corner2.equals(new BlockPos(204,101,0)) && session(s,"Alice").journal.size()==journal,"Rejected shrinking preserves delegated history and corners"));
+        write("workspace-expanded.done","passed");
+    }
+    private static void workspaceBusyExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project new");send(context,"engineer select1 240 100 0");send(context,"engineer select2 242 101 0");send(context,"engineer reference");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").corner2.equals(new BlockPos(242,101,0)));
+        server.runOnServer(s->{var project=session(s,"Alice");project.commandActor=player(s,"Alice").getUUID();try {
+            project.build();check(project.state.equals("EXECUTING"),"The rejection proof starts a genuine delegated build, not a fabricated status");
+            boolean rejected=false;try{project.expandWorkspace(new BlockPos(240,100,0),new BlockPos(243,101,0));}catch(IllegalStateException expected){rejected=true;}
+            check(rejected && project.corner2.equals(new BlockPos(242,101,0)) && project.state.equals("EXECUTING") && project.journal.isEmpty(),"Expansion cannot alter an active assignment or write its first block");project.pause("Workspace rejection proof stopped its genuine build");
+        } finally {project.commandActor=null;}});
+        write("workspace-busy-expansion.done","passed");
     }
     private static void generatedPlayerSection(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
         BlockPos target=server.computeOnServer(s->session(s,"Alice").blueprint.blocks().stream().filter(b->b.state().is(Blocks.STONE)).min(java.util.Comparator.comparingInt(b->b.pos().getY())).orElseThrow().pos());
@@ -419,7 +441,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         throw new AssertionError("Owner did not receive its private confirmation nonce");
     }
     private static void generatedConfirmationRecovery(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
-        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale"),"Restart retains accepted behavior and invalidates earlier functional authority");});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale") && project.corner2.equals(new BlockPos(204,101,0)),"Restart retains the expanded workspace and accepted behavior and invalidates earlier functional authority");});
         var checkpoint=server.computeOnServer(s->{var project=EngineerMod.managerFor(s).projects.get(UUID.fromString(read("generated-project")));project.checkpoint();return project.lastCheckpoint;});
         check(checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Restart reports generated intent against the new service/server epoch");
         if(LIVE_GENERATED) {
@@ -507,7 +529,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             await(context,()->view(context)!=null && view(context).projectId().equals(read("generated-project")),"Bob receives the generated preview only after a server grant");
             send(context,"engineer ask explain the timing");expectChat(context,"turning on after 12 game ticks and off after 16 game ticks");
             send(context,"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"permission");
-            write("generated-bob.done","passed");awaitFile(context,"generated-revoked");
+            write("generated-bob.done","passed");awaitFile(context,"workspace-bob-editable");MESSAGES.clear();send(context,"engineer expand 200 100 0 205 101 0");expectChat(context,"Only the project owner");write("workspace-bob-denied.done","passed");awaitFile(context,"generated-revoked");
             await(context,()->view(context)==null,"Generated preview is cleared when view access is revoked");write("generated-bob-revoked.done","passed");
         }
         awaitFile(context, "finish");
