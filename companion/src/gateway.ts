@@ -223,6 +223,11 @@ export class ServerGateway {
           "A mechanism revision requires the current canonical blueprint.",
           409,
         );
+      if (current.provenance.kind !== "curated")
+        throw new RequestError(
+          "Generated layouts require their separate confirmed design flow.",
+          422,
+        );
       input.revision = {
         template: current.provenance.template,
         rotation: current.rotation,
