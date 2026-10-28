@@ -2,6 +2,10 @@ name: Publish validated acceptance response
 on:
   workflow_dispatch:
     inputs:
+      stage:
+        type: choice
+        options: [catalog, behavior, geometry]
+        default: catalog
       request_run:
         required: true
         type: string
@@ -35,10 +39,11 @@ jobs:
       - name: Validate against the actual still-live request
         env:
           GH_TOKEN: ${{ github.token }}
+          MCE_ACCEPTANCE_STAGE: ${{ inputs.stage }}
         run: node scripts/ci/live-transport.mjs publish-response
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: mce-live-response-${{ inputs.request_run }}-${{ inputs.request_attempt }}
-          path: mod/build/live-exchange/response.json
+          name: mce-live-response-${{ inputs.request_run }}-${{ inputs.request_attempt }}${{ inputs.stage != 'catalog' && format('-{0}', inputs.stage) || '' }}
+          path: ${{ inputs.stage == 'catalog' && 'mod/build/live-exchange/response.json' || format('mod/build/live-exchange/{0}/response.json', inputs.stage) }}
           if-no-files-found: error
           retention-days: 1

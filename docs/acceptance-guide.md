@@ -39,6 +39,34 @@ server permissions, immutable context checks and proposal validation still apply
 A successful lamp flow does not establish general design generation or complete
 phase 1.
 
+## Generated buffer flow (development)
+
+Run `gh workflow run live-acceptance.yml --ref REVIEWED_BRANCH -f scenario=generated`
+from a clean checkout at that exact source SHA. This chooses two separate model
+calls through the normal native design/confirm commands, rather than catalog
+selection. Once each corresponding request artifact appears, run:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry
+```
+
+Wait for the geometry artifact before the second command. Each stage has its own
+exclusive private started/response receipt and request/result digest. The native
+owner confirms only the originally requested twelve-game-tick on and sixteen-
+game-tick off behavior; the geometry call retains that accepted intent. The
+pending native confirmation expires after five minutes, so respond promptly.
+No credentials are uploaded and ordinary CI continues to use deterministic data.
+
+The native flow previews the actual raw model response, places one support with
+a real client action, delegates the remaining blocks, measures both transitions,
+restarts the companion, shares and revokes Bob's preview/lesson, and reloads the
+world with passing evidence marked stale. Inspect `live-generated-model.done`,
+`player-generated-section.done`, both generated confirmation/recovery markers,
+separate accepted receipts, and the actual generated restart screenshot. A live
+model result or published artifact alone proves none of these game behaviors.
+This fixed synthetic buffer flow does not establish broader engineering or phase2.
+
 ## Recorded proof
 
 The fixed lamp path passed on reviewed source `a64f352` in

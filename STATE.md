@@ -391,3 +391,23 @@ wrong10-vs-actual12 timing failure despite matching geometry, shared Bob preview
 timing lesson with denied inference/revoked clearing, and durable generated
 source/baseline/edge linkage after restart. Scoped Java main/client compile passed.
 No further heavy review is scheduled; continue implementation and required CI.
+
+Source66edb97 CI40757994709 passed four gates; dedicated failed in the new
+wrong-timing fixture because a wait matched the previous project's identical
+corners before the project-new packet arrived. Require a blank fresh project.
+Proof92a99b6 / CI40759059224 failed at missing generated-acceptance.ts before
+implementation. GPT-6-Luna supplied only that data module3decaef2, integrated
+3bd8550; clean worktree and git cherry verified before removal. Root wired the
+manual behavior/geometry artifact stages into existing owner/run/SHA/receipt
+transport, typed CI-only broker, local responder purposes and optional generated
+workflow. Old catalog flow remains default. No credentials or ordinary CI model
+inference. Native generated live branch makes exactly two calls, confirms the
+requested12/16 contract, places one support through real client packets, delegates
+the rest, tests, shares/revokes and preserves generated intent through third boot.
+Added actual second companion restart after generated pass; each restart keeps
+its distinct receipt. Pure TypeScript and Java compile passed before final small
+restart-hook edit; tests remain GitHub-only. Whole live generated acceptance is
+not yet run, and D1-D3/PR18 remain open. Next: combined CI, fix actual failures,
+then freeze clean source and dispatch scenario=generated, respond once per stage
+using scripts/acceptance/respond.mjs --stage behavior / --stage geometry. Josh's
+latest direction: build and ship without additional heavy reviews.

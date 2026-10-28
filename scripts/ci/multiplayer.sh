@@ -74,7 +74,7 @@ start_companion() {
   return 1
 }
 restart_companion() {
-  local old_pid="$companion_pid" stop_status
+  local old_pid="$companion_pid" stop_status receipt_prefix="${1:-companion}"
   kill -0 "$old_pid" 2>/dev/null || { echo "Original companion was not live at restart request" >&2; return 1; }
   kill -TERM "$old_pid" || return 1
   for attempt in {1..50}; do
@@ -86,8 +86,8 @@ restart_companion() {
   if [[ "$stop_status" != 0 && "$stop_status" != 143 ]]; then echo "Companion exited unexpectedly: $stop_status" >&2; return 1; fi
   start_companion || return 1
   [[ "$companion_pid" != "$old_pid" ]] || { echo "Restart did not create a distinct companion process" >&2; return 1; }
-  printf '{"oldPid":%s,"newPid":%s}\n' "$old_pid" "$companion_pid" >"$coord/companion-restart.done.tmp"
-  mv "$coord/companion-restart.done.tmp" "$coord/companion-restart.done"
+  printf '{"oldPid":%s,"newPid":%s}\n' "$old_pid" "$companion_pid" >"$coord/$receipt_prefix-restart.done.tmp"
+  mv "$coord/$receipt_prefix-restart.done.tmp" "$coord/$receipt_prefix-restart.done"
   echo "Actual companion restarted: $old_pid -> $companion_pid, same private SQLite/config directory"
 }
 start_companion
@@ -110,6 +110,7 @@ launch bob Bob "$temporary/bob" false
 launch eve Eve "$temporary/eve" false
 text_started=false
 companion_restarted=false
+generated_companion_restarted=false
 deadline=$((SECONDS + harness_seconds))
 while true; do
   if compgen -G "$coord/*.failed" >/dev/null; then
@@ -119,6 +120,10 @@ while true; do
   if [[ "$companion_restarted" == false && -f "$coord/companion-restart.request" ]]; then
     restart_companion
     companion_restarted=true
+  fi
+  if [[ "$generated_companion_restarted" == false && -f "$coord/generated-companion-restart.request" ]]; then
+    restart_companion generated-companion
+    generated_companion_restarted=true
   fi
   if [[ "$text_started" == false && -f "$coord/eve.done" ]]; then
     # Eve must fully exit before her second native process reuses the profile.
@@ -146,7 +151,11 @@ done
 for pid in "${pids[@]}"; do wait "$pid"; done
 [[ ! -f "$temporary/config-alice/inference-attempted" ]] || { echo "An unauthorized CI request reached inference" >&2; exit 1; }
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
-  [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Live exchange was not accepted exactly once" >&2; exit 1; }
+  if [[ "${MCE_GENERATED_ACCEPTANCE:-}" == true ]]; then
+    [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/behavior/accepted.json" && -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/geometry/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Generated stages were not accepted exactly once" >&2; exit 1; }
+  else
+    [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Live exchange was not accepted exactly once" >&2; exit 1; }
+  fi
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
 fi
 node "$repo/scripts/ci/verify-memory.mjs" "$temporary/config-alice/projects.sqlite" "$coord" >"$evidence/memory-proof.json"

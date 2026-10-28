@@ -21,19 +21,22 @@ import {
   text,
   type DesignRequest,
 } from "./types.js";
-import type { AcceptanceProvenance, AcceptanceRun } from "./acceptance-exchange.js";
+import type {
+  AcceptanceProvenance,
+  AcceptanceRun,
+} from "./acceptance-exchange.js";
 
 const TTL = 15 * 60_000;
 export const GENERATED_ACCEPTANCE_REQUEST =
   "Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.";
 export const GENERATED_ACCEPTANCE_SCENARIO =
   "generated-buffer-owner-confirmation-v1";
-export const GENERATED_ACCEPTANCE_BEHAVIOR: Behavior = {
+export const GENERATED_ACCEPTANCE_BEHAVIOR: Behavior = Object.freeze({
   schemaVersion: 1,
   function: "buffer",
   risingGameTicks: 12,
   fallingGameTicks: 16,
-};
+});
 
 export type GeneratedAcceptanceStage = "behavior" | "geometry";
 export interface GeneratedAcceptanceRequest {
@@ -135,12 +138,16 @@ function requestBehavior(
 ): Behavior | null {
   if (requestStage === "behavior") {
     if (value !== null)
-      throw new RequestError("Behavior-stage requests must have null behavior.");
+      throw new RequestError(
+        "Behavior-stage requests must have null behavior.",
+      );
     return null;
   }
   const result = validateBehavior(value);
   if (JSON.stringify(result) !== JSON.stringify(GENERATED_ACCEPTANCE_BEHAVIOR))
-    throw new RequestError("Geometry stage requires the fixed accepted behavior.");
+    throw new RequestError(
+      "Geometry stage requires the fixed accepted behavior.",
+    );
   return result;
 }
 function payload(value: unknown): Omit<GeneratedAcceptanceRequest, "digest"> {
@@ -221,7 +228,10 @@ export function readGeneratedAcceptanceRequest(
     JSON.stringify(body.run) !== JSON.stringify(expected) ||
     hex(v.digest, 64) !== digest(body)
   )
-    throw new RequestError("Generated acceptance request identity changed.", 409);
+    throw new RequestError(
+      "Generated acceptance request identity changed.",
+      409,
+    );
   integer(now, "now", 0, Number.MAX_SAFE_INTEGER);
   if (now < body.createdAt || now >= body.expiresAt)
     throw new RequestError(
@@ -354,7 +364,10 @@ export function readGeneratedAcceptanceResponse(
     v.stage !== current.stage ||
     hex(v.requestDigest, 64) !== current.digest
   )
-    throw new RequestError("Generated response belongs to another request or stage.", 409);
+    throw new RequestError(
+      "Generated response belongs to another request or stage.",
+      409,
+    );
   const canonical = {
     schemaVersion: 1 as const,
     requestDigest: current.digest,
@@ -363,6 +376,9 @@ export function readGeneratedAcceptanceResponse(
     provenance: provenance(v.provenance),
   };
   if (hex(v.digest, 64) !== digest(canonical))
-    throw new RequestError("Generated acceptance response changed after receipt.", 409);
+    throw new RequestError(
+      "Generated acceptance response changed after receipt.",
+      409,
+    );
   return { ...canonical, digest: v.digest as string };
 }

@@ -41,6 +41,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
     private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
+    private static final boolean LIVE_GENERATED=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_GENERATED_ACCEPTANCE"));
     private static final long WAIT_MILLIS = LIVE_ACCEPTANCE?1_800_000:240_000;
     private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
 
@@ -90,9 +91,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("project", projectId);
                 send(context, "engineer select1 0 100 0");
                 send(context, "engineer select2 2 101 0");
-                send(context,LIVE_ACCEPTANCE?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
+                send(context,(LIVE_ACCEPTANCE && !LIVE_GENERATED)?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
                 server.waitFor(s -> session(s, "Alice").blueprint != null,LIVE_ACCEPTANCE?900_000:10_000);
-                if(LIVE_ACCEPTANCE){
+                if(LIVE_ACCEPTANCE && !LIVE_GENERATED){
                     server.runOnServer(s->{var accepted=session(s,"Alice").blueprint;
                         check(accepted.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")
                             && accepted.source().getAsJsonObject("parameters").get("delay").getAsInt()==1
@@ -296,7 +297,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
-            if(!LIVE_ACCEPTANCE)generatedConfirmationFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationFlow(context,server,connection);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -323,7 +324,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
-            if(!LIVE_ACCEPTANCE)generatedConfirmationRecovery(server);
+            if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationRecovery(context,server,connection);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
@@ -336,31 +337,39 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
     }
 
-    private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+    private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
         send(context,"engineer project new");
         send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
         server.waitFor(s->session(s,"Alice").blueprint==null && session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
         String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("generated-project",id);
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
-        String request="engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
-        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");
+        String request=LIVE_GENERATED?"engineer design Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.":"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
+        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ",LIVE_GENERATED?900_000:20_000);
         String first=confirmationNonce();
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.revision()==revision && project.delegation==null,"Behavior proposal changes neither canonical intent nor world authority");});
-        send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
-        MESSAGES.clear();send(context,"engineer confirm "+first);expectChat(context,"No current behavior proposal");
-        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");String accepted=confirmationNonce();
-        check(!accepted.equals(first),"A changed workspace requires a fresh owner confirmation");
-        MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"Generated preview accepted");
-        server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.revision()==revision+1 && project.blueprint.blocks().size()==8,"Confirmed raw geometry uses the normal canonical preview");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)),"Generated intent equals independently accepted timing");check(project.delegation==null && project.journal.isEmpty() && project.verified.equals("untested"),"Confirming inference grants no construction or functional pass");check(project.blueprint.blocks().stream().noneMatch(b->project.level().hasChunkAt(b.pos()) && project.level().getBlockState(b.pos()).is(Blocks.REPEATER)),"Preview does not place generated devices");});
+        String accepted=first;
+        if(!LIVE_GENERATED) {
+            send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
+            MESSAGES.clear();send(context,"engineer confirm "+first);expectChat(context,"No current behavior proposal");
+            MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");accepted=confirmationNonce();
+            check(!accepted.equals(first),"A changed workspace requires a fresh owner confirmation");
+        } else check(MESSAGES.stream().anyMatch(message->message.contains("turning on after 12 game ticks and off after 16 game ticks")),"The live owner confirms the originally requested behavior, not a model-selected easier contract");
+        MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"Generated preview accepted",LIVE_GENERATED?900_000:20_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.revision()==revision+1 && (LIVE_GENERATED || project.blueprint.blocks().size()==8),"Confirmed raw geometry uses the normal canonical preview");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)),"Generated intent equals independently accepted timing");check(project.delegation==null && project.journal.isEmpty() && project.verified.equals("untested"),"Confirming inference grants no construction or functional pass");check(project.blueprint.blocks().stream().noneMatch(b->project.level().hasChunkAt(b.pos()) && project.level().getBlockState(b.pos()).is(Blocks.REPEATER)),"Preview does not place generated devices");});
         MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"No current behavior proposal");
         server.runCommand("forceload add 192 0");
+        if(LIVE_GENERATED)generatedPlayerSection(context,server,connection);
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");JsonObject saved;try{saved=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(Exception error){throw new AssertionError(error);}var cases=saved.getAsJsonArray("functionalEvidence");FunctionalTrial.validateGeneratedEvidence(cases,GeneratedBlueprint.behavior(project.blueprint),true);check(cases.get(1).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==12 && cases.get(2).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==16,"Production test measures both accepted edges, not settled endpoint values");check(!project.hasPendingTest() && project.delegation==null,"A passing generated trial restores its input and releases authority");});
+        write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
+        var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Generated memory is read after an actual companion process restart");
+        server.runOnServer(s->session(s,"Alice").checkpoint());assertPersisted(server);
         send(context,"engineer project share Bob viewer");
         server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
         write("generated-shared","ready");awaitFile(context,"generated-bob.done");
         send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
+        if(LIVE_GENERATED){write("live-generated-model.done","passed");write("generated-confirmation.done","passed");return;}
         var correct=server.computeOnServer(s->session(s,"Alice").blueprint.source().deepCopy());
         send(context,"engineer project new");send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
         server.waitFor(s->session(s,"Alice").blueprint==null && session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
@@ -370,6 +379,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("generated-wrong-timing.done","passed");
         generatedConfirmationSaveFailure(context,server,request);
         write("generated-confirmation.done","passed");
+    }
+    private static void generatedPlayerSection(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
+        BlockPos target=server.computeOnServer(s->session(s,"Alice").blueprint.blocks().stream().filter(b->b.state().is(Blocks.STONE)).min(java.util.Comparator.comparingInt(b->b.pos().getY())).orElseThrow().pos());
+        BlockPos scaffold=target.below();
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(scaffold,Blocks.COBBLESTONE.defaultBlockState()));
+        server.runCommand("tp Alice "+(target.getX()+1.5)+" "+(target.getY()+1)+" "+(target.getZ()+2.5)+" -90 45");connection.waitForClientboundPackets();
+        equipConstructionItem(context,server,net.minecraft.world.item.Items.STONE);
+        context.runOnClient(client->client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(scaffold).add(0,0.5,0),net.minecraft.core.Direction.UP,scaffold,false)));
+        server.waitFor(s->session(s,"Alice").level().getBlockState(target).is(Blocks.STONE));
+        context.runOnClient(client->{client.gameMode.startDestroyBlock(scaffold,net.minecraft.core.Direction.SOUTH);client.gameMode.stopDestroyBlock();});
+        server.waitFor(s->session(s,"Alice").level().getBlockState(scaffold).isAir());
+        server.runOnServer(s->check(session(s,"Alice").journal.isEmpty(),"The player's actual generated support is not an assistant edit"));
+        write("player-generated-section.done","passed");
     }
     private static void generatedConfirmationSaveFailure(ClientGameTestContext context,TestDedicatedServerContext server,String request) throws Exception {
         send(context,"engineer project new");send(context,"engineer select1 220 100 0");send(context,"engineer select2 223 101 0");
@@ -390,10 +412,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find())return match.group(1);}
         throw new AssertionError("Owner did not receive its private confirmation nonce");
     }
-    private static void generatedConfirmationRecovery(TestDedicatedServerContext server) throws Exception {
+    private static void generatedConfirmationRecovery(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale"),"Restart retains accepted behavior and invalidates earlier functional authority");});
         var checkpoint=server.computeOnServer(s->{var project=EngineerMod.managerFor(s).projects.get(UUID.fromString(read("generated-project")));project.checkpoint();return project.lastCheckpoint;});
         check(checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Restart reports generated intent against the new service/server epoch");
+        if(LIVE_GENERATED) {
+            send(context,"engineer project use "+read("generated-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("generated-project")));
+            server.runCommand("tp Alice 201 103 6 180 20");connection.waitForClientboundPackets();context.waitTicks(20);
+            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-live-generated-restarted-build");
+        }
         write("generated-confirmation-recovery.done","passed");
     }
 
@@ -469,7 +496,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         write("lesson-denied.done","passed");
-        if(!LIVE_ACCEPTANCE) {
+        if(!LIVE_ACCEPTANCE || LIVE_GENERATED) {
             awaitFile(context,"generated-shared");MESSAGES.clear();send(context,"engineer project use "+read("generated-project"));
             await(context,()->view(context)!=null && view(context).projectId().equals(read("generated-project")),"Bob receives the generated preview only after a server grant");
             send(context,"engineer ask explain the timing");expectChat(context,"turning on after 12 game ticks and off after 16 game ticks");
