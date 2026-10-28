@@ -16,10 +16,14 @@ public final class EngineerGameTests {
         source.addProperty("status","EXECUTING");source.addProperty("verified","passed:old");source.addProperty("stage",0);
         source.add("blueprint",Blueprint.reference("old","minecraft:overworld",BlockPos.ZERO,0).source());
         var journal=new com.google.gson.JsonArray();var change=new com.google.gson.JsonObject();change.add("pos",Blueprint.jsonPos(BlockPos.ZERO));change.addProperty("before","minecraft:air");change.addProperty("after","minecraft:stone");journal.add(change);source.add("journal",journal);
+        source.add("functionalScope",new com.google.gson.JsonObject());
         var adopted=LegacyAdoption.convert(source,"old","new","minecraft:overworld",owner,id);
         helper.assertTrue(adopted.get("status").getAsString().equals("PAUSED") && adopted.get("controller").getAsString().equals(owner.toString()),"Historical execution never becomes an active delegation");
         helper.assertTrue(!adopted.get("verified").getAsString().startsWith("passed:") && adopted.getAsJsonArray("journal").equals(journal),"Preserve undo journal while invalidating old evidence");
         helper.assertTrue(ProjectAccess.read(owner,adopted.getAsJsonObject("access")).members().size()==1,"No legacy file grants friends access");
+        helper.assertTrue(!adopted.has("functionalScope") && adopted.getAsJsonArray("functionalEvidence").isEmpty(),"Adoption never relabels captured results under the new identity");
+        var interrupted=source.deepCopy();var inputs=new com.google.gson.JsonArray();inputs.add(new com.google.gson.JsonObject());interrupted.add("testInputs",inputs);
+        reject(helper,()->LegacyAdoption.convert(interrupted,"old","new","minecraft:overworld",owner,id),"Versioned pending input recovery must remain with its original identity");
         helper.assertTrue(adopted.getAsJsonObject("blueprint").get("projectId").getAsString().equals(id.toString()),"Intended identity moves with its new server project");
         helper.assertTrue(source.get("worldId").getAsString().equals("old") && source.get("status").getAsString().equals("EXECUTING"),"Conversion leaves the recovery source unchanged");
         reject(helper,()->LegacyAdoption.convert(source,"old","new","minecraft:overworld",java.util.UUID.randomUUID(),id),"Another player's checkpoint cannot be claimed");

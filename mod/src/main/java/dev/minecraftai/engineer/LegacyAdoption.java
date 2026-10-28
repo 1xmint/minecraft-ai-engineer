@@ -55,6 +55,18 @@ final class LegacyAdoption {
         if(revision<1)throw new IllegalArgumentException("Invalid legacy revision");
         out.addProperty("projectRevision",revision);out.add("access",new ProjectAccess(owner).json());out.addProperty("controller",owner.toString());
         out.add("tutorials",new JsonArray());out.add("dependencies",new JsonArray());
+        // A changed world/project identity cannot inherit another project's evidence or task bases.
+        // New scoped recovery is not a v1 document: keep its exact source for recovery instead.
+        if(source.has("functionalScope") && (source.has("testOriginal")
+                || (source.has("testInputs") && !source.getAsJsonArray("testInputs").isEmpty())))
+            throw new IllegalArgumentException("Reconcile versioned test inputs in their original project before legacy adoption");
+        out.remove("functionalScope");
+        if(out.has("journalVersion") && out.get("journalVersion").getAsBigDecimal().intValueExact()==3 && out.has("blueprint")) {
+            var assignments=new ComponentAssignments();
+            assignments.reconcile(Blueprint.parse(out.getAsJsonObject("blueprint"),world,dimension));
+            for(var task:assignments.tasks.values()) {task.status="PAUSED";task.verified="untested: adopted identity needs fresh observation and testing";}
+            out.add("componentAssignments",assignments.json());
+        }
         out.add("functionalEvidence",new JsonArray());
         out.addProperty("status","PAUSED");out.addProperty("verified","untested: adopted legacy project requires observation and a fresh test");
         out.addProperty("detail","Adopted with a backup and private ownership. Inspect and explicitly resume or undo; no execution authority was imported.");

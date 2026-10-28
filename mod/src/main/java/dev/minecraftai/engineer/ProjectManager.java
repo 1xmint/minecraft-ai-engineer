@@ -20,6 +20,16 @@ final class ProjectManager {
     final Map<UUID, UUID> selections = new HashMap<>();
     final Set<UUID> creators = new HashSet<>();
     private long sequence;
+    final InventoryPerception inventories=new InventoryPerception(this);
+    private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
+    private final Map<UUID,ConnectionStamp> connectionIds=new HashMap<>();
+    String connectionId(ServerPlayer player) {
+        if(!server.isSameThread() || server.getPlayerList().getPlayer(player.getUUID())!=player || player.hasDisconnected())throw new IllegalStateException("Inventory connection is no longer current");
+        var previous=connectionIds.get(player.getUUID());
+        if(previous==null || previous.connection()!=player.connection){previous=new ConnectionStamp(player.connection,UUID.randomUUID().toString());connectionIds.put(player.getUUID(),previous);}
+        return previous.id();
+    }
+
 
     ProjectManager(MinecraftServer server) {
         this.server = server; serverId = LocalFiles.serverId(); worldId = LocalFiles.worldId(server);
@@ -97,11 +107,9 @@ final class ProjectManager {
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
-        Set<BlockPos> writes = new HashSet<>(), reads = new HashSet<>();
-        for (Blueprint.PlannedBlock b : project.blueprint.blocks()) {
+        Set<BlockPos> writes = new HashSet<>(), reads = project.dependencyPositions(test);
+        for (Blueprint.PlannedBlock b : project.assignmentBlocks()) {
             writes.add(b.pos());
-            int margin = test ? 2 : 1;
-            for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-margin,-margin,-margin), b.pos().offset(margin,margin,margin))) reads.add(p.immutable());
         }
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
@@ -118,20 +126,16 @@ final class ProjectManager {
         if (project.delegation == null || !project.access.allows(project.controller, project.delegation.action())) throw new IllegalStateException("Delegation was revoked");
         ServerPlayer current=server.getPlayerList().getPlayer(project.controller);
         if(current==null || current.connection!=project.delegationConnection)throw new IllegalStateException("The controlling connection changed; explicit resume is required");
+        project.validateAssignmentFence();
         reservations.validate(scope(project), project.delegation, project.controller, project.revision(), project.access.revision(), server.getTickCount());
         // Other owners can revoke a cross-project grant while this task runs.
         // Its own authorization revision alone cannot fence that dependency.
+        Set<BlockPos> permissionFootprint=new HashSet<>();
+        project.assignmentBlocks().forEach(block->permissionFootprint.add(block.pos()));
+        if(project.isolationLease)permissionFootprint.addAll(project.dependencyPositions(true));
         for(var other:projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
-            boolean intersects=false;
-            for(var block:project.blueprint.blocks()) {
-                int margin=project.isolationLease?2:0;
-                BlockPos a=block.pos().offset(-margin,-margin,-margin),b=block.pos().offset(margin,margin,margin);
-                intersects=Math.max(a.getX(),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(b.getX(),Math.max(other.corner1.getX(),other.corner2.getX()))
-                        && Math.max(a.getY(),Math.min(other.corner1.getY(),other.corner2.getY()))<=Math.min(b.getY(),Math.max(other.corner1.getY(),other.corner2.getY()))
-                        && Math.max(a.getZ(),Math.min(other.corner1.getZ(),other.corner2.getZ()))<=Math.min(b.getZ(),Math.max(other.corner1.getZ(),other.corner2.getZ()));
-                if(intersects)break;
-            }
+            boolean intersects=permissionFootprint.stream().anyMatch(other::contains);
             if(intersects && !other.access.allows(project.controller,project.delegation.action()))throw new IllegalStateException("A required cross-project workspace grant was revoked; execution paused");
         }
     }
@@ -156,6 +160,8 @@ final class ProjectManager {
         }
     }
     void tick() {
+        inventories.tick();
+        connectionIds.entrySet().removeIf(entry->{var current=server.getPlayerList().getPlayer(entry.getKey());return current==null || current.connection!=entry.getValue().connection();});
         for (EngineeringSession project : projects.values()) project.tick();
         if (server.getTickCount() % 5 != 0) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -180,9 +186,11 @@ final class ProjectManager {
         return new ProjectView(player.getUUID(), worldId, project.dimension, project.projectId.toString(), epoch.toString(), ++sequence,
                 project.revision(), project.access.revision(), cursor.stage,
                 project.blueprint.name()+" | "+project.blueprint.stages().get(cursor.stage).title()+" | "+project.state
+                    +(ComponentTree.composite(project.blueprint)?" | active component "+project.activeComponent:"")
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
+        inventories.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

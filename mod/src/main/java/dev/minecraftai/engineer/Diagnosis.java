@@ -26,7 +26,8 @@ final class Diagnosis {
     }
 
     record Proposal(UUID snapshotId, UUID actor, net.minecraft.server.network.ServerGamePacketListenerImpl connection,
-                    UUID epoch, UUID projectId, int revision, long authorization, long expiresAtTick,
+                    UUID epoch, UUID projectId, int revision, long authorization, String component,
+                    long assignmentGeneration, String componentBasis, int componentBasisVersion, long expiresAtTick,
                     Map<BlockPos, BlockState> observed, List<Target> targets, List<String> messages,
                     boolean repairable) {
         Proposal {
@@ -56,6 +57,10 @@ final class Diagnosis {
             if (now >= expiresAtTick || expiresAtTick > now + MAX_TTL_TICKS || !EngineerMod.current(s.manager))
                 throw new IllegalStateException("Diagnosis expired; diagnose again");
             s.access.require(actor, ProjectAccess.Permission.BUILD);
+            var assignment=s.assignments.task(s.blueprint,component);
+            if(assignment.generation!=assignmentGeneration || !assignment.basis.equals(componentBasis)
+                    || componentBasisVersion!=ComponentAssignments.BASIS_VERSION)
+                throw new IllegalStateException("Component assignment changed; diagnose again");
             if (!s.dimension.equals(player.level().dimension().identifier().toString()))
                 throw new IllegalStateException("Return to the project dimension and diagnose again");
 
@@ -76,28 +81,45 @@ final class Diagnosis {
     private Diagnosis() { }
 
     static Proposal inspect(EngineeringSession s) {
+        return inspect(s,s.activeComponent);
+    }
+
+    static Proposal inspect(EngineeringSession s,String componentId) {
         Objects.requireNonNull(s);
+        Objects.requireNonNull(componentId);
         if (!s.server.isSameThread()) throw new IllegalStateException("World diagnosis belongs to the server thread");
         UUID actor = s.actor();
         s.access.require(actor, ProjectAccess.Permission.VIEW);
         if (s.blueprint == null) throw new IllegalStateException("Choose a canonical mechanism before diagnosis");
-        MechanismCatalog.contract(s.blueprint);
+        ComponentTree.validate(s.blueprint);
+        Blueprint selected=ComponentTree.component(s.blueprint,componentId);
+        MechanismCatalog.contract(selected);
         ServerPlayer player = s.server.getPlayerList().getPlayer(actor);
         if (player == null || !s.dimension.equals(player.level().dimension().identifier().toString()))
             throw new IllegalStateException("Diagnosis requires the connected player in the project dimension");
 
         var level = s.level();
-        var planned = new LinkedHashMap<BlockPos, Blueprint.PlannedBlock>();
         var footprint = new LinkedHashSet<BlockPos>();
-        for (Blueprint.PlannedBlock block : s.blueprint.blocks()) {
+        Set<String> closure=new LinkedHashSet<>();
+        collectClosure(s.blueprint,componentId,closure);
+        var planned = new LinkedHashMap<BlockPos, Blueprint.PlannedBlock>();
+        for(String id:closure)for(Blueprint.PlannedBlock block:ComponentTree.component(s.blueprint,id).blocks()) {
             BlockPos pos = block.pos().immutable();
             if (!s.contains(pos)) throw new IllegalStateException("Planned component is outside the delegated workspace at " + pos.toShortString());
             planned.put(pos, block);
-            for (BlockPos neighbor : BlockPos.betweenClosed(pos.offset(-2, -2, -2), pos.offset(2, 2, 2)))
-                footprint.add(neighbor.immutable());
-            if (footprint.size() > MAX_FOOTPRINT_STATES)
-                throw new IllegalStateException("Diagnosis footprint exceeds the 65536-state limit");
         }
+        Set<BlockPos> targetPositions=new LinkedHashSet<>();
+        Set<BlockPos> targetMargin=new LinkedHashSet<>();
+        for(Blueprint.PlannedBlock block:selected.blocks()) {
+            targetPositions.add(block.pos());
+            for(BlockPos neighbor:BlockPos.betweenClosed(block.pos().offset(-2,-2,-2),block.pos().offset(2,2,2))) {
+                BlockPos immutable=neighbor.immutable();footprint.add(immutable);targetMargin.add(immutable);
+            }
+        }
+        // Prerequisites contribute their complete read closure, including their own margins.
+        for(String id:closure)if(!id.equals(componentId))for(Blueprint.PlannedBlock block:ComponentTree.component(s.blueprint,id).blocks())
+            for(BlockPos neighbor:BlockPos.betweenClosed(block.pos().offset(-2,-2,-2),block.pos().offset(2,2,2)))footprint.add(neighbor.immutable());
+        if(footprint.size()>MAX_FOOTPRINT_STATES)throw new IllegalStateException("Diagnosis footprint exceeds the 65536-state limit");
 
         var observed = new LinkedHashMap<BlockPos, BlockState>();
         var blockEntities = new HashSet<BlockPos>();
@@ -112,7 +134,7 @@ final class Diagnosis {
         var targets = new ArrayList<Target>();
         var messages = new ArrayList<String>();
         boolean repairable = true;
-        for (Blueprint.PlannedBlock block : s.blueprint.blocks()) {
+        for (Blueprint.PlannedBlock block : selected.blocks()) {
             BlockState actual = observed.get(block.pos());
             BlockState intended = block.state();
             if (blockEntities.contains(block.pos())) {
@@ -145,9 +167,28 @@ final class Diagnosis {
             }
         }
 
-        Set<BlockPos> plannedPositions = planned.keySet();
+        Set<BlockPos> plannedPositions = new LinkedHashSet<>(targetPositions);
         for (var entry : observed.entrySet()) {
-            if (plannedPositions.contains(entry.getKey()) || entry.getValue().isAir()) continue;
+            if (plannedPositions.contains(entry.getKey())) continue;
+            if(blockEntities.contains(entry.getKey())) {
+                repairable=false;
+                messages.add("Protected block entity at "+entry.getKey().toShortString()+" entered the component read footprint; contents were not read and automatic repair is blocked.");
+                continue;
+            }
+            Blueprint.PlannedBlock prerequisite=planned.get(entry.getKey());
+            if(targetMargin.contains(entry.getKey()) && !entry.getValue().isAir()) {
+                repairable=false;
+                String description=Blueprint.describe(entry.getValue());
+                messages.add("Occupied isolation margin at "+entry.getKey().toShortString()+" contains "+description+"; move/remove it yourself before automatic repair.");
+                continue;
+            }
+            if(prerequisite!=null) {
+                if(!Blueprint.matches(prerequisite.state(),entry.getValue())) {
+                    repairable=false;messages.add("Required component '"+prerequisite.component()+"' at "+entry.getKey().toShortString()+" is not canonical; complete it before diagnosis repair.");
+                }
+                continue;
+            }
+            if(entry.getValue().isAir())continue;
             repairable = false;
             String description = blockEntities.contains(entry.getKey()) ? "a protected block entity (contents not read)"
                     : Blueprint.describe(entry.getValue());
@@ -164,8 +205,17 @@ final class Diagnosis {
         else if (!targets.isEmpty())
             messages.add("Some differences are supported, but automatic repair is blocked until every unsupported condition is resolved.");
 
+        var assignment=s.assignments.task(s.blueprint,componentId);
         return new Proposal(UUID.randomUUID(), actor, player.connection, s.manager.epoch, s.projectId, s.revision(),
-                s.access.revision(), s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
+                s.access.revision(),componentId,assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,
+                s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
+    }
+
+    private static void collectClosure(Blueprint project,String id,Set<String> result) {
+        if(!result.add(id))return;
+        var node=ComponentTree.nodes(project).stream().filter(candidate->candidate.id().equals(id)).findFirst()
+                .orElseThrow(()->new IllegalArgumentException("Choose a physical component, not a container or unknown name"));
+        for(String prerequisite:node.dependsOn())collectClosure(project,prerequisite,result);
     }
 
     static BlockState corrected(BlockState intended, BlockState observed) {

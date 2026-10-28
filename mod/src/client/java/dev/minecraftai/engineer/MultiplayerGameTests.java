@@ -224,6 +224,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         check(!adopted.projectId.equals(original.projectId) && adopted.state.equals("PAUSED") && adopted.delegation==null,"Explicit legacy adoption never imports execution authority");
                         check(adopted.journal.size()==original.journal.size() && adopted.access.members().size()==1,"Adoption preserves the recovery journal with private ownership");
                         check(adopted.trial.evidence().isEmpty(),"An adopted project's new identity cannot inherit unscoped functional evidence");
+                        check(adopted.trial.scope()==null && adopted.assignments.tasks.values().stream().allMatch(task->task.lastPassedScope==null && task.executor.equals("unassigned")),"Adopted descriptive tasks and test scope carry no old identity or assignment");
                         try(var backups=Files.walk(LocalFiles.configDir().resolve("legacy-backups").resolve(adopted.projectId.toString()))) {
                             Path preserved=backups.filter(path->path.getFileName().toString().equals(name)).findFirst().orElseThrow();
                             check(Files.readString(source).equals(before) && Files.readString(preserved).equals(before),"The exact legacy source is preserved and backed up before adoption");
@@ -277,6 +278,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             catalogFlow(context,server);
             recovery=repairFlow(context,server);
             legacyRevisionFlow(context,server);
+            componentFlow(context,server);
+            componentRevisionFlow(context,server);
+            targetedPerceptionFlow(context,server);
+            inventoryFlow(context,server);
+            undoContextFailureFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -300,8 +306,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==recovery.retained(),"Finishing an already-empty undo operation cannot consume an older operation");check(project.level().getBlockState(new BlockPos(21,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1,"Crash recovery preserves the older operation's repeater");check(project.level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Crash recovery preserves earlier construction");});
             MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
             write("repair-recovery.done","passed");
-            send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));inspectPersisted(context,server);
+            componentRecoveryFlow(context,server);
+            undoContextRecoveryFlow(context,server);
+            send(context,"engineer project use "+read("inventory-project"));
+            server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
+            MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
+            MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
+            write("inventory-recovery.done","passed");
+            send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
+            server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
+            inspectPersisted(context,server);
         }
     }
 
@@ -350,6 +365,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         awaitFile(context,"or-revoked");
         await(context,()->view(context)==null,"Revocation clears OR metadata during a multi-input trial");
         write("bob-or-revoked","ready");
+        awaitFile(context,"inventory-bob-project");
+        MESSAGES.clear();send(context,"engineer project use "+read("inventory-bob-project"));
+        send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"diamond=4");
+        check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private inspection never reads custom item names");
+        write("inventory-bob-private.done","passed");
+        awaitFile(context,"inventory-bob-queue");
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");write("inventory-bob-queued","ready");
+        awaitFile(context,"inventory-bob-revoked");
+        await(context,()->view(context)==null,"Private inventory grant revocation clears Bob's project view");
+        context.runOnClient(client->{client.player.closeContainer();client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(new BlockPos(140,100,0)),net.minecraft.core.Direction.UP,new BlockPos(140,100,0),false));});
+        context.waitTicks(6);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Revoked container request never reveals items even when vanilla permits a normal open");
+        write("inventory-revocation.done","passed");
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -471,8 +500,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(receipt.get("protocol").getAsInt()==2,"Actual dedicated-world observations must reach the private companion");
     }
     private static JsonObject saved(EngineeringSession project){try{return JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(java.io.IOException error){throw new AssertionError(error);}}
-    private static void expectChat(ClientGameTestContext context,String text){
-        long deadline=System.currentTimeMillis()+20_000;
+    private static void expectChat(ClientGameTestContext context,String text){expectChat(context,text,20_000);}
+    private static void expectChat(ClientGameTestContext context,String text,long timeoutMillis){
+        long deadline=System.currentTimeMillis()+timeoutMillis;
         while(System.currentTimeMillis()<deadline){if(MESSAGES.stream().anyMatch(message->message.contains(text)))return;context.waitTicks(1);}
         throw new AssertionError("Expected native command response: "+text+"; received "+MESSAGES);
     }
@@ -548,6 +578,417 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(rejected,"Unloaded player construction cannot be classified as an empty design");
             }finally{project.blueprint=original;project.corner1=first;project.corner2=second;}
         });
+        diagnoseReady(context);
+        MESSAGES.clear();send(context,"engineer component claim root");expectChat(context,"Component root assigned to you");
+        MESSAGES.clear();send(context,"engineer repair");expectChat(context,"No fresh diagnosis");
+        server.runOnServer(s->check(session(s,"Alice").journal.isEmpty() && session(s,"Alice").level().getBlockState(new BlockPos(41,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1,"Handoff invalidates an unchanged-world repair proposal without placing anything"));
+    }
+
+    private static void componentFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 73 108 15 180 25");
+        var previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        send(context,"engineer select1 60 100 0");send(context,"engineer select2 78 101 0");
+        MESSAGES.clear();send(context,"engineer component add a root signal-lamp 60 100 0");expectChat(context,"Added component a");
+        MESSAGES.clear();send(context,"engineer component group wing root");expectChat(context,"Added component wing");
+        MESSAGES.clear();send(context,"engineer component add b wing signal-lamp 68 100 0");expectChat(context,"Added component b");
+        MESSAGES.clear();send(context,"engineer component add c wing signal-lamp 76 100 0");expectChat(context,"Added component c");
+        MESSAGES.clear();send(context,"engineer component depend c b");expectChat(context,"Component c requires b");
+        server.runOnServer(s->check(session(s,"Alice").blueprint.blocks().size()==18,"A nested project contains all three actual mechanism geometries"));
+        String composedId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        await(context,()->view(context)!=null && view(context).projectId().equals(composedId) && view(context).blocks().size()==18,"The actual composed-project preview contains every leaf");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-components-shared-preview");
+        MESSAGES.clear();send(context,"engineer component build c");expectChat(context,"Required component b is incomplete");
+        server.runOnServer(s->check(session(s,"Alice").journal.isEmpty(),"Missing prerequisite blocks delegation before any write"));
+        MESSAGES.clear();send(context,"engineer component claim b");expectChat(context,"Component b assigned to you");
+        send(context,"engineer component build a");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.journal.isEmpty())return false;
+            project.level().setBlockAndUpdate(new BlockPos(68,100,0),Blocks.STONE.defaultBlockState());return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==6,"Assistant builds only component a while the player works in b");
+            check(project.level().getBlockState(new BlockPos(68,100,0)).is(Blocks.STONE)
+                && project.level().getBlockState(new BlockPos(69,100,0)).isAir(),"Independent player work is preserved without extending assistant delegation");
+            check(project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Actual component a finishes despite the independent player edit");
+        });
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        MESSAGES.clear();send(context,"engineer component list");expectChat(context,"Component a");expectChat(context,"Component b");expectChat(context,"Component wing | group");
+        MESSAGES.clear();send(context,"engineer component build b");
+        server.waitFor(s->{if(session(s,"Alice").journal.size()<=6)return false;
+            commandAs(s,"Alice","engineer component claim b");return true;});
+        expectChat(context,"Component b assigned to you");
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        int retained=server.computeOnServer(s->session(s,"Alice").journal.size());
+        server.runOnServer(s->{var project=session(s,"Alice");
+            var next=project.blueprint.blocks().stream().filter(block->block.pos().getX()>=68 && project.level().getBlockState(block.pos()).isAir()).findFirst().orElseThrow();
+            check(next.state().canSurvive(project.level(),next.pos()),"Player takeover continues the next buildable component part");
+            project.level().setBlockAndUpdate(next.pos(),next.state());
+            check(project.journal.size()==retained,"Human takeover retains every assistant journal entry");
+        });
+        assertPersisted(server);
+        write("companion-restart.request","ready");awaitFile(context,"companion-restart.done");
+        var restart=JsonParser.parseString(read("companion-restart.done")).getAsJsonObject();
+        check(restart.get("oldPid").getAsInt()>0 && restart.get("newPid").getAsInt()>0 && restart.get("oldPid").getAsInt()!=restart.get("newPid").getAsInt(),"Harness must stop the actual companion and start a distinct process");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==retained && project.delegation==null && project.assignments.task(project.blueprint,"b").executor.equals("player"),"Companion restart preserves paused handoff progress without granting authority");
+            project.checkpoint();
+        });
+        assertPersisted(server);write("companion-recovery.done","passed");
+        send(context,"engineer component build b");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.level().getBlockState(new BlockPos(70,101,0)).is(Blocks.REDSTONE_LAMP)
+                && project.level().getBlockState(new BlockPos(62,101,0)).is(Blocks.REDSTONE_LAMP),"Delegate-back finishes b while retaining a");
+            check(project.journal.size()==10,"Delegate-back retains old work and excludes both player-placed supports");
+        });
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        final var prerequisiteInput=new BlockPos(68,101,0);
+        var originalInput=server.computeOnServer(s->session(s,"Alice").level().getBlockState(prerequisiteInput));
+        send(context,"engineer component build c");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.journal.size()<=10)return false;
+            project.level().setBlockAndUpdate(prerequisiteInput,originalInput.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,net.minecraft.core.Direction.NORTH));return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        server.waitFor(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"b").verified.startsWith("stale:"));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==11 && project.level().getBlockState(prerequisiteInput).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.NORTH,"Changed prerequisite port pauses c before its next write and preserves the player edit");
+            check(project.assignments.task(project.blueprint,"a").verified.startsWith("passed:"),"Unrelated component a keeps its functional result");
+            project.level().setBlockAndUpdate(prerequisiteInput,originalInput);
+        });
+        send(context,"engineer component build c");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==16,"Fresh delegation retains the partial operation while finishing only c"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        await(context,()->view(context)!=null && view(context).blocks().size()==18 && view(context).blocks().stream().allMatch(ProjectView.Ghost::matches),"All composed geometry is visibly complete");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-components-constructed");
+        // Only the distant prerequisite footprint intersects Bob's workspace.
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer project new");
+            commandAs(s,"Bob","engineer select1 68 100 0");commandAs(s,"Bob","engineer select2 70 101 0");commandAs(s,"Bob","engineer project share Alice editor");
+            var bobProject=session(s,"Bob");check(bobProject.owner.equals(player(s,"Bob").getUUID()) && bobProject.contains(new BlockPos(68,100,0)) && bobProject.access.allows(player(s,"Alice").getUUID(),ProjectAccess.Permission.BUILD),"Distant prerequisite workspace is actually owned by Bob and initially grants Alice build rights");});
+        send(context,"engineer test");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.testTick<0 || !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            commandAs(s,"Bob","engineer project revoke Alice");check(!session(s,"Bob").access.allows(player(s,"Alice").getUUID(),ProjectAccess.Permission.BUILD),"The dependency grant was actually revoked");return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Revoked distant dependency grant prevents further input changes, including restoration under expired authority");commandAs(s,"Bob","engineer project share Alice editor");});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->check(!session(s,"Alice").level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Fresh cross-project grants and explicit resume safely restore the original input"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        // A distant prerequisite's empty margin is part of C's live read contract too.
+        final var farMargin=new BlockPos(66,100,0);
+        send(context,"engineer test");
+        server.waitFor(s->{var project=session(s,"Alice");if(project.testTick<0 || !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            check(project.level().getBlockState(farMargin).isAir(),"The distant prerequisite margin starts empty");
+            project.level().setBlockAndUpdate(farMargin,Blocks.STONE.defaultBlockState());return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)
+                && !project.verified.startsWith("passed:") && project.assignments.task(project.blueprint,"a").verified.startsWith("passed:"),"A far read-margin edit blocks the next test input mutation/restoration and preserves unrelated a");
+            project.level().setBlockAndUpdate(farMargin,Blocks.AIR.defaultBlockState());});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->check(!session(s,"Alice").level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Explicit fresh recovery restores the input after the distant margin is clear"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(farMargin,Blocks.STONE.defaultBlockState()));
+        server.waitFor(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"b").verified.startsWith("stale:")
+                && session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"c").verified.startsWith("stale:"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.assignments.task(project.blueprint,"a").verified.startsWith("passed:")
+                && !project.level().getBlockState(new BlockPos(76,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"An idle distant-margin edit stales only B/C without changing inputs");
+            project.level().setBlockAndUpdate(farMargin,Blocks.AIR.defaultBlockState());});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        write("components-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        write("components-independent.done","passed");
+    }
+
+    private static JsonObject assignment(EngineeringSession project,String id) {
+        return project.assignments.json().asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals(id)).findFirst().orElseThrow();
+    }
+    private static void componentRevisionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 113 108 15 180 25");
+        var previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        send(context,"engineer select1 100 100 0");send(context,"engineer select2 118 101 0");
+        for(var spec:java.util.List.of("a root signal-lamp 100 100 0","b root signal-lamp 108 100 0","c root signal-lamp 116 100 0")) {
+            MESSAGES.clear();send(context,"engineer component add "+spec);expectChat(context,"Added component "+spec.charAt(0));
+        }
+        MESSAGES.clear();send(context,"engineer component depend c b");expectChat(context,"Component c requires b");
+        for(String id:java.util.List.of("a","b","c")) {
+            MESSAGES.clear();send(context,"engineer component build "+id);
+            if(id.equals("b"))server.waitFor(s->{var project=session(s,"Alice");if(!project.activeComponent.equals("b") || project.journal.size()<=6)return false;
+                commandAs(s,"Alice","engineer component diagnose a");
+                check(project.activeComponent.equals("b") && project.state.equals("EXECUTING"),"Read-only diagnosis of a cannot change or pause active b");return true;});
+            if(id.equals("b"))expectChat(context,"Geometry matches");
+            server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").state.equals("COMPLETED"));
+            MESSAGES.clear();send(context,"engineer component test "+id);expectChat(context,"truth table running");
+            server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        }
+        // Keep the unaffected leaf active so revision must archive its buffer without relabelling it.
+        MESSAGES.clear();send(context,"engineer component test a");expectChat(context,"truth table running");
+        server.waitFor(s->session(s,"Alice").activeComponent.equals("a") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        MESSAGES.clear();send(context,"engineer component info b");expectChat(context,"Materials for this component");expectChat(context,"Port enable (input)");
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        var beforeA=server.computeOnServer(s->assignment(session(s,"Alice"),"a").deepCopy());
+        var beforeB=server.computeOnServer(s->assignment(session(s,"Alice"),"b").deepCopy());
+        var beforeC=server.computeOnServer(s->assignment(session(s,"Alice"),"c").deepCopy());
+        var worldBefore=server.computeOnServer(s->{var states=new java.util.LinkedHashMap<BlockPos,net.minecraft.world.level.block.state.BlockState>();var project=session(s,"Alice");for(var block:project.blueprint.blocks())states.put(block.pos(),project.level().getBlockState(block.pos()));return states;});
+        send(context,"engineer component revise b 4");server.waitFor(s->session(s,"Alice").revision()==revision+1);
+        server.runOnServer(s->{var project=session(s,"Alice");var aTask=assignment(project,"a");var bTask=assignment(project,"b");var cTask=assignment(project,"c");
+            check(project.journal.size()==18 && worldBefore.entrySet().stream().allMatch(entry->project.level().getBlockState(entry.getKey()).equals(entry.getValue())),"Component intent revision preserves all world blocks and prior operations");
+            check(aTask.get("basis").equals(beforeA.get("basis")) && aTask.get("generation").equals(beforeA.get("generation")) && aTask.get("verified").getAsString().startsWith("passed:"),"Unchanged a retains its basis, generation and functional result");
+            check(aTask.getAsJsonObject("lastPassedScope").equals(beforeA.getAsJsonObject("lastPassedScope")) && aTask.getAsJsonObject("lastPassedScope").get("blueprintRevision").getAsInt()==revision,"Unchanged a retains its original immutable test scope instead of relabelling vectors");
+            check(!bTask.get("basis").equals(beforeB.get("basis")) && bTask.get("generation").getAsLong()>beforeB.get("generation").getAsLong(),"Revised b gets a fresh task basis and generation");
+            check(!cTask.get("basis").equals(beforeC.get("basis")) && cTask.get("generation").getAsLong()>beforeC.get("generation").getAsLong() && cTask.get("verified").getAsString().startsWith("stale:"),"Changed prerequisite intent propagates into dependent c without changing its blocks");
+        });
+        String selected=server.computeOnServer(s->session(s,"Alice").activeComponent);
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");
+        final var relay=new BlockPos(109,101,0);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals(selected),"Diagnosis does not select a different execution component");project.level().setBlockAndUpdate(relay,project.level().getBlockState(relay).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,2));});
+        MESSAGES.clear();send(context,"engineer component repair b");expectChat(context,"World changed");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals(selected) && project.journal.size()==18 && project.level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==2,"A stale repair proposal neither selects b nor writes over the later player edit");});
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");send(context,"engineer component repair b");
+        server.waitFor(s->session(s,"Alice").activeComponent.equals("b") && session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==19 && session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==4,"Explicit component repair corrects only b's repeater"));
+        MESSAGES.clear();send(context,"engineer component test b");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");var scope=saved(project).getAsJsonObject("functionalScope");check(scope!=null && scope.get("component").getAsString().equals("b") && scope.get("basisVersion").getAsInt()==2 && scope.get("basis").getAsString().equals(project.assignments.task(project.blueprint,"b").basis) && scope.get("blueprintRevision").getAsInt()==project.revision(),"New truth vectors have an explicit v2 basis and exact intended revision");});
+        MESSAGES.clear();send(context,"engineer component test c");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").activeComponent.equals("c") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==18);
+        server.waitFor(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"c").verified.startsWith("stale:"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals("b") && project.level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==2 && project.assignments.task(project.blueprint,"a").verified.startsWith("passed:"),"Undo from selected c reserves/reverts just b's latest group and retains unrelated a");});
+        MESSAGES.clear();send(context,"engineer component diagnose b");expectChat(context,"Repair proposal ready");send(context,"engineer component repair b");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        MESSAGES.clear();send(context,"engineer component test b");expectChat(context,"truth table running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        var noOp=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer component revise b 4");expectChat(context,"already matches");
+        server.runOnServer(s->{var current=saved(session(s,"Alice"));check(current.get("projectRevision").equals(noOp.get("projectRevision")) && current.getAsJsonArray("functionalEvidence").equals(noOp.getAsJsonArray("functionalEvidence")) && current.getAsJsonObject("functionalScope").equals(noOp.getAsJsonObject("functionalScope")),"A no-op component revision keeps intention identity and buffered evidence untouched");});
+        write("component-revisions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("component-revisions.done","passed");
+    }
+
+    private static JsonObject observationSaved(EngineeringSession project) {
+        try{return JsonParser.parseString(Files.readString(project.file.resolveSibling(project.file.getFileName()+".snapshot.json"))).getAsJsonObject();}
+        catch(java.io.IOException failure){throw new AssertionError(failure);}
+    }
+    private static void targetedPerceptionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var prior=server.computeOnServer(s->session(s,"Alice").lastObservation);
+        int journal=server.computeOnServer(s->session(s,"Alice").journal.size());
+        MESSAGES.clear();send(context,"engineer inspect block 109 101 0");expectChat(context,"Targeted inspection");
+        server.waitFor(s->session(s,"Alice").lastObservation!=prior);
+        server.computeOnServer(s->session(s,"Alice").lastObservation).get(30,java.util.concurrent.TimeUnit.SECONDS);
+        server.runOnServer(s->{var project=session(s,"Alice");var snapshot=observationSaved(project);var facts=snapshot.getAsJsonObject("perception");
+            check(facts.get("kind").getAsString().equals("block") && facts.get("actorId").getAsString().equals(player(s,"Alice").getUUID().toString()),"Targeted facts belong to the authenticated requester");
+            check(Blueprint.pos(facts.getAsJsonObject("target")).equals(new BlockPos(109,101,0)) && snapshot.getAsJsonArray("blocks").size()==7,"Inspect the actual block and six immediate support/connection neighbors");
+            var relay=snapshot.getAsJsonArray("blocks").asList().stream().map(value->value.getAsJsonObject()).filter(value->Blueprint.pos(value.getAsJsonObject("pos")).equals(new BlockPos(109,101,0))).findFirst().orElseThrow();
+            check(relay.get("state").getAsString().contains("delay=4") && facts.getAsJsonObject("differences").get("changed").getAsInt()==0,"Actual repeater state and sampled geometry differences are retained");
+            check(facts.getAsJsonObject("player").getAsJsonObject("position").get("x").getAsDouble()==player(s,"Alice").getX(),"Perception captures the real requesting player's server position");
+            check(project.journal.size()==journal && project.verified.startsWith("passed:"),"Read-only targeted perception changes no construction or functional result");
+        });
+        var before=server.computeOnServer(s->observationSaved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer inspect block 99 101 0");expectChat(context,"outside");
+        server.runOnServer(s->check(observationSaved(session(s,"Alice")).equals(before),"An outside-workspace request writes no new snapshot"));
+        server.runCommand("tp Alice 109.5 102 4 180 40");
+        MESSAGES.clear();send(context,"engineer inspect view");expectChat(context,"Targeted inspection");
+        server.runOnServer(s->{var project=session(s,"Alice");var facts=observationSaved(project).getAsJsonObject("perception");
+            check(facts.get("kind").getAsString().equals("view") && project.contains(Blueprint.pos(facts.getAsJsonObject("target"))),"The real server view ray selects an actual block in the workspace");
+            check(facts.has("face") && facts.getAsJsonObject("player").getAsJsonObject("look").get("y").getAsDouble()<0,"The observed hit face and downward view direction are captured");
+        });
+        var oldProject=server.computeOnServer(s->session(s,"Alice").projectId);
+        write("targeted-perception-project",oldProject.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(oldProject));
+        send(context,"engineer select1 20000000 100 0");send(context,"engineer select2 20000002 101 0");
+        server.runOnServer(s->check(!session(s,"Alice").level().hasChunkAt(new BlockPos(20_000_000,100,0)),"The targeted unloaded fixture is actually unknown"));
+        MESSAGES.clear();send(context,"engineer inspect block 20000000 100 0");expectChat(context,"unloaded");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.level().hasChunkAt(new BlockPos(20_000_000,100,0)) && project.lastObservation==null,"A refused observation neither loads chunks nor sends guessed air to memory");});
+        write("targeted-perception.done","passed");
+    }
+
+    private static java.util.List<net.minecraft.world.item.ItemStack> inventoryCopies(net.minecraft.world.Container container) {
+        var copy=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+        for(int i=0;i<container.getContainerSize();i++)copy.add(container.getItem(i).copy());return copy;
+    }
+    private static void naturalStorageOpen(ClientGameTestContext context,TestDedicatedServerContext server,BlockPos target) throws Exception {
+        context.runOnClient(client->{client.player.closeContainer();client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(target),net.minecraft.core.Direction.UP,target,false));});
+        server.waitFor(s->player(s,"Alice").containerMenu!=player(s,"Alice").inventoryMenu);
+    }
+    private static void inventoryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var old=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(old));
+        send(context,"engineer select1 140 100 0");send(context,"engineer select2 149 101 0");
+        send(context,"engineer component add lamp root signal-lamp 147 100 0");
+        String inventoryProject=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("inventory-project",inventoryProject);
+        server.runCommand("tp Alice 140.5 101 3 180 25");
+        server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(141,100,0)));
+        server.runCommand("setblock 140 100 0 minecraft:chest[facing=north,type=left]");
+        server.runCommand("setblock 141 100 0 minecraft:chest[facing=north,type=right]");
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();actor.getInventory().clearContent();
+            var own=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,7);
+            own.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));actor.getInventory().setItem(0,own);
+            var first=(net.minecraft.world.level.block.entity.ChestBlockEntity)actor.level().getBlockEntity(new BlockPos(140,100,0));
+            var second=(net.minecraft.world.level.block.entity.ChestBlockEntity)actor.level().getBlockEntity(new BlockPos(141,100,0));
+            first.setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,5));
+            second.setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,11));
+        });
+        var ownBefore=server.computeOnServer(s->inventoryCopies(player(s,"Alice").getInventory()));
+        MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
+        server.runOnServer(s->check(net.minecraft.world.item.ItemStack.listMatches(ownBefore,inventoryCopies(player(s,"Alice").getInventory())),"Private own-inventory observation preserves every stack/component"));
+        check(MESSAGES.stream().noneMatch(message->message.contains("inventory-private-secret")),"Private facts exclude custom names/NBT");
+        MESSAGES.clear();send(context,"engineer materials lamp");expectChat(context,"Private materials for lamp");
+        var chestBefore=server.computeOnServer(s->{var out=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            out.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));return out;});
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(140,100,0));expectChat(context,"Private inventory remembered");expectChat(context,"stone=16");
+        server.runOnServer(s->{check(player(s,"Alice").containerMenu instanceof net.minecraft.world.inventory.ChestMenu chest && chest.getRowCount()==6,"The player actually opened the real double-chest menu");
+            var after=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));
+            check(net.minecraft.world.item.ItemStack.listMatches(chestBefore,after),"Natural storage inspection keeps every backing stack unchanged and does not double-count player slots");});
+        context.runOnClient(client->client.player.closeContainer());
+        server.runCommand("setblock 142 100 0 minecraft:crafter");
+        server.runOnServer(s->((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(142,100,0))).setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,2)));
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(142,100,0));expectChat(context,"Private inventory remembered");expectChat(context,"redstone=2");
+        server.runOnServer(s->check(player(s,"Alice").containerMenu instanceof net.minecraft.world.inventory.CrafterMenu && ((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(142,100,0))).getItem(0).getCount()==2,"The real crafter keeps its physical inventory; the virtual result slot is excluded"));
+        context.runOnClient(client->client.player.closeContainer());
+        // A queued request cannot follow the actor into another selected project.
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        send(context,"engineer project use "+old);server.waitFor(s->!session(s,"Alice").projectId.toString().equals(inventoryProject));
+        naturalStorageOpen(context,server,new BlockPos(140,100,0));context.waitTicks(5);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Changed project cancels the container request before item sampling/delivery");
+        context.runOnClient(client->client.player.closeContainer());send(context,"engineer project use "+inventoryProject);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(inventoryProject));
+        server.runCommand("tp Alice 143.5 101 3 180 25");
+        for(int x:java.util.List.of(143,145))server.runCommand("setblock "+x+" 100 0 minecraft:chest");
+        server.runOnServer(s->{for(int x:java.util.List.of(143,145)) {
+            var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(x,100,0));
+            chest.setLootTable(net.minecraft.world.level.storage.loot.BuiltInLootTables.SPAWN_BONUS_CHEST);chest.setLootTableSeed(73L);
+        }});
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        expectChat(context,"Private inventory request cancelled or expired",35_000);
+        server.runOnServer(s->{for(int x:java.util.List.of(143,145))check(((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(x,100,0))).getLootTable()!=null,"Queued/expired inspection never unpacks unopened loot");});
+        naturalStorageOpen(context,server,new BlockPos(143,100,0));context.waitTicks(5);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Expired natural-container request reads and sends no items");
+        context.runOnClient(client->client.player.closeContainer());
+        server.runOnServer(s->check(((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(143,100,0))).getLootTable()==null
+            && ((net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(145,100,0))).getLootTable()!=null,"Only the normal first-opened control chest has generated loot"));
+        var vanillaLoot=server.computeOnServer(s->inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(143,100,0))));
+        var cached=server.computeOnServer(s->Companion.gateway(session(s,"Alice"),"/v2/inventory/read",new JsonObject(),player(s,"Alice").getUUID())).get(30,java.util.concurrent.TimeUnit.SECONDS);
+        check(Blueprint.pos(cached.getAsJsonObject("inventory").getAsJsonObject("snapshot").getAsJsonArray("containers").get(0).getAsJsonObject()).equals(new BlockPos(142,100,0)),"Rejected selection/expiry never replace the previous private crafter snapshot");
+        MESSAGES.clear();send(context,"engineer inspect container");expectChat(context,"Open a vanilla container");
+        naturalStorageOpen(context,server,new BlockPos(145,100,0));expectChat(context,"Private inventory remembered");
+        server.runOnServer(s->{var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)player(s,"Alice").level().getBlockEntity(new BlockPos(145,100,0));
+            check(chest.getLootTable()==null && net.minecraft.world.item.ItemStack.listMatches(vanillaLoot,inventoryCopies(chest)),"A real first loot opening has identical items with and without the observer");});
+        context.runOnClient(client->client.player.closeContainer());
+        send(context,"engineer project share Bob viewer");server.runOnServer(s->{var bob=player(s,"Bob");bob.getInventory().clearContent();
+            var item=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND,4);item.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,Component.literal("inventory-private-secret"));bob.getInventory().setItem(0,item);});
+        MESSAGES.clear();write("inventory-bob-project",inventoryProject);awaitFile(context,"inventory-bob-private.done");context.waitTicks(3);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered") || message.contains("diamond=4")),"Bob's private result is not sent to the project controller Alice");
+        server.runCommand("tp Bob 140.5 101 3 180 25");
+        server.runOnServer(s->{var bob=player(s,"Bob");bob.getAbilities().flying=true;bob.onUpdateAbilities();});
+        write("inventory-bob-queue","ready");awaitFile(context,"inventory-bob-queued");
+        send(context,"engineer project revoke Bob");
+        server.waitFor(s->!session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
+        write("inventory-bob-revoked","ready");awaitFile(context,"inventory-revocation.done");
+        server.waitFor(s->player(s,"Bob").containerMenu instanceof net.minecraft.world.inventory.ChestMenu);
+        server.runOnServer(s->{var after=new java.util.ArrayList<net.minecraft.world.item.ItemStack>();
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(140,100,0))));
+            after.addAll(inventoryCopies((net.minecraft.world.Container)player(s,"Alice").level().getBlockEntity(new BlockPos(141,100,0))));
+            check(net.minecraft.world.item.ItemStack.listMatches(chestBefore,after),"Permission rejection does not alter natural gameplay or storage contents");});
+        // Refill current private cache so the later real-server restart rejection is meaningful.
+        MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
+        write("inventory-native.done","passed");
+    }
+
+    private static void assertUndoContextUnchanged(EngineeringSession project,JsonObject before) {
+        check(project.activeComponent.equals(before.get("activeComponent").getAsString()) && project.state.equals(before.get("status").getAsString())
+            && project.verified.equals(before.get("verified").getAsString()),"Rejected cross-component undo preserves original selection and verification");
+        var now=saved(project);
+        for(String key:java.util.List.of("controller","activeOperation","operationKind","originDiagnosis","baseline","dependencies","repairTargets","pendingPlacement","undoRequested","undoOperation","functionalEvidence","functionalScope"))
+            check(java.util.Objects.equals(now.get(key),before.get(key)),"Rejected undo preserves saved field "+key);
+        check(!assignment(project,"b").get("verified").getAsString().startsWith("passed:"),"B cannot inherit A's functional pass");
+        check(now.getAsJsonArray("componentAssignments").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals("b")).noneMatch(value->value.get("verified").getAsString().startsWith("passed:")),"A later real public save never persists A's label onto B");
+    }
+    private static void undoContextFailureFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 180 100 0");send(context,"engineer select2 190 101 0");
+        for(String spec:java.util.List.of("a root signal-lamp 180 100 0","b root signal-lamp 188 100 0")) {MESSAGES.clear();send(context,"engineer component add "+spec);expectChat(context,"Added component");}
+        server.runCommand("tp Alice 185 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos().offset(2,0,2))));
+        for(String id:java.util.List.of("a","b")){send(context,"engineer component build "+id);server.waitFor(s->session(s,"Alice").activeComponent.equals(id) && session(s,"Alice").state.equals("COMPLETED"));}
+        send(context,"engineer component test a");server.waitFor(s->session(s,"Alice").activeComponent.equals("a") && session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");player(s,"Bob").closeContainer();commandAs(s,"Bob","engineer project new");
+            commandAs(s,"Bob","engineer select1 188 100 0");commandAs(s,"Bob","engineer select2 190 101 0");});
+        var deniedBefore=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"has not granted");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeComponent.equals("a") && project.verified.startsWith("passed:") && project.journal.size()==12 && project.delegation==null,"Denied undo cannot select B, copy A's pass or mutate the journal");});
+        server.runOnServer(s->{commandAs(s,"Alice","engineer next");assertUndoContextUnchanged(session(s,"Alice"),deniedBefore);});
+        server.runOnServer(s->{commandAs(s,"Bob","engineer project share Alice editor");commandAs(s,"Bob","engineer project permission Alice undo true");
+            var project=session(s,"Alice");var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,2));});
+        var preflightBefore=server.computeOnServer(s->saved(session(s,"Alice")));
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Undo blocked by later edit");
+        server.runOnServer(s->{commandAs(s,"Alice","engineer next");var project=session(s,"Alice");assertUndoContextUnchanged(project,preflightBefore);check(project.journal.size()==12 && project.delegation==null,"Failed preflight releases fresh authority without changing either component");
+            var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,1));});
+        write("undo-context-failure.done","passed");
+        // Re-delegating an already complete A retains A's baseline without adding a journal group.
+        String beforeBuild=server.computeOnServer(s->session(s,"Alice").activeOperation);
+        send(context,"engineer component build a");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && !session(s,"Alice").baseline.isEmpty() && !session(s,"Alice").activeOperation.equals(beforeBuild));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(!project.baseline.isEmpty() && project.journal.size()==12 && project.journal.getLast().component().equals("b"),"Undo recovery starts with A's baseline but B's latest journal");
+            write("undo-context-a-scope",assignment(project,"a").getAsJsonObject("lastPassedScope").toString());
+            check(project.beginUndo(),"Production undo prepares a durable operation before any world write");
+            check(project.activeComponent.equals("b") && project.verified.equals("untested") && project.undoRequested && project.journal.size()==12,"Prepared undo selects only B and retains its journal until execution");
+            check(project.baseline.isEmpty() && project.dependencies.isEmpty() && project.repairTargets.isEmpty() && project.originDiagnosis==null && !project.pendingPlacement,"Target WAL never inherits A's recovery context");
+            check(assignment(project,"a").get("verified").getAsString().startsWith("passed:"),"Switching undo preserves A's original functional result");
+            var wal=saved(project);check(wal.get("activeComponent").getAsString().equals("b") && wal.get("undoRequested").getAsBoolean() && wal.getAsJsonArray("baseline").isEmpty(),"Real persisted WAL identifies B with an empty baseline");
+        });
+        write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+
+    private static void undoContextRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("undo-context-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runCommand("tp Alice 185 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos().offset(2,0,2))));
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.activeComponent.equals("b") && project.undoRequested && project.journal.size()==12,"Actual restart loads B's interrupted undo and exact journals");
+            check(project.delegation==null && project.delegationConnection==null && project.baseline.isEmpty() && project.dependencies.isEmpty(),"Restart imports no authority or A baseline");
+            var a=assignment(project,"a");
+            check(project.verified.equals("untested") && a.get("verified").getAsString().startsWith("stale:") && a.getAsJsonObject("lastPassedScope").equals(JsonParser.parseString(read("undo-context-a-scope"))),"Recovered B is untested; A needs retesting but preserves its exact historical pass scope");
+        });
+        send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested);
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==6 && project.journal.stream().allMatch(change->change.component().equals("a")),"Recovered undo cannot spill into A's older operation");
+            for(var block:project.blueprint.blocks())check(block.pos().getX()<188?Blueprint.matches(block.state(),project.level().getBlockState(block.pos())):project.level().getBlockState(block.pos()).isAir(),"Recovered undo removes B and preserves A's actual blocks");
+        });
+        write("undo-context-recovery.done","passed");
+    }
+
+    private static void componentRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String projectId=read("components-project");
+        send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
+        // This third boot starts near the origin, beyond this project's read margin.
+        // Load the positive recovery fixture through an actual nearby player, never a production read.
+        server.runCommand("tp Alice 73 108 15 180 25");
+        server.waitFor(s->{var project=session(s,"Alice");return project.dependencyPositions(true).stream().allMatch(pos->project.level().hasChunkAt(pos));});
+        long previousGeneration=server.computeOnServer(s->{var project=session(s,"Alice");
+            check(project.delegation==null && project.delegationConnection==null,"Component assignments never import a connection or execution lease on restart");
+            check(project.journal.size()==16 && project.activeComponent.equals("c"),"Restart retains the exact component operation journal and selected scope");
+            boolean denied=false;try{project.validateMutation();}catch(IllegalStateException noLease){denied=true;}
+            check(denied,"Persisted component metadata cannot authorize another world write");
+            return project.assignments.task(project.blueprint,"c").generation;
+        });
+        long unaffectedGeneration=server.computeOnServer(s->session(s,"Alice").assignments.task(session(s,"Alice").blueprint,"a").generation);
+        MESSAGES.clear();send(context,"engineer component claim c");expectChat(context,"Component c assigned to you");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.assignments.task(project.blueprint,"c").generation==previousGeneration+1
+                && project.assignments.task(project.blueprint,"a").generation==unaffectedGeneration,"Fresh handoff advances only its component generation");
+            project.level().setBlockAndUpdate(new BlockPos(78,101,0),Blocks.AIR.defaultBlockState());
+        });
+        MESSAGES.clear();send(context,"engineer component build c");expectChat(context,"recorded assistant component block changed");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.size()==16 && project.level().getBlockState(new BlockPos(78,101,0)).isAir(),"Delegate-back rejects a later player edit without clearing history or replacing it");
+            var lamp=project.blueprint.blocks().stream().filter(block->block.pos().equals(new BlockPos(78,101,0))).findFirst().orElseThrow();
+            project.level().setBlockAndUpdate(lamp.pos(),lamp.state());
+        });
+        send(context,"engineer component build c");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==16,"Reconciled complete geometry does not fabricate new assistant placements"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        write("components-recovery.done","passed");
     }
 
     private static void connect(ClientGameTestContext context, int generation) throws Exception {

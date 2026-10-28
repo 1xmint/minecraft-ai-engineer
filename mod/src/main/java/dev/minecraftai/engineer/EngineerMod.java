@@ -13,6 +13,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -27,7 +28,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], inspect, diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -75,7 +76,25 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
-                .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect)))
+                .then(Commands.literal("component")
+                    .then(Commands.literal("list").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::componentList)))
+                    .then(Commands.literal("info").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.componentInfo(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("diagnose").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.componentDiagnose(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("repair").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentRepair(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("test").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentTest(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("revise").then(Commands.argument("component",StringArgumentType.word()).then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.componentRevise(StringArgumentType.getString(ctx,"component"),IntegerArgumentType.getInteger(ctx,"delay")))))))
+                    .then(Commands.literal("claim").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentClaim(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("build").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.componentBuild(StringArgumentType.getString(ctx,"component"))))))
+                    .then(Commands.literal("group").then(Commands.argument("id",StringArgumentType.word()).then(Commands.argument("parent",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.componentAdd(StringArgumentType.getString(ctx,"id"),StringArgumentType.getString(ctx,"parent"),null,null))))))
+                    .then(Commands.literal("depend").then(Commands.argument("component",StringArgumentType.word()).then(Commands.argument("prerequisite",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.componentDepend(StringArgumentType.getString(ctx,"component"),StringArgumentType.getString(ctx,"prerequisite")))))))
+                    .then(Commands.literal("add").then(Commands.argument("id",StringArgumentType.word()).then(Commands.argument("parent",StringArgumentType.word()).then(Commands.argument("mechanism",StringArgumentType.word()).then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.componentAdd(StringArgumentType.getString(ctx,"id"),StringArgumentType.getString(ctx,"parent"),StringArgumentType.getString(ctx,"mechanism"),BlockPosArgument.getBlockPos(ctx,"position"))))))))))
+                .then(Commands.literal("inspect").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::inspect))
+                    .then(Commands.literal("inventory").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.manager.inventories.own(s))))
+                    .then(Commands.literal("container").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.manager.inventories.container(s))))
+                    .then(Commands.literal("block").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->WorldPerception.block(s,BlockPosArgument.getBlockPos(ctx,"position"))))))
+                    .then(Commands.literal("view").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,WorldPerception::view))))
+                .then(Commands.literal("materials").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.manager.inventories.materials(s)))
+                    .then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.manager.inventories.materials(s,StringArgumentType.getString(ctx,"component"))))))
                 .then(Commands.literal("diagnose").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::diagnose)))
                 .then(Commands.literal("repair").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::repair)))
                 .then(Commands.literal("revise").then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.revise(IntegerArgumentType.getInteger(ctx,"delay"))))))
@@ -100,6 +119,10 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("test").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::test)))
                 .then(Commands.literal("status").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.tell("Project "+s.projectId+" | "+s.status()))))
         ));
+        UseBlockCallback.EVENT.register((player,level,hand,hit)->{
+            if(player instanceof ServerPlayer connected){var manager=MANAGERS.get(connected.level().getServer());if(manager!=null)manager.inventories.interact(connected,hit);}
+            return net.minecraft.world.InteractionResult.PASS;
+        });
         ServerTickEvents.END_SERVER_TICK.register(server->{
             for(var entry:new ArrayList<>(PLANS.entrySet())) {
                 var s=entry.getKey();var request=entry.getValue();if(s.server!=server)continue;

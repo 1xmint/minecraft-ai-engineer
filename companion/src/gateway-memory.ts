@@ -1,4 +1,19 @@
 import type { DatabaseSync } from "node:sqlite";
+import { validateInventory, type InventorySnapshot } from "./inventory.js";
+import {
+  componentMemoryScopes,
+  expectedWorldStates,
+  geometryState,
+  positionKey,
+  readsPosition,
+} from "./component-memory.js";
+interface TaskRow {
+  task_id: string;
+  project_revision: number;
+  status: string;
+  observed: string | null;
+}
+
 import type { Blueprint, Checkpoint, Observation } from "./types.js";
 import { integer, RequestError } from "./types.js";
 import type {
@@ -31,6 +46,14 @@ export interface GatewayProject {
 
 /** Server assertions are mirrored for stale/privacy checks, never issued here. */
 export class GatewayMemory {
+  private readonly inventories = new Map<
+    string,
+    {
+      context: GatewayContext;
+      snapshot: InventorySnapshot;
+      recordedAt: number;
+    }
+  >();
   constructor(private readonly db: DatabaseSync) {
     db.exec(`
       INSERT OR IGNORE INTO metadata VALUES('gateway_schema_version','1');
@@ -147,6 +170,7 @@ export class GatewayMemory {
         .run(serverId);
       this.audit(serverId, undefined, "server-open", { serverEpoch: epoch });
     });
+    if (refresh) this.clearInventories(serverId);
   }
   assertEpoch(serverId: string, epoch: string): void {
     const row = this.db
@@ -253,10 +277,56 @@ export class GatewayMemory {
         reportSequence,
       );
   }
+  private intended(
+    serverId: string,
+    projectId: string,
+    revision: number,
+  ): Blueprint | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+      )
+      .get(serverId, projectId, revision) as { document: string } | undefined;
+    return row ? (JSON.parse(row.document) as Blueprint) : undefined;
+  }
+  private tasks(serverId: string, projectId: string): TaskRow[] {
+    return this.db
+      .prepare(
+        "SELECT task_id,project_revision,status,observed FROM gateway_tasks WHERE server_id=? AND project_id=?",
+      )
+      .all(serverId, projectId) as unknown as TaskRow[];
+  }
+  private taskComponent(task: TaskRow, projectId: string): string | undefined {
+    if (!task.observed) return undefined;
+    const observed: unknown = JSON.parse(task.observed);
+    if (
+      !observed ||
+      typeof observed !== "object" ||
+      !("component" in observed) ||
+      typeof observed.component !== "string"
+    )
+      return undefined;
+    return task.task_id === `${projectId}:${observed.component}`
+      ? observed.component
+      : undefined;
+  }
+  private invalidate(
+    serverId: string,
+    projectId: string,
+    taskId: string,
+    detail: string,
+  ): void {
+    this.db
+      .prepare(
+        "UPDATE gateway_tasks SET status='PAUSED',detail=?,observed=NULL,verified=NULL WHERE server_id=? AND project_id=? AND task_id=?",
+      )
+      .run(detail, serverId, projectId, taskId);
+  }
   sync(input: ProjectSync): GatewayProject {
     const c = input.context;
     this.assertEpoch(c.serverId, c.serverEpoch);
-    return this.atomic(() => {
+    const before = this.row(c.serverId, c.projectId);
+    const result = this.atomic(() => {
       const previous = this.row(c.serverId, c.projectId),
         members = JSON.stringify(input.members);
       if (previous) {
@@ -344,17 +414,54 @@ export class GatewayMemory {
         );
       if (
         previous &&
-        (previous.project_revision !== c.projectRevision ||
-          previous.authorization_revision !== c.authorizationRevision)
-      )
+        previous.authorization_revision !== c.authorizationRevision
+      ) {
         this.db
           .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Project or authorization revision changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
+            "UPDATE gateway_tasks SET status='PAUSED',detail='Project authorization changed; reconcile before resuming.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
           )
           .run(c.serverId, c.projectId);
+      } else if (previous && previous.project_revision !== c.projectRevision) {
+        const current = componentMemoryScopes(input.blueprint);
+        const old = new Map<number, ReturnType<typeof componentMemoryScopes>>();
+        for (const task of this.tasks(c.serverId, c.projectId)) {
+          const component = this.taskComponent(task, c.projectId);
+          if (!old.has(task.project_revision))
+            old.set(
+              task.project_revision,
+              componentMemoryScopes(
+                this.intended(c.serverId, c.projectId, task.project_revision),
+              ),
+            );
+          const before =
+            component && old.get(task.project_revision)?.get(component);
+          const after = component && current.get(component);
+          if (
+            !before ||
+            !after ||
+            before.intention !== after.intention ||
+            ["EXECUTING", "VERIFYING", "PLANNING"].includes(task.status)
+          )
+            this.invalidate(
+              c.serverId,
+              c.projectId,
+              task.task_id,
+              "Component or prerequisite intent changed; reconcile before resuming.",
+            );
+          // An unchanged row retains its original revision, scope and evidence verbatim.
+        }
+      }
       this.audit(c.serverId, c.projectId, "project-sync", input);
       return this.publicProject(this.row(c.serverId, c.projectId)!);
     });
+    if (
+      before &&
+      (before.project_revision !== c.projectRevision ||
+        before.authorization_revision !== c.authorizationRevision ||
+        before.synced_epoch !== c.serverEpoch)
+    )
+      this.clearInventories(c.serverId, c.projectId);
+    return result;
   }
   projects(
     serverId: string,
@@ -448,24 +555,51 @@ export class GatewayMemory {
         "Observation belongs to a different world/dimension.",
         409,
       );
+    if (
+      observation.perception &&
+      observation.perception.actorId !== context.actorId
+    )
+      throw new RequestError(
+        "Targeted perception must describe its authenticated requesting actor.",
+        403,
+      );
     return this.atomic(() => {
       this.claimReport(context, reportSequence, "observe");
-      const previous = this.db
+      const history = this.db
         .prepare(
-          "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id DESC LIMIT 1",
+          "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? ORDER BY id DESC LIMIT 20",
         )
-        .get(context.serverId, context.projectId) as
-        { document: string } | undefined;
-      const old = previous
-        ? (JSON.parse(previous.document) as Observation)
-        : undefined;
-      const oldStates = new Map(
-        old?.blocks.map((b) => [`${b.pos.x},${b.pos.y},${b.pos.z}`, b.state]),
+        .all(context.serverId, context.projectId) as { document: string }[];
+      const oldStates = new Map<string, string>();
+      let previousTick: number | null = null;
+      for (const row of history) {
+        const previous = JSON.parse(row.document) as Observation;
+        previousTick ??= previous.tick;
+        for (const block of previous.blocks) {
+          const key = positionKey(block.pos);
+          if (!oldStates.has(key)) oldStates.set(key, block.state);
+        }
+      }
+      const changedBlocks = observation.blocks.filter((block) => {
+        const old = oldStates.get(positionKey(block.pos));
+        return old !== undefined && old !== block.state;
+      });
+      const changed = changedBlocks.length;
+      const intended = this.intended(
+        context.serverId,
+        context.projectId,
+        context.projectRevision,
       );
-      const changed = observation.blocks.filter((b) => {
-        const key = `${b.pos.x},${b.pos.y},${b.pos.z}`;
-        return oldStates.has(key) && oldStates.get(key) !== b.state;
-      }).length;
+      const scopes = componentMemoryScopes(intended),
+        expected = expectedWorldStates(intended);
+      // Previously uncovered/expired coordinates also stale relevant results when they contradict geometry.
+      const conflicting = observation.blocks.filter(
+        (block) =>
+          !oldStates.has(positionKey(block.pos)) &&
+          geometryState(block.state) !==
+            (expected.get(positionKey(block.pos)) ??
+              geometryState("minecraft:air")),
+      );
       this.db
         .prepare(
           "INSERT INTO gateway_observations(server_id,project_id,document) VALUES(?,?,?)",
@@ -481,14 +615,111 @@ export class GatewayMemory {
           context.serverId,
           context.projectId,
         );
-      if (changed)
-        this.db
-          .prepare(
-            "UPDATE gateway_tasks SET status='PAUSED',detail='Observed world changes invalidate functional evidence.',observed=NULL,verified=NULL WHERE server_id=? AND project_id=?",
+      if (changed || conflicting.length)
+        for (const task of this.tasks(context.serverId, context.projectId)) {
+          const component = this.taskComponent(task, context.projectId);
+          const scope = component && scopes.get(component);
+          if (
+            !scope ||
+            [...changedBlocks, ...conflicting].some((block) =>
+              readsPosition(scope, block.pos),
+            )
           )
-          .run(context.serverId, context.projectId);
-      return { changed, previousTick: old?.tick ?? null };
+            this.invalidate(
+              context.serverId,
+              context.projectId,
+              task.task_id,
+              "Observed component or prerequisite changes invalidate functional evidence.",
+            );
+        }
+      return { changed, previousTick };
     });
+  }
+  private inventoryKey(context: GatewayContext): string {
+    return JSON.stringify([
+      context.serverId,
+      context.projectId,
+      context.actorId,
+    ]);
+  }
+  private clearInventories(serverId: string, projectId?: string): void {
+    for (const [key, entry] of this.inventories)
+      if (
+        entry.context.serverId === serverId &&
+        (projectId === undefined || entry.context.projectId === projectId)
+      )
+        this.inventories.delete(key);
+  }
+  private expireInventories(now: number): void {
+    for (const [key, entry] of this.inventories) {
+      const age = now - entry.recordedAt;
+      if (age < 0 || age >= 60_000) this.inventories.delete(key);
+    }
+  }
+  inventory(
+    context: GatewayContext,
+    input: InventorySnapshot,
+    reportSequence: number,
+  ): void {
+    // Validate again for direct callers; no rejection may claim report ordering.
+    const snapshot = validateInventory(input);
+    if (
+      !context.connectionId ||
+      snapshot.actorId !== context.actorId ||
+      snapshot.connectionId !== context.connectionId
+    )
+      throw new RequestError(
+        "Inventory must match its authenticated actor and connection.",
+        403,
+      );
+    const project = this.assertCurrent(context);
+    if (
+      snapshot.worldId !== project.worldId ||
+      snapshot.dimension !== project.dimension
+    )
+      throw new RequestError(
+        "Inventory belongs to a different world/dimension.",
+        409,
+      );
+    this.atomic(() => this.claimReport(context, reportSequence, "inventory"));
+    const now = Date.now();
+    this.expireInventories(now);
+    const key = this.inventoryKey(context);
+    this.inventories.delete(key);
+    if (this.inventories.size >= 256)
+      this.inventories.delete(this.inventories.keys().next().value!);
+    this.inventories.set(key, {
+      context: { ...context },
+      snapshot: structuredClone(snapshot),
+      recordedAt: now,
+    });
+  }
+  readInventory(context: GatewayContext): {
+    snapshot: InventorySnapshot;
+    ageMs: number;
+  } | null {
+    this.assertCurrent(context);
+    const now = Date.now();
+    this.expireInventories(now);
+    if (!context.connectionId) return null;
+    const entry = this.inventories.get(this.inventoryKey(context));
+    if (
+      !entry ||
+      entry.context.connectionId !== context.connectionId ||
+      entry.context.serverEpoch !== context.serverEpoch ||
+      entry.context.projectRevision !== context.projectRevision ||
+      entry.context.authorizationRevision !== context.authorizationRevision ||
+      entry.snapshot.actorId !== context.actorId
+    )
+      return null;
+    return {
+      snapshot: structuredClone(entry.snapshot),
+      ageMs: now - entry.recordedAt,
+    };
+  }
+  /** Private advice only. Never pass this to shared blueprint planning. */
+  privateContext(context: GatewayContext): string {
+    return JSON.stringify({ inventory: this.readInventory(context) });
   }
   context(context: GatewayContext): string {
     const project = this.assertCurrent(context, "plan");

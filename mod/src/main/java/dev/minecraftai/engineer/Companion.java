@@ -30,7 +30,7 @@ final class Companion {
         var open=new JsonObject();open.addProperty("serverId",session.manager.serverId);open.addProperty("serverEpoch",session.manager.epoch.toString());
         open.addProperty("serverGeneration",session.manager.serverGeneration);
         var body=operation.deepCopy();body.add("context",context);
-        if("/v2/checkpoint".equals(route) || "/v2/observe".equals(route)) {
+        if("/v2/checkpoint".equals(route) || "/v2/observe".equals(route) || "/v2/inventory".equals(route)) {
             session.reportSequence=Math.incrementExact(session.reportSequence);
             if(session.reportSequence>9_007_199_254_740_991L)throw new IllegalStateException("Report sequence exhausted; restart the server before continuing");
             body.addProperty("reportSequence",session.reportSequence);
@@ -60,7 +60,10 @@ final class Companion {
     static JsonObject context(EngineeringSession session,UUID actor) {
         var out=new JsonObject();out.addProperty("serverId",session.manager.serverId);out.addProperty("serverEpoch",session.manager.epoch.toString());
         out.addProperty("actorId",actor.toString());out.addProperty("projectId",session.projectId.toString());out.addProperty("projectRevision",session.revision());
-        out.addProperty("authorizationRevision",session.access.revision());out.addProperty("requestId",UUID.randomUUID().toString());return out;
+        out.addProperty("authorizationRevision",session.access.revision());out.addProperty("requestId",UUID.randomUUID().toString());
+        var connected=session.server.getPlayerList().getPlayer(actor);
+        if(connected!=null && !connected.hasDisconnected())out.addProperty("connectionId",session.manager.connectionId(connected));
+        return out;
     }
     static void synchronize(EngineeringSession session) {
         report(session,gateway(session,null,new JsonObject(),session.owner));

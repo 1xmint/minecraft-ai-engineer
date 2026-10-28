@@ -8,6 +8,7 @@ import {
   type GatewayContext,
 } from "./gateway-types.js";
 import { PlanningQueue } from "./planning-queue.js";
+import { validateInventory } from "./inventory.js";
 import {
   identifier,
   integer,
@@ -119,6 +120,8 @@ export class ServerGateway {
         "/v2/project",
         "/v2/checkpoint",
         "/v2/observe",
+        "/v2/inventory",
+        "/v2/inventory/read",
         "/v2/project/read",
         "/v2/design",
       ].includes(pathname)
@@ -127,6 +130,23 @@ export class ServerGateway {
     const v = object(value),
       context = gatewayContext(v.context);
     this.requireEpoch(context);
+    if (pathname === "/v2/inventory") {
+      const { context: _context, reportSequence, ...body } = v;
+      memory.inventory(
+        context,
+        validateInventory(body),
+        integer(reportSequence, "reportSequence", 1, Number.MAX_SAFE_INTEGER),
+      );
+      return { protocol: 2, status: "recorded", context };
+    }
+    if (pathname === "/v2/inventory/read") {
+      return {
+        protocol: 2,
+        status: "private",
+        context,
+        inventory: memory.readInventory(context),
+      };
+    }
     if (method === "POST" && pathname === "/v2/project") {
       const input = projectSync(v),
         project = memory.sync(input);

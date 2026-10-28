@@ -5,10 +5,12 @@
 A local-first engineering partner for Minecraft Java: **show me, teach me,
 take over, test it, and remember what we're building.**
 
-The first implementation is a bounded creative-mode reference workflow. Ask
-for a lever-controlled lamp, preview it in your world, build a section, delegate
-the rest, interrupt or resume, and test the actual redstone. Broader engineering
-features in the [product brief](docs/product-brief.md) are still in development.
+The source build provides bounded creative-mode workflows for a signal lamp,
+inverter and two-input OR gate: preview, teach, delegate, diagnose, explicitly
+repair, undo and test actual redstone behavior. Bounded component hierarchies
+support independent player/assistant work, with private inventory/material checks.
+Larger engineering designs and broader features in the [product brief](docs/product-brief.md) are
+still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
 
 **Multiplayer-first source build:** one dedicated Fabric server owns projects,

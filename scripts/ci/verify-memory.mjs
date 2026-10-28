@@ -148,6 +148,249 @@ try {
     ),
     "Third server boot records the completed undo without erasing earlier operation groups",
   );
+  assert.equal(
+    readFileSync(`${coordination}/components-independent.done`, "utf8").trim(),
+    "passed",
+  );
+  assert.equal(
+    readFileSync(`${coordination}/companion-recovery.done`, "utf8").trim(),
+    "passed",
+  );
+  const componentProject = readFileSync(
+    `${coordination}/components-project`,
+    "utf8",
+  ).trim();
+  assert.equal(
+    readFileSync(`${coordination}/components-recovery.done`, "utf8").trim(),
+    "passed",
+  );
+  const restoredComponents = db
+    .prepare(
+      "SELECT synced_epoch FROM gateway_projects WHERE server_id=? AND project_id=?",
+    )
+    .get(server.serverId, componentProject);
+  assert.equal(
+    restoredComponents.synced_epoch,
+    server.serverEpoch,
+    "Actual composed project was selected and synchronized after the third server boot",
+  );
+  for (const component of ["a", "b", "c"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')=? AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, componentProject, component);
+    assert.ok(
+      entry,
+      `Actual composed component ${component} functional evidence must reach SQLite`,
+    );
+    const report = JSON.parse(entry.document);
+    assert.equal(report.checkpoint.taskId, `${componentProject}:${component}`);
+    assert.match(report.checkpoint.observed.componentBasis, /^[a-f0-9]{64}$/u);
+    assert.ok(report.checkpoint.observed.assignmentGeneration >= 1);
+    const intended = JSON.parse(
+      db
+        .prepare(
+          "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+        )
+        .get(server.serverId, componentProject, report.context.projectRevision)
+        .document,
+    );
+    assert.equal(intended.provenance.template, "composition");
+    assert.equal(
+      intended.components.nodes.find((node) => node.id === component).template,
+      "signal-lamp",
+    );
+    const vectors = report.checkpoint.observed.testEvidence;
+    assert.equal(vectors.length, 3);
+    assert.deepEqual(
+      vectors.map((vector) => vector.inputs.enable),
+      [false, true, false],
+    );
+    for (const vector of vectors)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
+  assert.equal(
+    readFileSync(`${coordination}/component-revisions.done`, "utf8").trim(),
+    "passed",
+  );
+  const revisionProject = readFileSync(
+    `${coordination}/component-revisions-project`,
+    "utf8",
+  ).trim();
+  for (const component of ["a", "b", "c"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')=? AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, revisionProject, component);
+    assert.ok(
+      entry,
+      `Actual revision-project component ${component} must have functional evidence`,
+    );
+    const report = JSON.parse(entry.document);
+    const observed = report.checkpoint.observed;
+    const scope = observed.testScope ?? observed.lastPassedScope;
+    assert.ok(scope, "A pass must retain its captured test identity");
+    assert.equal(scope.projectId, revisionProject);
+    assert.equal(scope.component, component);
+    assert.equal(scope.basisVersion, 2);
+    assert.match(scope.basis, /^[a-f0-9]{64}$/u);
+    let evidence = observed.testEvidence;
+    if (component === "a") {
+      // A remains valid after unrelated B changes, but its vectors belong to the old intent.
+      assert.ok(scope.blueprintRevision < report.context.projectRevision);
+      assert.equal(observed.componentBasis, scope.basis);
+      assert.equal(observed.testScope, undefined);
+      assert.equal(evidence.length, 0);
+      const historical = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.component')='a' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:signal-lamp:%' ORDER BY id DESC",
+        )
+        .all(server.serverId, revisionProject)
+        .map((row) => JSON.parse(row.document))
+        .find((candidate) => {
+          const captured = candidate.checkpoint.observed.testScope;
+          return (
+            captured &&
+            Object.keys(scope).every((key) => captured[key] === scope[key]) &&
+            candidate.context.projectRevision === scope.blueprintRevision &&
+            candidate.checkpoint.observed.testEvidence.length === 3
+          );
+        });
+      assert.ok(
+        historical,
+        "A's historical pass must resolve to real vectors under its original intent",
+      );
+      evidence = historical.checkpoint.observed.testEvidence;
+    } else {
+      assert.equal(scope.blueprintRevision, report.context.projectRevision);
+    }
+    assert.equal(evidence.length, 3);
+    assert.deepEqual(
+      evidence.map((vector) => vector.inputs.enable),
+      [false, true, false],
+    );
+    const intended = JSON.parse(
+      db
+        .prepare(
+          "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+        )
+        .get(server.serverId, revisionProject, scope.blueprintRevision)
+        .document,
+    );
+    assert.equal(scope.blueprintId, intended.id);
+    const leaf = intended.components.nodes.find(
+      (node) => node.id === component,
+    );
+    assert.equal(leaf.template, "signal-lamp");
+    if (component === "b") {
+      assert.equal(leaf.parameters.delay, 4);
+      assert.ok(evidence.at(-1).elapsedTicks >= 56);
+    }
+    for (const vector of evidence)
+      assert.equal(vector.outputs.light, vector.inputs.enable);
+  }
+  assert.equal(
+    readFileSync(`${coordination}/targeted-perception.done`, "utf8").trim(),
+    "passed",
+  );
+  const perceptionProject = readFileSync(
+    `${coordination}/targeted-perception-project`,
+    "utf8",
+  ).trim();
+  assert.equal(perceptionProject, revisionProject);
+  const owner = JSON.parse(
+    db
+      .prepare(
+        "SELECT members FROM gateway_projects WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, perceptionProject).members,
+  ).find((member) => member.role === "owner").actorId;
+  for (const kind of ["block", "view"]) {
+    const entry = db
+      .prepare(
+        "SELECT document FROM gateway_observations WHERE server_id=? AND project_id=? AND json_extract(document,'$.perception.kind')=? ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, perceptionProject, kind);
+    assert.ok(
+      entry,
+      `Actual ${kind} perception must survive the server/companion protocol`,
+    );
+    const captured = JSON.parse(entry.document);
+    assert.equal(captured.perception.schemaVersion, 1);
+    assert.equal(captured.perception.actorId, owner);
+    assert.equal(captured.blocks.length, 7);
+    assert.ok(Number.isFinite(captured.perception.player.position.x));
+    assert.ok(
+      Math.abs(
+        Math.hypot(
+          ...["x", "y", "z"].map(
+            (axis) => captured.perception.player.look[axis],
+          ),
+        ) - 1,
+      ) < 0.01,
+    );
+    if (kind === "block") {
+      assert.deepEqual(captured.perception.target, { x: 109, y: 101, z: 0 });
+      assert.ok(
+        captured.blocks
+          .find(
+            (block) =>
+              block.pos.x === 109 && block.pos.y === 101 && block.pos.z === 0,
+          )
+          .state.includes("delay=4"),
+      );
+      assert.equal(captured.perception.differences.changed, 0);
+    } else
+      assert.ok(
+        ["north", "south", "east", "west", "up", "down"].includes(
+          captured.perception.face,
+        ),
+      );
+  }
+  for (const marker of [
+    "inventory-native.done",
+    "inventory-bob-private.done",
+    "inventory-revocation.done",
+    "inventory-recovery.done",
+    "undo-context-failure.done",
+    "undo-context-recovery.done",
+  ])
+    assert.equal(
+      readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+      "passed",
+    );
+  const inventoryCaptures = db
+    .prepare(
+      "SELECT count(*) AS count FROM gateway_requests WHERE server_id=? AND kind='inventory'",
+    )
+    .get(server.serverId).count;
+  assert.ok(
+    inventoryCaptures >= 7,
+    "Actual private own/double-chest/crafter/other-actor/restart captures must reach the companion",
+  );
+  for (const table of db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    )
+    .all()) {
+    for (const persisted of db
+      .prepare(
+        'SELECT * FROM "' + String(table.name).replaceAll('"', '""') + '"',
+      )
+      .all()) {
+      const data = JSON.stringify(persisted);
+      assert.ok(
+        !data.includes("minecraft:diamond"),
+        "The real other-actor private item ID cannot enter durable project data",
+      );
+      assert.ok(
+        !data.includes("inventory-private-secret"),
+        "Custom item names never enter companion payloads or persistence",
+      );
+    }
+  }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
@@ -159,6 +402,10 @@ try {
       recordedCatalogMechanisms: catalogEvidence,
       repairedDelays: [...testedDelays].sort(),
       recoveredRepairProject: repairProject,
+      testedProjectComponents: ["a", "b", "c"],
+      revisedComponent: "b:delay4",
+      targetedPerception: ["block", "view"],
+      ephemeralPrivateInventories: inventoryCaptures,
     }),
   );
 } finally {

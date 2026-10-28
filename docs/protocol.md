@@ -111,6 +111,36 @@ revocation and fresh checkpoints clear stale functional evidence while audit
 records remain. Request IDs for mutating operations are one-use, even after
 restart. A retry must be a new explicit operation, not replayed authority.
 
+Composite checkpoint task IDs are `projectUUID:component`. Their observed payload
+includes the component, basis/version, assignment generation and descriptive
+assignments. `testScope` identifies captured vectors by project, exact blueprint
+id/revision, component and basis/version. `lastPassedScope` may point to an older
+immutable revision when an unrelated component changed; empty current vectors
+are never a new test. Historical audit records keep their original identity.
+These fields describe work; none grants a Minecraft execution lease.
+
+On intent sync, the companion derives leaf geometry and transitive prerequisites
+from canonical stored blueprints. It preserves unchanged historical task rows,
+pauses changed/removed/unscoped tasks and never carries live execution across a
+project revision. Authorization changes and service/server registration pause
+all tasks. World observations compare coordinate history across the retained 20
+snapshots and invalidate only intersecting component/read closures; each closure
+includes a two-block margin. Newly covered coordinates that contradict canonical
+geometry also invalidate affected results. Legacy unscoped rows fail closed.
+The comparison fingerprint is local to companion invalidation and is not the
+Fabric assignment basis or an execution credential.
+
+A targeted observation may include `perception` schema1 with kind `block` or
+`view`, authenticated `actorId`, self `player` position/eye/look vectors, integer
+`target`, optional view `face`, and integer `differences` counts (missing, changed,
+unplanned). Its target must be present in the at-most-seven sampled blocks.
+Pose values are finite and view direction normalized; unknown fields, arbitrary
+inventory payloads and wrong actor attribution are rejected. The actor must match
+the request context before report ordering is claimed. The companion preserves
+these typed facts in the private observation record. Observations without this
+optional object remain compatible. This route never reads Minecraft itself or
+grants permission to access a new world region.
+
 POST `/v2/project/read` accepts context and returns the authorized project and
 current blueprint. GET `/v2/projects?serverId=...&serverEpoch=...&actorId=...&worldId=...`
 returns only that actor's current project memberships. Equal project UUIDs in
@@ -135,3 +165,23 @@ Fabric must validate and accept the proposal, then synchronize the new revision
 through `/v2/project`; the model response cannot advance canonical authority.
 Every response is protocol 2. Invalid/stale authority returns 403/409, exhausted
 budgets 429, and cancelled/unavailable planning 503. No route mutates Minecraft.
+
+## Ephemeral private inventory
+
+A connected actor's gateway context may include server-generated `connectionId`
+(UUID). POST `/v2/inventory` uses the ordinary fenced context/report sequence and
+strict schema1 fields: `worldId`, `dimension`, `actorId`, `connectionId`, `source`
+(`player`/`container`), `tick`, `slots` (1..128), `containers` (zero own-inventory
+positions or one/two storage positions), and unique item ID/count pairs. Counts
+are positive integers bounded by the slot capacity. Unknown fields, duplicate
+items/positions and mismatched actor/connection are rejected before report order
+is consumed. It records no item data in SQLite or the audit.
+
+POST `/v2/inventory/read` requires current VIEW context and returns protocol2,
+status `private`, context and `inventory` (`{snapshot, ageMs}` or null). Only the
+same current actor, connection, server epoch and project/auth revision can read a
+snapshot for 60 seconds. The bounded in-memory cache replaces each actor/project
+entry, clears on service restart/authority changes, and never joins shared model
+context. `privateContext` is a separate internal interface for future private
+advice; the shared design route never uses it. No inventory fact grants resource
+ownership, access rights or a Minecraft execution lease.
