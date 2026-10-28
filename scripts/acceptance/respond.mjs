@@ -419,10 +419,20 @@ async function main() {
       startedAt: Date.now(),
       model: options["--model"],
     });
+    const { RequestError } = await import("../../dist/companion/src/types.js");
     const provider = new CodexPlanningProvider({
       configDir: directory,
       model: options["--model"],
       timeoutMs: Math.min(90_000, request.expiresAt - Date.now()),
+      onUntrustedResult: async (value) => {
+        const bytes = JSON.stringify(value).length;
+        await privateWrite(join(receipts, `${request.digest}.untrusted.json`), {
+          schemaVersion: 1,
+          stage,
+          requestDigest: request.digest,
+          ...(bytes <= 65536 ? { result: value } : { oversize: true, bytes }),
+        });
+      },
     });
     check(
       !generated || request.stage === stage,
@@ -434,31 +444,53 @@ async function main() {
         : stage === "geometry"
           ? "generateGeometry"
           : "plan";
-    const plan = await provider[method](
-      request.input,
-      new AbortController().signal,
-      request.memory,
-    );
-    const usage = provider.lastUsage;
-    check(
-      usage && typeof usage === "object",
-      "Provider did not return token usage; no response was published.",
-    );
-    response = createAcceptanceResponse(requestEnvelope(request), plan, {
-      model: options["--model"],
-      sdkVersion: sdk.version,
-      inputTokens: usage.input_tokens,
-      cachedInputTokens: usage.cached_input_tokens,
-      outputTokens: usage.output_tokens,
-    });
-    response = readAcceptanceResponse(
-      response,
-      requestEnvelope(request),
-      Date.now(),
-    );
-    resultPath = join(receipts, `${request.digest}.response.json`);
-    await privateWrite(resultPath, response);
-    console.log(`Validated response saved: ${resultPath}`);
+    try {
+      const plan = await provider[method](
+        request.input,
+        new AbortController().signal,
+        request.memory,
+      );
+      const usage = provider.lastUsage;
+      check(
+        usage && typeof usage === "object",
+        "Provider did not return token usage; no response was published.",
+      );
+      response = createAcceptanceResponse(requestEnvelope(request), plan, {
+        model: options["--model"],
+        sdkVersion: sdk.version,
+        inputTokens: usage.input_tokens,
+        cachedInputTokens: usage.cached_input_tokens,
+        outputTokens: usage.output_tokens,
+      });
+      response = readAcceptanceResponse(
+        response,
+        requestEnvelope(request),
+        Date.now(),
+      );
+      resultPath = join(receipts, `${request.digest}.response.json`);
+      await privateWrite(resultPath, response);
+      console.log(`Validated response saved: ${resultPath}`);
+    } catch (error) {
+      const failure = {
+        schemaVersion: 1,
+        stage,
+        requestDigest: request.digest,
+        category: provider.lastDiagnostic,
+        usage: provider.lastUsage,
+        error:
+          error instanceof RequestError
+            ? error.message
+            : "Local validation or publication preparation failed.",
+      };
+      console.error(
+        `Local acceptance failure (${failure.category}): ${failure.error}`,
+      );
+      await privateWrite(
+        join(receipts, `${request.digest}.failure.json`),
+        failure,
+      );
+      throw error;
+    }
   }
   const current = await liveRun();
   await reviewedBranch();

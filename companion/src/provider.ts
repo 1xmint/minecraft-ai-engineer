@@ -148,11 +148,13 @@ export function plannerEnvironment(
 }
 export class CodexPlanningProvider implements PlanningProvider {
   public lastUsage: unknown = null;
+  public lastDiagnostic = "not-started";
   constructor(
     private readonly options: {
       configDir: string;
       model?: string;
       timeoutMs?: number;
+      onUntrustedResult?: (value: unknown) => Promise<void>;
     },
   ) {}
   async plan(
@@ -192,6 +194,8 @@ export class CodexPlanningProvider implements PlanningProvider {
     externalSignal: AbortSignal,
     purpose: "catalog" | "behavior" | "geometry",
   ): Promise<unknown> {
+    this.lastUsage = null;
+    this.lastDiagnostic = "starting";
     const launcher = await preparePlannerLauncher(this.options.configDir);
     const directory = mkdtempSync(join(tmpdir(), "mce-planner-"));
     mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -220,6 +224,7 @@ export class CodexPlanningProvider implements PlanningProvider {
         modelReasoningEffort: "low",
       });
 
+      this.lastDiagnostic = "running";
       const run = await thread.runStreamed(prompt, {
         outputSchema,
         signal: controller.signal,
@@ -234,6 +239,7 @@ export class CodexPlanningProvider implements PlanningProvider {
           if (
             !["agent_message", "reasoning", "error"].includes(event.item.type)
           ) {
+            this.lastDiagnostic = "prohibited-tool";
             controller.abort();
             throw new RequestError(
               "Planner attempted a prohibited tool action. Planning stopped.",
@@ -246,21 +252,51 @@ export class CodexPlanningProvider implements PlanningProvider {
           )
             response = event.item.text;
         }
-        if (event.type === "turn.failed" || event.type === "error")
+        if (event.type === "turn.failed" || event.type === "error") {
+          const message =
+            event.type === "turn.failed" ? event.error.message : event.message;
+          this.lastDiagnostic = /schema/iu.test(message)
+            ? "schema-rejected"
+            : /limit|quota/iu.test(message)
+              ? "usage-limit"
+              : "provider-error";
           throw new RequestError(
             "Codex could not complete planning. Check subscription sign-in, model availability or usage limits; no automatic retry was made.",
             503,
           );
+        }
         if (event.type === "turn.completed") this.lastUsage = event.usage;
       }
-      return JSON.parse(response) as unknown;
+      let value: unknown;
+      try {
+        value = JSON.parse(response) as unknown;
+      } catch {
+        this.lastDiagnostic = "invalid-json";
+        throw new RequestError("Planner did not return a JSON result.", 502);
+      }
+      this.lastDiagnostic = "completed";
+      if (this.options.onUntrustedResult) {
+        try {
+          await this.options.onUntrustedResult(value);
+        } catch {
+          this.lastDiagnostic = "local-capture-failed";
+          throw new RequestError(
+            "Local diagnostic capture could not be saved; no response was published.",
+            503,
+          );
+        }
+      }
+      return value;
     } catch (error) {
       if (error instanceof RequestError) throw error;
-      if (controller.signal.aborted)
+      if (controller.signal.aborted) {
+        this.lastDiagnostic = "cancelled-or-timeout";
         throw new RequestError(
           "Planning cancelled or timed out. No world changes were made.",
           503,
         );
+      }
+      this.lastDiagnostic = "provider-unavailable";
       throw new RequestError(
         "Codex planning unavailable. Run the doctor, check ChatGPT sign-in and account limits, then retry manually.",
         503,
