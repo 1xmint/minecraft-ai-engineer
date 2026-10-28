@@ -52,6 +52,11 @@ instead of an old paused flag, and compares Alice's cursor after Bob's controls.
 Java main/client compile and formatting passed; combined native/data acceptance
 is pending the next CI. Nothing here completes broader free-form E1 or E2/E3.
 
+Root corrected a recovery-fixture assumption before acceptance: existing
+ProjectManager.changed intentionally removes a revoked member's cursor. Recovery
+must verify Bob stays absent and Alice's explicitly paused B lesson survives,
+not require revoked metadata to reappear. No product behavior was relaxed.
+
 The actual signed-in lamp path PASSED: request workflow **40624276545** and
 response workflow **40624742436**, both source **a64f352**, owner-dispatched
 attempt1. One local official SDK0.164.0/gpt-6-luna call used10529 input/73 output

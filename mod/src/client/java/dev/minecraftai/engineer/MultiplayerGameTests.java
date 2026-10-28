@@ -998,13 +998,16 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.blueprint.blocks().stream().filter(block->block.component().equals("b")).allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Negated natural requests cannot start construction");});
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component b")),"Bob's question replies stay private from Alice's controller");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("lesson-revoked","ready");awaitFile(context,"lesson-denied.done");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.cursors.containsKey(player(s,"Bob").getUUID()),"Revocation deliberately removes Bob's private lesson cursor");
+            commandAs(s,"Alice","engineer teach b");commandAs(s,"Alice","engineer pause");});
         write("lesson-followup.done","passed");
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void lessonRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("lesson-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
         server.runOnServer(s->{var project=session(s,"Alice");var bob=project.cursors.get(UUID.fromString(read("lesson-bob-actor")));
-            check(bob!=null && bob.stage==3 && !bob.teaching,"The actual restart preserves Bob's paused lesson without granting access");
+            var alice=project.cursors.get(player(s,"Alice").getUUID());
+            check(bob==null && alice!=null && alice.stage==3 && !alice.teaching,"Actual restart preserves the member's paused B lesson and never recreates the revoked member's cursor");
             check(project.delegation==null && project.journal.size()==6 && project.verified.startsWith("stale:"),"A question never restores authority or a fresh pass after restart");});
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
         server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
