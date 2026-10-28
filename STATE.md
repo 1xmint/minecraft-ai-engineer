@@ -12,9 +12,11 @@ under the safe stale-on-restart label; private inventory/block/view/component
 proofs all passed. No new release or full phase1 completion is claimed.
 
 This branch contains the actual client construction proof (scoped Java client
-compile passed) and proof-first synthetic exchange/gateway-boundary tests. No
-exchange implementation yet: GitHub must first prove missing APIs fail. Tests
-remain GitHub-only. The public PR for this slice is being opened as a draft.
+compile passed) and proof-first synthetic exchange/gateway-boundary tests. The data-only exchange contract and immutable provider authority frame now
+compile. Proof-first CI40620293316 failed the missing acceptance-exchange module
+(TS2307), as intended. Next CI must prove contract/gateway rejection cases and
+actual client placement. Transport/local CLI/live model invocation remain to build.
+Tests stay GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
 
 ## Current acceptance slice plan (serves #3/E4)
 
@@ -38,8 +40,8 @@ P2 protocol proofs are written first in tests/acceptance-exchange.test.ts:
 strict synthetic request reconstruction, reviewed run/attempt identity, digest,
 nonce/expiry, actor/connection/epoch/revision crosstalk and bounded result schema.
 A gateway proof requires a separate immutable authenticated frame at the provider
-boundary; model text is not that frame. No implementation yet: Companion CI must
-fail these missing APIs before code. Source documentation rechecked official SDK
+boundary; model text is not that frame. CI40620293316 failed these missing APIs before implementation. Contract code now
+passes scoped TypeScript compile; runtime rejection proofs are pending. Source documentation rechecked official SDK
 and ChatGPT authentication: https://learn.chatgpt.com/docs/codex-sdk and
 https://learn.chatgpt.com/docs/auth. Local SDK invocation stays private/manual;
 no Codex execution or credentials are exposed in public CI.

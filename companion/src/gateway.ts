@@ -255,6 +255,7 @@ export class ServerGateway {
             input,
             controller.signal,
             memory.context(context),
+            Object.freeze({ ...context }),
           );
           if (controller.signal.aborted)
             throw new RequestError(
