@@ -317,3 +317,16 @@ before dispatch, cancel on invalidation and compare returned behavior/digest bef
 acceptance. Service cannot independently prove physical connection/consent.
 TypeScript and Java compile passed on the immediate-edge correction. Next CI
 covers direct0/4 lamp alongside serial12/16 and all new HTTP rejection proofs.
+
+Sourceb8ef16c **CI40727441475** Fabric passed all25 tests, including actual0/4
+and12/16 edge measurements; companion/client/Windows passed, dedicated run live
+at last check. Native boundary proofs added next for strict BehaviorSpec and raw
+generated root dispatch, unchanged curated oracle, transformed ports and behavior-
+bound task basis. These classes/dispatch do not exist yet: observe compile failure
+before implementing. Then wire owner design/confirm, original-request capture,
+workspace/disconnect cancellation, behavior equality, production tick trace/WAL,
+teaching and real model acceptance. Generated construction should preflight and
+reserve a loaded clear two-block read margin before its first write, retaining
+explicit build delegation/assignment semantics; human lever changes must not be
+silently overwritten. Watch per-tick validation cost with larger raw geometry;
+do not cache mutable source metadata without proving immutability.

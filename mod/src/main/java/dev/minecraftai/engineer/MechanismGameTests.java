@@ -93,6 +93,47 @@ public final class MechanismGameTests {
         helper.runAtTickTime(17,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.pullLever(input);});
         helper.runAtTickTime(31,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.succeed();});
     }
+    @GameTest public void acceptedBehaviorHasIndependentStrictUnitsAndDigest(GameTestHelper helper) {
+        var behavior=BehaviorSpec.read(com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"function\":\"buffer\",\"risingGameTicks\":0,\"fallingGameTicks\":4}").getAsJsonObject());
+        helper.assertTrue(behavior.risingGameTicks()==0 && behavior.fallingGameTicks()==4 && behavior.digest().matches("[0-9a-f]{64}"),"Observable intent records both edge units, including immediate activation");
+        for(String invalid:new String[]{"{\"schemaVersion\":1,\"function\":\"buffer\",\"risingGameTicks\":-1,\"fallingGameTicks\":4}","{\"schemaVersion\":1,\"function\":\"clock\",\"risingGameTicks\":12,\"fallingGameTicks\":16}","{\"schemaVersion\":1,\"function\":\"buffer\",\"risingGameTicks\":12,\"fallingGameTicks\":16,\"expected\":true}"})
+            reject(helper,()->BehaviorSpec.read(com.google.gson.JsonParser.parseString(invalid).getAsJsonObject()),"Model-selected extra tests, unsupported behavior and invalid timing never become accepted intent");
+        helper.succeed();
+    }
+    @GameTest public void generatedRootsKeepCuratedValidationAndBindBehaviorToTheirTaskBasis(GameTestHelper helper) {
+        var source=generatedSource(12,16);var plan=Blueprint.parse(source,"test","minecraft:overworld");
+        GeneratedBlueprint.validate(plan);ComponentTree.validate(plan);
+        helper.assertTrue(ComponentTree.component(plan,"root").blocks().size()==8 && ComponentTree.nodes(plan).size()==1,"A generated root uses raw geometry through the normal project validator");
+        helper.assertTrue(GeneratedBlueprint.contract(plan).ports().getFirst().pos().equals(new BlockPos(2,3,2)),"Generated contract ports resolve into the actual transformed world positions");
+        reject(helper,()->MechanismCatalog.contract(plan),"Generated provenance never weakens the curated geometry oracle");
+        var revised=Blueprint.parse(generatedSource(10,16),"test","minecraft:overworld");
+        helper.assertTrue(!ComponentAssignments.basis(plan,"root").equals(ComponentAssignments.basis(revised,"root")),"The same geometry with a different accepted behavior is a different task intention");
+        var forged=source.deepCopy();forged.getAsJsonObject("provenance").addProperty("behaviorDigest","0".repeat(64));
+        reject(helper,()->GeneratedBlueprint.validate(Blueprint.parse(forged,"test","minecraft:overworld")),"A model cannot rewrite independently accepted behavior metadata");
+        var claimed=source.deepCopy();claimed.addProperty("verification","passed");
+        reject(helper,()->GeneratedBlueprint.validate(Blueprint.parse(claimed,"test","minecraft:overworld")),"Generated data cannot claim a functional pass");
+        helper.succeed();
+    }
+    private static com.google.gson.JsonObject generatedSource(int rising,int falling) {
+        var source=com.google.gson.JsonParser.parseString("""
+            {"schemaVersion":1,"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","projectId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":2,"worldId":"test","dimension":"minecraft:overworld","name":"Generated serial buffer","explanation":"Raw serial wiring; actual timing requires a game test.","anchor":{"x":2,"y":2,"z":2},"rotation":0,
+            "blocks":[
+              {"pos":{"x":0,"y":0,"z":0},"state":"minecraft:stone","stage":"support","component":"root","prerequisites":[]},
+              {"pos":{"x":1,"y":0,"z":0},"state":"minecraft:stone","stage":"support","component":"root","prerequisites":[]},
+              {"pos":{"x":2,"y":0,"z":0},"state":"minecraft:stone","stage":"support","component":"root","prerequisites":[]},
+              {"pos":{"x":3,"y":0,"z":0},"state":"minecraft:stone","stage":"support","component":"root","prerequisites":[]},
+              {"pos":{"x":0,"y":1,"z":0},"state":"minecraft:lever[face=floor,facing=east,powered=false]","stage":"devices","component":"root","prerequisites":["support"]},
+              {"pos":{"x":1,"y":1,"z":0},"state":"minecraft:repeater[delay=3,facing=west,locked=false,powered=false]","stage":"devices","component":"root","prerequisites":["support"]},
+              {"pos":{"x":2,"y":1,"z":0},"state":"minecraft:repeater[delay=3,facing=west,locked=false,powered=false]","stage":"devices","component":"root","prerequisites":["support"]},
+              {"pos":{"x":3,"y":1,"z":0},"state":"minecraft:redstone_lamp[lit=false]","stage":"devices","component":"root","prerequisites":["support"]}],
+            "stages":[{"id":"support","title":"Build the support","explanation":"Place the stone supports for the generated mechanism.","prerequisites":[]},{"id":"devices","title":"Install the devices","explanation":"Place the lever, repeaters and output lamp.","prerequisites":["support"]}],
+            "bounds":{"min":{"x":0,"y":0,"z":0},"max":{"x":3,"y":1,"z":0}},"resources":{"minecraft:stone":4,"minecraft:lever":1,"minecraft:repeater":2,"minecraft:redstone_lamp":1},
+            "ports":[{"name":"input","pos":{"x":0,"y":1,"z":0},"kind":"input"},{"name":"output","pos":{"x":3,"y":1,"z":0},"kind":"output"}],"tests":[],"provenance":{"kind":"generated","minecraft":"26.3","generatorRevision":1},"verification":"untested"}
+            """).getAsJsonObject();
+        var behavior=new BehaviorSpec(rising,falling);source.add("behavior",behavior.json());source.getAsJsonObject("provenance").addProperty("behaviorDigest",behavior.digest());
+        var test=new com.google.gson.JsonObject();test.addProperty("id","buffer-timing");test.addProperty("description","Measure the lamp transition after input edges: rising "+rising+" game ticks and falling "+falling+" game ticks; confirm stable off/on/off behavior.");source.getAsJsonArray("tests").add(test);
+        return source;
+    }
     @GameTest public void transitionTraceRequiresEveryTickAndStableBehavior(GameTestHelper helper) {
         var correct=new TransitionTrace(false,true,12,8);
         for(int tick=0;tick<=20;tick++)correct.sample(tick,tick>=12);
