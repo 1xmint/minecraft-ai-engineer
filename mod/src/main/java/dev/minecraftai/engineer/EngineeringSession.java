@@ -892,12 +892,16 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     void undoReserved() {
+        if(applyUndoEntriesReserved())finishUndo();
+    }
+    /** Production WAL phase: completion is separate so a last-entry interruption stays recoverable. */
+    boolean applyUndoEntriesReserved() {
         if (hasPendingTest()) restoreTest();
         if(hasPendingTest())throw new IllegalStateException("Reconcile the interrupted test input before undo; the circuit and recovery checkpoint were preserved");
         String targetOperation=undoRequested?undoOperation:(journal.isEmpty()?null:journal.getLast().operation());
-        if(targetOperation==null) { manager.release(this);return; }
+        if(targetOperation==null) { manager.release(this);return false; }
         List<Change> batch=undoBatch(targetOperation);
-        if(batch.isEmpty()) { finishUndo();return; }
+        if(batch.isEmpty()) return true;
         // Repeat preflight after the durable target intent, then validate every actual mutation.
         Set<BlockPos> assistantPositions=journalPositions(),plannedPositions=plannedPositions();
         preflightUndo(batch,assistantPositions,plannedPositions);
@@ -919,7 +923,7 @@ final class EngineeringSession implements BuildExecutor {
             journal.removeLast();pendingPlacement=false;save();
         }
         if(!journal.isEmpty() && journal.stream().anyMatch(c->c.operation().equals(targetOperation)))throw new IllegalStateException("Undo target is not the latest contiguous operation; journal retained");
-        finishUndo();
+        return true;
     }
     private List<Change> undoBatch(String operation) {
         var batch=new ArrayList<Change>();

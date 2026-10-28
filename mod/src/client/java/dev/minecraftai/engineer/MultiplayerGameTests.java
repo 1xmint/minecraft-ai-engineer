@@ -578,8 +578,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1 && session(s,"Alice").level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Undo reverses just the last repair, preserving earlier construction"));
         diagnoseReady(context);send(context,"engineer repair");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         String target=server.computeOnServer(s->{var journal=saved(session(s,"Alice")).getAsJsonArray("journal");return journal.get(journal.size()-1).getAsJsonObject().get("operation").getAsString();});
-        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==5);
-        var recovery=server.computeOnServer(s->{var project=session(s,"Alice");var checkpoint=saved(project);checkpoint.addProperty("undoRequested",true);checkpoint.addProperty("undoOperation",target);return new RepairRecovery(project.file,checkpoint,project.projectId.toString(),project.journal.size());});
+        var recovery=server.computeOnServer(s->{var project=session(s,"Alice");
+            check(project.beginUndo() && project.undoOperation.equals(target),"The real undo WAL selects this exact repair operation");
+            check(project.applyUndoEntriesReserved(),"The production undo phase applies its recorded inverse changes");
+            check(project.undoRequested && project.journal.size()==5 && project.journal.stream().noneMatch(change->change.operation().equals(target)),"Last-entry flush retains an explicit empty target before completion");
+            project.manager.release(project);
+            return new RepairRecovery(project.file,saved(project),project.projectId.toString(),project.journal.size());});
         write("repair-project",recovery.project());return recovery;
     }
 

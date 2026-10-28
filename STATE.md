@@ -368,3 +368,14 @@ mixed immutable history refuses before backup/destination writes. Root's scoped
 compile caught a missing JsonArray import in the newly added active-frame
 rejection fixture; import fixed. Worker worktree was clean and git cherry showed
 its commit integrated before removal; its branch remains recoverable.
+
+CI40713536255 / sourcec404ef2 passed all data/client gates and first two native
+boots, genuine legacy adoption, original operation revision assertions, private
+lessons and companion restart3125->4356. Third boot rejected an old fabricated
+empty-undo fixture: it toggled undoRequested after completion, when the original
+scope was legitimately pruned. Root preserves strict v4 loading. Extracted the
+existing production undo-entry WAL phase from completion; normal undo still runs
+both in sequence. The native proof now prepares real undo, applies actual inverse
+writes, captures its genuine final-entry-flushed checkpoint before completion,
+and restarts that exact document. No synthetic undo flags or scope are invented.
+Focused deletion/recovery review and scoped compile required before next CI.
