@@ -173,8 +173,7 @@ final class OperationScopes {
             validateOperationId(id); validateComponentId(component);
             Snapshot snapshot = out.snapshots.get(snapshotId);
             if (snapshot == null) throw new IllegalArgumentException("Operation references a missing snapshot");
-            if (snapshot.transition() == null) componentPositions(snapshot, component);
-            else validateTransitionComponent(snapshot.transition(), component);
+            componentPositions(snapshot, component);
             if (out.operations.putIfAbsent(id, new Operation(id, component, snapshotId)) != null)
                 throw new IllegalArgumentException("Duplicate operation identity");
             referenced.add(snapshotId);
@@ -232,7 +231,6 @@ final class OperationScopes {
         Operation mapping = operations.get(operation);
         if (mapping == null) throw new IllegalArgumentException("Unknown operation scope");
         Snapshot snapshot = snapshots.get(mapping.snapshot());
-        if (snapshot.transition() != null) return snapshot.transition().writes();
         return componentPositions(snapshot, mapping.component());
     }
 
@@ -268,7 +266,11 @@ final class OperationScopes {
     }
 
     private static Set<BlockPos> componentPositions(Snapshot snapshot,String component) {
-        return snapshot.positions().computeIfAbsent(component,id->componentPositions(snapshot.parsed(), id));
+        return snapshot.positions().computeIfAbsent(component,id->{
+            if(snapshot.transition()==null)return componentPositions(snapshot.parsed(),id);
+            validateTransitionComponent(snapshot.transition(),id);
+            return snapshot.transition().writes();
+        });
     }
     private static Set<BlockPos> componentPositions(Blueprint blueprint, String component) {
         Set<BlockPos> positions=new HashSet<>();

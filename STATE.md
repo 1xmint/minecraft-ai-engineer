@@ -171,3 +171,23 @@ positions per operation; transition scopes need both real sources/write union an
 read closure, never an invented union blueprint. Do not simply plug new steps into
 the old journal and claim undo/restart works. These production pieces, explicit
 workspace/preview/apply and real modification acceptance remain pending.
+
+StructuralTransition source d0b3bf3 passed Fabric **CI40771775541**, all30 required
+tests; Companion/Windows/integrated client also passed before the next proof push.
+Paired-scope prooff084fca / CI40772570707 failed at missing captureTransition/
+sources/positions. GPT-6-Luna implemented only OperationScopes9a0ae2b, integrated
+1eb1fe5. Schema2 explicitly stores paired sources and exact writes; schema1 old
+wire/hash behavior stays unchanged, and pruning the pair returns the original
+schema1 graph. Root caches paired component-footprint validation across operation
+references and adds corruption/version-relabel rejection. Java compile passed.
+
+Critical caller contract: operationScopes.blueprint(transition) is the real AFTER
+blueprint, not an execution/undo footprint. Future reservation writes must use
+positions(operation), and dependency reads must cover sources(operation), both
+real before/after sources. Current world executor/load/undo callers have NOT yet
+been adapted, and nothing creates a production transition operation yet. Next
+implement projected inverse preflight, explicit transition WAL/step execution and
+preview/apply/workspace expansion with actual native conflict/restart proofs.
+Check the strict adjacent revision assumption when redo/new planning follows an
+undo while canonical intent remains later; never relabel the true historical
+source just to satisfy an identity check. PR19 stays draft; S1-S3 incomplete.
