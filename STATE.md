@@ -4,17 +4,17 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Working on **phase/5-player-acceptance**, branched from9458cf0 while #2's
-PR12 https://github.com/1xmint/minecraft-ai-engineer/pull/12 awaits final native
-CI40618880526. Four checks were green; native was live at last inspection. Do not
-merge #2 until all five pass and retained recovery artifacts agree. Rebase this
-branch's own changes onto main after #2 merges; do not reintroduce squashed commits.
+Working on **phase/5-player-acceptance** for #3/E4. #2 merged as **c01a3e7**
+through PR12 after **811a600 / CI40619656132 passed all five checks**. Root
+inspected actual rejection/recovery markers, native logs and SQLite proof:
+B-only undo on third boot preserves A's blocks/journal/exact historical scope
+under the safe stale-on-restart label; private inventory/block/view/component
+proofs all passed. No new release or full phase1 completion is claimed.
 
-#2 inventory fdd03d7/CI40595380532 passed all five, artifacts inspected. Transactional
-undo67014ab independently accepted by GPT-6.1-Sol; proof9458cf0 corrects two root
-fixture errors (old completed state race, restart correctly stales historical
-passes). Its real WAL/third-boot proof must keep B untested, preserve A's exact
-historical scope without a live pass, and remove B only. No new release claimed.
+This branch contains the actual client construction proof (scoped Java client
+compile passed) and proof-first synthetic exchange/gateway-boundary tests. No
+exchange implementation yet: GitHub must first prove missing APIs fail. Tests
+remain GitHub-only. The public PR for this slice is being opened as a draft.
 
 ## Current acceptance slice plan (serves #3/E4)
 
