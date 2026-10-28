@@ -50,7 +50,12 @@ public final class EngineerGameTests {
         reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(1,0,0)),java.util.Set.of(),1),"A neighboring write cannot invalidate another task's read dependency");
         leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(10,0,0)),java.util.Set.of(),1);
         leases.validate(a,first,editor,1,policy.revision(),2);
+        leases.validateWrite(a,first,editor,1,policy.revision(),BlockPos.ZERO,2);
+        reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(1,0,0),2),"A reserved read dependency never grants write authority");
+        reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(2,0,0),2),"A valid lease never authorizes an unreserved block in its workspace");
+        reject(helper,()->leases.validateWrite(b,first,editor,1,policy.revision(),BlockPos.ZERO,2),"Reserved positions cannot be replayed under another project scope");
         policy.revoke(owner,editor);
+        reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),BlockPos.ZERO,3),"Write membership cannot bypass a changed grant revision");
         reject(helper,()->leases.validate(a,first,editor,1,policy.revision(),3),"Revocation fences already-issued work");
         reject(helper,()->new RegionReservations(java.util.UUID.randomUUID()).validate(a,first,editor,1,1,4),"A restarted server never restores an old lease");
         reject(helper,()->leases.validate(b,first,owner,1,1,4),"A lease cannot be replayed for another project or actor");

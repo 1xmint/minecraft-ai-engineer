@@ -480,6 +480,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->{
             var project=session(s,"Alice");var actual=project.level().getBlockState(new BlockPos(10,101,2));
             if(!project.state.equals("VERIFYING") || !actual.is(Blocks.LEVER) || !actual.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            project.validateMutation(ProjectAccess.Permission.BUILD,new BlockPos(10,101,2));
+            boolean unreservedRejected=false;
+            try {project.validateMutation(ProjectAccess.Permission.BUILD,new BlockPos(11,101,1));}
+            catch(IllegalStateException outsideLease){unreservedRejected=true;}
+            check(unreservedRejected,"A live functional-test lease refuses an unreserved air block inside its read area");
+            check(project.level().getBlockState(new BlockPos(11,101,1)).isAir(),"Rejected target validation leaves the world untouched");
             commandAs(s,"Alice","engineer project revoke Bob");return true;
         });
         server.runOnServer(s->{
@@ -989,6 +995,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer ask "+"x".repeat(241));expectChat(context,"within 240 characters");
         write("lesson-project",id);write("lesson-a-revision",String.valueOf(passedRevision));
         write("lesson-bob-actor",server.computeOnServer(s->player(s,"Bob").getUUID().toString()));
+        // Freeze Alice through her real command before comparing across Bob's client round trips.
+        // Otherwise the ordinary ten-tick auto-advance can legitimately change her cursor.
+        MESSAGES.clear();send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
         String aliceLesson=server.computeOnServer(s->{var c=session(s,"Alice").cursor(player(s,"Alice").getUUID());return c.stage+":"+c.teaching;});
         MESSAGES.clear();write("lesson-bob-project",id);awaitFile(context,"lesson-bob.done");
         server.waitFor(s->!session(s,"Bob").cursor(player(s,"Bob").getUUID()).teaching);
