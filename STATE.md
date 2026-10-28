@@ -4,13 +4,58 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Working on **phase/5-live-acceptance**, based on PR13 merge **c80b8cd**.
-PR13 source **767feea / CI40623373036 passed all five gates**. Root inspected
-native client-construction/recovery markers, logs and SQLite proof. P1 actual
-client placement/tutorial/journal-exclusion passed. P2 bootstrap provenance,
-privacy/cancellation/expiry/one-use checks passed; the live lamp path is now
-proven below. PR12/#2 merged asc01a3e7 with full component/inventory proofs.
-No new release, full phase1 completion or phase2 feature is claimed.
+Working on **phase/6-contextual-teaching**, based on evidence PR14 merge
+**2c97246** (all five gates CI40625698878). PR13 bootstrap c80b8cd and the actual
+signed-in lamp proof below are landed. The full original scope remains active.
+
+## Current teaching slice plan (#3/E1)
+
+- T1: ask for current lesson details/timing or an explicit component without
+  retargeting the shared AI. Use the actor's existing tutorial stage to resolve
+  the leaf; explicit target overrides only the answer. Show canonical materials,
+  ports, intended delay and distinct current/historical functional labels. Proof:
+  Bob's B lesson while A executes; no lease/controller/assignment/journal/world or
+  cursor changes; A's original test revision remains accurate after B revision.
+- T2: exact bounded read-only phrases and explicit component syntax only. Unknown,
+  negated or mutating text requests clarification, never calls planning/build or
+  creates a project. VIEW checked before facts. Proof: real command rejection,
+  no project auto-create, denied membership and no private reply to controller.
+- T3: reuse existing teach/repeat/skip/previous/private pause controls. Verify own
+  cursor stays separate from execution and survives actual restart as paused.
+  This slice adds no global controller or new lesson persistence format.
+
+Options weighed: no change misses useful followups; expanding repeat alone misses
+context/timing; a new LLM advice endpoint spends quota and adds privacy surface for
+routine known facts. Choose a bounded local lesson assistant, no world scans or
+inference. GPT-6-Luna independently challenged actual interfaces and confirmed the
+existing controls already suffice; avoid duplicating them. Auto advance runs every
+10 ticks, so ask must be read-only and never toggle teaching. Existing /resume is
+BUILD execution, not a lesson alias. New ask uses existing-selection-only handler;
+old commands retain their auto-create behavior. Intended delay is not a measured
+latency; historical pass scope is never relabelled as a fresh test.
+
+Proofs first, native GitHub failure, implementation, scoped local compile, final
+review and all five gates. Full E1 dialogue/decision memory, E2 connected designs,
+E3 deeper diagnostics/textured ghosts and all phase2 features remain later work.
+
+Teaching proof **2d54c55 / CI40627174587** failed exactly at the missing ask
+command before any project existed. New LessonAssistant and ask(create=false)
+handler now compile: exact normalized bounded phrases, canonical leaf facts,
+actor-stage target resolution, intended timing vs stored/historical labels,
+private replies, no cursor/save/world/model calls. Existing teach gained an
+explicit leaf argument to select only the actor's first component lesson stage;
+unknown/group targets fail before cursor creation. Shared AI target stays intact.
+
+GPT-6-Luna reviewed actual source and the small explicit teach extension; no
+blocker found. Native proof now waits for actual pause/denial chat acknowledgments
+instead of an old paused flag, and compares Alice's cursor after Bob's controls.
+Java main/client compile and formatting passed; combined native/data acceptance
+is pending the next CI. Nothing here completes broader free-form E1 or E2/E3.
+
+Root corrected a recovery-fixture assumption before acceptance: existing
+ProjectManager.changed intentionally removes a revoked member's cursor. Recovery
+must verify Bob stays absent and Alice's explicitly paused B lesson survives,
+not require revoked metadata to reappear. No product behavior was relaxed.
 
 The actual signed-in lamp path PASSED: request workflow **40624276545** and
 response workflow **40624742436**, both source **a64f352**, owner-dispatched
