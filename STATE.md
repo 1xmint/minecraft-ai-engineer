@@ -282,3 +282,18 @@ separate calls, immutable accepted intent, single-use nonce, unchanged canonical
 revision, stale grants and pre-quota expiry/actor/workspace rejection. Routes not
 implemented yet; observe their expected failure next. PR18 stays draft and whole
 D1-D3 slice remains active.
+
+HTTP proofs31359d2 / CI40722834397 failed with404 at the missing generated routes
+before implementation; the stale-result proof fails promptly if no provider is
+dispatched. Implemented separate private behavior/geometry routes using existing
+epoch/grant/owner/budget/queue/cancellation checks. A strict native acceptance
+envelope binds basis (without requestId), actor connection, world, corners,
+rotation, behavior digest and bounded expiry. Recheck before dispatch and after
+inference; confirmation nonce uses the existing durable replay ledger before
+quota, not a new authorization system. Provider receives a frozen accepted
+behavior copy separately from raw geometry. Proposals never advance canonical
+intent. Generated server blueprint registration dispatch now validates its kind
+strictly; curated registration remains unchanged. TypeScript compile passed.
+Combined HTTP CI next; native confirmation/registry dispatch/production trial and
+live SDK acceptance still pending. Worker was clean and git cherry confirmed
+both commits integrated before its worktree removal; branch recoverable.

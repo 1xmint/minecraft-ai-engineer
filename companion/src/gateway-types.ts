@@ -1,3 +1,4 @@
+import { validateGeneratedBlueprint } from "./generated.js";
 import {
   type Blueprint,
   type Position,
@@ -123,6 +124,8 @@ export function serverBlueprint(
     typeof v.rotation !== "number"
   )
     throw new RequestError("Invalid blueprint rotation.");
+  if (object(v.provenance).kind === "generated")
+    return validateGeneratedBlueprint(v);
   if (!Array.isArray(v.stages) || v.stages.length < 1 || v.stages.length > 64)
     throw new RequestError("Invalid blueprint stages.");
   const stageIds = new Set<string>();
