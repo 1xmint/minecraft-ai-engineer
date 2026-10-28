@@ -93,6 +93,60 @@ public final class MechanismGameTests {
         helper.runAtTickTime(17,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.pullLever(input);});
         helper.runAtTickTime(31,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.succeed();});
     }
+    @GameTest public void transitionTraceRequiresEveryTickAndStableBehavior(GameTestHelper helper) {
+        var correct=new TransitionTrace(false,true,12,8);
+        for(int tick=0;tick<=20;tick++)correct.sample(tick,tick>=12);
+        helper.assertTrue(correct.complete() && correct.passed() && correct.json().get("transitionTick").getAsInt()==12,"A complete trace measures the actual transition and stable hold");
+        var early=new TransitionTrace(false,true,12,8);
+        for(int tick=0;tick<=20;tick++)early.sample(tick,tick>=10);
+        helper.assertTrue(early.complete() && !early.passed(),"A correct settled output never hides an early edge");
+        var late=new TransitionTrace(false,true,12,8);
+        for(int tick=0;tick<=20;tick++)late.sample(tick,tick>=14);
+        helper.assertTrue(!late.passed(),"A late edge fails despite a correct final output");
+        var unstable=new TransitionTrace(false,true,12,8);
+        for(int tick=0;tick<=20;tick++)unstable.sample(tick,tick>=12 && tick!=17);
+        helper.assertTrue(!unstable.passed(),"The stable window rejects a transient glitch");
+        var missed=new TransitionTrace(false,true,12,8);missed.sample(0,false);missed.sample(2,false);
+        helper.assertTrue(!missed.passed() && missed.failure().startsWith("inconclusive:"),"A missed game tick cannot become a functional pass");
+        reject(helper,()->new TransitionTrace(false,true,129,8),"Trace latency is bounded before allocation");
+        reject(helper,()->new TransitionTrace(false,false,12,8),"An edge trace cannot invent a transition between equal values");
+        helper.succeed();
+    }
+    @GameTest(maxTicks=65) public void serialRepeatersMeasureBothObservableLampEdges(GameTestHelper helper) {
+        serialTrace(helper,false);
+    }
+    @GameTest(maxTicks=35) public void disconnectedGeometryFailsTheSameIndependentTimingContract(GameTestHelper helper) {
+        serialTrace(helper,true);
+    }
+    private static void serialTrace(GameTestHelper helper,boolean disconnected) {
+        var rotation=Rotation.NONE;
+        for(int x=0;x<4;x++)block(helper,x,0,0,"minecraft:stone",rotation);
+        input(helper,0,1,0,false,rotation);
+        block(helper,1,1,0,"minecraft:repeater[facing=west,delay=3,locked=false,powered=false]",rotation);
+        block(helper,2,1,0,"minecraft:repeater[facing="+(disconnected?"east":"west")+",delay=3,locked=false,powered=false]",rotation);
+        block(helper,3,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
+        var input=at(0,1,0,rotation);var output=at(3,1,0,rotation);
+        var rising=new TransitionTrace(false,true,12,8);
+        helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.pullLever(input);rising.sample(0,lamp(helper,output));});
+        for(int elapsed=1;elapsed<=20;elapsed++){
+            final int tick=elapsed;
+            helper.runAtTickTime(8+tick,()->{
+                rising.sample(tick,lamp(helper,output));
+                if(tick==20){
+                    helper.assertTrue(rising.complete() && rising.passed()!=disconnected,"Observed rising trace must match the independent behavior, not matching geometry: "+rising.json());
+                    if(disconnected)helper.succeed();
+                }
+            });
+        }
+        if(disconnected)return;
+        var falling=new TransitionTrace(true,false,16,8);
+        helper.runAtTickTime(32,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.pullLever(input);falling.sample(0,lamp(helper,output));});
+        for(int elapsed=1;elapsed<=24;elapsed++){
+            final int tick=elapsed;
+            helper.runAtTickTime(32+tick,()->{falling.sample(tick,lamp(helper,output));if(tick==24){helper.assertTrue(falling.complete() && falling.passed(),"Lamp falling latency includes its own four game ticks: "+falling.json());helper.succeed();}});
+        }
+    }
+    private static boolean lamp(GameTestHelper helper,BlockPos pos){return helper.getLevel().getBlockState(helper.absolutePos(pos)).getValue(BlockStateProperties.LIT);}
     private static void reject(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static BlockPos at(int x,int y,int z,Rotation rotation){return new BlockPos(x,y,z).rotate(rotation).offset(4,2,4);}
     private static void block(GameTestHelper helper,int x,int y,int z,String state,Rotation rotation){helper.setBlock(at(x,y,z,rotation),Blueprint.state(state).rotate(rotation));}

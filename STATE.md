@@ -45,6 +45,23 @@ completion of broader redstone/engineering. No structural revision executor in
 this slice: separately approved old/new diff, player-edit preservation, ordering,
 undo and restart follow it immediately under G2/G3.
 
+Decision: independent GPT-6.1-Sol challenge supports two isolated model calls with
+one native owner confirmation. Keep pending behavior outside projectRevision and
+Blueprint; confirmation binds actor/connection/epoch/revisions/workspace/nonce/TTL.
+Selection changes do not advance project revision, so corners must be rechecked.
+Pending proposals disappear on restart; accepted behavior/digest stays in canonical
+source. Use buffer observable rising/falling game ticks first, not repeater-delay
+labels. Keep curated plan compatibility. A separate generated design command may
+avoid silently adding a second model call to the existing catalog path; final UI
+wiring follows after the boundary/oracle proofs. Both model stages use the same
+stripped isolated SDK runner, queue, rate budgets and current authority checks.
+
+Proofs first now cover independent behavior, raw geometry/derived metadata,
+unsupported/extra inputs/support/extent rejection, digest corruption and actual
+serial-repeater edge traces. Pure traces must reject early/late/glitch/missing-tick
+cases; physical disconnected geometry must fail the same behavioral contract.
+No generated production code written yet. Observe CI failure before implementation.
+
 ## Proven operation history (Serves G2/G3)
 
 Outcomes passed CI40715295100 / PR17 merge88d4043:
