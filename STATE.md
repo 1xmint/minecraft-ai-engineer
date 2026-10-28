@@ -4,73 +4,69 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Working on **phase/5-player-acceptance** for #3/E4. #2 merged as **c01a3e7**
-through PR12 after **811a600 / CI40619656132 passed all five checks**. Root
-inspected actual rejection/recovery markers, native logs and SQLite proof:
-B-only undo on third boot preserves A's blocks/journal/exact historical scope
-under the safe stale-on-restart label; private inventory/block/view/component
-proofs all passed. No new release or full phase1 completion is claimed.
+Working on **phase/5-live-acceptance**, based on PR13 merge **c80b8cd**.
+PR13 source **767feea / CI40623373036 passed all five gates**. Root inspected
+native client-construction/recovery markers, logs and SQLite proof. P1 actual
+client placement/tutorial/journal-exclusion passed. P2 bootstrap provenance,
+privacy/cancellation/expiry/one-use checks passed; the live lamp path is now
+proven below. PR12/#2 merged asc01a3e7 with full component/inventory proofs.
+No new release, full phase1 completion or phase2 feature is claimed.
 
-Current source458665a passed all five checks in CI40620567886. Root inspected
-player-client-construction.done, actual tutorial step1->2->3 chat, functional and
-restart logs, and SQLite proof. Intended player blocks now use actual client
-placement and never enter the assistant journal; scaffold removal uses client
-breaking. Creative item supply and initial scaffold remain fixtures. Strict
-exchange and immutable provider-frame rejection tests also passed. Transport,
-local CLI and the combined live model invocation remain to build. Tests stay
-GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
+The actual signed-in lamp path PASSED: request workflow **40624276545** and
+response workflow **40624742436**, both source **a64f352**, owner-dispatched
+attempt1. One local official SDK0.164.0/gpt-6-luna call used10529 input/73 output
+tokens, returning signal-lamp/delay1/rotation0. Local receipt and retained CI
+request/result/accepted digests match; acceptedAt was within15min. No login or
+SDK event payload was published. The run is terminal success; source freeze ended.
 
-Transport bootstrap is now implemented locally: strict GitHub provenance,
-private one-call/resend CLI, CI-only file provider, separate owner-only manual
-request/response workflows, normal gateway/Fabric plan acceptance and bounded
-manual-only waits. Default CI still disables inference. Proof-first
-CI40621899855 failed missing github/broker modules (TS2307). Worker GPT-6.1-Sol
-commitdc2f855 integrated asafb3bf9, source only, root formatted/combined.
+Root inspected live-model-design, actual player-client-construction, original
+functional cases, SQL proof, companion restart3472->5449, game/component/undo
+recovery markers and native chat. First constructed-client PNG visibly shows the
+six correct blocks. The final post-teleport restart PNG shows ghost bounds only;
+do not use it to claim post-restart visual rendering. Actual server restart and
+functional evidence passed. Richer visualization still needs its own driven proof.
 
-GPT-6.1-Sol independent review found a service95s deadline despite the long Java
-wait, a wrong metadata field and missing one-tick requirement assertion. All
-fixed: only live CI service uses900s, actual provenance.template is checked plus
-delay1/rotation0/anchor before the model marker. No further confirmed auth/data
-blocker; bounded ZIP format was checked against official artifact archiver.
-Scoped Java main/client and TypeScript compile, JS syntax, bash-n and formatting
-passed. Next combined CI must prove broker/provenance rejection and default native
-compatibility. No SDK call or combined live proof has run. Bootstrap needs merge
-only after green gates/review, then an actual owner-dispatched synthetic run.
-Operator instructions: docs/acceptance-guide.md. Keep full #3/phase2 scope intact.
+Request digest: fb61cac0cfb1b0b61bde69a633712ef3828f073f9d237926f5f645181964b594
+Result digest: 67fd6d677a3188194990ab694a905db7e87e663249a3776a59cca02d87947027
+Artifacts: task work/live-proof-40624276545 (synthetic fixtures only).
 
-## Current acceptance slice plan (serves #3/E4)
+Next: broader #3 engineering and teaching. This fixed lamp call is selection,
+not general design generation or natural-language modification/clarification.
+Its model explanation even calls teaching outside the selector, while the actual
+catalog tutorial advanced correctly; make model context accurately describe the
+app and add useful followups. Durable objectives/rationale/preferences/decisions,
+new connected designs, timing transition diagnostics, textured ghosts and later
+project explanation remain. Phase2's six features are all still unstarted.
+Tests stay on GitHub; only the operator SDK call and scoped compile ran locally.
 
-- P1: actual player client places three supports and a correctly oriented lever,
-  sees tutorial advance, removes temporary scaffold through normal client break,
-  and leaves wiring for AI. Proof checks real server blocks, no assistant journal,
-  remaining blocks absent, then uses existing actual delegation/conflict/test flow.
-  Only initial scaffold and creative item supply are fixtures, not intended blocks.
-- P2: one-shot live signed-in model response crosses synthetic CI exchange through
-  normal provider/gateway validation, followed by full player/AI/restart functional
-  acceptance. Failure proof rejects wrong run/attempt/nonce/context/epoch/ACL/expiry
-  and unavailable model without mutation. Default CI remains deterministic and
-  rejects inference. No paid service, public AI endpoint, CI login or local MC test.
+## Acceptance Outcomes and bootstrap proof (#3/E4)
 
-P1 proof replaces the old server-set intended human section; local scoped client
-compile and GitHub native acceptance are next. P2 architecture was independently
-challenged below, integration/protocol proofs are not implemented. This is a slice
-of #3, not all general engineering/teaching. Full original brief and phase2 remain.
+- P1 PASS: real client placed three supports and the oriented lever, tutorial
+  advanced step1->2->3, client removed initial scaffold, assistant journal stayed
+  empty until actual delegation. Initial creative item/scaffold supply is fixture
+  setup. CI40620567886 and final combined CI40623373036 passed.
+- P2 bootstrap and live lamp path PASS: the normal gateway supplies an immutable
+  authenticated frame separately from model text. A CI-only one-shot file provider
+  accepts only the reconstructed fresh lamp scenario, refuses arbitrary memory,
+  crosstalk, replay, expiry and cancellation. Local responder verifies reviewed
+  source and owner/workflow/run+attempt/artifact provenance before one official
+  isolated SDK call, saves a private durable receipt/result, and can resend without
+  another call. Separate owner-only manual workflows transport bounded data, never
+  login credentials. CI40621899855 failed missing modules before implementation;
+  all new rejection proofs passed final CI40623373036.
+- P2 manual proof PASS on40624276545: actual validated model plan matched one-tick lamp,
+  rotation0/selected anchor, then drove real player/AI/construction/conflict/test
+  and service/game restart markers together. A model answer or published workflow
+  alone is not this proof. A passing lamp path does not prove general engineering.
 
-P2 protocol proofs are written first in tests/acceptance-exchange.test.ts:
-strict synthetic request reconstruction, reviewed run/attempt identity, digest,
-nonce/expiry, actor/connection/epoch/revision crosstalk and bounded result schema.
-A gateway proof requires a separate immutable authenticated frame at the provider
-boundary; model text is not that frame. CI40620293316 failed these missing APIs before implementation. Contract code now
-passes scoped TypeScript compile; runtime rejection proofs are pending. Source documentation rechecked official SDK
-and ChatGPT authentication: https://learn.chatgpt.com/docs/codex-sdk and
-https://learn.chatgpt.com/docs/auth. Local SDK invocation stays private/manual;
-no Codex execution or credentials are exposed in public CI.
-
-#2 CI40618880526 actually passed new recovery markers but failed an existing final
-inspection after the distant visit unloaded the original chunk. Fix811a600 orders
-the existing return teleport before inspection and waits for normal player chunk
-loading; CI40619656132 is live. No production guard changed. Rebase this branch
-from9458cf0 onto the final #2 main merge before opening its pull request.
+GPT-6.1-Sol independently reviewed bootstrap. Fixed its95s service deadline
+(live CI only900s; ordinary deadline unchanged), incorrect metadata assertion
+(actual provenance.template) and missing delay1 requirement assertion. No further
+confirmed auth/data blocker; bounded ZIP format checked against official archiver.
+Java main/client, TypeScript, JS/shell syntax and format checks passed locally;
+all tests ran on GitHub. Operator guide: docs/acceptance-guide.md.
+WorkerSol dc2f855 integrated asafb3bf9 plus root formatting; clean worker checkout
+was removed after status/cherry confirmed integration; branch remains recoverable.
 
 ## Outcomes and proof for #2
 
@@ -204,7 +200,7 @@ separately. No combined game/model or general shared-account proof is claimed.
 CI graphics signed APT archive/Azure bounded fallback passed native checks; sources:
 https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html and
 https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
-Retained artifacts under ../work/: component-proof-40584567109,
+Retained artifacts in the task work directory: component-proof-40584567109,
 margin-red-40585762989, perception-proof-40586816662, inventory-proof-40595380532.
 Worker inventory-companion1ee545f integrated ase1fe550 plus root formatting/fixes;
 its clean worktree was removed after status/cherry confirmed integration. Old clean component worker checkouts were removed

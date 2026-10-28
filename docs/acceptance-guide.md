@@ -39,6 +39,16 @@ server permissions, immutable context checks and proposal validation still apply
 A successful lamp flow does not establish general design generation or complete
 phase 1.
 
+## Recorded proof
+
+The fixed lamp path passed on reviewed source `a64f352` in
+[request run40624276545](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40624276545)
+and [response run40624742436](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40624742436).
+One local signed-in SDK call returned delay1/rotation0; matching request/result
+receipts link it to real client construction, actual redstone tests and service/
+game restart evidence. This proves that fixed path, not general engineering,
+natural follow-up revisions or the entire phase1 brief.
+
 ## Interrupted publication
 
 A durable started receipt prevents a second SDK call for the same request. If the
