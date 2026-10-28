@@ -1,5 +1,6 @@
 package dev.minecraftai.engineer;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.minecraftai.engineer.client.ClientPreview;

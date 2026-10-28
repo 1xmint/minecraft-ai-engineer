@@ -362,3 +362,9 @@ operationScopes. LegacyAdoption now explicitly refuses mixed schema1/v4 immutabl
 history rather than silently relabelling it; native unit rejection added. Genuine
 old save adoption and exact source backup still require combined CI proof.
 Source5551b62 CI40712975481 superseded by this necessary fixture/version fix.
+
+GPT-6.1-Sol verified adoption boundary fix: genuine pre-v4 saves still migrate;
+mixed immutable history refuses before backup/destination writes. Root's scoped
+compile caught a missing JsonArray import in the newly added active-frame
+rejection fixture; import fixed. Worker worktree was clean and git cherry showed
+its commit integrated before removal; its branch remains recoverable.
