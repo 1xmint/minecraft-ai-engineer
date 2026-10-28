@@ -174,6 +174,20 @@ public final class MechanismGameTests {
         loaded.retain(java.util.Set.of(original));helper.assertTrue(loaded.json().equals(old),"Pruning a completed transition preserves the original schema1 snapshot and hash exactly");
         helper.succeed();
     }
+    @GameTest public void inverseProjectionHandlesRepeatedPositionsWithoutTouchingWorld(GameTestHelper helper) {
+        var pos=new BlockPos(2,3,2);var air=Blocks.AIR.defaultBlockState();var lamp=Blocks.REDSTONE_LAMP.defaultBlockState();var repeater=Blueprint.state("minecraft:repeater[delay=2,facing=west,locked=false,powered=false]");
+        var inverse=java.util.List.of(new EngineeringSession.Change(pos,air,repeater,"projection"),new EngineeringSession.Change(pos,lamp,air,"projection"));
+        var observed=java.util.Map.of(pos,repeater);
+        var restored=UndoProjection.project(inverse,p->observed.getOrDefault(p,air),change->false,(change,view)->{});
+        helper.assertTrue(restored.get(pos).equals(lamp) && observed.get(pos).equals(repeater),"Inverse preflight follows new->AIR->old without mutating the observed world");
+        reject(helper,()->UndoProjection.project(inverse,p->Blocks.GLASS.defaultBlockState(),change->false,(change,view)->{}),"An intervening player block cannot satisfy a projected inverse");
+        var lever=Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]");var support=pos.below();
+        var supported=java.util.List.of(new EngineeringSession.Change(support,Blocks.STONE.defaultBlockState(),air,"projection"),new EngineeringSession.Change(pos,lever,air,"projection"));
+        var supportedResult=UndoProjection.project(supported,p->air,change->false,(change,view)->{if(change.before().is(Blocks.LEVER))helper.assertTrue(view.projected(support) && view.get(support).is(Blocks.STONE),"A restored support is visible to the later inverse device preflight");});
+        helper.assertTrue(supportedResult.get(pos).equals(lever) && UndoProjection.support(lever,pos).equals(support),"Projected support uses the actual attachment direction");
+        reject(helper,()->UndoProjection.project(java.util.List.of(new EngineeringSession.Change(pos,air,lever,"projection")),p->lever.setValue(BlockStateProperties.POWERED,true),change->false,(change,view)->{}),"Exact lever power conflicts remain protected during projection");
+        helper.succeed();
+    }
     private static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}
