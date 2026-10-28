@@ -995,6 +995,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer ask "+"x".repeat(241));expectChat(context,"within 240 characters");
         write("lesson-project",id);write("lesson-a-revision",String.valueOf(passedRevision));
         write("lesson-bob-actor",server.computeOnServer(s->player(s,"Bob").getUUID().toString()));
+        // Freeze Alice through her real command before comparing across Bob's client round trips.
+        // Otherwise the ordinary ten-tick auto-advance can legitimately change her cursor.
+        MESSAGES.clear();send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
         String aliceLesson=server.computeOnServer(s->{var c=session(s,"Alice").cursor(player(s,"Alice").getUUID());return c.stage+":"+c.teaching;});
         MESSAGES.clear();write("lesson-bob-project",id);awaitFile(context,"lesson-bob.done");
         server.waitFor(s->!session(s,"Bob").cursor(player(s,"Bob").getUUID()).teaching);

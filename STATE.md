@@ -307,3 +307,13 @@ format corrected locally. Production placement/repair, undo, and real lever
 activation/restoration now call target-aware validation immediately before writes.
 Live native OR trial checks allowed input and rejected read-area air target.
 Scoped compile and final independent diff review next; runtime proof pending.
+
+Exact-write guard c77fe98: scoped Java main/client compile passed. GPT-6-Luna
+review accepted all production mutation callsites and existing authority checks.
+CI40708184972 passed Fabric's20 required tests, companion, Windows and client;
+dedicated run passed the new live OR lease checks, then failed an existing lesson
+fixture race: Alice's ordinary ten-tick auto-advance changed her cursor during
+Bob's command round trips. Retained Alice log shows Step2 after snapshot. Root
+corrected the proof to issue Alice's real private pause and wait for its new chat
+ack before the isolation comparison. No product timing or behavior changed.
+Combined native/restart proof must pass after this fixture correction before merge.
