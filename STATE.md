@@ -1,61 +1,63 @@
 # Now
 
-2026-10-27: Active goal: **complete all milestones**, remaining phase 1 plus all
+2026-10-28: Active goal: **complete all milestones**, remaining phase 1 plus all
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Working on **phase/6-contextual-teaching**, based on evidence PR14 merge
-**2c97246** (all five gates CI40625698878). PR13 bootstrap c80b8cd and the actual
-signed-in lamp proof below are landed. The full original scope remains active.
+Working on **phase/7-generated-designs**, based on teaching PR15 merge
+**a77476b**. All five required gates passed **CI40628498967**, source4476332.
+Root inspected native lesson markers, private chat, unchanged controller/lease
+and saved JSON, exact historical A revision4 evidence, Alice's paused B lesson
+through actual restart, and revoked Bob cursor absence. GPT-6-Luna independently
+reviewed the read-only assistant and explicit personal lesson selection.
 
-## Current teaching slice plan (#3/E1)
+## Generated design slice: architecture challenge in progress (#3/E2)
 
-- T1: ask for current lesson details/timing or an explicit component without
-  retargeting the shared AI. Use the actor's existing tutorial stage to resolve
-  the leaf; explicit target overrides only the answer. Show canonical materials,
-  ports, intended delay and distinct current/historical functional labels. Proof:
-  Bob's B lesson while A executes; no lease/controller/assignment/journal/world or
-  cursor changes; A's original test revision remains accurate after B revision.
-- T2: exact bounded read-only phrases and explicit component syntax only. Unknown,
-  negated or mutating text requests clarification, never calls planning/build or
-  creates a project. VIEW checked before facts. Proof: real command rejection,
-  no project auto-create, denied membership and no private reply to controller.
-- T3: reuse existing teach/repeat/skip/previous/private pause controls. Verify own
-  cursor stays separate from execution and survives actual restart as paused.
-  This slice adds no global controller or new lesson persistence format.
+Outcomes for the coming connected-design slice:
+- G1: request a circuit outside the catalog's four-tick delay limit, preview its
+  proposed blocks, build it and measure actual rising/falling transitions. A
+  disconnected but visually matching layout must fail functional verification.
+- G2: approve a structural layout revision that moves/removes blocks while
+  preserving player edits. Collision or revoked authority must pause safely;
+  explicit undo restores only its recorded operation under fresh authority.
+- G3: restart during construction/revision/undo and retain original intent and
+  evidence identities. Recovery pauses; no old checkpoint or historical footprint
+  becomes a lease, and unchanged catalog behavior remains compatible.
 
-Options weighed: no change misses useful followups; expanding repeat alone misses
-context/timing; a new LLM advice endpoint spends quota and adds privacy surface for
-routine known facts. Choose a bounded local lesson assistant, no world scans or
-inference. GPT-6-Luna independently challenged actual interfaces and confirmed the
-existing controls already suffice; avoid duplicating them. Auto advance runs every
-10 ticks, so ask must be read-only and never toggle teaching. Existing /resume is
-BUILD execution, not a lesson alias. New ask uses existing-selection-only handler;
-old commands retain their auto-create behavior. Intended delay is not a measured
-latency; historical pass scope is never relabelled as a fresh test.
+Leading architecture: bounded generated geometry as untrusted data, behavior
+accepted separately before geometry, complete code-derived boolean vectors and
+bounded game-tick traces. Keep the five currently supported blocks initially;
+expand semantics with real native proofs later. Server derives identities,
+limits, resources and bounds. Curated geometry still uses exact catalog checks;
+new generated provenance must not masquerade as curated or verified.
 
-Proofs first, native GitHub failure, implementation, scoped local compile, final
-review and all five gates. Full E1 dialogue/decision memory, E2 connected designs,
-E3 deeper diagnostics/textured ghosts and all phase2 features remain later work.
+Alternatives weighed: no change fails general engineering; more catalog family
+selectors postpone the same gap; a netlist compiler/router adds substantial
+upfront complexity and does not cover sequential/mechanical designs. Simplify by
+reusing the executor and trial machinery, not by weakening catalog validation.
+First probe: two serial repeaters with total delay beyond four redstone ticks,
+then a moved output/relay revision and deliberately disconnected failure.
+This is a boundary probe, not completion of general design or phase1.
 
-Teaching proof **2d54c55 / CI40627174587** failed exactly at the missing ask
-command before any project existed. New LessonAssistant and ask(create=false)
-handler now compile: exact normalized bounded phrases, canonical leaf facts,
-actor-stage target resolution, intended timing vs stored/historical labels,
-private replies, no cursor/save/world/model calls. Existing teach gained an
-explicit leaf argument to select only the actor's first component lesson stage;
-unknown/group targets fail before cursor creation. Shared AI target stays intact.
+Critical prerequisite found in actual EngineeringSession.load: journal entries
+are checked against current component positions. Historical moved/removed writes
+need immutable original operation footprints before structural revisions can be
+safe. ProjectManager.acquire/validate also derives current positions, so undo
+must reserve/recheck historical targets and read closure under current grants.
+Legacy position validation cannot invent original semantic identity after old
+delay revisions. Baseline/dependencies and partial revision WAL need their own
+approved transition scope. Historical scopes are descriptions, never authority.
 
-GPT-6-Luna reviewed actual source and the small explicit teach extension; no
-blocker found. Native proof now waits for actual pause/denial chat acknowledgments
-instead of an old paused flag, and compares Alice's cursor after Bob's controls.
-Java main/client compile and formatting passed; combined native/data acceptance
-is pending the next CI. Nothing here completes broader free-form E1 or E2/E3.
+GPT-6.1-Sol architecture recommendation received in prior session; fresh independent
+GPT-6.1-Sol challenge is running read-only against actual code after context
+restart. Decide and record implementation tasks after its findings; no generated
+production code written yet. Tests stay on GitHub, local compile/format only.
 
-Root corrected a recovery-fixture assumption before acceptance: existing
-ProjectManager.changed intentionally removes a revoked member's cursor. Recovery
-must verify Bob stays absent and Alice's explicitly paused B lesson survives,
-not require revoked metadata to reappear. No product behavior was relaxed.
+Teaching now supports bounded local exact ask phrases, explicit component facts,
+intended timing vs stored functional results, and per-player teach/repeat/skip/
+previous/pause controls. It does not yet provide free-form LLM dialogue or durable
+objective/rationale/preferences/decision memory. Those E1 gaps remain alongside
+E2, E3 deeper diagnosis/textured ghosts and all six phase2 features.
 
 The actual signed-in lamp path PASSED: request workflow **40624276545** and
 response workflow **40624742436**, both source **a64f352**, owner-dispatched
