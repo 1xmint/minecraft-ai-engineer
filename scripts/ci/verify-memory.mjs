@@ -357,6 +357,10 @@ try {
     "undo-context-failure.done",
     "undo-context-recovery.done",
     "player-client-construction.done",
+    "lesson-followup.done",
+    "lesson-bob.done",
+    "lesson-denied.done",
+    "lesson-recovery.done",
   ])
     assert.equal(
       readFileSync(`${coordination}/${marker}`, "utf8").trim(),

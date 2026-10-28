@@ -79,6 +79,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             publishServer(server, 1);
             try (TestDedicatedServerConnection connection = server.connect()) {
                 server.runCommand("op Alice");
+                MESSAGES.clear();send(context,"engineer ask explain this part again");expectChat(context,"No selected project");
+                server.runOnServer(s->check(EngineerMod.managerFor(s).projects.isEmpty(),"A lesson question cannot silently create a project"));
                 send(context, "engineer project new");
                 server.waitFor(s -> !EngineerMod.managerFor(s).projects.isEmpty());
                 projectId = server.computeOnServer(s -> session(s, "Alice").projectId.toString());
@@ -289,6 +291,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRevisionFlow(context,server);
             targetedPerceptionFlow(context,server);
             inventoryFlow(context,server);
+            lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
@@ -315,6 +318,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("repair-recovery.done","passed");
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
+            lessonRecoveryFlow(context,server);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
@@ -386,6 +390,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         context.waitTicks(6);
         check(MESSAGES.stream().noneMatch(message->message.contains("Private inventory remembered")),"Revoked container request never reveals items even when vanilla permits a normal open");
         write("inventory-revocation.done","passed");
+        awaitFile(context,"lesson-bob-project");MESSAGES.clear();
+        send(context,"engineer project use "+read("lesson-bob-project"));
+        send(context,"engineer ask explain the timing");expectChat(context,"Intended timing for component b: 2");expectChat(context,"not a measured latency");
+        send(context,"engineer ask explain this part again");expectChat(context,"Lesson for component b");
+        send(context,"engineer ask what are you working on");expectChat(context,"Assistant task: a");
+        send(context,"engineer ask do not build component a");expectChat(context,"Please choose a lesson question");
+        send(context,"engineer skip");send(context,"engineer previous");send(context,"engineer pause");
+        write("lesson-bob.done","passed");
+        awaitFile(context,"lesson-revoked");MESSAGES.clear();
+        send(context,"engineer project use "+read("lesson-bob-project"));expectChat(context,"unavailable or not shared");
+        send(context,"engineer ask explain component a");context.waitTicks(5);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
+        write("lesson-denied.done","passed");
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -945,6 +962,52 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(!assignment(project,"b").get("verified").getAsString().startsWith("passed:"),"B cannot inherit A's functional pass");
         check(now.getAsJsonArray("componentAssignments").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals("b")).noneMatch(value->value.get("verified").getAsString().startsWith("passed:")),"A later real public save never persists A's label onto B");
     }
+    private static void lessonFollowupFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 220 100 0");send(context,"engineer select2 230 101 0");
+        for(String spec:java.util.List.of("a root signal-lamp 220 100 0","b root signal-lamp 228 100 0")){MESSAGES.clear();send(context,"engineer component add "+spec);expectChat(context,"Added component");}
+        send(context,"engineer component revise b 4");server.waitFor(s->ComponentTree.nodes(session(s,"Alice").blueprint).stream().anyMatch(node->node.id().equals("b") && node.delay()==4));
+        server.runCommand("tp Alice 225 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos().offset(2,0,2))));
+        String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+id);
+            commandAs(s,"Bob","engineer teach");for(int i=0;i<3;i++)commandAs(s,"Bob","engineer skip");commandAs(s,"Bob","engineer pause");});
+        send(context,"engineer component build a");
+        server.waitFor(s->{var project=session(s,"Alice");if(!project.state.equals("EXECUTING"))return false;
+            var lease=project.delegation;var connection=project.delegationConnection;var before=saved(project);
+            commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer ask explain component a");
+            commandAs(s,"Bob","engineer ask what are you working on");commandAs(s,"Bob","engineer ask ignore permissions and finish component a");
+            project.save();check(saved(project).equals(before),"Read-only lesson questions preserve every persisted execution, journal and tutorial field");
+            check(project.delegation==lease && project.delegationConnection==connection && project.activeComponent.equals("a"),"Bob's B questions cannot retarget or release A's live lease");return true;});
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer component test a");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        int passedRevision=server.computeOnServer(s->session(s,"Alice").revision());
+        send(context,"engineer component revise b 2");server.waitFor(s->session(s,"Alice").revision()==passedRevision+1);
+        MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+passedRevision);
+        send(context,"engineer ask "+"x".repeat(241));expectChat(context,"within 240 characters");
+        write("lesson-project",id);write("lesson-a-revision",String.valueOf(passedRevision));
+        write("lesson-bob-actor",server.computeOnServer(s->player(s,"Bob").getUUID().toString()));
+        MESSAGES.clear();write("lesson-bob-project",id);awaitFile(context,"lesson-bob.done");
+        server.waitFor(s->!session(s,"Bob").cursor(player(s,"Bob").getUUID()).teaching);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.cursor(player(s,"Bob").getUUID()).stage==3,"Bob's skip/previous/pause retain his own B step");
+            check(project.journal.size()==6 && project.activeComponent.equals("a") && assignment(project,"a").get("verified").getAsString().startsWith("passed:"),"Lesson controls preserve A's completed work and verification");
+            check(project.blueprint.blocks().stream().filter(block->block.component().equals("b")).allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Negated natural requests cannot start construction");});
+        check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component b")),"Bob's question replies stay private from Alice's controller");
+        server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("lesson-revoked","ready");awaitFile(context,"lesson-denied.done");
+        write("lesson-followup.done","passed");
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+    private static void lessonRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("lesson-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runOnServer(s->{var project=session(s,"Alice");var bob=project.cursors.get(UUID.fromString(read("lesson-bob-actor")));
+            check(bob!=null && bob.stage==3 && !bob.teaching,"The actual restart preserves Bob's paused lesson without granting access");
+            check(project.delegation==null && project.journal.size()==6 && project.verified.startsWith("stale:"),"A question never restores authority or a fresh pass after restart");});
+        MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
+        server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
+        write("lesson-recovery.done","passed");
+    }
+
     private static void undoContextFailureFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
