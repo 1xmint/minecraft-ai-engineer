@@ -151,3 +151,17 @@ test("a persisted generated source cannot rewrite the accepted behavior digest o
     validateGeneratedBlueprint({ ...blueprint, verification: "passed" }),
   );
 });
+
+test("generated initial states cannot hide powered or locked inputs behind a passing-looking preview", () => {
+  for (const [index, state] of [
+    [4, "minecraft:lever[face=floor,facing=east,powered=true]"],
+    [4, "minecraft:lever"],
+    [5, "minecraft:repeater[delay=3,facing=west,locked=true,powered=false]"],
+    [5, "minecraft:repeater[delay=3,facing=west,locked=false,powered=true]"],
+    [7, "minecraft:redstone_lamp[lit=true]"],
+  ] as const) {
+    const raw = geometry();
+    raw.blocks[index]!.state = state;
+    assert.throws(() => makeGeneratedBlueprint(input, raw, behavior));
+  }
+});

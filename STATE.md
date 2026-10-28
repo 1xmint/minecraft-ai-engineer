@@ -253,3 +253,19 @@ Published v0.1.0-alpha.1 at168ac190 remains the older solo reference release.
 AGENTS.md and this file are the only project memory; CLAUDE.md is @AGENTS.md.
 Tests stay on GitHub; local work only scoped compile/format/syntax checks. Push
 working branches, keep protected main/pinned dependencies, merge green reviewed PRs.
+
+Phase9 proof-first32c48d2 / CI40718937254 failed exactly at missing generated.ts
+and native TransitionTrace. GPT-6-Luna implemented only generated.ts7476f46,
+integrated35cb578; root owns all proofs/types/integration. Node boundary derives
+metadata from raw model geometry and separately supplied behavior; root tightened
+explicit unpowered/unlocked states, quarter-turn validation and SDK schema types.
+Native bounded TransitionTrace now records every sample/first edge, rejects wrong
+latency/glitches and marks missed ticks inconclusive. Stored trace claims are
+recomputed from samples on read. Native physical proofs sample actual world game
+time, not wall-clock or a settling endpoint. TypeScript check passed; Java compile
+passed before the final game-time fixture edit. Queue/SDK routes/native confirmation,
+generated registry dispatch, production trial integration and live SDK proof still
+pending. No end-to-end generated capability is claimed by these primitives alone.
+Official SDK source checked: https://learn.chatgpt.com/docs/codex-sdk and pinned
+SDK TurnOptions.outputSchema/runStreamed types. Preserve isolated subscription
+adapter; no API key or new separately billed service.

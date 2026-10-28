@@ -126,12 +126,12 @@ public final class MechanismGameTests {
         block(helper,2,1,0,"minecraft:repeater[facing="+(disconnected?"east":"west")+",delay=3,locked=false,powered=false]",rotation);
         block(helper,3,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
         var input=at(0,1,0,rotation);var output=at(3,1,0,rotation);
-        var rising=new TransitionTrace(false,true,12,8);
-        helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.pullLever(input);rising.sample(0,lamp(helper,output));});
+        var rising=new TransitionTrace(false,true,12,8);long[] edgeTime=new long[2];
+        helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.pullLever(input);edgeTime[0]=helper.getLevel().getGameTime();rising.sample(0,lamp(helper,output));});
         for(int elapsed=1;elapsed<=20;elapsed++){
             final int tick=elapsed;
             helper.runAtTickTime(8+tick,()->{
-                rising.sample(tick,lamp(helper,output));
+                rising.sample(helper.getLevel().getGameTime()-edgeTime[0],lamp(helper,output));
                 if(tick==20){
                     helper.assertTrue(rising.complete() && rising.passed()!=disconnected,"Observed rising trace must match the independent behavior, not matching geometry: "+rising.json());
                     if(disconnected)helper.succeed();
@@ -140,10 +140,10 @@ public final class MechanismGameTests {
         }
         if(disconnected)return;
         var falling=new TransitionTrace(true,false,16,8);
-        helper.runAtTickTime(32,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.pullLever(input);falling.sample(0,lamp(helper,output));});
+        helper.runAtTickTime(32,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,true);helper.pullLever(input);edgeTime[1]=helper.getLevel().getGameTime();falling.sample(0,lamp(helper,output));});
         for(int elapsed=1;elapsed<=24;elapsed++){
             final int tick=elapsed;
-            helper.runAtTickTime(32+tick,()->{falling.sample(tick,lamp(helper,output));if(tick==24){helper.assertTrue(falling.complete() && falling.passed(),"Lamp falling latency includes its own four game ticks: "+falling.json());helper.succeed();}});
+            helper.runAtTickTime(32+tick,()->{falling.sample(helper.getLevel().getGameTime()-edgeTime[1],lamp(helper,output));if(tick==24){helper.assertTrue(falling.complete() && falling.passed(),"Lamp falling latency includes its own four game ticks: "+falling.json());helper.succeed();}});
         }
     }
     private static boolean lamp(GameTestHelper helper,BlockPos pos){return helper.getLevel().getBlockState(helper.absolutePos(pos)).getValue(BlockStateProperties.LIT);}
