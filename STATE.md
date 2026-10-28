@@ -14,6 +14,7 @@ reviewed the read-only assistant and explicit personal lesson selection.
 ## Generated design slice: architecture challenge in progress (#3/E2)
 
 Outcomes for the coming connected-design slice:
+
 - G1: request a circuit outside the catalog's four-tick delay limit, preview its
   proposed blocks, build it and measure actual rising/falling transitions. A
   disconnected but visually matching layout must fail functional verification.
@@ -299,3 +300,10 @@ to read-only dependencies, unreserved positions, foreign project scope and stale
 grants. No layout revision or journalv4 support is claimed by this guard alone.
 Later transition executor must explicitly preview removals and compare exact
 fresh before states; recorded neighbor membership alone is not ownership proof.
+
+Reservation proof-first source e86acb0 / CI40707827221 Fabric failed at missing
+validateWrite, before implementation. Companion also caught STATE formatting;
+format corrected locally. Production placement/repair, undo, and real lever
+activation/restoration now call target-aware validation immediately before writes.
+Live native OR trial checks allowed input and rejected read-area air target.
+Scoped compile and final independent diff review next; runtime proof pending.

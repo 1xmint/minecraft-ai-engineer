@@ -102,7 +102,7 @@ final class FunctionalTrial {
         }
     }
     private void activate(BlockPos pos,BlockState before,BlockState wanted,ProjectAccess.Permission action){
-        var s=session;s.validateMutation(action);s.requireCreative();s.validateTarget(pos);
+        var s=session;s.validateMutation(action,pos);s.requireCreative();s.validateTarget(pos);
         if(!s.level().getBlockState(pos).equals(before) || !before.is(Blocks.LEVER) || !wanted.is(Blocks.LEVER))throw new IllegalStateException("Lever changed before authorized activation");
         if(!before.equals(wanted))((LeverBlock)before.getBlock()).pull(before,s.level(),pos,s.server.getPlayerList().getPlayer(s.controller));
         if(!s.level().getBlockState(pos).equals(wanted))throw new IllegalStateException("Minecraft rejected the test input; restoration journal retained");

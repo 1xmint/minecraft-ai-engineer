@@ -138,6 +138,10 @@ final class EngineeringSession implements BuildExecutor {
         ServerPlayer p=server.getPlayerList().getPlayer(controller);
         if(p==null || !p.isCreative() || !dimension.equals(p.level().dimension().identifier().toString())) throw new IllegalStateException("The controller disconnected, changed dimension or left creative mode");
     }
+    void validateMutation(ProjectAccess.Permission required, BlockPos target) {
+        validateMutation(required);
+        manager.reservations.validateWrite(manager.scope(this),delegation,controller,revision(),access.revision(),target,server.getTickCount());
+    }
     boolean contains(BlockPos p) {
         return corner1 != null && corner2 != null && p.getX() >= Math.min(corner1.getX(), corner2.getX())
                 && p.getX() <= Math.max(corner1.getX(), corner2.getX()) && p.getY() >= Math.min(corner1.getY(), corner2.getY())
@@ -436,7 +440,7 @@ final class EngineeringSession implements BuildExecutor {
                         after=b.state();
                     }
                     journal.add(new Change(b.pos(),actual,after,activeOperation,activeComponent)); pendingPlacement=true;save();
-                    validateMutation();
+                    validateMutation(ProjectAccess.Permission.BUILD,b.pos());
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save(); return;
@@ -880,7 +884,7 @@ final class EngineeringSession implements BuildExecutor {
             if(!undoAfterMatches(c,actual))throw new IllegalStateException("Undo blocked by later edit at "+c.pos().toShortString());
             validateUndoNeighbors(c,assistantPositions,plannedPositions);
             if(!c.before().isAir() && (c.before().hasBlockEntity() || !c.before().canSurvive(level(),c.pos())))throw new IllegalStateException("Undo cannot safely restore the recorded block at "+c.pos().toShortString());
-            validateMutation(ProjectAccess.Permission.UNDO);
+            validateMutation(ProjectAccess.Permission.UNDO,c.pos());
             if(!undoAfterMatches(c,level().getBlockState(c.pos())))throw new IllegalStateException("World changed immediately before undo at "+c.pos().toShortString());
             BlockState restore=restoreDynamic(c.before(),actual);
             if(!level().setBlockAndUpdate(c.pos(),restore))throw new IllegalStateException("Minecraft rejected undo; journal retained for recovery");

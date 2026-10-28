@@ -480,6 +480,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->{
             var project=session(s,"Alice");var actual=project.level().getBlockState(new BlockPos(10,101,2));
             if(!project.state.equals("VERIFYING") || !actual.is(Blocks.LEVER) || !actual.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))return false;
+            project.validateMutation(ProjectAccess.Permission.BUILD,new BlockPos(10,101,2));
+            boolean unreservedRejected=false;
+            try {project.validateMutation(ProjectAccess.Permission.BUILD,new BlockPos(11,101,1));}
+            catch(IllegalStateException outsideLease){unreservedRejected=true;}
+            check(unreservedRejected,"A live functional-test lease refuses an unreserved air block inside its read area");
+            check(project.level().getBlockState(new BlockPos(11,101,1)).isAir(),"Rejected target validation leaves the world untouched");
             commandAs(s,"Alice","engineer project revoke Bob");return true;
         });
         server.runOnServer(s->{

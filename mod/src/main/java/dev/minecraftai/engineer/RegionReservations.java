@@ -44,6 +44,12 @@ final class RegionReservations {
             throw new IllegalStateException("Execution authority expired or changed; explicit reconciliation is required");
         lease.expires = now + LEASE_TICKS;
     }
+    /** A valid lease only permits writes to its captured targets, never its read closure. */
+    void validateWrite(Scope scope, Fence fence, UUID actor, int projectRevision, long authorityRevision, BlockPos target, long now) {
+        validate(scope,fence,actor,projectRevision,authorityRevision,now);
+        if(!leases.get(scope).writes.contains(target))
+            throw new IllegalStateException("Mutation target is outside the reserved write set");
+    }
     void release(Scope scope, Fence fence) {
         Lease current = leases.get(scope);
         if (current != null && current.fence.equals(fence)) leases.remove(scope);
