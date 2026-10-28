@@ -121,6 +121,38 @@ authority; persisted assignments never resume construction automatically.
 
 These source features are not a new release or completion of phase 1.
 
+## Contextual teaching (source build)
+
+Choose your lesson with `/engineer teach b` for component B, or `/engineer teach`
+to continue your current step. Your lesson stays separate from the assistant's
+construction target. Existing `next`, `skip`, `previous`, `repeat` and `pause`
+commands control your own tutorial. `teach` resumes tutorial progression;
+`resume` is the separate construction command.
+
+Ask routine questions without using model quota:
+
+```text
+/engineer ask explain this part again
+/engineer ask show me how the timing works
+/engineer ask explain timing for component b
+/engineer ask explain materials for component b
+/engineer ask what are you working on
+```
+
+"This part" means your current lesson step. An explicit component changes only
+the answer. Details show canonical mechanism purpose, intended positions/facing,
+materials and ports. Timing describes the intended repeater setting; it does not
+measure latency. Stored verification and original test revision are labeled
+separately. These questions do not inspect the world, count private inventory,
+change lessons or run tests. The status answer labels the assistant's shared task
+and your personal lesson separately.
+
+Only the listed question forms are recognized. Other text asks you to choose a
+supported lesson question; construction still uses the explicit permission-checked
+commands. You need project view permission and an existing project. Lessons are
+restored paused after a restart. Broader free-form advice and design changes
+remain in development.
+
 ## Targeted inspection (source build)
 
 `/engineer inspect block 109 101 0` reads that actual block and its six immediate

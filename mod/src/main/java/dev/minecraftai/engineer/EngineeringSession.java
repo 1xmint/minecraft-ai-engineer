@@ -177,6 +177,16 @@ final class EngineeringSession implements BuildExecutor {
         Cursor c=cursor(actor()); Blueprint.Stage s = blueprint.stages().get(c.stage);
         tell("Step " + (c.stage + 1) + "/" + blueprint.stages().size() + ": " + s.title() + ". " + s.explanation());
     }
+    void teachComponent(String id) {
+        access.require(actor(),ProjectAccess.Permission.VIEW);
+        if(blueprint==null)throw new IllegalStateException("Load a design before choosing a component lesson");
+        ComponentTree.component(blueprint,id);
+        Set<String> stages=new HashSet<>();
+        for(var block:blueprint.blocks())if(!ComponentTree.composite(blueprint) || block.component().equals(id))stages.add(block.stage());
+        int first=-1;for(int i=0;i<blueprint.stages().size();i++)if(stages.contains(blueprint.stages().get(i).id())){first=i;break;}
+        if(first<0)throw new IllegalStateException("Choose a component with a construction lesson");
+        Cursor c=cursor(actor());c.stage=first;c.teaching=true;save();explain();
+    }
     void moveStage(int delta) { access.require(actor(),ProjectAccess.Permission.VIEW); if (blueprint == null) throw new IllegalStateException("No blueprint"); Cursor c=cursor(actor());c.stage = Math.clamp(c.stage + delta,0,blueprint.stages().size()-1); c.teaching=true; save(); explain(); }
     void componentAdd(String id,String parent,String template,BlockPos position) {
         access.require(actor(),ProjectAccess.Permission.EDIT);

@@ -38,6 +38,20 @@ Proofs first, native GitHub failure, implementation, scoped local compile, final
 review and all five gates. Full E1 dialogue/decision memory, E2 connected designs,
 E3 deeper diagnostics/textured ghosts and all phase2 features remain later work.
 
+Teaching proof **2d54c55 / CI40627174587** failed exactly at the missing ask
+command before any project existed. New LessonAssistant and ask(create=false)
+handler now compile: exact normalized bounded phrases, canonical leaf facts,
+actor-stage target resolution, intended timing vs stored/historical labels,
+private replies, no cursor/save/world/model calls. Existing teach gained an
+explicit leaf argument to select only the actor's first component lesson stage;
+unknown/group targets fail before cursor creation. Shared AI target stays intact.
+
+GPT-6-Luna reviewed actual source and the small explicit teach extension; no
+blocker found. Native proof now waits for actual pause/denial chat acknowledgments
+instead of an old paused flag, and compares Alice's cursor after Bob's controls.
+Java main/client compile and formatting passed; combined native/data acceptance
+is pending the next CI. Nothing here completes broader free-form E1 or E2/E3.
+
 The actual signed-in lamp path PASSED: request workflow **40624276545** and
 response workflow **40624742436**, both source **a64f352**, owner-dispatched
 attempt1. One local official SDK0.164.0/gpt-6-luna call used10529 input/73 output
