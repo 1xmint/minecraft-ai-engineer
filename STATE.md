@@ -330,3 +330,23 @@ reserve a loaded clear two-block read margin before its first write, retaining
 explicit build delegation/assignment semantics; human lever changes must not be
 silently overwritten. Watch per-tick validation cost with larger raw geometry;
 do not cache mutable source metadata without proving immutability.
+
+Native proof9314e93 / CI40728705803 failed at missing BehaviorSpec/GeneratedBlueprint;
+companion tests stayed green. GPT-6-Luna implemented only those two data classes
+8489781, integrated0ab4640. Root corrected a JSON array/object accessor compile
+error, added generated-root ComponentTree dispatch, behavior-bound basis without
+changing curated hashes, common contract selection and generated lesson facts.
+FunctionalTrial explicitly refuses generated tests until its trace mode is wired;
+it cannot accidentally grant an endpoint-only pass. Native owner confirmation,
+production trace/WAL/load handling and live acceptance remain unfinished. No new
+catalog ID is added. Native metadata/dispatch CI follows scoped compile.
+
+Native metadata classes and dispatch compile after the array accessor fix.
+Server-written behavior summary names the actual buffer relation and on/off times,
+so confirmation cannot hide its function behind timing numbers. Pending actor
+invalidation must use the request's captured actor, not the session's previous
+construction controller. Captured original request must feed geometry verbatim.
+Next implement native design/confirm maps and production generated trace mode;
+keep the explicit no-endpoint-pass guard until that mode is fully wired. PR18
+remains draft and unmerged. Sourceb8ef16c CI40727441475 completed all five gates;
+current native data/dispatch changes still need their own combined CI.

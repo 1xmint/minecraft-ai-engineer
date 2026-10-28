@@ -38,7 +38,8 @@ final class FunctionalTrial {
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
-        var candidate=MechanismCatalog.contract(s.executionBlueprint());s.validateTestArea();
+        if(GeneratedBlueprint.isGenerated(s.blueprint))throw new IllegalStateException("Generated transition trial integration is not ready; no endpoint-only pass is permitted");
+        var candidate=EngineeringContracts.contract(s.executionBlueprint());s.validateTestArea();
         var captured=new LinkedHashMap<String,Input>();
         for(var port:candidate.ports())if(port.input()){
             s.validateTarget(port.pos());BlockState actual=s.level().getBlockState(port.pos());

@@ -277,7 +277,7 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.VIEW);
         if(blueprint==null)throw new IllegalStateException("Add or select a mechanism first");
         Blueprint selected=ComponentTree.component(blueprint,id);
-        var task=assignments.task(blueprint,id);var contract=MechanismCatalog.contract(selected);
+        var task=assignments.task(blueprint,id);var contract=EngineeringContracts.contract(selected);
         String assignee="unassigned";
         if(task.actor!=null) {
             var connected=server.getPlayerList().getPlayer(task.actor);
@@ -724,7 +724,7 @@ final class EngineeringSession implements BuildExecutor {
         ensureComponentContextIdle("test a component");
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);
-        MechanismCatalog.contract(selected);
+        EngineeringContracts.contract(selected);
         validateComponentTestArea(id);
 
         ComponentAssignments.Task oldTask=assignments.task(blueprint,activeComponent);

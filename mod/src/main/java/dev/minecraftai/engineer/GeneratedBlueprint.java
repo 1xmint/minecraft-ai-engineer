@@ -130,9 +130,9 @@ final class GeneratedBlueprint {
         validate(blueprint);
         BehaviorSpec behavior = BehaviorSpec.read(blueprint.source().getAsJsonObject("behavior"));
         List<MechanismCatalog.Port> ports = List.of(
-                new MechanismCatalog.Port("input", position(blueprint.source().getAsJsonObject("ports").get(0).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
+                new MechanismCatalog.Port("input", position(blueprint.source().getAsJsonArray("ports").get(0).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
                         .rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()), true),
-                new MechanismCatalog.Port("output", position(blueprint.source().getAsJsonObject("ports").get(1).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
+                new MechanismCatalog.Port("output", position(blueprint.source().getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
                         .rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()), false));
         List<MechanismCatalog.Vector> cases = List.of(
                 vector(false, false), vector(true, true), vector(false, false));

@@ -49,8 +49,8 @@ record BehaviorSpec(int risingGameTicks, int fallingGameTicks) {
     }
 
     String summary() {
-        return "Intended rising transition: " + risingGameTicks + " game ticks; intended falling transition: "
-                + fallingGameTicks + " game ticks. Functional testing is still required.";
+        return "Intended behavior: the lamp follows the lever, turning on after " + risingGameTicks
+                + " game ticks and off after " + fallingGameTicks + " game ticks. Functional testing is still required.";
     }
 
     private static int integer(JsonElement value) {
