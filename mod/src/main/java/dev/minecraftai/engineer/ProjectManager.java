@@ -21,6 +21,7 @@ final class ProjectManager {
     final Set<UUID> creators = new HashSet<>();
     private long sequence;
     final InventoryPerception inventories=new InventoryPerception(this);
+    final GeneratedPlanning generated=new GeneratedPlanning(this);
     private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
     private final Map<UUID,ConnectionStamp> connectionIds=new HashMap<>();
     String connectionId(ServerPlayer player) {
@@ -83,6 +84,7 @@ final class ProjectManager {
     void use(ServerPlayer player, UUID id) {
         EngineeringSession project = projects.get(id);
         if (project == null || !project.access.allows(player.getUUID(), ProjectAccess.Permission.VIEW)) throw new IllegalStateException("Project unavailable or not shared with you");
+        for(var other:projects.values())if(!other.projectId.equals(id))generated.cancelActor(other,player.getUUID());
         selections.put(player.getUUID(), id);
         player.sendSystemMessage(Component.literal("Engineer: Selected project " + id));
     }
@@ -110,7 +112,7 @@ final class ProjectManager {
         Set<BlockPos> writes=project.reservationWrites(action),reads=project.reservationReads(action,test);
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
-            boolean touches=writes.stream().anyMatch(other::contains) || (test && reads.stream().anyMatch(other::contains));
+            boolean touches=writes.stream().anyMatch(other::contains) || ((test || GeneratedBlueprint.isGenerated(project.reservationBlueprint(action))) && reads.stream().anyMatch(other::contains));
             if(touches && !other.access.allows(actor,action))throw new IllegalStateException("The assignment intersects a workspace that has not granted the required permission");
             if (!other.hasPendingTest() || other.blueprint == null) continue;
             for (Blueprint.PlannedBlock b : other.blueprint.blocks()) for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-2,-2,-2), b.pos().offset(2,2,2)))
@@ -155,7 +157,7 @@ final class ProjectManager {
         }
     }
     void tick() {
-        inventories.tick();
+        inventories.tick();generated.tick();
         connectionIds.entrySet().removeIf(entry->{var current=server.getPlayerList().getPlayer(entry.getKey());return current==null || current.connection!=entry.getValue().connection();});
         for (EngineeringSession project : projects.values()) project.tick();
         if (server.getTickCount() % 5 != 0) return;
@@ -185,7 +187,7 @@ final class ProjectManager {
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
-        inventories.close();connectionIds.clear();
+        generated.close();inventories.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

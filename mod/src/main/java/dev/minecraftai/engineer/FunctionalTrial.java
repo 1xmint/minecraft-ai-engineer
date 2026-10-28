@@ -17,6 +17,10 @@ final class FunctionalTrial {
     private JsonObject evidenceScope,evidenceBlueprint;
     private MechanismCatalog.Contract contract;
     private int vector,nextTick;
+    private BehaviorSpec generatedBehavior;
+    private TransitionTrace transition;
+    private JsonObject generatedRow;
+    private long startedGameTick,phaseStart,lastBaseline=-1;
     FunctionalTrial(EngineeringSession session){this.session=session;}
     boolean pending(){return !inputs.isEmpty();}
     JsonArray evidence(){return evidence.deepCopy();}
@@ -38,7 +42,6 @@ final class FunctionalTrial {
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
-        if(GeneratedBlueprint.isGenerated(s.blueprint))throw new IllegalStateException("Generated transition trial integration is not ready; no endpoint-only pass is permitted");
         var candidate=EngineeringContracts.contract(s.executionBlueprint());s.validateTestArea();
         var captured=new LinkedHashMap<String,Input>();
         for(var port:candidate.ports())if(port.input()){
@@ -50,6 +53,8 @@ final class FunctionalTrial {
         contract=candidate;inputs.putAll(captured);evidence=new JsonArray();
         evidenceScope=makeScope(s.blueprint,s.activeComponent,ComponentAssignments.BASIS_VERSION);
         evidenceBlueprint=s.blueprint.source().deepCopy();vector=-1;nextTick=contract.settleTicks();
+        generatedBehavior=GeneratedBlueprint.isGenerated(s.executionBlueprint())?GeneratedBlueprint.behavior(s.executionBlueprint()):null;
+        generatedRow=null;transition=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+" truth table running";
         s.save();s.checkpoint();
         s.tell(s.detail);
@@ -59,6 +64,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(generatedBehavior!=null){tickGenerated();return;}
             if(s.testTick>=nextTick){
                 // Let pending construction updates settle before the first input
                 // transition; no case is claimed from the initial world state.
@@ -77,6 +83,84 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickGenerated() {
+        var s=session;long now=s.level().getGameTime();
+        s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0) {
+            if(now-startedGameTick<contract.settleTicks())return;
+            apply(Map.of("input",false));vector=0;phaseStart=now;lastBaseline=-1;
+            generatedRow=generatedRow(0);generatedRow.add("baselineSamples",new JsonArray());evidence.add(generatedRow);
+        }
+        sampleGenerated(now);
+        if(vector==0) {
+            if(now-phaseStart<8)return;
+            s.save();beginGeneratedEdge(now,true);return;
+        }
+        if(!transition.complete())return;
+        s.save();
+        if(!transition.passed())throw new IllegalStateException(transition.failure());
+        if(vector==1){beginGeneratedEdge(now,false);return;}
+        validateGeneratedEvidence(evidence,generatedBehavior,true);
+        int elapsed=s.testTick;restore();
+        if(pending())throw new IllegalStateException("Inputs still need safe restoration; no functional pass was recorded");
+        s.verified="passed:generated-buffer:3 vectors@"+elapsed;
+        var task=s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString());task.lastPassedScope=evidenceScope.deepCopy();
+        s.state="COMPLETED";s.detail="Actual Minecraft buffer test passed: stable off/on/off, rising "+generatedBehavior.risingGameTicks()+" and falling "+generatedBehavior.fallingGameTicks()+" game ticks";
+        s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
+    }
+    private JsonObject generatedRow(int index) {
+        var row=new JsonObject();row.addProperty("case",index);row.addProperty("behaviorDigest",generatedBehavior.digest());
+        row.add("inputs",new JsonObject());row.add("outputs",new JsonObject());return row;
+    }
+    private void beginGeneratedEdge(long now,boolean on) {
+        apply(Map.of("input",on));vector=on?1:2;phaseStart=now;
+        transition=new TransitionTrace(!on,on,on?generatedBehavior.risingGameTicks():generatedBehavior.fallingGameTicks(),8);
+        generatedRow=generatedRow(vector);evidence.add(generatedRow);
+        // Vanilla can update an adjacent lamp synchronously. The activation tick is sample zero.
+        sampleGenerated(now);session.save();
+    }
+    private void sampleGenerated(long now) {
+        var s=session;long elapsed=now-phaseStart;
+        if(elapsed<0 || elapsed>(vector==0?8:transition.horizon()))throw new IllegalStateException("inconclusive: game-tick sampling window was missed");
+        var input=contract.ports().stream().filter(MechanismCatalog.Port::input).findFirst().orElseThrow();
+        var output=contract.ports().stream().filter(port->!port.input()).findFirst().orElseThrow();
+        boolean actualInput=s.level().getBlockState(input.pos()).getValue(BlockStateProperties.POWERED);
+        boolean actualOutput=s.level().getBlockState(output.pos()).getValue(BlockStateProperties.LIT);
+        generatedRow.addProperty("tick",now);generatedRow.addProperty("elapsedTicks",elapsed);
+        generatedRow.getAsJsonObject("inputs").addProperty("input",actualInput);generatedRow.getAsJsonObject("outputs").addProperty("output",actualOutput);
+        if(vector==0) {
+            var sample=new JsonObject();sample.addProperty("elapsedTicks",elapsed);sample.addProperty("observed",actualOutput);generatedRow.getAsJsonArray("baselineSamples").add(sample);
+            if(elapsed!=lastBaseline+1)throw new IllegalStateException("inconclusive: missing baseline game-tick sample");
+            lastBaseline=elapsed;
+            if(actualOutput)throw new IllegalStateException("Output must remain off throughout the baseline");
+        } else {transition.sample(elapsed,actualOutput);generatedRow.add("trace",transition.json());}
+    }
+    /** Recompute stored claims from bounded actual samples and independently accepted intent. */
+    static void validateGeneratedEvidence(JsonArray cases,BehaviorSpec behavior,boolean requirePass) {
+        if(cases.size()>3 || (requirePass && cases.size()!=3))throw new IllegalStateException("Generated evidence needs complete off/on/off phases");
+        long previousTick=-1;
+        for(int index=0;index<cases.size();index++) {
+            JsonObject row=cases.get(index).getAsJsonObject();
+            Set<String> fields=new HashSet<>(Set.of("case","tick","elapsedTicks","inputs","outputs","behaviorDigest",index==0?"baselineSamples":"trace"));
+            if(!row.keySet().equals(fields) || row.get("case").getAsBigDecimal().intValueExact()!=index || !row.get("behaviorDigest").getAsString().equals(behavior.digest()))throw new IllegalStateException("Generated evidence differs from accepted intent");
+            long tick=row.get("tick").getAsBigDecimal().longValueExact();int elapsed=row.get("elapsedTicks").getAsBigDecimal().intValueExact();
+            if(tick<0 || elapsed<0 || (previousTick>=0 && tick-elapsed!=previousTick))throw new IllegalStateException("Generated evidence game-time phases disagree");
+            JsonObject inputs=row.getAsJsonObject("inputs"),outputs=row.getAsJsonObject("outputs");
+            if(!inputs.keySet().equals(Set.of("input")) || !outputs.keySet().equals(Set.of("output")) || !inputs.get("input").getAsJsonPrimitive().isBoolean() || !outputs.get("output").getAsJsonPrimitive().isBoolean() || inputs.get("input").getAsBoolean()!=(index==1))throw new IllegalStateException("Generated evidence input differs from its phase");
+            if(index==0) {
+                JsonArray samples=row.getAsJsonArray("baselineSamples");
+                if(samples.isEmpty() || samples.size()>9 || (requirePass && samples.size()!=9))throw new IllegalStateException("Generated baseline is incomplete");
+                int last=-1;boolean observed=false;
+                for(var value:samples){var sample=value.getAsJsonObject();if(!sample.keySet().equals(Set.of("elapsedTicks","observed")) || !sample.get("observed").getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid baseline sample");int at=sample.get("elapsedTicks").getAsBigDecimal().intValueExact();observed=sample.get("observed").getAsBoolean();if(at<=last || at>8 || (requirePass && (at!=last+1 || observed)))throw new IllegalStateException("Baseline ticks cannot establish stable off behavior");last=at;}
+                if(last!=elapsed || observed!=outputs.get("output").getAsBoolean())throw new IllegalStateException("Baseline summary differs from its samples");
+            } else {
+                var trace=TransitionTrace.read(row.getAsJsonObject("trace"));var source=trace.json();boolean on=index==1;
+                if(source.get("from").getAsBoolean()==on || source.get("to").getAsBoolean()!=on || source.get("expectedGameTicks").getAsInt()!=(on?behavior.risingGameTicks():behavior.fallingGameTicks()) || source.get("stableGameTicks").getAsInt()!=8 || (requirePass && !trace.passed()))throw new IllegalStateException("Trace differs from the accepted edge timing");
+                var samples=source.getAsJsonArray("samples");if(samples.isEmpty())throw new IllegalStateException("Trace has no samples");var last=samples.get(samples.size()-1).getAsJsonObject();if(last.get("elapsedTicks").getAsInt()!=elapsed || last.get("observed").getAsBoolean()!=outputs.get("output").getAsBoolean())throw new IllegalStateException("Trace summary differs from its samples");
+            }
+            previousTick=tick;
+        }
     }
     private void observe(MechanismCatalog.Vector expected){
         var s=session;var row=new JsonObject();row.addProperty("case",vector);row.addProperty("tick",s.level().getGameTime());row.addProperty("elapsedTicks",s.testTick);
@@ -166,10 +250,11 @@ final class FunctionalTrial {
             evidenceBlueprint=session.blueprint.source().deepCopy();
             if(session.blueprint==null)throw new IllegalStateException("Legacy functional evidence has no intended blueprint");
         }
+        if(session.blueprint!=null && GeneratedBlueprint.isGenerated(session.blueprint))validateGeneratedEvidence(evidence,GeneratedBlueprint.behavior(session.blueprint),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;
         if(entries!=null && entries.isEmpty()){if(json.has("testOriginal"))throw new IllegalStateException("Conflicting test recovery formats");return;}
-        contract=MechanismCatalog.contract(session.executionBlueprint());
+        contract=EngineeringContracts.contract(session.executionBlueprint());
         if(entries==null){
             var port=contract.ports().stream().filter(MechanismCatalog.Port::input).findFirst().orElseThrow();
             if(contract.ports().stream().filter(MechanismCatalog.Port::input).count()!=1)throw new IllegalStateException("Scalar test recovery cannot authorize a multi-input mechanism");

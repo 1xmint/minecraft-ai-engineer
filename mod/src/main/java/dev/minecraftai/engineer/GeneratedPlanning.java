@@ -136,13 +136,14 @@ final class GeneratedPlanning {
         future.whenComplete((result, error) -> session.server.execute(() -> finishGeometry(flight, result, error)));
     }
 
+    void cancelActor(EngineeringSession session, UUID actor) {
+        requireServerThread();
+        var proposal=pending.get(session);var flight=flights.get(session);
+        if((proposal!=null && proposal.actor().equals(actor)) || (flight!=null && flight.basis().actor().equals(actor)))cancelCaptured(session);
+    }
+
     void cancel(EngineeringSession session) {
         requireServerThread();
-        Basis captured = pending.get(session);
-        Flight active = flights.get(session);
-        if (captured == null && active != null) captured = active.basis();
-        if (captured != null && !session.actor().equals(captured.actor()))
-            throw new IllegalStateException("Only the actor who requested generated planning can cancel it");
         cancelCaptured(session);
     }
 
@@ -247,7 +248,7 @@ final class GeneratedPlanning {
             GeneratedBlueprint.validate(candidate);
             BehaviorSpec accepted = GeneratedBlueprint.behavior(candidate);
             if (!GeneratedBlueprint.isGenerated(candidate) || !accepted.digest().equals(basis.behavior().digest())
-                    || !candidate.anchor().equals(basis.origin()) || candidate.rotation() != basis.rotation()
+                    || candidate.rotation() != basis.rotation()
                     || candidate.blocks().stream().anyMatch(block -> !session.contains(block.pos())))
                 throw new IllegalArgumentException("Generated geometry does not match the accepted behavior and workspace");
             if (candidate.revision() != Math.addExact(basis.revision(), 1)
@@ -277,11 +278,12 @@ final class GeneratedPlanning {
 
     private void requireCurrentBasis(Basis basis, boolean requireState) {
         EngineeringSession session = basis.session();
+        if (expired(basis)) throw new IllegalStateException("Generated planning request expired");
         if (manager != session.manager || !EngineerMod.current(manager) || manager.epoch != basis.epoch()
                 || session.revision() != basis.revision() || session.access.revision() != basis.authorization()
                 || !session.owner.equals(basis.actor()) || !session.access.allows(basis.actor(), ProjectAccess.Permission.PLAN)
                 || !session.access.allows(basis.actor(), ProjectAccess.Permission.EDIT)
-                || !basis.session().worldId.equals(manager.worldId) || !basis.session().dimension.equals(session.dimension)
+                || !basis.session().worldId.equals(manager.worldId)
                 || !java.util.Objects.equals(manager.selections.get(basis.actor()), basis.selectedProject())
                 || !basis.corner1().equals(session.corner1) || !basis.corner2().equals(session.corner2)
                 || !basis.origin().equals(session.planningAnchor())

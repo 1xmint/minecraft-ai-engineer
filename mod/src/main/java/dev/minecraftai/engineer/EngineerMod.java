@@ -28,7 +28,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -36,6 +36,7 @@ public final class EngineerMod implements ModInitializer {
             ProjectManager manager=MANAGERS.get(server);if(manager==null)return;
             for(var project:manager.projects.values()) {
                 project.forgetDiagnosis(handler.player.getUUID());
+                manager.generated.cancelActor(project,handler.player.getUUID());
                 if(project.controller.equals(handler.player.getUUID())
                     && (project.state.equals("EXECUTING") || project.state.equals("PLANNING") || project.testTick>=0)) {
                 cancelPlan(project);manager.reservations.revoke(manager.scope(project));project.delegation=null;project.delegationConnection=null;
@@ -103,6 +104,8 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.argument("mechanism",StringArgumentType.word())
                         .executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(MechanismCatalog.create(StringArgumentType.getString(ctx,"mechanism"),s.worldId,s.dimension,s.anchor(),0,1))))
                         .then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(MechanismCatalog.create(StringArgumentType.getString(ctx,"mechanism"),s.worldId,s.dimension,s.anchor(),0,IntegerArgumentType.getInteger(ctx,"delay"))))))))
+                .then(Commands.literal("design").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->{if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");s.manager.generated.design(s,StringArgumentType.getString(ctx,"request"));}))))
+                .then(Commands.literal("confirm").then(Commands.argument("nonce",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->s.manager.generated.confirm(s,StringArgumentType.getString(ctx,"nonce")),false))))
                 .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->plan(s,StringArgumentType.getString(ctx,"request"))))))
                 .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
                 .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner can move its workspace");if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
@@ -176,15 +179,16 @@ public final class EngineerMod implements ModInitializer {
             source.sendSuccess(()->Component.literal("Engineer: World identity forked; the previous identity was backed up. Old projects were not granted authority."),false);return 1;
         }catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
     }
-    static void cancelPlan(EngineeringSession session) {var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
+    static void cancelPlan(EngineeringSession session) {session.manager.generated.cancel(session);var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
     private static String safe(Throwable error) {
         Throwable t=error;while(t.getCause()!=null)t=t.getCause();
         String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));
     }
     private static void plan(EngineeringSession s,String request) {
         if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
-        if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
+        if(s.state.equals("PLANNING") || PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
         if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || s.pendingPlacement || s.undoRequested)throw new IllegalStateException("Stop and reconcile active work before planning");
+        s.manager.generated.cancel(s);
         UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
         boolean built=s.hasBuiltStructure();BlockPos origin=s.planningAnchor();String previousState=s.state;
         JsonObject body=new JsonObject();body.addProperty("request",request);body.addProperty("worldId",s.worldId);body.addProperty("dimension",s.dimension);body.add("anchor",Blueprint.jsonPos(origin));body.addProperty("rotation",built?s.blueprint.rotation():0);body.addProperty("revisionOnly",built);body.addProperty("projectId",s.projectId.toString());

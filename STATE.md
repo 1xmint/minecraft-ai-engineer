@@ -350,3 +350,22 @@ Next implement native design/confirm maps and production generated trace mode;
 keep the explicit no-endpoint-pass guard until that mode is fully wired. PR18
 remains draft and unmerged. Sourceb8ef16c CI40727441475 completed all five gates;
 current native data/dispatch changes still need their own combined CI.
+
+Native metadata sourcef31cef3 Fabric passed all27 tests, including strict generated
+root dispatch, after80907eb corrected registry enum serialization (getName, not
+Java enum.toString). The combined run was superseded before dedicated completion.
+Proof3f0e496 / CI40733443663 failed at the missing production evidence validator.
+GPT-6-Luna supplied only GeneratedPlanning cdfe521, integrated70c6fe7. Root wired
+design/confirm, private original-request/connection/epoch/revision/auth/workspace/
+TTL capture, explicit single-use inference consent and invalidation. Geometry
+confirmation grants no build; source remains untested. Root removed a worker
+cancel check that wrongly used prior controller rather than captured requester,
+and permits valid normalized geometry anchor shifts while enforcing workspace.
+Production generated tests now keep bounded stable-off baseline and both actual
+world-tick traces, including activation sample0. Saved claims replay against the
+accepted digest; interrupted input restoration uses existing WAL/fences. Generated
+builds reserve/preflight loaded clear2block margins without changing explicit BUILD
+assignment semantics. Local Java main/client compile passed; no local tests.
+Next combined CI must prove owner invalidation/replay, actual generated build/test
+and restart. Sol independent native auth/restoration review requested. New live
+signed-in two-call acceptance and whole D1-D3 remain unfinished; PR18 stays draft.

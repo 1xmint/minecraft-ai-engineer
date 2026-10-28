@@ -97,7 +97,7 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Explicitly delegate this component with component build "+activeComponent);
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
-        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test;
+        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action));
         if(!test && action==ProjectAccess.Permission.BUILD && task.executor.equals("unassigned"))task.assign(actor(),"assistant");
         delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
     }
@@ -114,7 +114,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     private static Set<BlockPos> dependencyPositions(Blueprint source,String component,boolean isolation) {
         Set<BlockPos> result=new LinkedHashSet<>();
-        collectDependencies(source,component,isolation?2:1,new HashSet<>(),result);
+        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source))?2:1,new HashSet<>(),result);
         return result;
     }
     private static void collectDependencies(Blueprint source,String id,int margin,Set<String> visited,Set<BlockPos> result) {
@@ -175,6 +175,7 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can change the delegated workspace");
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo assistant work before changing the delegated region");
+        manager.generated.cancel(this);
         if (corner == 1) {corner1 = pos.immutable();corner2=null;}
         else {if(corner1==null)throw new IllegalStateException("Set the first corner before completing the workspace");manager.workspace(this,actor(),corner1,pos);corner2 = pos.immutable();}
         baseline.clear();dependencies.clear(); state = blueprint == null ? "PENDING" : "READY"; save(); tell("Corner " + corner + " set to " + pos.toShortString());
@@ -345,6 +346,7 @@ final class EngineeringSession implements BuildExecutor {
             if (!actual.isAir() && !Blueprint.matches(b.state(), actual)) throw new IllegalStateException("Occupied or incorrect block at " + b.pos().toShortString() + "; move the preview or correct it yourself");
             proposedBaseline.put(b.pos(), actual);
         }
+        if(GeneratedBlueprint.isGenerated(blueprint))validateGeneratedBuildMargin();
         var proposedDependencies=captureDependencies();
         long needed=proposedBaseline.entrySet().stream().filter(e->e.getValue().isAir()).count();
         ensureJournalCapacity(needed);
@@ -371,7 +373,7 @@ final class EngineeringSession implements BuildExecutor {
         return expected;
     }
     private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual) {
-        if(operationKind.equals("REPAIR") && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
+        if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint)) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
         return Blueprint.matches(expected,actual);
     }
     void reconcile() {
@@ -393,6 +395,13 @@ final class EngineeringSession implements BuildExecutor {
         for(var entry:dependencies.entrySet()) {
             if(!level().hasChunkAt(entry.getKey()) || !Blueprint.matches(entry.getValue(),level().getBlockState(entry.getKey())))
                 throw new IllegalStateException("A support or neighboring dependency changed; reconcile before resuming");
+        }
+    }
+    private void validateGeneratedBuildMargin() {
+        Set<BlockPos> planned=new HashSet<>();assignmentBlocks().forEach(block->planned.add(block.pos()));
+        for(BlockPos pos:dependencyPositions(false)) {
+            if(!level().hasChunkAt(pos))throw new IllegalStateException("Generated construction needs a loaded two-block isolation margin");
+            if(!planned.contains(pos) && !level().getBlockState(pos).isAir())throw new IllegalStateException("Generated construction needs a clear two-block isolation margin at "+pos.toShortString());
         }
     }
     Map<BlockPos,BlockState> captureDependencies() {
