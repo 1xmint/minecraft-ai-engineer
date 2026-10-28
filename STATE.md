@@ -4,27 +4,35 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Building #2 on **phase/4-component-collaboration**, draft PR #12:
-https://github.com/1xmint/minecraft-ai-engineer/pull/12
-**67014ab** implements transactional component undo. CI **40598801562** passed
-four checks and both undo rejection paths, then hit a root harness race: a wait
-accepted A's previous COMPLETED/pass before its new build packet was processed.
-The corrected **428e1b9 / CI40617970716** passed both rejections, production WAL
-preparation and actual third-boot loading with no authority/foreign baseline. It
-then exposed a second root assertion error: restart intentionally stales old pass
-labels. The proof now checks A's exact retained historical scope plus stale status,
-while B remains untested; final undo completion is pending the next CI.
-Java main/client compile passed locally. Tests run only on GitHub. New restart
-acceptance calls the real production prepare/WAL phase, stops the actual server,
-then requires B-only recovery on the third boot; no fabricated target checkpoint.
-GPT-6.1-Sol independently accepted the fix; runtime evidence remains required.
-Docs updates explain inventory, source commands and current limits.
-Do not merge until the current source passes all five checks and artifacts agree.
+Working on **phase/5-player-acceptance**, branched from9458cf0 while #2's
+PR12 https://github.com/1xmint/minecraft-ai-engineer/pull/12 awaits final native
+CI40618880526. Four checks were green; native was live at last inspection. Do not
+merge #2 until all five pass and retained recovery artifacts agree. Rebase this
+branch's own changes onto main after #2 merges; do not reintroduce squashed commits.
 
-Inventory **fdd03d7 / CI40595380532 passed all five checks**. Retained native logs,
-markers and SQLite proof were inspected. Earlier component/block/view source
-**e3bc4b1 / CI40586816662** also passed all five. Full phase 1 #3 and phase 2 #4
-remain; neither the published release nor a catalog dependency is the full product.
+#2 inventory fdd03d7/CI40595380532 passed all five, artifacts inspected. Transactional
+undo67014ab independently accepted by GPT-6.1-Sol; proof9458cf0 corrects two root
+fixture errors (old completed state race, restart correctly stales historical
+passes). Its real WAL/third-boot proof must keep B untested, preserve A's exact
+historical scope without a live pass, and remove B only. No new release claimed.
+
+## Current acceptance slice plan (serves #3/E4)
+
+- P1: actual player client places three supports and a correctly oriented lever,
+  sees tutorial advance, removes temporary scaffold through normal client break,
+  and leaves wiring for AI. Proof checks real server blocks, no assistant journal,
+  remaining blocks absent, then uses existing actual delegation/conflict/test flow.
+  Only initial scaffold and creative item supply are fixtures, not intended blocks.
+- P2: one-shot live signed-in model response crosses synthetic CI exchange through
+  normal provider/gateway validation, followed by full player/AI/restart functional
+  acceptance. Failure proof rejects wrong run/attempt/nonce/context/epoch/ACL/expiry
+  and unavailable model without mutation. Default CI remains deterministic and
+  rejects inference. No paid service, public AI endpoint, CI login or local MC test.
+
+P1 proof replaces the old server-set intended human section; local scoped client
+compile and GitHub native acceptance are next. P2 architecture was independently
+challenged below, integration/protocol proofs are not implemented. This is a slice
+of #3, not all general engineering/teaching. Full original brief and phase2 remain.
 
 CI **40618880526 /9458cf0** passed every new undo assertion and the real
 third-boot B-only completion; recovery marker passed. Four other checks green.

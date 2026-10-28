@@ -356,6 +356,7 @@ try {
     "inventory-recovery.done",
     "undo-context-failure.done",
     "undo-context-recovery.done",
+    "player-client-construction.done",
   ])
     assert.equal(
       readFileSync(`${coordination}/${marker}`, "utf8").trim(),
