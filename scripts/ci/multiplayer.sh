@@ -16,6 +16,10 @@ companion_pid=""
 companion_entry="$repo/scripts/ci/companion.mjs"
 client_timeout=14m
 harness_seconds=900
+# Synthetic provider only; this offline UUID carries no real account credentials.
+if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
+  export MCE_CODEX_OPERATOR_UUID=10920508-d5d8-3eed-93d2-92f193afe7d7
+fi
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
   [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REPOSITORY:-}" == 1xmint/minecraft-ai-engineer ]] || exit 64
   companion_entry="$repo/scripts/ci/live-companion.mjs"

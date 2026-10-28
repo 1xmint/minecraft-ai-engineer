@@ -369,3 +369,9 @@ assignment semantics. Local Java main/client compile passed; no local tests.
 Next combined CI must prove owner invalidation/replay, actual generated build/test
 and restart. Sol independent native auth/restoration review requested. New live
 signed-in two-call acceptance and whole D1-D3 remain unfinished; PR18 stays draft.
+
+Source51ef1bd CI40734124481 passed Companion, Windows, integrated client and all
+28 Fabric tests. Dedicated flow reached the new generated command and correctly
+denied inference because ordinary CI had never configured a model operator.
+Configure only the synthetic fixture offline Alice UUID; keep production checks.
+Sol review failed to run due account usage limit, so no review acceptance claimed.
