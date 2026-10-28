@@ -164,6 +164,11 @@ public final class MechanismGameTests {
         helper.assertTrue(history.positions(revision).equals(transition.writes()),"Historical scope retains the exact transition write footprint");
         helper.assertTrue(history.blueprint(revision).blocks().stream().noneMatch(b->b.pos().equals(pair[0].anchor())) && history.positions(revision).contains(pair[0].anchor()),"The real after blueprint stays distinct from removed-only historical targets");
         history.validate(revision,"root",pair[0].anchor());reject(helper,()->history.validate(revision,"root",pair[0].anchor().offset(40,0,0)),"A persisted diff never authorizes an escaped position");
+        var reads=EngineeringSession.historicalReads(history,revision,"root",true);
+        var oldOnlyRead=pair[0].anchor().offset(-2,0,0);var newOnlyRead=after.anchor().offset(6,0,0);
+        helper.assertTrue(reads.contains(oldOnlyRead) && reads.contains(newOnlyRead),"Undo reserves dependency margins of both real layouts, including removed-only and added-only edges");
+        helper.assertTrue(!reads.contains(pair[0].anchor().offset(40,0,0)),"Paired dependency reservations remain bounded");
+        helper.assertTrue(EngineeringSession.historicalReads(history,original,"root",true).contains(oldOnlyRead),"Legacy operation reservations keep their captured layout dependencies");
         helper.assertTrue(history.basis(revision).equals(ComponentAssignments.basis(after,"root")),"Resume basis belongs to the accepted after intention while the before source remains historical");
         var mislabeled=history.json();mislabeled.addProperty("schemaVersion",1);reject(helper,()->OperationScopes.read(mislabeled,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"A paired intention cannot masquerade as legacy schema1");
         var corrupt=history.json();for(var element:corrupt.getAsJsonArray("snapshots")){var snapshot=element.getAsJsonObject();if(snapshot.get("kind").getAsString().equals("transition"))snapshot.getAsJsonObject("transition").getAsJsonObject("before").addProperty("name","Rewritten old intention");}

@@ -214,3 +214,6 @@ projection and the explicit pending preview/apply + WAL executor.
 
 Workspace source c606bb1 passed all five gates CI40776834318. Inverse projection proof 6d37653 failed at the absent UndoProjection class in CI40778110622. The implementation now simulates repeated-position inverse rows without changing the world, checks projected attachment supports, and limits neighbor exemptions to the operation being undone. Scoped Java main/client compilation passed; GitHub runs the tests. Actual structural execution and interruption/restart remain pending. Josh explicitly requested skipping heavy reviews; continue implementation and required CI.
 
+
+Undo reservations now use the captured operation's exact write positions and bounded dependency closure from both actual sources. Added-only and removed-only dependency edges are covered by the paired-scope game test; legacy source behavior remains covered. Scoped main/client compilation passed. Structural apply is still disabled until its WAL executor and actual interruption proofs land.
+

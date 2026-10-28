@@ -130,12 +130,22 @@ final class EngineeringSession implements BuildExecutor {
         return action==ProjectAccess.Permission.UNDO?operationScopes.blueprint(activeOperation):blueprint;
     }
     Set<BlockPos> reservationWrites(ProjectAccess.Permission action) {
+        if(action==ProjectAccess.Permission.UNDO)return operationScopes.positions(activeOperation);
         Set<BlockPos> writes=new HashSet<>();
         ComponentTree.component(reservationBlueprint(action),activeComponent).blocks().forEach(block->writes.add(block.pos()));
         return writes;
     }
     Set<BlockPos> reservationReads(ProjectAccess.Permission action,boolean isolation) {
-        return dependencyPositions(reservationBlueprint(action),activeComponent,isolation);
+        return action==ProjectAccess.Permission.UNDO?historicalReads(operationScopes,activeOperation,activeComponent,isolation)
+            :dependencyPositions(reservationBlueprint(action),activeComponent,isolation);
+    }
+    static Set<BlockPos> historicalReads(OperationScopes scopes,String operation,String component,boolean isolation) {
+        Set<BlockPos> reads=new LinkedHashSet<>();
+        for(Blueprint source:scopes.sources(operation)) {
+            reads.addAll(dependencyPositions(source,component,isolation));
+            if(reads.size()>65536)throw new IllegalStateException("Historical dependency footprint exceeds its limit");
+        }
+        return Set.copyOf(reads);
     }
     private void validateOperationIntention() {
         if(baseline.isEmpty() || undoRequested)return;
