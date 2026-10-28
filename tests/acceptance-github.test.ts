@@ -122,3 +122,40 @@ test("only one bounded unexpired artifact from the verified run and SHA is reada
       ),
     );
 });
+
+test("generated stage artifacts retain exact owner/run/source provenance", () => {
+  const generated = {
+    ...expected,
+    scenario: "generated-buffer-owner-confirmation-v1",
+  };
+  assert.equal(requireAcceptanceRun(run(), generated, "request").id, "123");
+  for (const stage of ["behavior", "geometry"]) {
+    const name = `mce-live-request-123-2-${stage}`,
+      artifact = {
+        id: 789,
+        name,
+        expired: false,
+        size_in_bytes: 4096,
+        workflow_run: { id: 123, head_sha: expected.sourceSha },
+      };
+    assert.equal(
+      requireAcceptanceArtifact(artifact, "123", expected.sourceSha, name),
+      "789",
+    );
+    assert.throws(() =>
+      requireAcceptanceArtifact(
+        { ...artifact, name: name + "-other" },
+        "123",
+        expected.sourceSha,
+        name + "-other",
+      ),
+    );
+  }
+  assert.throws(() =>
+    requireAcceptanceRun(
+      { ...run(), triggering_actor: { login: "other" } },
+      generated,
+      "request",
+    ),
+  );
+});

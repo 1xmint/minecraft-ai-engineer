@@ -1,3 +1,4 @@
+import { behaviorDigest } from "../companion/src/generated.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
@@ -1320,6 +1321,266 @@ test("planning provider receives an immutable authenticated frame separate from 
     assert.equal(Object.isFrozen(frame), true);
     assert.equal(JSON.stringify(frame).includes(TOKEN), false);
   } finally {
+    await f.close();
+  }
+});
+
+const timedBehavior = {
+  schemaVersion: 1 as const,
+  function: "buffer" as const,
+  risingGameTicks: 12,
+  fallingGameTicks: 16,
+};
+const generatedConnection = "55555555-5555-4555-8555-555555555555";
+const generatedInput = {
+  ...design,
+  request: "A lamp turns on after12 game ticks and off after16",
+  maxSize: { x: 4, y: 2, z: 1 },
+  modelAuthorized: true,
+  isOperator: true,
+};
+function acceptedBehavior(c: GatewayContext) {
+  const { requestId: _request, ...basis } = c;
+  return {
+    schemaVersion: 1,
+    proposalId: randomUUID(),
+    behaviorDigest: behaviorDigest(timedBehavior),
+    basis,
+    worldId: design.worldId,
+    dimension: design.dimension,
+    corner1: { x: 0, y: 100, z: 0 },
+    corner2: { x: 3, y: 101, z: 0 },
+    rotation: 0,
+    expiresAt: Date.now() + 60_000,
+  };
+}
+function generatedGeometry() {
+  return {
+    name: "Serial generated buffer",
+    explanation:
+      "Two serial repeaters; actual timing still needs game testing.",
+    blocks: [
+      ...[0, 1, 2, 3].map((x) => ({
+        pos: { x, y: 0, z: 0 },
+        state: "minecraft:stone",
+      })),
+      {
+        pos: { x: 0, y: 1, z: 0 },
+        state: "minecraft:lever[face=floor,facing=east,powered=false]",
+      },
+      {
+        pos: { x: 1, y: 1, z: 0 },
+        state:
+          "minecraft:repeater[delay=3,facing=west,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 2, y: 1, z: 0 },
+        state:
+          "minecraft:repeater[delay=3,facing=west,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 3, y: 1, z: 0 },
+        state: "minecraft:redstone_lamp[lit=false]",
+      },
+    ],
+    input: { x: 0, y: 1, z: 0 },
+    output: { x: 3, y: 1, z: 0 },
+  };
+}
+
+test("generated behavior and geometry use separate fenced calls and single-use confirmation without advancing canonical intent", async () => {
+  const stages: string[] = [];
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior(_input, _signal, _memory, authority) {
+      assert.ok(authority);
+      assert.ok(Object.isFrozen(authority));
+      stages.push("behavior");
+      return {
+        behavior: timedBehavior,
+        explanation: "Confirm lamp on12/off16 game ticks before geometry.",
+      };
+    },
+    async generateGeometry(input, _signal, _memory, authority) {
+      assert.ok(authority);
+      assert.ok(Object.isFrozen(authority));
+      assert.ok(Object.isFrozen(input.behavior));
+      assert.deepEqual(input.behavior, timedBehavior);
+      stages.push("geometry");
+      return generatedGeometry();
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const c = context({ connectionId: generatedConnection });
+    const proposed = await f.post("/v2/behavior/propose", {
+      ...generatedInput,
+      context: c,
+    });
+    assert.equal(proposed.status, 200);
+    assert.deepEqual(
+      (await json<{ proposal: { behavior: unknown } }>(proposed)).proposal
+        .behavior,
+      timedBehavior,
+    );
+    assert.deepEqual(stages, ["behavior"]);
+    const acceptance = acceptedBehavior(c);
+    const generated = await f.post("/v2/design/generated", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+      behavior: timedBehavior,
+      acceptance,
+    });
+    assert.equal(generated.status, 200);
+    const answer = await json<{ blueprint: Blueprint }>(generated);
+    assert.equal(answer.blueprint.provenance.kind, "generated");
+    assert.equal(answer.blueprint.revision, 2);
+    assert.equal(answer.blueprint.verification, "untested");
+    assert.deepEqual(answer.blueprint.behavior, timedBehavior);
+    const stillCurrent = await f.post("/v2/project/read", {
+      context: context(),
+    });
+    assert.equal(
+      (await json<{ blueprint: Blueprint }>(stillCurrent)).blueprint.provenance
+        .kind,
+      "curated",
+    );
+    const replay = await f.post("/v2/design/generated", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+      behavior: timedBehavior,
+      acceptance,
+    });
+    assert.equal(replay.status, 409);
+    assert.deepEqual(stages, ["behavior", "geometry"]);
+  } finally {
+    await f.close();
+  }
+});
+
+test("invalid generated confirmation and actor bindings reject before provider use or planning budget", async () => {
+  let calls = 0;
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior() {
+      calls++;
+      return { behavior: timedBehavior, explanation: "Confirm" };
+    },
+    async generateGeometry() {
+      calls++;
+      return generatedGeometry();
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const c = context({ connectionId: generatedConnection }),
+      valid = acceptedBehavior(c);
+    const bad = [
+      { ...valid, expiresAt: Date.now() - 1 },
+      { ...valid, behaviorDigest: "0".repeat(64) },
+      { ...valid, basis: { ...valid.basis, actorId: EVE } },
+      { ...valid, basis: { ...valid.basis, connectionId: randomUUID() } },
+      { ...valid, basis: { ...valid.basis, projectRevision: 2 } },
+      { ...valid, corner2: { x: 8, y: 101, z: 0 } },
+    ];
+    for (const acceptance of bad) {
+      const result = await f.post("/v2/design/generated", {
+        ...generatedInput,
+        context: context({ connectionId: generatedConnection }),
+        behavior: timedBehavior,
+        acceptance,
+      });
+      assert.equal(result.status, 409);
+    }
+    assert.equal(
+      (
+        await f.post("/v2/design/generated", {
+          ...generatedInput,
+          context: context({ connectionId: generatedConnection }),
+          behavior: timedBehavior,
+          acceptance: valid,
+          command: "op Eve",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/behavior/propose", {
+          ...generatedInput,
+          context: context({
+            actorId: EDITOR,
+            connectionId: generatedConnection,
+          }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/behavior/propose", {
+          ...generatedInput,
+          context: context({ connectionId: generatedConnection }),
+          isOperator: false,
+        })
+      ).status,
+      403,
+    );
+    assert.equal(calls, 0);
+    assert.equal(
+      (
+        await f.post("/v2/behavior/propose", {
+          ...generatedInput,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      200,
+    );
+    assert.equal(calls, 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test("a generated behavior result arriving after grant revision is discarded", async () => {
+  let start!: () => void, release!: () => void;
+  const started = new Promise<void>((resolve) => {
+    start = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior() {
+      start();
+      await gate;
+      return { behavior: timedBehavior, explanation: "Old result" };
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const pending = f.post("/v2/behavior/propose", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await Promise.race([
+      started,
+      pending.then(() => {
+        throw new Error("Generated request finished before provider dispatch");
+      }),
+    ]);
+    await f.sync(context({ authorizationRevision: 2 }));
+    release();
+    assert.equal((await pending).status, 503);
+  } finally {
+    release();
     await f.close();
   }
 });

@@ -1,6 +1,12 @@
 name: Manual signed-in game acceptance
 on:
   workflow_dispatch:
+    inputs:
+      scenario:
+        description: Synthetic game flow
+        type: choice
+        options: [catalog, generated]
+        default: catalog
 permissions:
   contents: read
   actions: read
@@ -12,6 +18,8 @@ jobs:
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
       MCE_LIVE_ACCEPTANCE: "true"
+      MCE_GENERATED_ACCEPTANCE: ${{ inputs.scenario == 'generated' && 'true' || 'false' }}
+      MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'generated' && 'behavior' || 'catalog' }}
       MCE_ACCEPTANCE_EXCHANGE_DIR: ${{ github.workspace }}/mod/build/live-exchange
       MCE_CODEX_OPERATOR_UUID: 10920508-d5d8-3eed-93d2-92f193afe7d7
     steps:
@@ -38,15 +46,33 @@ jobs:
       - run: node scripts/ci/live-transport.mjs wait-request
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}
-          path: mod/build/live-exchange/request.json
+          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}${{ inputs.scenario == 'generated' && '-behavior' || '' }}
+          path: ${{ inputs.scenario == 'generated' && 'mod/build/live-exchange/behavior/request.json' || 'mod/build/live-exchange/request.json' }}
           if-no-files-found: error
           retention-days: 1
       - name: Receive the manually produced bounded answer
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci/live-transport.mjs wait-response
-      - run: node scripts/ci/live-transport.mjs wait-finish
+      - name: Wait for the owner-confirmed geometry request
+        if: inputs.scenario == 'generated'
+        run: node scripts/ci/live-transport.mjs wait-request geometry
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: inputs.scenario == 'generated'
+        with:
+          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}-geometry
+          path: mod/build/live-exchange/geometry/request.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Receive the raw generated design
+        if: inputs.scenario == 'generated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/live-transport.mjs wait-response geometry
+      - name: Verify the complete game flow
+        env:
+          MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'generated' && 'geometry' || 'catalog' }}
+        run: node scripts/ci/live-transport.mjs wait-finish
       - name: Stop any remaining native processes
         if: always()
         run: |

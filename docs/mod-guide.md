@@ -81,6 +81,36 @@ pauses active repair, and revocation/disconnect expires its authority. A restart
 retains journals and evidence, while requiring fresh explicit authority. This
 slice does not yet support arbitrary circuit rewrites or component relayout.
 
+## Generated timed buffers (source build)
+
+This branch adds a separate two-call flow for the configured account-owning
+operator who owns the project. `/engineer plan` retains its existing catalog
+behavior. Start with a new, empty selected workspace:
+
+1. `/engineer design Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks.` requests a behavior proposal.
+2. Read the server's statement of the input/output relation and both timings.
+   `/engineer confirm <nonce>` authorizes one geometry request for that behavior.
+   It does not authorize construction. Changing the workspace, project, rights,
+   connection or intended revision invalidates pending confirmation; restart
+   discards it. `/engineer stop` cancels pending work.
+3. Review the generated preview and derived materials, then explicitly use
+   `/engineer build` to delegate construction. This first slice uses creative
+   placement with stone, lever, repeaters, lamp and wall torches. It requires
+   loaded chunks and a clear two-block isolation margin before construction.
+4. `/engineer test` records stable off behavior and every game-tick sample of
+   both edges, including the activation tick. Actual timings must match the
+   accepted contract, with an eight-tick stable hold after each edge. A matching
+   layout alone cannot pass. A missing sample is inconclusive. The test restores
+   its inputs without overwriting a player's conflicting edit.
+
+Authorized viewers receive the same generated preview and may ask its timing
+lesson; sharing a preview grants no model access. Accepted behavior remains with
+its canonical blueprint after restart, while execution permissions expire and
+previous passing evidence becomes stale. Generated relayout of built work,
+broader mechanism functions are still pending. Signed-in generated wiring has passed
+construction, measured timing and restart; see the evidence and fixture limitation
+in the [acceptance guide](acceptance-guide.md).
+
 ## Component collaboration (source build)
 
 The development branch adds a bounded project tree. Set a workspace before

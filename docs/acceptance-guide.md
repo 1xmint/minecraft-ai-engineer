@@ -39,6 +39,34 @@ server permissions, immutable context checks and proposal validation still apply
 A successful lamp flow does not establish general design generation or complete
 phase 1.
 
+## Generated buffer flow (development)
+
+Run `gh workflow run live-acceptance.yml --ref REVIEWED_BRANCH -f scenario=generated`
+from a clean checkout at that exact source SHA. This chooses two separate model
+calls through the normal native design/confirm commands, rather than catalog
+selection. Once each corresponding request artifact appears, run:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry
+```
+
+Wait for the geometry artifact before the second command. Each stage has its own
+exclusive private started/response receipt and request/result digest. The native
+owner confirms only the originally requested twelve-game-tick on and sixteen-
+game-tick off behavior; the geometry call retains that accepted intent. The
+pending native confirmation expires after five minutes, so respond promptly.
+No credentials are uploaded and ordinary CI continues to use deterministic data.
+
+The native flow previews the actual raw model response, places one support with
+a real client action, delegates the remaining blocks, measures both transitions,
+restarts the companion, shares and revokes Bob's preview/lesson, and reloads the
+world with passing evidence marked stale. Inspect `live-generated-model.done`,
+`player-generated-section.done`, both generated confirmation/recovery markers,
+separate accepted receipts, and the actual generated restart screenshot. A live
+model result or published artifact alone proves none of these game behaviors.
+This fixed synthetic buffer flow does not establish broader engineering or phase2.
+
 ## Recorded proof
 
 The fixed lamp path passed on reviewed source `a64f352` in
@@ -48,6 +76,30 @@ One local signed-in SDK call returned delay1/rotation0; matching request/result
 receipts link it to real client construction, actual redstone tests and service/
 game restart evidence. This proves that fixed path, not general engineering,
 natural follow-up revisions or the entire phase1 brief.
+
+## Recorded generated proof and regression replay
+
+Source `00e5da5` in [request run40766098371](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40766098371)
+used two local signed-in SDK0.164.0/gpt-6-luna calls. Behavior response
+[40766960852](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40766960852)
+returned the requested12/16 contract; geometry response
+[40767111851](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40767111851)
+returned two serial repeaters with delays4+2, rather than a catalog selection.
+Native construction, both actual edge traces, shared preview/lesson revocation,
+companion restart and third game boot all passed their retained markers. The
+restart screenshot visibly contains the constructed blocks.
+
+That manual run's **overall result failed** afterward: its creative player-item
+fixture left64 stone in the held slot, while an earlier inventory recovery proof
+correctly expected the original7. The cleanup fix restores the exact prior held
+stack/components. Ordinary CI replays the recorded raw reply from
+`tests/fixtures/live-generated-buffer.json`, drives the same player support and
+remaining AI construction, and checks the complete post-restart inventory flow.
+This replay performs no new inference and does not claim a fresh signed-in call.
+No production geometry, behavior, timing or authorization code changed for this
+fixture cleanup. Do not label the original manual run as a successful whole run.
+
+![Actual signed-in generated circuit visible after game restart](images/generated-restarted.png)
 
 ## Interrupted publication
 

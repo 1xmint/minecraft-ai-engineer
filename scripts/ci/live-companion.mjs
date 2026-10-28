@@ -4,6 +4,7 @@ import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
 import { createCompanionServer } from "../../dist/companion/src/server.js";
 import { SyntheticAcceptanceProvider } from "../../dist/companion/src/acceptance-broker.js";
+import { GeneratedSyntheticAcceptanceProvider } from "../../dist/companion/src/generated-acceptance-broker.js";
 if (
   process.env.CI !== "true" ||
   process.env.GITHUB_ACTIONS !== "true" ||
@@ -15,7 +16,11 @@ if (
   throw new Error("Manual synthetic CI acceptance only");
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
-const provider = new SyntheticAcceptanceProvider({
+const generated = process.env.MCE_GENERATED_ACCEPTANCE === "true";
+const Provider = generated
+  ? GeneratedSyntheticAcceptanceProvider
+  : SyntheticAcceptanceProvider;
+const provider = new Provider({
   directory: process.env.MCE_ACCEPTANCE_EXCHANGE_DIR,
   run: {
     repository: process.env.GITHUB_REPOSITORY,
@@ -23,7 +28,9 @@ const provider = new SyntheticAcceptanceProvider({
     sourceSha: process.env.GITHUB_SHA,
     runId: process.env.GITHUB_RUN_ID,
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-    scenario: "signal-lamp-client-handoff-v1",
+    scenario: generated
+      ? "generated-buffer-owner-confirmation-v1"
+      : "signal-lamp-client-handoff-v1",
   },
 });
 const server = createCompanionServer({

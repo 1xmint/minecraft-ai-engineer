@@ -1,3 +1,9 @@
+import type {
+  Behavior,
+  BehaviorProposal,
+  GeneratedGeometry,
+  GeneratedRequest,
+} from "./generated.js";
 import type { GatewayContext } from "./gateway-types.js";
 export interface Position {
   x: number;
@@ -68,12 +74,22 @@ export interface Blueprint {
   resources: Record<string, number>;
   ports: { name: string; pos: Position; kind: "input" | "output" }[];
   tests: { id: string; description: string }[];
-  provenance: {
-    kind: "curated";
-    template: string;
-    minecraft: "26.3";
-    catalogRevision?: number;
-  };
+  provenance:
+    | {
+        kind: "curated";
+        template: string;
+        minecraft: "26.3";
+        catalogRevision?: number;
+      }
+    | {
+        kind: "generated";
+        minecraft: "26.3";
+        generatorRevision: 1;
+        behaviorDigest: string;
+        template?: never;
+        catalogRevision?: never;
+      };
+  behavior?: Behavior;
   components?: ComponentTree;
   parameters?: { delay: number };
   verification: "untested";
@@ -126,6 +142,18 @@ export interface Plan {
   rotation?: Rotation;
 }
 export interface PlanningProvider {
+  proposeBehavior?(
+    input: DesignRequest,
+    signal: AbortSignal,
+    context?: string,
+    authority?: Readonly<GatewayContext>,
+  ): Promise<BehaviorProposal>;
+  generateGeometry?(
+    input: GeneratedRequest,
+    signal: AbortSignal,
+    context?: string,
+    authority?: Readonly<GatewayContext>,
+  ): Promise<GeneratedGeometry>;
   plan(
     input: DesignRequest,
     signal: AbortSignal,

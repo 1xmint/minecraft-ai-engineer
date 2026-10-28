@@ -201,6 +201,7 @@ async function main() {
         "--model",
         "--config",
         "--publish",
+        "--stage",
       ].includes(key) &&
         args[i + 1] &&
         !Object.hasOwn(options, key),
@@ -216,13 +217,22 @@ async function main() {
       /^[a-z0-9][a-z0-9._-]{0,95}$/u.test(options["--model"] ?? ""),
     "Explicit valid run, attempt, reviewed SHA and model are required.",
   );
+  const stage = options["--stage"] ?? "catalog";
+  check(
+    ["catalog", "behavior", "geometry"].includes(stage),
+    "Stage must be catalog, behavior or geometry.",
+  );
+  const generated = stage !== "catalog",
+    suffix = generated ? `-${stage}` : "";
   const expected = {
     repository,
     workflow: ".github/workflows/live-acceptance.yml",
     sourceSha: options["--sha"],
     runId: options["--run"],
     runAttempt: Number(options["--attempt"]),
-    scenario: "signal-lamp-client-handoff-v1",
+    scenario: generated
+      ? "generated-buffer-owner-confirmation-v1"
+      : "signal-lamp-client-handoff-v1",
   };
   check(
     (
@@ -269,11 +279,19 @@ async function main() {
     await import("../../dist/companion/src/config.js");
   const { CodexPlanningProvider } =
     await import("../../dist/companion/src/provider.js");
-  const {
-    readAcceptanceRequest,
-    createAcceptanceResponse,
-    readAcceptanceResponse,
-  } = await import("../../dist/companion/src/acceptance-exchange.js");
+  const catalogExchange =
+    await import("../../dist/companion/src/acceptance-exchange.js");
+  const generatedExchange =
+    await import("../../dist/companion/src/generated-acceptance.js");
+  const readAcceptanceRequest = generated
+    ? generatedExchange.readGeneratedAcceptanceRequest
+    : catalogExchange.readAcceptanceRequest;
+  const createAcceptanceResponse = generated
+    ? generatedExchange.createGeneratedAcceptanceResponse
+    : catalogExchange.createAcceptanceResponse;
+  const readAcceptanceResponse = generated
+    ? generatedExchange.readGeneratedAcceptanceResponse
+    : catalogExchange.readAcceptanceResponse;
   const { requireAcceptanceRun, requireAcceptanceArtifact } =
     await import("../../dist/companion/src/acceptance-github.js");
   async function liveRun() {
@@ -323,7 +341,7 @@ async function main() {
   const matches = listing.artifacts.filter(
     (artifact) =>
       artifact.name ===
-      `mce-live-request-${expected.runId}-${expected.runAttempt}`,
+      `mce-live-request-${expected.runId}-${expected.runAttempt}${suffix}`,
   );
   check(
     matches.length === 1,
@@ -333,7 +351,7 @@ async function main() {
     matches[0],
     expected.runId,
     expected.sourceSha,
-    `mce-live-request-${expected.runId}-${expected.runAttempt}`,
+    `mce-live-request-${expected.runId}-${expected.runAttempt}${suffix}`,
   );
   const archive = await command(
     "gh",
@@ -392,41 +410,87 @@ async function main() {
       "Reviewed checkout changed during preflight.",
     );
     readAcceptanceRequest(requestEnvelope(request), expected, Date.now());
+    check(
+      !generated || request.stage === stage,
+      "Request artifact belongs to another generated stage.",
+    );
     await privateWrite(join(receipts, `${request.digest}.started.json`), {
       requestDigest: request.digest,
       startedAt: Date.now(),
       model: options["--model"],
     });
+    const { RequestError } = await import("../../dist/companion/src/types.js");
     const provider = new CodexPlanningProvider({
       configDir: directory,
       model: options["--model"],
       timeoutMs: Math.min(90_000, request.expiresAt - Date.now()),
+      onUntrustedResult: async (value) => {
+        const bytes = JSON.stringify(value).length;
+        await privateWrite(join(receipts, `${request.digest}.untrusted.json`), {
+          schemaVersion: 1,
+          stage,
+          requestDigest: request.digest,
+          ...(bytes <= 65536 ? { result: value } : { oversize: true, bytes }),
+        });
+      },
     });
-    const plan = await provider.plan(
-      request.input,
-      new AbortController().signal,
-      request.memory,
-    );
-    const usage = provider.lastUsage;
     check(
-      usage && typeof usage === "object",
-      "Provider did not return token usage; no response was published.",
+      !generated || request.stage === stage,
+      "Request artifact belongs to another generated stage.",
     );
-    response = createAcceptanceResponse(requestEnvelope(request), plan, {
-      model: options["--model"],
-      sdkVersion: sdk.version,
-      inputTokens: usage.input_tokens,
-      cachedInputTokens: usage.cached_input_tokens,
-      outputTokens: usage.output_tokens,
-    });
-    response = readAcceptanceResponse(
-      response,
-      requestEnvelope(request),
-      Date.now(),
-    );
-    resultPath = join(receipts, `${request.digest}.response.json`);
-    await privateWrite(resultPath, response);
-    console.log(`Validated response saved: ${resultPath}`);
+    const method =
+      stage === "behavior"
+        ? "proposeBehavior"
+        : stage === "geometry"
+          ? "generateGeometry"
+          : "plan";
+    try {
+      const plan = await provider[method](
+        request.input,
+        new AbortController().signal,
+        request.memory,
+      );
+      const usage = provider.lastUsage;
+      check(
+        usage && typeof usage === "object",
+        "Provider did not return token usage; no response was published.",
+      );
+      response = createAcceptanceResponse(requestEnvelope(request), plan, {
+        model: options["--model"],
+        sdkVersion: sdk.version,
+        inputTokens: usage.input_tokens,
+        cachedInputTokens: usage.cached_input_tokens,
+        outputTokens: usage.output_tokens,
+      });
+      response = readAcceptanceResponse(
+        response,
+        requestEnvelope(request),
+        Date.now(),
+      );
+      resultPath = join(receipts, `${request.digest}.response.json`);
+      await privateWrite(resultPath, response);
+      console.log(`Validated response saved: ${resultPath}`);
+    } catch (error) {
+      const failure = {
+        schemaVersion: 1,
+        stage,
+        requestDigest: request.digest,
+        category: provider.lastDiagnostic,
+        usage: provider.lastUsage,
+        error:
+          error instanceof RequestError
+            ? error.message
+            : "Local validation or publication preparation failed.",
+      };
+      console.error(
+        `Local acceptance failure (${failure.category}): ${failure.error}`,
+      );
+      await privateWrite(
+        join(receipts, `${request.digest}.failure.json`),
+        failure,
+      );
+      throw error;
+    }
   }
   const current = await liveRun();
   await reviewedBranch();
@@ -446,6 +510,7 @@ async function main() {
       request_attempt: String(expected.runAttempt),
       source_sha: expected.sourceSha,
       result: JSON.stringify(response),
+      stage,
     },
   });
   const input = join(

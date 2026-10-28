@@ -1,7 +1,7 @@
 // Real HTTP gateway and SQLite persistence for the multiplayer proof. Inference
-// is deliberately unavailable: CI never receives a personal login or API key.
+// is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
 import { createCompanionServer } from "../../dist/companion/src/server.js";
@@ -11,12 +11,37 @@ if (process.env.CI !== "true" || !process.argv[2]) {
     "This fixture runs only in GitHub CI with a private config directory.",
   );
 }
+// Recorded raw signed-in reply; replay is deterministic and never invokes inference.
+const generatedFixture = JSON.parse(
+  readFileSync(
+    new URL("../../tests/fixtures/live-generated-buffer.json", import.meta.url),
+    "utf8",
+  ),
+);
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
   token: config.token,
   store,
   provider: {
+    async proposeBehavior(input) {
+      if (
+        input.request !==
+        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+      )
+        throw new Error("Unexpected generated fixture request");
+      return structuredClone(generatedFixture.proposal);
+    },
+    async generateGeometry(input) {
+      if (
+        input.request !==
+          "CI generated buffer: on after 12 game ticks, off after 16 game ticks." ||
+        input.behavior.risingGameTicks !== 12 ||
+        input.behavior.fallingGameTicks !== 16
+      )
+        throw new Error("Original request or confirmed intent changed");
+      return structuredClone(generatedFixture.geometry);
+    },
     async plan() {
       writeFileSync(
         join(config.directory, "inference-attempted"),

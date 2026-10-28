@@ -10,16 +10,33 @@ import {
 import { join, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
-  readAcceptanceRequest,
-  readAcceptanceResponse,
+  readAcceptanceRequest as readCatalogRequest,
+  readAcceptanceResponse as readCatalogResponse,
 } from "../../dist/companion/src/acceptance-exchange.js";
 import {
   requireAcceptanceRun,
   requireAcceptanceArtifact,
 } from "../../dist/companion/src/acceptance-github.js";
+import {
+  readGeneratedAcceptanceRequest,
+  readGeneratedAcceptanceResponse,
+} from "../../dist/companion/src/generated-acceptance.js";
+const stage = process.argv[3] ?? process.env.MCE_ACCEPTANCE_STAGE ?? "catalog";
+if (!["catalog", "behavior", "geometry"].includes(stage))
+  throw new Error("Unknown acceptance stage");
+const generated = stage !== "catalog",
+  suffix = generated ? `-${stage}` : "";
+const readAcceptanceRequest = generated
+  ? readGeneratedAcceptanceRequest
+  : readCatalogRequest;
+const readAcceptanceResponse = generated
+  ? readGeneratedAcceptanceResponse
+  : readCatalogResponse;
 const repo = "1xmint/minecraft-ai-engineer",
   base = `repos/${repo}/`,
-  directory = resolve("mod/build/live-exchange"),
+  directory = generated
+    ? resolve("mod/build/live-exchange", stage)
+    : resolve("mod/build/live-exchange"),
   statusFile = resolve("mod/build/live-status");
 function check(ok) {
   if (!ok)
@@ -85,7 +102,9 @@ function envelope(run, attempt, sha) {
     sourceSha: sha,
     runId: String(run),
     runAttempt: Number(attempt),
-    scenario: "signal-lamp-client-handoff-v1",
+    scenario: generated
+      ? "generated-buffer-owner-confirmation-v1"
+      : "signal-lamp-client-handoff-v1",
   };
 }
 function own() {
@@ -102,6 +121,7 @@ function childAlive() {
 function readRequest() {
   const raw = JSON.parse(readFileSync(join(directory, "request.json"), "utf8"));
   readAcceptanceRequest(raw, own(), Date.now());
+  check(!generated || raw.stage === stage);
   return raw;
 }
 async function main() {
@@ -117,7 +137,7 @@ async function main() {
   }
   if (mode === "wait-response") {
     const request = readRequest(),
-      name = `mce-live-response-${request.run.runId}-${request.run.runAttempt}`;
+      name = `mce-live-response-${request.run.runId}-${request.run.runAttempt}${suffix}`;
     while (true) {
       childAlive();
       readAcceptanceRequest(request, own(), Date.now());
@@ -174,7 +194,7 @@ async function main() {
       expected,
       "request",
     );
-    const name = `mce-live-request-${expected.runId}-${expected.runAttempt}`,
+    const name = `mce-live-request-${expected.runId}-${expected.runAttempt}${suffix}`,
       listing = api(`actions/runs/${expected.runId}/artifacts?per_page=100`);
     check(Array.isArray(listing.artifacts) && listing.total_count <= 100);
     const matches = listing.artifacts.filter((a) => a.name === name);
@@ -201,6 +221,48 @@ async function main() {
       await setTimeout(2000);
     }
     check(readFileSync(statusFile, "utf8").trim() === "0");
+    if (generated) {
+      const envelopes = [];
+      for (const phase of ["behavior", "geometry"]) {
+        const location = resolve("mod/build/live-exchange", phase),
+          request = JSON.parse(
+            readFileSync(join(location, "request.json"), "utf8"),
+          ),
+          result = JSON.parse(
+            readFileSync(join(location, "response.json"), "utf8"),
+          ),
+          accepted = JSON.parse(
+            readFileSync(join(location, "accepted.json"), "utf8"),
+          );
+        readGeneratedAcceptanceRequest(request, own(), accepted.acceptedAt);
+        readGeneratedAcceptanceResponse(result, request, accepted.acceptedAt);
+        check(
+          request.stage === phase &&
+            accepted.stage === phase &&
+            accepted.requestDigest === request.digest &&
+            accepted.resultDigest === result.digest,
+        );
+        envelopes.push({ request, result, accepted });
+      }
+      check(
+        JSON.stringify(envelopes[0].result.result.behavior) ===
+          JSON.stringify(envelopes[1].request.behavior) &&
+          envelopes[0].accepted.acceptedAt <= envelopes[1].request.createdAt,
+      );
+      for (const marker of [
+        "generated-confirmation.done",
+        "generated-confirmation-recovery.done",
+        "live-generated-model.done",
+        "player-generated-section.done",
+      ])
+        check(
+          readFileSync(
+            `mod/build/multiplayer-evidence/coordination/${marker}`,
+            "utf8",
+          ).trim() === "passed",
+        );
+      return;
+    }
     const proof = JSON.parse(
       readFileSync(join(directory, "accepted.json"), "utf8"),
     );

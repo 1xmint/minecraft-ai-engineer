@@ -35,7 +35,10 @@ export function requireAcceptanceRun(
   if (
     expected.repository !== "1xmint/minecraft-ai-engineer" ||
     expected.workflow !== ".github/workflows/live-acceptance.yml" ||
-    expected.scenario !== "signal-lamp-client-handoff-v1" ||
+    !new Set([
+      "signal-lamp-client-handoff-v1",
+      "generated-buffer-owner-confirmation-v1",
+    ]).has(expected.scenario) ||
     (kind !== "request" && kind !== "response")
   )
     fail();
@@ -96,7 +99,7 @@ export function requireAcceptanceArtifact(
     parent = object(v.workflow_run);
   if (
     typeof name !== "string" ||
-    !/^mce-live-(request|response)-[1-9][0-9]{0,19}-[1-9][0-9]{0,3}$/u.test(
+    !/^mce-live-(request|response)-[1-9][0-9]{0,19}-[1-9][0-9]{0,3}(?:-(?:behavior|geometry))?$/u.test(
       name,
     ) ||
     v.name !== name ||

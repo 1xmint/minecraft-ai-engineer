@@ -38,11 +38,12 @@ final class LessonAssistant {
         if(s.blueprint==null)throw new IllegalStateException("Load a design before asking for lesson details");
         if(target==null)target=currentComponent(s,true);
         Blueprint selected=ComponentTree.component(s.blueprint,target);
-        var contract=MechanismCatalog.contract(selected);
+        var contract=EngineeringContracts.contract(selected);
         int delay=selected.source().has("parameters")?selected.source().getAsJsonObject("parameters").get("delay").getAsInt():1;
-        Blueprint canonical=MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
+        boolean generated=GeneratedBlueprint.isGenerated(selected);
+        Blueprint canonical=generated?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
-            s.tell("Lesson for component "+target+": "+canonical.name()+". "+canonical.source().get("explanation").getAsString());
+            s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?GeneratedBlueprint.behavior(selected).summary():canonical.source().get("explanation").getAsString()));
             String current=currentComponent(s,false);
             if(target.equals(current)) {
                 var cursor=s.cursors.get(s.actor());var stage=s.blueprint.stages().get(cursor.stage);
@@ -60,7 +61,9 @@ final class LessonAssistant {
             materials(s,target,canonical);
             for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
         } else if(topic==Topic.MATERIALS)materials(s,target,canonical);
-        else {
+        else if(generated) {
+            s.tell(GeneratedBlueprint.behavior(selected).summary());
+        } else {
             var delays=new TreeSet<Integer>();
             for(var block:selected.blocks())if(block.state().is(Blocks.REPEATER))delays.add(block.state().getValue(BlockStateProperties.DELAY));
             if(delays.size()==1) {

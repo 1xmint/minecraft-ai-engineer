@@ -118,6 +118,7 @@ public final class ComponentTree {
 
     /** Validates single recipes or verifies every persisted composite field against regeneration. */
     public static void validate(Blueprint blueprint) {
+        if(GeneratedBlueprint.isGenerated(blueprint)){GeneratedBlueprint.validate(blueprint);return;}
         if (!composite(blueprint)) { MechanismCatalog.contract(blueprint); return; }
         JsonObject source = blueprint.source();
         JsonObject provenance = object(source.get("provenance"));
@@ -147,6 +148,7 @@ public final class ComponentTree {
     public static List<Node> nodes(Blueprint blueprint) {
         validate(blueprint);
         if (composite(blueprint)) return parseNodes(blueprint.source().getAsJsonObject("components").getAsJsonArray("nodes"));
+        if(GeneratedBlueprint.isGenerated(blueprint))return List.of(new Node("root",null,"mechanism","generated",BlockPos.ZERO,0,1,List.of()));
         JsonObject provenance = object(blueprint.source().get("provenance"));
         int delay = blueprint.source().has("parameters") ? integer(object(blueprint.source().get("parameters")).get("delay")) : 1;
         return List.of(new Node("root", null, "mechanism", text(provenance.get("template"), 128), BlockPos.ZERO, 0, delay, List.of()));

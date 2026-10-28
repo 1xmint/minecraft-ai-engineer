@@ -31,6 +31,8 @@ final class ComponentAssignments {
         StringBuilder text=new StringBuilder(project.worldId()).append('|').append(project.dimension()).append('|').append(id);
         for(var block:component.blocks())text.append('|').append(block.pos().toShortString()).append(':').append(Blueprint.describe(block.state())).append(':').append(block.stage());
         for(var node:ComponentTree.nodes(project))if(node.id().equals(id))text.append('|').append(node.dependsOn());
+        // New generated intentions bind behavior without changing any curated v1/v2 digest.
+        if(GeneratedBlueprint.isGenerated(project))text.append("|generated-behavior-v1:").append(GeneratedBlueprint.behavior(project).digest());
         return digest(text.toString());
     }
 
