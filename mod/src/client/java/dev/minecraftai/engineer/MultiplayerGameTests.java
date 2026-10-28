@@ -39,7 +39,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos REPEATER = LEVER.east();
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
-    private static final long WAIT_MILLIS = 240_000;
+    private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
+    private static final long WAIT_MILLIS = LIVE_ACCEPTANCE?1_800_000:240_000;
     private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
 
     @Override public void runTest(ClientGameTestContext context) {
@@ -86,8 +87,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("project", projectId);
                 send(context, "engineer select1 0 100 0");
                 send(context, "engineer select2 2 101 0");
-                send(context, "engineer reference");
-                server.waitFor(s -> session(s, "Alice").blueprint != null);
+                send(context,LIVE_ACCEPTANCE?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
+                server.waitFor(s -> session(s, "Alice").blueprint != null,LIVE_ACCEPTANCE?900_000:10_000);
+                if(LIVE_ACCEPTANCE){
+                    server.runOnServer(s->{var accepted=session(s,"Alice").blueprint;
+                        check(accepted.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")
+                            && accepted.source().getAsJsonObject("parameters").get("delay").getAsInt()==1
+                            && accepted.rotation()==0 && accepted.anchor().equals(ANCHOR),"The actual validated model design matches the requested one-tick lamp and selected layout");});
+                    write("live-model-design.done","passed");
+                }
                 inspectPersisted(context,server);
                 await(context, () -> view(context) != null, "Alice's authorized network preview");
                 check(view(context).stage() == 0, "Alice begins her own support lesson");
@@ -115,9 +123,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     check(project.cursor(player(s, "Bob").getUUID()).stage == 1, "Bob has an independent lesson cursor");
                     check(project.cursor(player(s, "Alice").getUUID()).stage == 0, "Alice's server cursor is unchanged");
                     check(!project.access.allows(deniedActor, ProjectAccess.Permission.VIEW), "Eve has no project grant after disconnect too");
-                    for (int x = 0; x < 3; x++) project.level().setBlockAndUpdate(ANCHOR.east(x), Blocks.STONE.defaultBlockState());
-                    project.level().setBlockAndUpdate(LEVER, Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]"));
                 });
+                playerConstructionFlow(context,server,connection);
                 write("build-bob", "ready");
                 // Revoke on the same real server tick that observes a partial build.
                 // This removes scheduling races between observing and revoking.
@@ -791,6 +798,44 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer inspect block 20000000 100 0");expectChat(context,"unloaded");
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.level().hasChunkAt(new BlockPos(20_000_000,100,0)) && project.lastObservation==null,"A refused observation neither loads chunks nor sends guessed air to memory");});
         write("targeted-perception.done","passed");
+    }
+
+    private static void playerConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
+        // Only the initial disposable scaffolding and creative item supply are fixtures.
+        // Every intended player block and all scaffold removal travel through vanilla client packets.
+        server.runOnServer(s->{var project=session(s,"Alice");
+            for(int x=0;x<3;x++)project.level().setBlockAndUpdate(ANCHOR.east(x).below(),Blocks.COBBLESTONE.defaultBlockState());
+            check(project.journal.isEmpty(),"No assistant operation precedes the player's section");
+        });
+        server.runCommand("tp Alice 1.5 101 2.5 -90 45");connection.waitForClientboundPackets();
+        equipConstructionItem(context,server,net.minecraft.world.item.Items.STONE);
+        for(int x=0;x<3;x++) {
+            BlockPos target=ANCHOR.east(x),support=target.below();
+            context.runOnClient(client->client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(support).add(0,0.5,0),net.minecraft.core.Direction.UP,support,false)));
+            server.waitFor(s->player(s,"Alice").level().getBlockState(target).is(Blocks.STONE));
+        }
+        server.waitFor(s->session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage==1);
+        equipConstructionItem(context,server,net.minecraft.world.item.Items.LEVER);
+        context.runOnClient(client->client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,
+            new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(ANCHOR).add(0,0.5,0),net.minecraft.core.Direction.UP,ANCHOR,false)));
+        server.waitFor(s->Blueprint.matches(Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]"),player(s,"Alice").level().getBlockState(LEVER)));
+        server.waitFor(s->session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage==2);
+        for(int x=0;x<3;x++) {
+            BlockPos scaffold=ANCHOR.east(x).below();
+            context.runOnClient(client->{client.gameMode.startDestroyBlock(scaffold,net.minecraft.core.Direction.SOUTH);client.gameMode.stopDestroyBlock();});
+            server.waitFor(s->player(s,"Alice").level().getBlockState(scaffold).isAir());
+        }
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.isEmpty(),"Real player placements and scaffold removal never become assistant journal entries");
+            check(project.level().getBlockState(REPEATER).isAir() && project.level().getBlockState(LAMP).isAir(),"The player leaves actual remaining wiring for delegation");
+        });
+        write("player-client-construction.done","passed");
+        server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
+    }
+    private static void equipConstructionItem(ClientGameTestContext context,TestDedicatedServerContext server,net.minecraft.world.item.Item item) throws Exception {
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.item.ItemStack(item,64));actor.inventoryMenu.broadcastChanges();});
+        await(context,()->context.computeOnClient(client->client.player.getMainHandItem().is(item)),"Actual creative construction item received by client");
     }
 
     private static java.util.List<net.minecraft.world.item.ItemStack> inventoryCopies(net.minecraft.world.Container container) {

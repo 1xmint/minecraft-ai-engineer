@@ -1,3 +1,4 @@
+import type { GatewayContext } from "./gateway-types.js";
 export interface Position {
   x: number;
   y: number;
@@ -129,6 +130,7 @@ export interface PlanningProvider {
     input: DesignRequest,
     signal: AbortSignal,
     context?: string,
+    authority?: Readonly<GatewayContext>,
   ): Promise<Plan>;
 }
 export class RequestError extends Error {

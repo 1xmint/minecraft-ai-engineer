@@ -4,37 +4,73 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Building #2 on **phase/4-component-collaboration**, draft PR #12:
-https://github.com/1xmint/minecraft-ai-engineer/pull/12
-**67014ab** implements transactional component undo. CI **40598801562** passed
-four checks and both undo rejection paths, then hit a root harness race: a wait
-accepted A's previous COMPLETED/pass before its new build packet was processed.
-The corrected **428e1b9 / CI40617970716** passed both rejections, production WAL
-preparation and actual third-boot loading with no authority/foreign baseline. It
-then exposed a second root assertion error: restart intentionally stales old pass
-labels. The proof now checks A's exact retained historical scope plus stale status,
-while B remains untested; final undo completion is pending the next CI.
-Java main/client compile passed locally. Tests run only on GitHub. New restart
-acceptance calls the real production prepare/WAL phase, stops the actual server,
-then requires B-only recovery on the third boot; no fabricated target checkpoint.
-GPT-6.1-Sol independently accepted the fix; runtime evidence remains required.
-Docs updates explain inventory, source commands and current limits.
-Do not merge until the current source passes all five checks and artifacts agree.
+Working on **phase/5-player-acceptance** for #3/E4. #2 merged as **c01a3e7**
+through PR12 after **811a600 / CI40619656132 passed all five checks**. Root
+inspected actual rejection/recovery markers, native logs and SQLite proof:
+B-only undo on third boot preserves A's blocks/journal/exact historical scope
+under the safe stale-on-restart label; private inventory/block/view/component
+proofs all passed. No new release or full phase1 completion is claimed.
 
-Inventory **fdd03d7 / CI40595380532 passed all five checks**. Retained native logs,
-markers and SQLite proof were inspected. Earlier component/block/view source
-**e3bc4b1 / CI40586816662** also passed all five. Full phase 1 #3 and phase 2 #4
-remain; neither the published release nor a catalog dependency is the full product.
+Current source458665a passed all five checks in CI40620567886. Root inspected
+player-client-construction.done, actual tutorial step1->2->3 chat, functional and
+restart logs, and SQLite proof. Intended player blocks now use actual client
+placement and never enter the assistant journal; scaffold removal uses client
+breaking. Creative item supply and initial scaffold remain fixtures. Strict
+exchange and immutable provider-frame rejection tests also passed. Transport,
+local CLI and the combined live model invocation remain to build. Tests stay
+GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
 
-CI **40618880526 /9458cf0** passed every new undo assertion and the real
-third-boot B-only completion; recovery marker passed. Four other checks green.
-The final preexisting root inspection then correctly refused an unloaded chunk:
-the added distant recovery visit moved Alice farther away before returning home.
-Root reordered the fixture's existing teleport before inspection and waits for
-ordinary player chunk loading. No production unloaded guard changed. Final full
-run pending. Next acceptance work is separately pushed as2e01cbd on
-phase/5-player-acceptance (actual client placement proof, scoped compile passed);
-rebase only its own changes after this PR merges.
+Transport bootstrap is now implemented locally: strict GitHub provenance,
+private one-call/resend CLI, CI-only file provider, separate owner-only manual
+request/response workflows, normal gateway/Fabric plan acceptance and bounded
+manual-only waits. Default CI still disables inference. Proof-first
+CI40621899855 failed missing github/broker modules (TS2307). Worker GPT-6.1-Sol
+commitdc2f855 integrated asafb3bf9, source only, root formatted/combined.
+
+GPT-6.1-Sol independent review found a service95s deadline despite the long Java
+wait, a wrong metadata field and missing one-tick requirement assertion. All
+fixed: only live CI service uses900s, actual provenance.template is checked plus
+delay1/rotation0/anchor before the model marker. No further confirmed auth/data
+blocker; bounded ZIP format was checked against official artifact archiver.
+Scoped Java main/client and TypeScript compile, JS syntax, bash-n and formatting
+passed. Next combined CI must prove broker/provenance rejection and default native
+compatibility. No SDK call or combined live proof has run. Bootstrap needs merge
+only after green gates/review, then an actual owner-dispatched synthetic run.
+Operator instructions: docs/acceptance-guide.md. Keep full #3/phase2 scope intact.
+
+## Current acceptance slice plan (serves #3/E4)
+
+- P1: actual player client places three supports and a correctly oriented lever,
+  sees tutorial advance, removes temporary scaffold through normal client break,
+  and leaves wiring for AI. Proof checks real server blocks, no assistant journal,
+  remaining blocks absent, then uses existing actual delegation/conflict/test flow.
+  Only initial scaffold and creative item supply are fixtures, not intended blocks.
+- P2: one-shot live signed-in model response crosses synthetic CI exchange through
+  normal provider/gateway validation, followed by full player/AI/restart functional
+  acceptance. Failure proof rejects wrong run/attempt/nonce/context/epoch/ACL/expiry
+  and unavailable model without mutation. Default CI remains deterministic and
+  rejects inference. No paid service, public AI endpoint, CI login or local MC test.
+
+P1 proof replaces the old server-set intended human section; local scoped client
+compile and GitHub native acceptance are next. P2 architecture was independently
+challenged below, integration/protocol proofs are not implemented. This is a slice
+of #3, not all general engineering/teaching. Full original brief and phase2 remain.
+
+P2 protocol proofs are written first in tests/acceptance-exchange.test.ts:
+strict synthetic request reconstruction, reviewed run/attempt identity, digest,
+nonce/expiry, actor/connection/epoch/revision crosstalk and bounded result schema.
+A gateway proof requires a separate immutable authenticated frame at the provider
+boundary; model text is not that frame. CI40620293316 failed these missing APIs before implementation. Contract code now
+passes scoped TypeScript compile; runtime rejection proofs are pending. Source documentation rechecked official SDK
+and ChatGPT authentication: https://learn.chatgpt.com/docs/codex-sdk and
+https://learn.chatgpt.com/docs/auth. Local SDK invocation stays private/manual;
+no Codex execution or credentials are exposed in public CI.
+
+#2 CI40618880526 actually passed new recovery markers but failed an existing final
+inspection after the distant visit unloaded the original chunk. Fix811a600 orders
+the existing return teleport before inspection and waits for normal player chunk
+loading; CI40619656132 is live. No production guard changed. Rebase this branch
+from9458cf0 onto the final #2 main merge before opening its pull request.
 
 ## Outcomes and proof for #2
 
@@ -182,10 +218,30 @@ Bind repository/workflow/reviewed SHA/run+attempt/scenario/nonce/context digest/
 expiry and response actor provenance. Reconstruct allowed request locally; never
 execute downloaded code or auto-spend quota for arbitrary runs. Return through
 PlanningProvider and normal gateway/Fabric validation. Two integration points to
-solve: provider currently lacks full authenticated gateway context (capture at
-validated gateway boundary), and ordinary Minecraft HTTP90s timeout is shorter
+solve: provider now gets immutable authenticated gateway context (proven in
+CI40620567886), and ordinary Minecraft HTTP90s timeout is shorter
 than manual exchange plus provider90s (separate bounded acceptance timeout only).
-Default CI must still reject inference. First replace human fixture blocks with
-real client placement and journal-exclusion proof. A lamp flow proves E4's path,
+Default CI must still reject inference. Actual client placement and journal
+exclusion passed CI40620567886. A lamp flow proves E4's path,
 not general design capability. Research: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
 and https://docs.github.com/en/rest/actions/artifacts#download-an-artifact.
+
+Transport build plan: separate manual request/response workflows must first be
+published on the default branch before workflow_dispatch can execute them.
+Bootstrap reviewed infrastructure, then prove the live flow after publication;
+do not call the combined flow complete before that proof. Local CLI must require
+an explicit run/attempt/reviewed local SHA and verify repository, workflow, event,
+actor/triggering actor and head SHA before reading bounded data or spending quota.
+Preflight response-workflow availability before the model call; record a private
+started receipt and validated answer so resending never needs another model call.
+
+Broker must compare actual validated input/memory/frame with the reconstructed
+fresh synthetic scenario before publishing IDs. Fresh memory is Engineering
+project/current revision/empty tasks. No arbitrary world text or real player data.
+Return Plan through normal gateway and Fabric validation. A manual workflow can
+background the existing multiplayer script, upload its request while it waits,
+verify response workflow/actor/SHA provenance, then deliver data to a file broker.
+Keep ordinary CI inference disabled. Extend only bounded manual acceptance waits;
+retain ordinary90s product timeout/default900s harness. Require request/result
+digests, acceptedAt and usual actual construction/test/service/game-restart proof.
+Finish transport implementation and independent auth/data review before merging.

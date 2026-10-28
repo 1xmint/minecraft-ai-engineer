@@ -1296,3 +1296,30 @@ test("private inventory expires on project or authorization changes", async () =
     await f.close();
   }
 });
+
+test("planning provider receives an immutable authenticated frame separate from model text", async () => {
+  let frame: unknown;
+  const f = await fixture({
+    async plan(...args: unknown[]) {
+      frame = args[3];
+      return plan.plan(design, new AbortController().signal);
+    },
+  });
+  try {
+    assert.equal((await f.open()).status, 200);
+    assert.equal((await f.sync()).status, 200);
+    const c = context({ connectionId: "44444444-4444-4444-8444-444444444444" });
+    const response = await f.post("/v2/design", {
+      ...design,
+      context: c,
+      modelAuthorized: true,
+      isOperator: true,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(frame, c);
+    assert.equal(Object.isFrozen(frame), true);
+    assert.equal(JSON.stringify(frame).includes(TOKEN), false);
+  } finally {
+    await f.close();
+  }
+});

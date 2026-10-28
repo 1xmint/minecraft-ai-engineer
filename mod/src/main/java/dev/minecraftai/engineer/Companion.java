@@ -82,8 +82,10 @@ final class Companion {
             String token = config.get("token").getAsString();
             int port = config.has("port") ? config.get("port").getAsInt() : 43127;
             if (token.length() < 32 || port < 1024 || port > 65535) throw new IllegalStateException("Invalid companion configuration");
+            boolean manualAcceptance=route.equals("/v2/design") && "true".equals(System.getenv("CI"))
+                    && "true".equals(System.getenv("GITHUB_ACTIONS")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + route))
-                    .timeout(Duration.ofSeconds(90)).header("Authorization", "Bearer " + token).header("Content-Type", "application/json");
+                    .timeout(Duration.ofSeconds(manualAcceptance?900:90)).header("Authorization", "Bearer " + token).header("Content-Type", "application/json");
             if (body == null) builder.GET(); else builder.POST(HttpRequest.BodyPublishers.ofString(LocalFiles.GSON.toJson(body)));
             CompletableFuture<HttpResponse<String>> exchange=CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString());
             CompletableFuture<JsonObject> parsed=exchange.thenApply(response -> {

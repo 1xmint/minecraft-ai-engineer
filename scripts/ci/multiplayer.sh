@@ -13,6 +13,15 @@ mkdir -p "$coord" "$evidence"
 pids=()
 copies=()
 companion_pid=""
+companion_entry="$repo/scripts/ci/companion.mjs"
+client_timeout=14m
+harness_seconds=900
+if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
+  [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REPOSITORY:-}" == 1xmint/minecraft-ai-engineer ]] || exit 64
+  companion_entry="$repo/scripts/ci/live-companion.mjs"
+  client_timeout=29m
+  harness_seconds=1800
+fi
 cleanup() {
   for pid in "${pids[@]}"; do kill -- "-$pid" 2>/dev/null || true; done
   if [[ -n "$companion_pid" ]]; then kill -- "-$companion_pid" 2>/dev/null || true; fi
@@ -49,7 +58,7 @@ done
 start_companion() {
   local previous_ready ready
   previous_ready=$(grep -c 'Companion ready' "$evidence/companion.log" || true)
-  setsid node "$repo/scripts/ci/companion.mjs" "$temporary/config-alice" >>"$evidence/companion.log" 2>&1 &
+  setsid node "$companion_entry" "$temporary/config-alice" >>"$evidence/companion.log" 2>&1 &
   companion_pid=$!
   for attempt in {1..50}; do
     if ! kill -0 "$companion_pid" 2>/dev/null; then cat "$evidence/companion.log" >&2; return 1; fi
@@ -86,9 +95,9 @@ launch() {
     cd "$1/mod"
     export MCE_MP_ROLE="$2" MCE_MP_COORD="$3" MCE_CONFIG_DIR="$3/../config-$2" MCE_DISABLE_OVERLAY="$4"
     chmod +x gradlew
-    timeout 14m xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --no-daemon --max-workers=1 \
+    timeout "$6" xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --no-daemon --max-workers=1 \
       -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$5" -PmceTestRunDir="build/run/mp-$2" runClientGameTest
-  ' _ "$checkout" "$role" "$coord" "$overlay_disabled" "$username" >"$evidence/$role.log" 2>&1 &
+  ' _ "$checkout" "$role" "$coord" "$overlay_disabled" "$username" "$client_timeout" >"$evidence/$role.log" 2>&1 &
   pids+=("$!")
 }
 
@@ -97,7 +106,7 @@ launch bob Bob "$temporary/bob" false
 launch eve Eve "$temporary/eve" false
 text_started=false
 companion_restarted=false
-deadline=$((SECONDS + 900))
+deadline=$((SECONDS + harness_seconds))
 while true; do
   if compgen -G "$coord/*.failed" >/dev/null; then
     cat "$coord/"*.failed >&2
@@ -132,6 +141,10 @@ done
 [[ "$companion_restarted" == true ]] || { echo "Native flow did not request an actual companion restart" >&2; exit 1; }
 for pid in "${pids[@]}"; do wait "$pid"; done
 [[ ! -f "$temporary/config-alice/inference-attempted" ]] || { echo "An unauthorized CI request reached inference" >&2; exit 1; }
+if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
+  [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Live exchange was not accepted exactly once" >&2; exit 1; }
+  cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
+fi
 node "$repo/scripts/ci/verify-memory.mjs" "$temporary/config-alice/projects.sqlite" "$coord" >"$evidence/memory-proof.json"
 find "$repo/mod/build/run/mp-alice" -type f \( -name '*.png' -o -name '*.log' \) -exec cp --parents '{}' "$evidence" \;
 echo "Dedicated multiplayer proof passed: Alice, Bob, denied Eve, text-only Eve and saved-world restart."

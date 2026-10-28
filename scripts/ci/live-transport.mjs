@@ -1,0 +1,237 @@
+// GitHub transports bounded synthetic data; credentials never enter an artifact.
+import { execFileSync } from "node:child_process";
+import {
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  existsSync,
+  mkdirSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
+import { setTimeout } from "node:timers/promises";
+import {
+  readAcceptanceRequest,
+  readAcceptanceResponse,
+} from "../../dist/companion/src/acceptance-exchange.js";
+import {
+  requireAcceptanceRun,
+  requireAcceptanceArtifact,
+} from "../../dist/companion/src/acceptance-github.js";
+const repo = "1xmint/minecraft-ai-engineer",
+  base = `repos/${repo}/`,
+  directory = resolve("mod/build/live-exchange"),
+  statusFile = resolve("mod/build/live-status");
+function check(ok) {
+  if (!ok)
+    throw new Error(
+      "Synthetic acceptance transport rejected data or lifecycle",
+    );
+}
+check(
+  process.env.CI === "true" &&
+    process.env.GITHUB_ACTIONS === "true" &&
+    process.env.GITHUB_REPOSITORY === repo &&
+    process.env.GITHUB_ACTOR === "1xmint",
+);
+const mode = process.argv[2];
+function api(route) {
+  return JSON.parse(
+    execFileSync(
+      "gh",
+      [
+        "api",
+        "--hostname",
+        "github.com",
+        "-H",
+        "X-GitHub-Api-Version: 2026-03-10",
+        base + route,
+      ],
+      {
+        encoding: "utf8",
+        maxBuffer: 2_000_000,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    ),
+  );
+}
+function data(artifact, parent, sha, name, file, max) {
+  const id = requireAcceptanceArtifact(artifact, parent, sha, name);
+  const zip = execFileSync(
+    "gh",
+    [
+      "api",
+      "--hostname",
+      "github.com",
+      "-H",
+      "X-GitHub-Api-Version: 2026-03-10",
+      base + `actions/artifacts/${id}/zip`,
+    ],
+    { maxBuffer: 16384, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  const script =
+    "import sys,io,zipfile,stat\nz=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read()))\na=z.infolist()\nassert len(a)==1\ni=a[0]\nassert i.filename==sys.argv[1] and not i.is_dir() and i.file_size<=int(sys.argv[2]) and not (i.flag_bits&1)\nm=(i.external_attr>>16)&0o170000\nassert m in (0,stat.S_IFREG)\nb=z.read(i)\nassert len(b)<=int(sys.argv[2])\nsys.stdout.buffer.write(b)";
+  return JSON.parse(
+    execFileSync("python3", ["-c", script, file, String(max)], {
+      input: zip,
+      maxBuffer: max,
+      stdio: ["pipe", "pipe", "pipe"],
+    }).toString("utf8"),
+  );
+}
+function envelope(run, attempt, sha) {
+  return {
+    repository: repo,
+    workflow: ".github/workflows/live-acceptance.yml",
+    sourceSha: sha,
+    runId: String(run),
+    runAttempt: Number(attempt),
+    scenario: "signal-lamp-client-handoff-v1",
+  };
+}
+function own() {
+  return envelope(
+    process.env.GITHUB_RUN_ID,
+    process.env.GITHUB_RUN_ATTEMPT,
+    process.env.GITHUB_SHA,
+  );
+}
+function childAlive() {
+  if (existsSync(statusFile))
+    throw new Error("Native acceptance stopped before the exchange completed");
+}
+function readRequest() {
+  const raw = JSON.parse(readFileSync(join(directory, "request.json"), "utf8"));
+  readAcceptanceRequest(raw, own(), Date.now());
+  return raw;
+}
+async function main() {
+  if (mode === "wait-request") {
+    const deadline = Date.now() + 10 * 60_000;
+    while (!existsSync(join(directory, "request.json"))) {
+      childAlive();
+      check(Date.now() < deadline);
+      await setTimeout(1000);
+    }
+    readRequest();
+    return;
+  }
+  if (mode === "wait-response") {
+    const request = readRequest(),
+      name = `mce-live-response-${request.run.runId}-${request.run.runAttempt}`;
+    while (true) {
+      childAlive();
+      readAcceptanceRequest(request, own(), Date.now());
+      requireAcceptanceRun(
+        api(`actions/runs/${request.run.runId}`),
+        request.run,
+        "request",
+      );
+      const listing = api(`actions/artifacts?name=${name}&per_page=100`);
+      check(Array.isArray(listing.artifacts) && listing.total_count <= 100);
+      for (const artifact of listing.artifacts) {
+        let parent;
+        try {
+          parent = requireAcceptanceRun(
+            api(`actions/runs/${artifact.workflow_run.id}`),
+            request.run,
+            "response",
+          );
+        } catch {
+          continue;
+        }
+        const result = data(
+          artifact,
+          parent.id,
+          request.run.sourceSha,
+          name,
+          "response.json",
+          8192,
+        );
+        readAcceptanceResponse(result, request, Date.now());
+        writeFileSync(join(directory, "response.tmp"), JSON.stringify(result));
+        renameSync(
+          join(directory, "response.tmp"),
+          join(directory, "response.json"),
+        );
+        return;
+      }
+      await setTimeout(3000);
+    }
+  }
+  if (mode === "publish-response") {
+    const event = JSON.parse(
+        readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"),
+      ),
+      inputs = event.inputs;
+    const expected = envelope(
+      inputs.request_run,
+      inputs.request_attempt,
+      inputs.source_sha,
+    );
+    check(expected.sourceSha === process.env.GITHUB_SHA);
+    requireAcceptanceRun(
+      api(`actions/runs/${expected.runId}`),
+      expected,
+      "request",
+    );
+    const name = `mce-live-request-${expected.runId}-${expected.runAttempt}`,
+      listing = api(`actions/runs/${expected.runId}/artifacts?per_page=100`);
+    check(Array.isArray(listing.artifacts) && listing.total_count <= 100);
+    const matches = listing.artifacts.filter((a) => a.name === name);
+    check(matches.length === 1);
+    const request = data(
+      matches[0],
+      expected.runId,
+      expected.sourceSha,
+      name,
+      "request.json",
+      4096,
+    );
+    readAcceptanceRequest(request, expected, Date.now());
+    const result = JSON.parse(inputs.result);
+    readAcceptanceResponse(result, request, Date.now());
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "response.json"), JSON.stringify(result));
+    return;
+  }
+  if (mode === "wait-finish") {
+    const deadline = Date.now() + 30 * 60_000;
+    while (!existsSync(statusFile)) {
+      check(Date.now() < deadline);
+      await setTimeout(2000);
+    }
+    check(readFileSync(statusFile, "utf8").trim() === "0");
+    const proof = JSON.parse(
+      readFileSync(join(directory, "accepted.json"), "utf8"),
+    );
+    const request = JSON.parse(
+      readFileSync(join(directory, "request.json"), "utf8"),
+    );
+    readAcceptanceRequest(request, own(), proof.acceptedAt);
+    const result = JSON.parse(
+        readFileSync(join(directory, "response.json"), "utf8"),
+      ),
+      accepted = JSON.parse(
+        readFileSync(join(directory, "accepted.json"), "utf8"),
+      );
+    readAcceptanceResponse(result, request, accepted.acceptedAt);
+    check(
+      accepted.requestDigest === request.digest &&
+        accepted.resultDigest === result.digest,
+    );
+    check(
+      readFileSync(
+        "mod/build/multiplayer-evidence/coordination/live-model-design.done",
+        "utf8",
+      ).trim() === "passed",
+    );
+    return;
+  }
+  throw new Error("Unknown acceptance transport action");
+}
+main().catch(() => {
+  console.error(
+    "Synthetic acceptance transport failed; no credentials or raw payloads were logged.",
+  );
+  process.exitCode = 1;
+});
