@@ -28,8 +28,6 @@ final class StructuralTransition {
 
     private final JsonObject beforeSource;
     private final JsonObject afterSource;
-    private final Blueprint before;
-    private final Blueprint after;
     private final String digest;
     private final Set<BlockPos> writes;
     private final List<Step> steps;
@@ -41,8 +39,6 @@ final class StructuralTransition {
                                  Blueprint before, Blueprint after) {
         this.beforeSource = beforeSource.deepCopy();
         this.afterSource = afterSource.deepCopy();
-        this.before = before;
-        this.after = after;
         if (serializedSize(this.beforeSource, this.afterSource) > MAX_BYTES)
             throw invalid("Structural transition exceeds storage limit");
         this.digest = digest(this.beforeSource, this.afterSource);
@@ -116,10 +112,10 @@ final class StructuralTransition {
         if (integer(saved.get("schemaVersion")) != 1) throw invalid("Unsupported structural transition schema");
         String claimedDigest = string(saved.get("digest"));
         if (!claimedDigest.matches("[0-9a-f]{64}")) throw invalid("Invalid structural transition digest");
-        JsonObject oldSource = object(saved.get("before")).deepCopy();
-        JsonObject newSource = object(saved.get("after")).deepCopy();
         if (saved.toString().getBytes(StandardCharsets.UTF_8).length > MAX_BYTES)
             throw invalid("Structural transition exceeds storage limit");
+        JsonObject oldSource = object(saved.get("before")).deepCopy();
+        JsonObject newSource = object(saved.get("after")).deepCopy();
         Blueprint oldSnapshot = Blueprint.parse(oldSource, world, dimension);
         Blueprint newSnapshot = Blueprint.parse(newSource, world, dimension);
         if (!oldSnapshot.projectId().equals(project.toString()) || !newSnapshot.projectId().equals(project.toString()))

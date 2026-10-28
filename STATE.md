@@ -152,3 +152,22 @@ from it. The newer generated restart PNG does visibly render real blocks.
    optimization; multiple independent builders.
 
 AGENTS.md/STATE.md are the only project memory. CLAUDE.md contains @AGENTS.md.
+
+S1/S3 boundary proof937d795 / **CI40770908941** failed at missing
+StructuralTransition before implementation. GPT-6-Luna supplied only immutable
+data class54c0bc1, integrated9736e69. Root removed redundant parsed-source storage
+and checks serialized budget before cloning read data. Java main/client compile
+passed; no local tests. The new class keeps two real sources, exact added/removed/
+changed positions and ordered detach/support/device steps; its saved data grants
+no authority and currently drives no world edits. PR19 stays draft for wholeS1-S3.
+
+Concrete next integration constraint from source: existing preflightUndo compares
+every journal row with the current world, assuming one touch per position. A
+replacement has old->AIR and AIR->new at the same position, so that preflight
+would reject a legitimate inverse. Add projected inverse-state validation before
+using structural steps, retain actual before-state checks at every mutation, and
+cover genuine interruption. OperationScopes currently stores one source and its
+positions per operation; transition scopes need both real sources/write union and
+read closure, never an invented union blueprint. Do not simply plug new steps into
+the old journal and claim undo/restart works. These production pieces, explicit
+workspace/preview/apply and real modification acceptance remain pending.
