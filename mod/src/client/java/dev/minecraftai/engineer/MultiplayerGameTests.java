@@ -296,6 +296,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
+            if(!LIVE_ACCEPTANCE)generatedConfirmationFlow(context,server);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -322,6 +323,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
+            if(!LIVE_ACCEPTANCE)generatedConfirmationRecovery(server);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
@@ -332,6 +334,35 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
         }
+    }
+
+    private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project new");
+        send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
+        String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("generated-project",id);
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        String request="engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
+        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");
+        String first=confirmationNonce();
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.revision()==revision && project.delegation==null,"Behavior proposal changes neither canonical intent nor world authority");});
+        send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
+        MESSAGES.clear();send(context,"engineer confirm "+first);expectChat(context,"No current behavior proposal");
+        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");String accepted=confirmationNonce();
+        check(!accepted.equals(first),"A changed workspace requires a fresh owner confirmation");
+        MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"Generated preview accepted");
+        server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.revision()==revision+1 && project.blueprint.blocks().size()==8,"Confirmed raw geometry uses the normal canonical preview");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)),"Generated intent equals independently accepted timing");check(project.delegation==null && project.journal.isEmpty() && project.verified.equals("untested"),"Confirming inference grants no construction or functional pass");check(project.blueprint.blocks().stream().noneMatch(b->project.level().hasChunkAt(b.pos()) && project.level().getBlockState(b.pos()).is(Blocks.REPEATER)),"Preview does not place generated devices");});
+        MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"No current behavior proposal");
+        write("generated-confirmation.done","passed");
+    }
+    private static String confirmationNonce() {
+        var pattern=java.util.regex.Pattern.compile("/engineer confirm ([0-9a-f-]{36})");
+        for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find())return match.group(1);}
+        throw new AssertionError("Owner did not receive its private confirmation nonce");
+    }
+    private static void generatedConfirmationRecovery(TestDedicatedServerContext server) {
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.equals("untested"),"Restart retains accepted behavior without inventing functional evidence or execution authority");});
+        write("generated-confirmation-recovery.done","passed");
     }
 
     private static void editor(ClientGameTestContext context) throws Exception {
