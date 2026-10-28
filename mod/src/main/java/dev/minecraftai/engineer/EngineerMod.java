@@ -28,7 +28,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], expand <x1 y1 z1> <x2 y2 z2>, component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -77,6 +77,7 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(1,BlockPosArgument.getBlockPos(ctx,"position"))))))
                 .then(Commands.literal("select2").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,s.player().blockPosition())))
                     .then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.select(2,BlockPosArgument.getBlockPos(ctx,"position"))))))
+                .then(Commands.literal("expand").then(Commands.argument("first",BlockPosArgument.blockPos()).then(Commands.argument("second",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.expandWorkspace(BlockPosArgument.getBlockPos(ctx,"first"),BlockPosArgument.getBlockPos(ctx,"second")),false)))))
                 .then(Commands.literal("component")
                     .then(Commands.literal("list").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::componentList)))
                     .then(Commands.literal("info").then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.componentInfo(StringArgumentType.getString(ctx,"component"))))))

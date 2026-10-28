@@ -191,3 +191,23 @@ preview/apply/workspace expansion with actual native conflict/restart proofs.
 Check the strict adjacent revision assumption when redo/new planning follows an
 undo while canonical intent remains later; never relabel the true historical
 source just to satisfy an identity check. PR19 stays draft; S1-S3 incomplete.
+
+Paired-scope source1badb10 passed all five gates **CI40773555504**, Fabric all31
+required tests. S1 workspace proof5c98be9 / CI40775421540 fails at the missing
+expandWorkspace method before implementation. Add explicit owner-only monotonic
+expansion retaining the whole previous region; preserve blueprint ID/revision,
+journal, baseline and all world blocks. Reject active build/planning/test/pending
+restoration, shrinking, invalid volume and missing cross-project EDIT before any
+change. Invalidate pending model consent/leases only after successful validation.
+On save failure restore old corners in memory without resurrecting authority.
+Native proof drives owner expansion, Bob EDIT-but-not-owner denial, shrinking,
+real active-build refusal and retained expanded corners after third boot. Owner
+travels to the busy-proof workspace and waits for loaded dependencies; no fake
+state flags or forced chunks. Structural preview/apply and inverse WAL still
+pending; this command alone is not a structural executor.
+
+S1 expansion implementation passes scoped Java main/client compile. Pushed for
+native owner/EDITOR rejection, no world edits, preserved journal, true active-build
+refusal and expanded-box restart proof. No local tests or extra review. No
+production structural transition is enabled yet; next work remains inverse
+projection and the explicit pending preview/apply + WAL executor.

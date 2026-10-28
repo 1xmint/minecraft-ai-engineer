@@ -111,6 +111,22 @@ broader mechanism functions are still pending. Signed-in generated wiring has pa
 construction, measured timing and restart; see the evidence and fixture limitation
 in the [acceptance guide](acceptance-guide.md).
 
+## Expanding a built workspace (structural-edit branch)
+
+The project owner can extend an idle project's delegated region without undoing
+its existing construction:
+
+```text
+/engineer expand 200 100 0 204 101 0
+```
+
+Both corners must retain the entire previous workspace and fit the existing size
+limit. Other overlapping projects still require their owners' edit grants.
+Expansion preserves the blueprint, player blocks and assistant history, and
+invalidates pending model consent and old execution leases. Active construction,
+planning, testing or interrupted restoration must be stopped/reconciled first.
+Structural preview/apply remains in development on this branch.
+
 ## Component collaboration (source build)
 
 The development branch adds a bounded project tree. Set a workspace before

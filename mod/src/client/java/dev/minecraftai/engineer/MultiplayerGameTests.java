@@ -395,6 +395,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void workspaceBusyExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         send(context,"engineer project new");send(context,"engineer select1 240 100 0");send(context,"engineer select2 242 101 0");send(context,"engineer reference");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").corner2.equals(new BlockPos(242,101,0)));
+        server.runCommand("tp Alice 241 103 6 180 20");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(false).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{var project=session(s,"Alice");project.commandActor=player(s,"Alice").getUUID();try {
             project.build();check(project.state.equals("EXECUTING"),"The rejection proof starts a genuine delegated build, not a fabricated status");
             boolean rejected=false;try{project.expandWorkspace(new BlockPos(240,100,0),new BlockPos(243,101,0));}catch(IllegalStateException expected){rejected=true;}

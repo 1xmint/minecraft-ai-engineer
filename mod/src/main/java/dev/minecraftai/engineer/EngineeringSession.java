@@ -180,6 +180,28 @@ final class EngineeringSession implements BuildExecutor {
         else {if(corner1==null)throw new IllegalStateException("Set the first corner before completing the workspace");manager.workspace(this,actor(),corner1,pos);corner2 = pos.immutable();}
         baseline.clear();dependencies.clear(); state = blueprint == null ? "PENDING" : "READY"; save(); tell("Corner " + corner + " set to " + pos.toShortString());
     }
+    void expandWorkspace(BlockPos first,BlockPos second) {
+        access.require(actor(),ProjectAccess.Permission.EDIT);
+        if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can expand the delegated workspace");
+        if(corner1==null || corner2==null)throw new IllegalStateException("Set both workspace corners before expanding");
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || state.equals("VERIFYING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
+            throw new IllegalStateException("Stop and reconcile active work before expanding the workspace");
+        BlockPos nextFirst=Objects.requireNonNull(first).immutable(),nextSecond=Objects.requireNonNull(second).immutable();
+        if(!boxContains(nextFirst,nextSecond,corner1) || !boxContains(nextFirst,nextSecond,corner2))
+            throw new IllegalStateException("Expansion must retain the entire previous workspace");
+        manager.workspace(this,actor(),nextFirst,nextSecond);
+        if(contains(nextFirst) && contains(nextSecond)){tell("Workspace already covers those corners");return;}
+        BlockPos priorFirst=corner1,priorSecond=corner2;String priorDetail=detail;
+        corner1=nextFirst;corner2=nextSecond;detail="Workspace expanded. Request a revision to use the new area.";
+        try {manager.changed(this);}
+        catch(RuntimeException failure){corner1=priorFirst;corner2=priorSecond;detail=priorDetail;throw failure;}
+        tell(detail);
+    }
+    private static boolean boxContains(BlockPos first,BlockPos second,BlockPos target) {
+        return target.getX()>=Math.min(first.getX(),second.getX()) && target.getX()<=Math.max(first.getX(),second.getX())
+            && target.getY()>=Math.min(first.getY(),second.getY()) && target.getY()<=Math.max(first.getY(),second.getY())
+            && target.getZ()>=Math.min(first.getZ(),second.getZ()) && target.getZ()<=Math.max(first.getZ(),second.getZ());
+    }
     void accept(Blueprint value) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         ComponentTree.validate(value);
