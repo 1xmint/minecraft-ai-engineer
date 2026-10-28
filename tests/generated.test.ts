@@ -192,3 +192,58 @@ test("all generated planning stages preserve isolated subscription-only no-tool 
     /accepted behavior/iu,
   );
 });
+
+test("model geometry schema constrains actual delegated volume, rotations and canonical block states", async () => {
+  const { generatedGeometrySchema } =
+    await import("../companion/src/generated.js");
+  for (const rotation of [0, 90, 180, 270] as const) {
+    const schema = generatedGeometrySchema({
+      ...input,
+      rotation,
+      maxSize: { x: 4, y: 2, z: 1 },
+    });
+    assert.equal(schema.properties.blocks.maxItems, 8);
+    const pos = schema.properties.blocks.items.properties.pos.properties;
+    assert.equal(
+      pos.x.maximum - pos.x.minimum + 1,
+      rotation === 90 || rotation === 270 ? 1 : 4,
+    );
+    assert.equal(pos.y.maximum - pos.y.minimum + 1, 2);
+    assert.equal(
+      pos.z.maximum - pos.z.minimum + 1,
+      rotation === 90 || rotation === 270 ? 4 : 1,
+    );
+    assert.ok(
+      schema.properties.blocks.items.properties.state.enum.includes(
+        "minecraft:stone",
+      ),
+    );
+    assert.ok(
+      !schema.properties.blocks.items.properties.state.enum.includes("stone"),
+    );
+    assert.ok(
+      !schema.properties.blocks.items.properties.state.enum.some(
+        (state) =>
+          state.includes("powered=true") || state.includes("command_block"),
+      ),
+    );
+    assert.ok(
+      pos.x.maximum < 64 && pos.z.maximum < 64,
+      "The observed 65-block model layout cannot satisfy the delegated output schema",
+    );
+  }
+  const large = generatedGeometrySchema({
+    ...input,
+    rotation: 0,
+    maxSize: { x: 128, y: 1, z: 1 },
+  }).properties.blocks.items.properties.pos.properties.x;
+  assert.equal(large.maximum - large.minimum + 1, 128);
+  assert.ok(
+    large.minimum >= -64 && large.maximum <= 64,
+    "Large workspaces retain their representable extent",
+  );
+  assert.throws(() =>
+    generatedGeometrySchema({ ...input, maxSize: { x: 0, y: 2, z: 1 } }),
+  );
+  assert.throws(() => generatedGeometrySchema({ ...input, rotation: 45 as 0 }));
+});
