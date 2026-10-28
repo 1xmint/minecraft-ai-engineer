@@ -139,6 +139,15 @@ test("CI broker never publishes arbitrary requests or project memory", async () 
         ),
       );
       assert.equal(existsSync(join(f.directory, "request.json")), false);
+      await assert.rejects(
+        f.provider.plan(
+          fixture.input,
+          new AbortController().signal,
+          fixture.memory,
+          context,
+        ),
+      );
+      assert.equal(existsSync(join(f.directory, "request.json")), false);
       assert.equal(
         readFileSync(
           join(f.directory, "unexpected-inference"),

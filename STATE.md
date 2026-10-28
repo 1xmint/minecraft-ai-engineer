@@ -20,6 +20,24 @@ exchange and immutable provider-frame rejection tests also passed. Transport,
 local CLI and the combined live model invocation remain to build. Tests stay
 GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
 
+Transport bootstrap is now implemented locally: strict GitHub provenance,
+private one-call/resend CLI, CI-only file provider, separate owner-only manual
+request/response workflows, normal gateway/Fabric plan acceptance and bounded
+manual-only waits. Default CI still disables inference. Proof-first
+CI40621899855 failed missing github/broker modules (TS2307). Worker GPT-6.1-Sol
+commitdc2f855 integrated asafb3bf9, source only, root formatted/combined.
+
+GPT-6.1-Sol independent review found a service95s deadline despite the long Java
+wait, a wrong metadata field and missing one-tick requirement assertion. All
+fixed: only live CI service uses900s, actual provenance.template is checked plus
+delay1/rotation0/anchor before the model marker. No further confirmed auth/data
+blocker; bounded ZIP format was checked against official artifact archiver.
+Scoped Java main/client and TypeScript compile, JS syntax, bash-n and formatting
+passed. Next combined CI must prove broker/provenance rejection and default native
+compatibility. No SDK call or combined live proof has run. Bootstrap needs merge
+only after green gates/review, then an actual owner-dispatched synthetic run.
+Operator instructions: docs/acceptance-guide.md. Keep full #3/phase2 scope intact.
+
 ## Current acceptance slice plan (serves #3/E4)
 
 - P1: actual player client places three supports and a correctly oriented lever,

@@ -39,7 +39,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos REPEATER = LEVER.east();
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
-    private static final long WAIT_MILLIS = 240_000;
+    private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
+    private static final long WAIT_MILLIS = LIVE_ACCEPTANCE?1_800_000:240_000;
     private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
 
     @Override public void runTest(ClientGameTestContext context) {
@@ -86,8 +87,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("project", projectId);
                 send(context, "engineer select1 0 100 0");
                 send(context, "engineer select2 2 101 0");
-                send(context, "engineer reference");
-                server.waitFor(s -> session(s, "Alice").blueprint != null);
+                send(context,LIVE_ACCEPTANCE?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
+                server.waitFor(s -> session(s, "Alice").blueprint != null,LIVE_ACCEPTANCE?900_000:10_000);
+                if(LIVE_ACCEPTANCE){
+                    server.runOnServer(s->{var accepted=session(s,"Alice").blueprint;
+                        check(accepted.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")
+                            && accepted.source().getAsJsonObject("parameters").get("delay").getAsInt()==1
+                            && accepted.rotation()==0 && accepted.anchor().equals(ANCHOR),"The actual validated model design matches the requested one-tick lamp and selected layout");});
+                    write("live-model-design.done","passed");
+                }
                 inspectPersisted(context,server);
                 await(context, () -> view(context) != null, "Alice's authorized network preview");
                 check(view(context).stage() == 0, "Alice begins her own support lesson");

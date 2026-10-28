@@ -1,0 +1,66 @@
+name: Manual signed-in game acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  acceptance:
+    if: github.repository == '1xmint/minecraft-ai-engineer' && github.actor == '1xmint' && github.triggering_actor == '1xmint'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      MCE_LIVE_ACCEPTANCE: "true"
+      MCE_ACCEPTANCE_EXCHANGE_DIR: ${{ github.workspace }}/mod/build/live-exchange
+      MCE_CODEX_OPERATOR_UUID: 10920508-d5d8-3eed-93d2-92f193afe7d7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+      - run: npm ci
+      - run: npm run build
+      - run: bash scripts/ci/graphics.sh
+      - name: Start the real dedicated-player flow
+        run: |
+          mkdir -p mod/build
+          setsid bash -c 'set +e; bash scripts/ci/multiplayer.sh; result=$?; printf "%s\n" "$result" > mod/build/live-status' >mod/build/live-driver.log 2>&1 </dev/null &
+          echo "$!" > mod/build/live-driver.pid
+      - run: node scripts/ci/live-transport.mjs wait-request
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}
+          path: mod/build/live-exchange/request.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Receive the manually produced bounded answer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/live-transport.mjs wait-response
+      - run: node scripts/ci/live-transport.mjs wait-finish
+      - name: Stop any remaining native processes
+        if: always()
+        run: |
+          if [[ -f mod/build/live-driver.pid ]]; then
+            driver_pid=$(cat mod/build/live-driver.pid)
+            if [[ "$driver_pid" =~ ^[1-9][0-9]+$ ]]; then kill -- "-$driver_pid" 2>/dev/null || true; fi
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: live-game-acceptance-evidence
+          path: |
+            mod/build/multiplayer-evidence/
+            mod/build/live-exchange/
+            mod/build/live-driver.log
+          if-no-files-found: warn
+          retention-days: 7
