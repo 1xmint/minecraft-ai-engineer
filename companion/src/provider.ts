@@ -1,6 +1,6 @@
 import {
   BEHAVIOR_PROPOSAL_SCHEMA,
-  GENERATED_GEOMETRY_SCHEMA,
+  generatedGeometrySchema,
   validateBehavior,
   validateBehaviorProposal,
   validateGeneratedGeometry,
@@ -183,9 +183,10 @@ export class CodexPlanningProvider implements PlanningProvider {
     context = "No prior project.",
   ): Promise<GeneratedGeometry> {
     const behavior = validateBehavior(input.behavior);
-    const prompt = `Generate genuine raw circuit coordinates, not a catalog template, for the separately accepted observable behavior. Return relative positions and vanilla block states, one lever input and one lamp output, at most4096 blocks with each coordinate -64..64. Available blocks: stone, lever, repeater, redstone_lamp, redstone_wall_torch. Every lever/repeater/torch needs its explicit stone backing. State all lever face/facing/powered=false, repeater delay1..4/facing/locked=false/powered=false, lamp lit=false, wall torch facing/lit properties. Repeaters read from their facing side and output opposite it. Use no commands, entities, inventories, dust or other blocks. The server builds stone supports before devices and derives materials, stages and all tests. Respect the delegated size. No IDs, expected tests, timings or verification fields belong in geometry. Rising and falling lamp latency must satisfy the frozen accepted behavior, including the lamp off delay.\nTRUSTED_ACCEPTED_BEHAVIOR_JSON=${JSON.stringify(behavior)}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
+    const outputSchema = generatedGeometrySchema(input);
+    const prompt = `Generate genuine raw circuit coordinates, not a catalog template, for the separately accepted observable behavior. Return relative positions and vanilla block states, one lever input and one lamp output. The output schema derives exact coordinate ranges and maximum block count from this delegated workspace and rotation. Every block and port must obey those ranges. Use only the exact minecraft:-prefixed state strings enumerated in the schema. Available blocks: stone, lever, repeater, redstone_lamp, redstone_wall_torch. Every lever/repeater/torch needs its explicit stone backing. State all lever face/facing/powered=false, repeater delay1..4/facing/locked=false/powered=false, lamp lit=false, wall torch facing/lit properties. Repeaters read from their facing side and output opposite it: a west-facing repeater reads the neighbor at x-1 and powers the neighbor at x+1. Each repeater adds 2 times its delay in game ticks per edge. A lamp lights immediately when powered and takes 4 game ticks to turn off after losing power. Use no commands, entities, inventories, dust or other blocks. The server builds stone supports before devices and derives materials, stages and all tests. Respect the delegated size. No IDs, expected tests, timings or verification fields belong in geometry. Rising and falling lamp latency must satisfy the frozen accepted behavior, including the lamp off delay.\nTRUSTED_ACCEPTED_BEHAVIOR_JSON=${JSON.stringify(behavior)}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
     return validateGeneratedGeometry(
-      await this.run(prompt, GENERATED_GEOMETRY_SCHEMA, signal, "geometry"),
+      await this.run(prompt, outputSchema, signal, "geometry"),
     );
   }
   private async run(
@@ -221,7 +222,7 @@ export class CodexPlanningProvider implements PlanningProvider {
         approvalPolicy: "never",
         networkAccessEnabled: false,
         webSearchMode: "disabled",
-        modelReasoningEffort: "low",
+        modelReasoningEffort: purpose === "geometry" ? "medium" : "low",
       });
 
       this.lastDiagnostic = "running";

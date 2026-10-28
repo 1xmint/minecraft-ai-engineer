@@ -157,3 +157,18 @@ so it is not proof of final rendered construction.
    resource, latency/reliability optimization; multiple independent builders.
 
 AGENTS.md and STATE.md are the only project memory. CLAUDE.md contains @AGENTS.md.
+
+Sourcebe88db6 passed all five gates **CI40763893283**. Manual40763954487
+behavior succeeded (response40764897528). Geometry diagnosis is now concrete:
+private request25edf0ef40ce6acfadcc7a8d0601283ebaa7a1b1fc075e4e88ccbe5681926402
+completed SDK inference (10492input/1708output), but returned79 blocks acrossx0..64
+for a4x2x1 workspace, all with shorthand unnamespaced states. Strict validation
+rejected it before publish/world editing. Cancelled run, receipt consumed.
+Proof0da5e3d / CI40765617098 fails at missing generatedGeometrySchema. Implement
+code-derived per-request schema coordinate bounds, rotation and block-count cap;
+enumerate the38 supported canonical namespaced states. This preserves topology
+generation, not a new catalog template. Keep independent support/state/fit and
+actual timing checks. For extents>65 use a translated signed frame within-64..64
+to preserve all128 representable positions. Geometry reasoning uses medium while
+behavior/catalog stay low; explicit general repeater/lamp timing semantics are
+calibrated by the physical0/4 and12/16 tests. TypeScript compile passes.

@@ -64,6 +64,28 @@ export const BEHAVIOR_PROPOSAL_SCHEMA = {
     explanation: { type: "string", minLength: 1, maxLength: 4000 },
   },
 } as const;
+const directions = ["north", "east", "south", "west"] as const;
+export const GENERATED_BLOCK_STATES = Object.freeze([
+  "minecraft:stone",
+  ...["floor", "wall", "ceiling"].flatMap((face) =>
+    directions.map(
+      (facing) =>
+        `minecraft:lever[face=${face},facing=${facing},powered=false]`,
+    ),
+  ),
+  ...directions.flatMap((facing) =>
+    [1, 2, 3, 4].map(
+      (delay) =>
+        `minecraft:repeater[delay=${delay},facing=${facing},locked=false,powered=false]`,
+    ),
+  ),
+  "minecraft:redstone_lamp[lit=false]",
+  ...directions.flatMap((facing) =>
+    [false, true].map(
+      (lit) => `minecraft:redstone_wall_torch[facing=${facing},lit=${lit}]`,
+    ),
+  ),
+]);
 export const GENERATED_GEOMETRY_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -91,7 +113,7 @@ export const GENERATED_GEOMETRY_SCHEMA = {
               ]),
             ),
           },
-          state: { type: "string", minLength: 1, maxLength: 512 },
+          state: { type: "string", enum: GENERATED_BLOCK_STATES },
         },
       },
     },
@@ -112,6 +134,55 @@ export const GENERATED_GEOMETRY_SCHEMA = {
     },
   },
 } as const;
+
+/** Limit generation upstream to the actual delegated frame; validation remains independent. */
+export function generatedGeometrySchema(input: DesignRequest) {
+  if (!input.maxSize)
+    throw new RequestError("Generated geometry needs its delegated size.");
+  const size = {
+    x: integer(input.maxSize.x, "workspace x", 1, 128),
+    y: integer(input.maxSize.y, "workspace y", 1, 128),
+    z: integer(input.maxSize.z, "workspace z", 1, 128),
+  };
+  const volume = size.x * size.y * size.z;
+  if (volume > 4096)
+    throw new RequestError("Generated workspace exceeds 4096 blocks.");
+  if (![0, 90, 180, 270].includes(input.rotation))
+    throw new RequestError("Rotation must be a quarter turn.");
+  const swapped = input.rotation === 90 || input.rotation === 270;
+  const coordinate = (extent: number) => ({
+    type: "integer",
+    minimum: extent <= 65 ? 0 : -64,
+    maximum: extent <= 65 ? extent - 1 : extent - 65,
+  });
+  const pos = {
+    type: "object",
+    additionalProperties: false,
+    required: ["x", "y", "z"],
+    properties: {
+      x: coordinate(swapped ? size.z : size.x),
+      y: coordinate(size.y),
+      z: coordinate(swapped ? size.x : size.z),
+    },
+  };
+  const { $defs: _definitions, ...base } = GENERATED_GEOMETRY_SCHEMA;
+  return {
+    ...base,
+    properties: {
+      ...base.properties,
+      blocks: {
+        ...base.properties.blocks,
+        maxItems: volume,
+        items: {
+          ...base.properties.blocks.items,
+          properties: { ...base.properties.blocks.items.properties, pos },
+        },
+      },
+      input: pos,
+      output: pos,
+    },
+  };
+}
 
 export function validateBehavior(value: unknown): Behavior {
   const v = strictObject(value, [
