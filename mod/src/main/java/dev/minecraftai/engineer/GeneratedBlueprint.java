@@ -253,7 +253,11 @@ final class GeneratedBlueprint {
 
     private static String property(BlockState state, String name) {
         return state.getProperties().stream().filter(p -> p.getName().equals(name)).findFirst()
-                .map(p -> state.getValue(p).toString()).orElse("");
+                .map(p -> propertyName(state, p)).orElse("");
+    }
+
+    private static <T extends Comparable<T>> String propertyName(BlockState state, net.minecraft.world.level.block.state.properties.Property<T> property) {
+        return property.getName(state.getValue(property));
     }
 
     private static BlockPos offset(BlockPos pos, String direction, int amount) {
