@@ -155,6 +155,22 @@ public final class MechanismGameTests {
         reject(helper,()->StructuralTransition.read(saved,"other-world","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"A valid digest cannot authorize another world");
         helper.succeed();
     }
+    @GameTest public void transitionScopesKeepRemovedPositionsWithoutInventingUnionIntent(GameTestHelper helper) {
+        var pair=structuralPair();var shifted=pair[1].source().deepCopy();shifted.getAsJsonObject("anchor").addProperty("x",3);
+        var after=Blueprint.parse(shifted,"test","minecraft:overworld");var transition=StructuralTransition.between(pair[0],after);
+        var history=new OperationScopes();String original="11111111-1111-4111-8111-111111111111",revision="22222222-2222-4222-8222-222222222222";
+        history.capture(original,"root",pair[0],false);var old=history.json();history.captureTransition(revision,"root",transition);
+        helper.assertTrue(history.json().get("schemaVersion").getAsInt()==2 && history.sources(revision).size()==2,"A transition explicitly stores both real sources in the extended scope format");
+        helper.assertTrue(history.positions(revision).equals(transition.writes()),"Historical scope retains the exact transition write footprint");
+        helper.assertTrue(history.blueprint(revision).blocks().stream().noneMatch(b->b.pos().equals(pair[0].anchor())) && history.positions(revision).contains(pair[0].anchor()),"The real after blueprint stays distinct from removed-only historical targets");
+        history.validate(revision,"root",pair[0].anchor());reject(helper,()->history.validate(revision,"root",pair[0].anchor().offset(40,0,0)),"A persisted diff never authorizes an escaped position");
+        helper.assertTrue(history.basis(revision).equals(ComponentAssignments.basis(after,"root")),"Resume basis belongs to the accepted after intention while the before source remains historical");
+        var loaded=OperationScopes.read(history.json(),"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId()));
+        helper.assertTrue(loaded.sources(revision).get(0).id().equals(pair[0].id()) && loaded.sources(revision).get(1).id().equals(after.id()),"Restart does not relabel either original source");
+        loaded.sources(revision).get(0).source().addProperty("name","Caller changed history");helper.assertTrue(!loaded.sources(revision).get(0).name().equals("Caller changed history"),"History returns copies rather than mutable source authority");
+        loaded.retain(java.util.Set.of(original));helper.assertTrue(loaded.json().equals(old),"Pruning a completed transition preserves the original schema1 snapshot and hash exactly");
+        helper.succeed();
+    }
     private static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}
