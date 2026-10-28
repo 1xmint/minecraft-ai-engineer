@@ -313,8 +313,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
             MESSAGES.clear();send(context,"engineer inspect inventory");expectChat(context,"Private inventory remembered");expectChat(context,"stone=7");
             write("inventory-recovery.done","passed");
-            send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));inspectPersisted(context,server);
+            send(context,"engineer project use "+projectId);server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
+            server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
+            inspectPersisted(context,server);
         }
     }
 

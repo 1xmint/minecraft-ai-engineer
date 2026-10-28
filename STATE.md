@@ -26,6 +26,16 @@ markers and SQLite proof were inspected. Earlier component/block/view source
 **e3bc4b1 / CI40586816662** also passed all five. Full phase 1 #3 and phase 2 #4
 remain; neither the published release nor a catalog dependency is the full product.
 
+CI **40618880526 /9458cf0** passed every new undo assertion and the real
+third-boot B-only completion; recovery marker passed. Four other checks green.
+The final preexisting root inspection then correctly refused an unloaded chunk:
+the added distant recovery visit moved Alice farther away before returning home.
+Root reordered the fixture's existing teleport before inspection and waits for
+ordinary player chunk loading. No production unloaded guard changed. Final full
+run pending. Next acceptance work is separately pushed as2e01cbd on
+phase/5-player-acceptance (actual client placement proof, scoped compile passed);
+rebase only its own changes after this PR merges.
+
 ## Outcomes and proof for #2
 
 - C1: player builds B while assistant completes A; show hierarchy, ports,
