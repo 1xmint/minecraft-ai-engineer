@@ -28,6 +28,37 @@ public final class EngineerGameTests {
         helper.assertTrue(source.get("worldId").getAsString().equals("old") && source.get("status").getAsString().equals("EXECUTING"),"Conversion leaves the recovery source unchanged");
         reject(helper,()->LegacyAdoption.convert(source,"old","new","minecraft:overworld",java.util.UUID.randomUUID(),id),"Another player's checkpoint cannot be claimed");
         reject(helper,()->LegacyAdoption.convert(source,"different","new","minecraft:overworld",owner,id),"Another world path cannot be silently adopted");
+        var mixed=source.deepCopy();mixed.addProperty("journalVersion",4);mixed.add("operationScopes",new com.google.gson.JsonObject());
+        reject(helper,()->LegacyAdoption.convert(mixed,"old","new","minecraft:overworld",owner,id),"Immutable v4 history cannot be silently relabelled by legacy identity adoption");
+        helper.succeed();
+    }
+    @GameTest
+    public void operationScopesFreezeIntentWithoutGrantingAuthority(GameTestHelper helper){
+        var plan=Blueprint.reference("test","minecraft:overworld",BlockPos.ZERO,0);
+        var operation=java.util.UUID.randomUUID().toString();
+        var second=java.util.UUID.randomUUID().toString();
+        var scopes=new OperationScopes();
+        scopes.capture(operation,"root",plan,false);scopes.capture(second,"root",plan,false);
+        var saved=scopes.json();
+        helper.assertTrue(saved.getAsJsonArray("snapshots").size()==1 && saved.getAsJsonArray("operations").size()==2,"Identical immutable intention is stored once across operation groups");
+        plan.source().addProperty("name","Changed mutable source after delegation");
+        helper.assertTrue(scopes.json().equals(saved),"An operation's captured intention cannot change through Blueprint.source access");
+        var project=java.util.UUID.fromString(plan.projectId());
+        var restored=OperationScopes.read(saved,"test","minecraft:overworld",project);
+        restored.validate(operation,"root",BlockPos.ZERO);
+        reject(helper,()->restored.validate(operation,"root",new BlockPos(40,0,0)),"Frozen scope refuses an unrecorded target");
+        reject(helper,()->restored.validate(operation,"other",BlockPos.ZERO),"Operation scope cannot be relabelled as another component");
+        var forged=saved.deepCopy();forged.getAsJsonArray("snapshots").get(0).getAsJsonObject().addProperty("id","0".repeat(64));
+        reject(helper,()->OperationScopes.read(forged,"test","minecraft:overworld",project),"A changed immutable snapshot fails its content digest");
+        var duplicate=saved.deepCopy();duplicate.getAsJsonArray("operations").add(duplicate.getAsJsonArray("operations").get(0).deepCopy());
+        reject(helper,()->OperationScopes.read(duplicate,"test","minecraft:overworld",project),"Repeated operation identities are not silently overwritten");
+        var unknown=saved.deepCopy();unknown.addProperty("schemaVersion",99);
+        reject(helper,()->OperationScopes.read(unknown,"test","minecraft:overworld",project),"Unknown scope versions fail closed");
+        reject(helper,()->OperationScopes.read(saved,"test","minecraft:overworld",java.util.UUID.randomUUID()),"Frozen intentions cannot move between projects");
+        restored.retain(java.util.Set.of(operation));
+        helper.assertTrue(restored.json().getAsJsonArray("operations").size()==1 && restored.json().getAsJsonArray("snapshots").size()==1,"Pruning an operation retains a shared snapshot still in use");
+        restored.retain(java.util.Set.of());
+        helper.assertTrue(restored.json().getAsJsonArray("snapshots").isEmpty(),"Unreferenced intention snapshots do not accumulate");
         helper.succeed();
     }
     @GameTest
@@ -50,6 +81,8 @@ public final class EngineerGameTests {
         reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(1,0,0)),java.util.Set.of(),1),"A neighboring write cannot invalidate another task's read dependency");
         leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(10,0,0)),java.util.Set.of(),1);
         leases.validate(a,first,editor,1,policy.revision(),2);
+        helper.assertTrue(leases.permissionFootprint(a,first,true,2).equals(java.util.Set.of(BlockPos.ZERO,new BlockPos(1,0,0))),"Live permission checks use the lease's captured writes and isolation reads");
+        reject(helper,()->leases.permissionFootprint(a,first,true,2).add(new BlockPos(2,0,0)),"Callers cannot expand a captured lease footprint");
         leases.validateWrite(a,first,editor,1,policy.revision(),BlockPos.ZERO,2);
         reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(1,0,0),2),"A reserved read dependency never grants write authority");
         reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(2,0,0),2),"A valid lease never authorizes an unreserved block in its workspace");

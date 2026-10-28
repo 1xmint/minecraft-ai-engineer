@@ -107,10 +107,7 @@ final class ProjectManager {
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
-        Set<BlockPos> writes = new HashSet<>(), reads = project.dependencyPositions(test);
-        for (Blueprint.PlannedBlock b : project.assignmentBlocks()) {
-            writes.add(b.pos());
-        }
+        Set<BlockPos> writes=project.reservationWrites(action),reads=project.reservationReads(action,test);
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || (test && reads.stream().anyMatch(other::contains));
@@ -130,9 +127,7 @@ final class ProjectManager {
         reservations.validate(scope(project), project.delegation, project.controller, project.revision(), project.access.revision(), server.getTickCount());
         // Other owners can revoke a cross-project grant while this task runs.
         // Its own authorization revision alone cannot fence that dependency.
-        Set<BlockPos> permissionFootprint=new HashSet<>();
-        project.assignmentBlocks().forEach(block->permissionFootprint.add(block.pos()));
-        if(project.isolationLease)permissionFootprint.addAll(project.dependencyPositions(true));
+        Set<BlockPos> permissionFootprint=reservations.permissionFootprint(scope(project),project.delegation,project.isolationLease,server.getTickCount());
         for(var other:projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
             boolean intersects=permissionFootprint.stream().anyMatch(other::contains);

@@ -4,14 +4,15 @@
 six phase 2 capabilities. Do not narrow it or claim the full product shipped.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 
-Working on **phase/7-generated-designs**, based on teaching PR15 merge
-**a77476b**. All five required gates passed **CI40628498967**, source4476332.
-Root inspected native lesson markers, private chat, unchanged controller/lease
-and saved JSON, exact historical A revision4 evidence, Alice's paused B lesson
-through actual restart, and revoked Bob cursor absence. GPT-6-Luna independently
-reviewed the read-only assistant and explicit personal lesson selection.
+Working on **phase/8-operation-frames**, based on PR16 merge **8eefe61**.
+Exact write-target guard passed all five required gates **CI40709523753**, source
+69f4ffd. Root inspected retained native markers and private chat: lessons, denied
+member, inventory, player placement, component/undo recovery and companion restart
+3168->4453. GPT-6-Luna independently reviewed all production mutation callsites.
+Scoped Java main/client compile passed locally; tests ran only on GitHub.
+PR15 teaching remains proven by CI40628498967 / mergea77476b.
 
-## Generated design slice: architecture challenge in progress (#3/E2)
+## Generated design architecture chosen (#3/E2)
 
 Outcomes for the coming connected-design slice:
 
@@ -25,7 +26,7 @@ Outcomes for the coming connected-design slice:
   evidence identities. Recovery pauses; no old checkpoint or historical footprint
   becomes a lease, and unchanged catalog behavior remains compatible.
 
-Leading architecture: bounded generated geometry as untrusted data, behavior
+Chosen architecture: bounded generated geometry as untrusted data, behavior
 accepted separately before geometry, complete code-derived boolean vectors and
 bounded game-tick traces. Keep the five currently supported blocks initially;
 expand semantics with real native proofs later. Server derives identities,
@@ -49,10 +50,11 @@ Legacy position validation cannot invent original semantic identity after old
 delay revisions. Baseline/dependencies and partial revision WAL need their own
 approved transition scope. Historical scopes are descriptions, never authority.
 
-GPT-6.1-Sol architecture recommendation received in prior session; fresh independent
-GPT-6.1-Sol challenge is running read-only against actual code after context
-restart. Decide and record implementation tasks after its findings; no generated
-production code written yet. Tests stay on GitHub, local compile/format only.
+GPT-6.1-Sol architecture recommendation and independent actual-code challenge
+completed. Choose bounded generated geometry with separately accepted behavior;
+start with immutable operation scopes and transition recovery before enabling
+structural writes. No generated production code written yet. Tests stay on GitHub,
+local compile/format only.
 
 Teaching now supports bounded local exact ask phrases, explicit component facts,
 intended timing vs stored functional results, and per-player teach/repeat/skip/
@@ -124,7 +126,8 @@ was removed after status/cherry confirmed integration; branch remains recoverabl
 - C2: handoff/delegate-back preserves grouped journals, immutable evidence and
   generations through service/game restart; stale connection/grant/basis cannot
   authorize writes. Scoped revise/diagnose/repair/test and full transitive
-  read-margin rejection/recovery passed CI40586816662. Final undo fix pending.
+  read-margin rejection/recovery passed CI40586816662. Transactional undo and
+  real restart proof passed final CI40619656132; PR12 merged c01a3e7.
 - C3: authenticated actual block/view/support samples and read-only private
   inventories; unloaded/refused reads fail closed; only affected tasks stale.
   Typed native/HTTP/SQLite proof passed CI40586816662. Inventory native and HTTP
@@ -210,12 +213,16 @@ Transactional beginUndo now captures/restores original context on rejection,
 archives original evidence only after successful preflight, clears old recovery
 fields and persists an untested B target before writes. Never restore authority
 or roll back after ambiguous save/commit attempt. Reviewer accepted actual code;
-new real restart proof remains pending after the harness correction above.
+real restart proof passed CI40619656132 before PR12 merged c01a3e7. Root
+inspected B-only recovery, A's original historical scope and unchanged A blocks.
 
 ## Roadmap / next slices
 
-1. Finish #2 current native undo proof, inspect retained evidence, update PR and
-   merge after all five gates. Local checks only compile/format; CI tests only.
+1. #2 component/inventory foundation complete for its bounded catalog scope:
+   PR12 c01a3e7, all five gates CI40619656132. #3/E2 prerequisite PR16 exact
+   write targets merged8eefe61 after CI40709523753 passed on69f4ffd. Next persist
+   immutable operation/transition frames and prove recovery before revisions.
+   Local checks only compile/format; CI tests only.
 2. #3 deeper engineering/teaching: carry the whole unmet product brief forward.
    Natural followups/clarification before uncertain mutation; objective/rationale/
    preferences/decision memory; real connected multi-component designs and useful
@@ -227,9 +234,11 @@ new real restart proof remains pending after the harness correction above.
    design -> preview -> **real client placement** of first section -> AI rest ->
    interrupt/modify/resume -> actual functional proof -> game/service restart ->
    identify/explain later. Existing CI fixture-places human sections via server;
-   do not claim actual client placement. Separate signed-in probe plus deterministic
-   native fixture is not combined model/game acceptance. Public CI stays secret-free;
-   no combined bridge/approach has yet been decided or proven.
+   earlier server-placed fixtures do not prove actual client placement. The real
+   client and one live signed-in catalog lamp flow are now proven by40624276545;
+   separately probing the SDK would not suffice. Public CI stays secret-free.
+   Repeat combined acceptance for broader generated designs and modifications;
+   the lamp proof does not establish those capabilities.
 4. Phase2 #4: voice conversation, visible physical NPC, genuine survival gathering,
    schematic import/export, optimization of size/resources/latency/reliability and
    multiple independent builders. All unstarted. Keep creative executor replaceable;
@@ -244,7 +253,8 @@ actual catalog oracles. Offline fixture identities/overlay opt-out are not Mojan
 authentication or a separate vanilla binary. Keep production online-mode=true.
 Published v0.1.0-alpha.1 at168ac190 remains the older solo reference. PR5 proved
 handoff/save/reopen/conflict/undo/test; signed-in SDK gpt-6-luna probe passed
-separately. No combined game/model or general shared-account proof is claimed.
+separately. Combined catalog lamp/game proof subsequently passed40624276545;
+no general shared-account eligibility proof is claimed.
 CI graphics signed APT archive/Azure bounded fallback passed native checks; sources:
 https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html and
 https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh.
@@ -253,42 +263,6 @@ margin-red-40585762989, perception-proof-40586816662, inventory-proof-4059538053
 Worker inventory-companion1ee545f integrated ase1fe550 plus root formatting/fixes;
 its clean worktree was removed after status/cherry confirmed integration. Old clean component worker checkouts were removed
 only after git cherry confirmed integration; recoverable branches remain.
-
-Next acceptance architecture challenge: GPT-6.1-Sol recommends a manually chosen,
-one-shot synthetic CI exchange. Local operator invokes the existing isolated
-Codex provider once; authenticated GitHub workflow/artifact transport carries
-only validated synthetic request/Plan, never credentials or real player worlds.
-Bind repository/workflow/reviewed SHA/run+attempt/scenario/nonce/context digest/
-expiry and response actor provenance. Reconstruct allowed request locally; never
-execute downloaded code or auto-spend quota for arbitrary runs. Return through
-PlanningProvider and normal gateway/Fabric validation. Two integration points to
-solve: provider now gets immutable authenticated gateway context (proven in
-CI40620567886), and ordinary Minecraft HTTP90s timeout is shorter
-than manual exchange plus provider90s (separate bounded acceptance timeout only).
-Default CI must still reject inference. Actual client placement and journal
-exclusion passed CI40620567886. A lamp flow proves E4's path,
-not general design capability. Research: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
-and https://docs.github.com/en/rest/actions/artifacts#download-an-artifact.
-
-Transport build plan: separate manual request/response workflows must first be
-published on the default branch before workflow_dispatch can execute them.
-Bootstrap reviewed infrastructure, then prove the live flow after publication;
-do not call the combined flow complete before that proof. Local CLI must require
-an explicit run/attempt/reviewed local SHA and verify repository, workflow, event,
-actor/triggering actor and head SHA before reading bounded data or spending quota.
-Preflight response-workflow availability before the model call; record a private
-started receipt and validated answer so resending never needs another model call.
-
-Broker must compare actual validated input/memory/frame with the reconstructed
-fresh synthetic scenario before publishing IDs. Fresh memory is Engineering
-project/current revision/empty tasks. No arbitrary world text or real player data.
-Return Plan through normal gateway and Fabric validation. A manual workflow can
-background the existing multiplayer script, upload its request while it waits,
-verify response workflow/actor/SHA provenance, then deliver data to a file broker.
-Keep ordinary CI inference disabled. Extend only bounded manual acceptance waits;
-retain ordinary90s product timeout/default900s harness. Require request/result
-digests, acceptedAt and usual actual construction/test/service/game-restart proof.
-Finish transport implementation and independent auth/data review before merging.
 
 2026-10-28 E2 independent challenge completed: GPT-6.1-Sol supports bounded raw
 geometry and independently accepted behavior. Confirmed immutable transition
@@ -317,3 +291,91 @@ Bob's command round trips. Retained Alice log shows Step2 after snapshot. Root
 corrected the proof to issue Alice's real private pause and wait for its new chat
 ack before the isolation comparison. No product timing or behavior changed.
 Combined native/restart proof must pass after this fixture correction before merge.
+
+## Current operation-frame phase plan (Serves G2/G3)
+
+- F1: new assistant operations retain their original intended identity and allowed
+  positions after later revisions and actual restart. Proof first: native existing
+  build -> delay revision -> saved/reloaded original operation scope, no relabelled
+  source revision or imported lease. Record source snapshot once, reference it from
+  operations, and keep it immutable despite mutable Blueprint.source JSON access.
+- F2: valid old flat/v2/v3 journals remain recoverable without invented history.
+  Validate under the exact old rules first, then migrate explicitly as legacy
+  position scope; the checkpoint's current blueprint is not necessarily the
+  original intended revision. Reject missing/forged/duplicate/unknown-version
+  scope or escaped positions before any execution. Proofs cover both valid legacy
+  and corrupt documents, including old component delay revisions.
+- F3: freeze the active execution/transition frame, including exact before/desired
+  states, bounded write targets, read closure and original/destination identities.
+  Acquisition and live cross-project permission checks must consume that same
+  frame. Prove fresh grants/connection/epoch on resume/undo; saved scope grants no
+  authority. Keep current intended revision after undo, explicitly untested.
+
+Tasks: first write native/save-load and corruption proofs (F1/F2); observe their
+CI failure; implement bounded deduplicated scope storage and legacy migration
+(F1/F2); then capture active frames and use them consistently for leases, live
+checks and interrupted recovery (F3). Independent auth/data diff review, scoped
+compile and all five gates before merge. Preserve existing original functional
+scopes, assignment bases and legacy recovery semantics. No new removal executor
+until operation frame proofs pass. Structural revision will separately preview
+all changes/removals and require exact fresh before states, safe attachment order,
+actual inverse journal order and current-state ownership checks for neighbors.
+
+This phase is planned, not implemented. Full generated two-repeater timed design,
+moved-output revision, disconnected failure, live model acceptance and subsequent
+broader functions still follow; all remaining product milestones stay active.
+
+Operation-history proof-first c7747a0 / CI40711161879 failed at the missing
+OperationScopes class. GPT-6-Luna worker implemented only the isolated strict
+immutable scope validator (bdbb868, integrated d1ec173); root owns proofs and all
+server integration. New capture deduplicates whole original intention snapshots,
+checks canonical content digest/identity/leaf membership and bounded metadata,
+returns deep copies and prunes orphan scopes. V4 journals require mappings;
+flat/v2/v3 validate under old rules before explicit legacy-position migration.
+Root added native old-version and corrupt-document loader proofs, original A
+revision retention after B revision and actual restart, plus immutable lease
+footprint assertions. Existing baseline/dependency states stay attached to the
+captured original source; stale changed intention cannot resume construction.
+Undo acquires original positions/read closure under fresh current authority.
+Live cross-project permission validation now consumes the actual captured lease
+footprint instead of reconstructing positions from current blueprint metadata.
+No new structural mutation executor is enabled: a future old/new layout transition
+still needs its explicit approved diff, before-state capture and attachment order.
+Scoped compile, independent auth/history review and combined CI pending.
+
+GPT-6.1-Sol independent review found P2 synchronous geometry regeneration on each
+retained journal validation. Root memoized immutable per-snapshot component
+position sets and basis hashes, changed runtime checks to set/map membership and
+existing current assignment basis, removed full-JSON counting and redundant
+budget serialization when pruning only removes data. Root also found and fixed
+active-frame component mismatch when an empty interrupted undo retains an
+operation without journal entries; native corrupt-document proof added. Reviewer
+accepted remaining auth/recovery lifecycle and old position-only migration;
+focused verification of the cache fix follows. No changed-state hardening was
+added to legacy journals because that would invent original intended semantics.
+
+Reviewer verified the cache fix closes P2 and preserves private immutable sources.
+CI40712303720 onaf5219f passed Fabric/client/data gates, then old adoption fixture
+failed because it synthesized schema1 by copying newv4 scopes and rewriting only
+top-level world identity. Root corrected this pre-v4 fixture to journalv3 without
+operationScopes. LegacyAdoption now explicitly refuses mixed schema1/v4 immutable
+history rather than silently relabelling it; native unit rejection added. Genuine
+old save adoption and exact source backup still require combined CI proof.
+Source5551b62 CI40712975481 superseded by this necessary fixture/version fix.
+
+GPT-6.1-Sol verified adoption boundary fix: genuine pre-v4 saves still migrate;
+mixed immutable history refuses before backup/destination writes. Root's scoped
+compile caught a missing JsonArray import in the newly added active-frame
+rejection fixture; import fixed. Worker worktree was clean and git cherry showed
+its commit integrated before removal; its branch remains recoverable.
+
+CI40713536255 / sourcec404ef2 passed all data/client gates and first two native
+boots, genuine legacy adoption, original operation revision assertions, private
+lessons and companion restart3125->4356. Third boot rejected an old fabricated
+empty-undo fixture: it toggled undoRequested after completion, when the original
+scope was legitimately pruned. Root preserves strict v4 loading. Extracted the
+existing production undo-entry WAL phase from completion; normal undo still runs
+both in sequence. The native proof now prepares real undo, applies actual inverse
+writes, captures its genuine final-entry-flushed checkpoint before completion,
+and restarts that exact document. No synthetic undo flags or scope are invented.
+Focused deletion/recovery review and scoped compile required before next CI.

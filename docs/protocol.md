@@ -185,3 +185,27 @@ entry, clears on service restart/authority changes, and never joins shared model
 context. `privateContext` is a separate internal interface for future private
 advice; the shared design route never uses it. No inventory fact grants resource
 ownership, access rights or a Minecraft execution lease.
+
+## Local operation history
+
+Fabric checkpoint schema2 uses `journalVersion:4` and a local `operationScopes`
+object (`schemaVersion:1`). `snapshots` contain a canonical SHA-256 content ID,
+`kind` (`intended` or `legacy-position`) and the full immutable blueprint source.
+`operations` map each operation ID and physical component to one snapshot ID.
+Sources retain their original world, dimension, project, blueprint ID and revision.
+Hashes detect internal inconsistency; they are not execution credentials.
+
+Limits are 4,097 operation mappings, 64 snapshots, 65,536 total stored blueprint
+blocks and 8 MiB of metadata. Shared sources are deduplicated; unreferenced sources
+are pruned. Missing, duplicate, mismatched or unknown-version metadata fails closed.
+Old flat/v2/v3 journals first pass their existing position/component validation,
+then migrate explicitly as `legacy-position`; their checkpoint blueprint cannot
+establish an unknown original semantic revision. No history or personal inventory
+is added to the companion's shared model context by this format.
+
+The active baseline and dependency states belong to their captured operation
+source. Changed task intention blocks resume. Undo acquires historical targets
+and read closure under current grants; live permission checks use the exact
+captured lease footprint. Persisted metadata never restores a connection or lease.
+Structural revisions still require a separately approved old/new transition and
+are not enabled by journalv4 alone.

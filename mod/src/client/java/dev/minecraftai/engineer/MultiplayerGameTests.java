@@ -1,5 +1,6 @@
 package dev.minecraftai.engineer;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.minecraftai.engineer.client.ClientPreview;
@@ -226,6 +227,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         String name=oldWorld+"-"+original.owner+"-"+original.dimension.replace(':','_')+".json";
                         Path source=LocalFiles.configDir().resolve("sessions").resolve(name);
                         var legacy=com.google.gson.JsonParser.parseString(Files.readString(original.file)).getAsJsonObject();
+                        // A pre-v4 save has no immutable scope metadata to rewrite across identities.
+                        legacy.addProperty("journalVersion",3);legacy.remove("operationScopes");
                         legacy.addProperty("schemaVersion",1);legacy.addProperty("worldId",oldWorld);legacy.getAsJsonObject("blueprint").addProperty("worldId",oldWorld);
                         LocalFiles.write(source,legacy);String before=Files.readString(source);
                         commandAs(s,"Alice","engineer project adopt-legacy");
@@ -474,6 +477,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer reference or-gate 4");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.blocks().size()==10);
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{for(int version:new int[]{1,2,3})assertLegacyScopeMigration(session(s,"Alice"),version);});
         send(context,"engineer project share Bob editor");
         server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
         write("or-test",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
@@ -574,8 +578,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(session(s,"Alice").level().getBlockState(relay).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==1 && session(s,"Alice").level().getBlockState(new BlockPos(21,100,0)).is(Blocks.STONE),"Undo reverses just the last repair, preserving earlier construction"));
         diagnoseReady(context);send(context,"engineer repair");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         String target=server.computeOnServer(s->{var journal=saved(session(s,"Alice")).getAsJsonArray("journal");return journal.get(journal.size()-1).getAsJsonObject().get("operation").getAsString();});
-        send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.size()==5);
-        var recovery=server.computeOnServer(s->{var project=session(s,"Alice");var checkpoint=saved(project);checkpoint.addProperty("undoRequested",true);checkpoint.addProperty("undoOperation",target);return new RepairRecovery(project.file,checkpoint,project.projectId.toString(),project.journal.size());});
+        var recovery=server.computeOnServer(s->{var project=session(s,"Alice");
+            check(project.beginUndo() && project.undoOperation.equals(target),"The real undo WAL selects this exact repair operation");
+            check(project.applyUndoEntriesReserved(),"The production undo phase applies its recorded inverse changes");
+            check(project.undoRequested && project.journal.size()==5 && project.journal.stream().noneMatch(change->change.operation().equals(target)),"Last-entry flush retains an explicit empty target before completion");
+            project.manager.release(project);
+            return new RepairRecovery(project.file,saved(project),project.projectId.toString(),project.journal.size());});
         write("repair-project",recovery.project());return recovery;
     }
 
@@ -991,6 +999,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer component test a");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         int passedRevision=server.computeOnServer(s->session(s,"Alice").revision());
         send(context,"engineer component revise b 2");server.waitFor(s->session(s,"Alice").revision()==passedRevision+1);
+        server.runOnServer(s->assertOperationScope(session(s,"Alice"),passedRevision));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+passedRevision);
         send(context,"engineer ask "+"x".repeat(241));expectChat(context,"within 240 characters");
         write("lesson-project",id);write("lesson-a-revision",String.valueOf(passedRevision));
@@ -1012,12 +1021,52 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("lesson-followup.done","passed");
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
+    private static void assertLegacyScopeMigration(EngineeringSession project,int version) {
+        var legacy=saved(project);legacy.remove("operationScopes");
+        if(version==1)legacy.remove("journalVersion");else legacy.addProperty("journalVersion",version);
+        var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,legacy);
+        check(loaded.delegation==null && loaded.state.equals("PAUSED") && loaded.journal.size()==project.journal.size(),"Validated old journals migrate as paused descriptions without authority or lost changes");
+        var migrated=loaded.operationScopes.json();
+        check(!migrated.getAsJsonArray("snapshots").isEmpty(),"A valid legacy journal retains its validated position scope");
+        for(var entry:migrated.getAsJsonArray("snapshots"))check(entry.getAsJsonObject().get("kind").getAsString().equals("legacy-position"),"Legacy migration never invents an original intended revision");
+        var escaped=legacy.deepCopy();escaped.getAsJsonArray("journal").get(0).getAsJsonObject().add("pos",Blueprint.jsonPos(new BlockPos(11,101,1)));
+        boolean escapedRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,escaped);}
+        catch(IllegalStateException invalidLegacy){escapedRejected=true;}
+        check(escapedRejected,"Legacy position validation runs before migration and refuses escaped targets");
+    }
+
+    private static void assertOperationScope(EngineeringSession project,int originalRevision) {
+        var checkpoint=saved(project);
+        check(checkpoint.get("journalVersion").getAsInt()==4,"New operation journals persist immutable intention scopes");
+        assertLegacyScopeMigration(project,3);
+        var missing=checkpoint.deepCopy();missing.remove("operationScopes");
+        boolean missingRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,missing);}
+        catch(IllegalStateException corruptScope){missingRejected=true;}
+        check(missingRejected,"A v4 journal cannot silently fall back to current geometry when original scopes are missing");
+        var scopes=checkpoint.getAsJsonObject("operationScopes");
+        var operation=project.journal.getFirst().operation();
+        var mapping=scopes.getAsJsonArray("operations").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals(operation)).findFirst().orElseThrow();
+        var snapshot=scopes.getAsJsonArray("snapshots").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").equals(mapping.get("snapshot"))).findFirst().orElseThrow();
+        check(mapping.get("component").getAsString().equals("a") && snapshot.get("kind").getAsString().equals("intended"),"Original operation keeps its component and exact intended provenance");
+        check(snapshot.getAsJsonObject("blueprint").get("revision").getAsInt()==originalRevision && project.revision()==originalRevision+1,"A later component revision never relabels an older operation's original intention");
+        var wrongActive=checkpoint.deepCopy();wrongActive.addProperty("activeOperation",operation);wrongActive.addProperty("undoOperation",operation);
+        wrongActive.addProperty("activeComponent","b");wrongActive.addProperty("undoRequested",true);
+        wrongActive.add("baseline",new JsonArray());wrongActive.add("dependencies",new JsonArray());
+        boolean activeRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,wrongActive);}
+        catch(IllegalStateException wrongComponent){activeRejected=true;}
+        check(activeRejected,"Even an empty pending undo must keep its operation's original component label");
+    }
+
     private static void lessonRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("lesson-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
         server.runOnServer(s->{var project=session(s,"Alice");var bob=project.cursors.get(UUID.fromString(read("lesson-bob-actor")));
             var alice=project.cursors.get(player(s,"Alice").getUUID());
             check(bob==null && alice!=null && alice.stage==3 && !alice.teaching,"Actual restart preserves the member's paused B lesson and never recreates the revoked member's cursor");
             check(project.delegation==null && project.journal.size()==6 && project.verified.startsWith("stale:"),"A question never restores authority or a fresh pass after restart");});
+        server.runOnServer(s->assertOperationScope(session(s,"Alice"),Integer.parseInt(read("lesson-a-revision"))));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
         server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
         write("lesson-recovery.done","passed");

@@ -44,6 +44,8 @@ final class LegacyAdoption {
         if(source.get("schemaVersion").getAsBigDecimal().intValueExact()!=1 || !legacyWorld.equals(source.get("worldId").getAsString())
                 || !dimension.equals(source.get("dimension").getAsString()) || !owner.toString().equals(source.get("owner").getAsString()))
             throw new IllegalArgumentException("Legacy checkpoint identity does not match this operator, world and dimension");
+        if(source.has("operationScopes") || (source.has("journalVersion") && source.get("journalVersion").getAsBigDecimal().intValueExact()>=4))
+            throw new IllegalArgumentException("Immutable operation history must stay with its original identity; legacy adoption accepts only pre-v4 saves");
         JsonObject out=source.deepCopy();out.addProperty("schemaVersion",2);out.addProperty("worldId",world);out.addProperty("projectId",project.toString());
         int revision=1;
         if(out.has("blueprint")) {
