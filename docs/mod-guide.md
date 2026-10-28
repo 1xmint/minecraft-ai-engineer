@@ -33,11 +33,19 @@ world with the same UUID is rejected while the original exists; an operator
 can `/engineer world fork` before adopting projects to give the copy a new
 identity. This does not copy existing project permissions or history.
 
+Each assistant operation keeps an immutable copy of its original intended design.
+A later delay revision keeps that history under its original revision; it does
+not relabel older construction or test evidence. Undo reserves the recorded
+component's original positions and dependencies under fresh current permissions.
+Restart restores descriptions and pauses work, never an execution lease.
+
 To upgrade a legacy solo checkpoint, an operator runs
 `/engineer project adopt-legacy` in its original world path and dimension.
 It adopts only that operator's UUID, validates the recovery document, and
 backs up the original checkpoint/snapshot under private `legacy-backups/`
 before creating a private paused project. The original stays untouched.
+This route accepts pre-v4 saves. A mixed document containing immutable v4 history
+is refused rather than changing that history's world or project identity.
 Inspect before explicitly resuming or undoing. Other players, copied paths,
 and arbitrary file imports are not silently adopted. Restart expires all
 delegations, and multiple owned projects require an explicit `project use`.
