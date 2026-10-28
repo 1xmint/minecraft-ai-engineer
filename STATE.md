@@ -411,3 +411,18 @@ not yet run, and D1-D3/PR18 remain open. Next: combined CI, fix actual failures,
 then freeze clean source and dispatch scenario=generated, respond once per stage
 using scripts/acceptance/respond.mjs --stage behavior / --stage geometry. Josh's
 latest direction: build and ship without additional heavy reviews.
+
+Sourceec38d8f passed all five gates **CI40759856316**, Fabric28 and dedicated
+negative/shared/restart checks. Inspected artifacts at task work/generated-proof-
+40759856316: wrong-timing and confirmation-save-failure passed; actual second
+companion restart4671->4805. Full source is green; no heavy review is waiting.
+Manual generated request40760225622 stagebehavior invoked one local signed-in
+SDK0.164.0/gpt-6-luna call (10327input/65output), response40761209695 published.
+Actual result was null behavior, asking to establish feasibility before confirming
+the explicit12/16 intent. No geometry call occurred. Cancelled that acceptance run
+before another call; private one-shot receipt7079faaae8846eb0bd7f416046626e102adf
+72f36a3dd2363d0f66f21b50165f remains consumed. This is a prompt separation bug,
+not accepted generation. Remove feasibility as a condition for expressing clear
+desired behavior; retain clarification for ambiguous relation/units/timing and
+unsupported functions. Layout feasibility and verification remain later checks.
+New source must have a fresh frozen acceptance run; never retry that receipt.
