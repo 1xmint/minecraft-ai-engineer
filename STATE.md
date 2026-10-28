@@ -34,15 +34,21 @@ compile and GitHub native acceptance are next. P2 architecture was independently
 challenged below, integration/protocol proofs are not implemented. This is a slice
 of #3, not all general engineering/teaching. Full original brief and phase2 remain.
 
-CI **40618880526 /9458cf0** passed every new undo assertion and the real
-third-boot B-only completion; recovery marker passed. Four other checks green.
-The final preexisting root inspection then correctly refused an unloaded chunk:
-the added distant recovery visit moved Alice farther away before returning home.
-Root reordered the fixture's existing teleport before inspection and waits for
-ordinary player chunk loading. No production unloaded guard changed. Final full
-run pending. Next acceptance work is separately pushed as2e01cbd on
-phase/5-player-acceptance (actual client placement proof, scoped compile passed);
-rebase only its own changes after this PR merges.
+P2 protocol proofs are written first in tests/acceptance-exchange.test.ts:
+strict synthetic request reconstruction, reviewed run/attempt identity, digest,
+nonce/expiry, actor/connection/epoch/revision crosstalk and bounded result schema.
+A gateway proof requires a separate immutable authenticated frame at the provider
+boundary; model text is not that frame. No implementation yet: Companion CI must
+fail these missing APIs before code. Source documentation rechecked official SDK
+and ChatGPT authentication: https://learn.chatgpt.com/docs/codex-sdk and
+https://learn.chatgpt.com/docs/auth. Local SDK invocation stays private/manual;
+no Codex execution or credentials are exposed in public CI.
+
+#2 CI40618880526 actually passed new recovery markers but failed an existing final
+inspection after the distant visit unloaded the original chunk. Fix811a600 orders
+the existing return teleport before inspection and waits for normal player chunk
+loading; CI40619656132 is live. No production guard changed. Rebase this branch
+from9458cf0 onto the final #2 main merge before opening its pull request.
 
 ## Outcomes and proof for #2
 
