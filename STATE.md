@@ -11,12 +11,14 @@ B-only undo on third boot preserves A's blocks/journal/exact historical scope
 under the safe stale-on-restart label; private inventory/block/view/component
 proofs all passed. No new release or full phase1 completion is claimed.
 
-This branch contains the actual client construction proof (scoped Java client
-compile passed) and proof-first synthetic exchange/gateway-boundary tests. The data-only exchange contract and immutable provider authority frame now
-compile. Proof-first CI40620293316 failed the missing acceptance-exchange module
-(TS2307), as intended. Next CI must prove contract/gateway rejection cases and
-actual client placement. Transport/local CLI/live model invocation remain to build.
-Tests stay GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
+Current source458665a passed all five checks in CI40620567886. Root inspected
+player-client-construction.done, actual tutorial step1->2->3 chat, functional and
+restart logs, and SQLite proof. Intended player blocks now use actual client
+placement and never enter the assistant journal; scaffold removal uses client
+breaking. Creative item supply and initial scaffold remain fixtures. Strict
+exchange and immutable provider-frame rejection tests also passed. Transport,
+local CLI and the combined live model invocation remain to build. Tests stay
+GitHub-only. Draft PR13: https://github.com/1xmint/minecraft-ai-engineer/pull/13.
 
 ## Current acceptance slice plan (serves #3/E4)
 
@@ -198,10 +200,30 @@ Bind repository/workflow/reviewed SHA/run+attempt/scenario/nonce/context digest/
 expiry and response actor provenance. Reconstruct allowed request locally; never
 execute downloaded code or auto-spend quota for arbitrary runs. Return through
 PlanningProvider and normal gateway/Fabric validation. Two integration points to
-solve: provider currently lacks full authenticated gateway context (capture at
-validated gateway boundary), and ordinary Minecraft HTTP90s timeout is shorter
+solve: provider now gets immutable authenticated gateway context (proven in
+CI40620567886), and ordinary Minecraft HTTP90s timeout is shorter
 than manual exchange plus provider90s (separate bounded acceptance timeout only).
-Default CI must still reject inference. First replace human fixture blocks with
-real client placement and journal-exclusion proof. A lamp flow proves E4's path,
+Default CI must still reject inference. Actual client placement and journal
+exclusion passed CI40620567886. A lamp flow proves E4's path,
 not general design capability. Research: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
 and https://docs.github.com/en/rest/actions/artifacts#download-an-artifact.
+
+Transport build plan: separate manual request/response workflows must first be
+published on the default branch before workflow_dispatch can execute them.
+Bootstrap reviewed infrastructure, then prove the live flow after publication;
+do not call the combined flow complete before that proof. Local CLI must require
+an explicit run/attempt/reviewed local SHA and verify repository, workflow, event,
+actor/triggering actor and head SHA before reading bounded data or spending quota.
+Preflight response-workflow availability before the model call; record a private
+started receipt and validated answer so resending never needs another model call.
+
+Broker must compare actual validated input/memory/frame with the reconstructed
+fresh synthetic scenario before publishing IDs. Fresh memory is Engineering
+project/current revision/empty tasks. No arbitrary world text or real player data.
+Return Plan through normal gateway and Fabric validation. A manual workflow can
+background the existing multiplayer script, upload its request while it waits,
+verify response workflow/actor/SHA provenance, then deliver data to a file broker.
+Keep ordinary CI inference disabled. Extend only bounded manual acceptance waits;
+retain ordinary90s product timeout/default900s harness. Require request/result
+digests, acceptedAt and usual actual construction/test/service/game-restart proof.
+Finish transport implementation and independent auth/data review before merging.
