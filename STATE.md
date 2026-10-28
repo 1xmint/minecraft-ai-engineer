@@ -211,3 +211,6 @@ native owner/EDITOR rejection, no world edits, preserved journal, true active-bu
 refusal and expanded-box restart proof. No local tests or extra review. No
 production structural transition is enabled yet; next work remains inverse
 projection and the explicit pending preview/apply + WAL executor.
+
+Workspace source c606bb1 passed all five gates CI40776834318. Inverse projection proof 6d37653 failed at the absent UndoProjection class in CI40778110622. The implementation now simulates repeated-position inverse rows without changing the world, checks projected attachment supports, and limits neighbor exemptions to the operation being undone. Scoped Java main/client compilation passed; GitHub runs the tests. Actual structural execution and interruption/restart remain pending. Josh explicitly requested skipping heavy reviews; continue implementation and required CI.
+

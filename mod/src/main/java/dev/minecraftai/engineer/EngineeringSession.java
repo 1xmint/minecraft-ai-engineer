@@ -895,7 +895,7 @@ final class EngineeringSession implements BuildExecutor {
             assignments.task(blueprint,activeComponent);
             activeOperation=selectedOperation;
             claim(ProjectAccess.Permission.UNDO,true);
-            preflightUndo(undoBatch(selectedOperation),journalPositions(),plannedPositions());
+            var inverse=undoBatch(selectedOperation);preflightUndo(inverse,journalPositions(inverse),plannedPositions());
             // Keep the old buffer's original label while archiving its captured scope.
             var oldTask=assignments.task(blueprint,previous.component);oldTask.status=previous.state;oldTask.verified=previous.verified;
             trial.resetEvidence();
@@ -910,18 +910,23 @@ final class EngineeringSession implements BuildExecutor {
             throw failure;
         }
     }
-    private Set<BlockPos> journalPositions(){var result=new HashSet<BlockPos>();journal.forEach(change->result.add(change.pos()));return result;}
+    private Set<BlockPos> journalPositions(List<Change> batch){var result=new HashSet<BlockPos>();batch.forEach(change->result.add(change.pos()));return result;}
     private Set<BlockPos> plannedPositions(){var result=new HashSet<BlockPos>();if(blueprint!=null)blueprint.blocks().forEach(block->result.add(block.pos()));return result;}
     private void preflightUndo(List<Change> batch,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
-        for(Change change:batch) {
-            validateTarget(change.pos());BlockState actual=level().getBlockState(change.pos());
-            if((undoRequested || (pendingPlacement && journal.getLast().equals(change))) && actual.equals(change.before()))continue;
-            if(!undoAfterMatches(change,actual))throw new IllegalStateException("Undo blocked by later edit at "+change.pos().toShortString());
-            validateUndoNeighbors(change,assistantPositions,plannedPositions);
-            if(!change.before().isAir() && (change.before().hasBlockEntity() || !change.before().canSurvive(level(),change.pos())))
-                throw new IllegalStateException("Undo cannot safely restore the recorded block at "+change.pos().toShortString());
-        }
+        for(Change change:batch)validateTarget(change.pos());
+        UndoProjection.project(batch,pos->{
+            if(!level().hasChunkAt(pos))throw new IllegalStateException("Undo needs loaded blocks");
+            return level().getBlockState(pos);
+        },change->undoRequested || (pendingPlacement && journal.getLast().equals(change)),(change,view)->{
+            validateUndoNeighbors(change,assistantPositions,plannedPositions,view::get);
+            if(change.before().isAir())return;
+            BlockPos support=UndoProjection.support(change.before(),change.pos());
+            // A previously restored declared backing is not yet present in the live world during preflight.
+            boolean survives=support!=null && view.projected(support)?view.get(support).is(net.minecraft.world.level.block.Blocks.STONE):change.before().canSurvive(level(),change.pos());
+            if(change.before().hasBlockEntity() || !survives)throw new IllegalStateException("Undo cannot safely restore the recorded block at "+change.pos().toShortString());
+        });
     }
+
     void undoReserved() {
         if(applyUndoEntriesReserved())finishUndo();
     }
@@ -934,7 +939,7 @@ final class EngineeringSession implements BuildExecutor {
         List<Change> batch=undoBatch(targetOperation);
         if(batch.isEmpty()) return true;
         // Repeat preflight after the durable target intent, then validate every actual mutation.
-        Set<BlockPos> assistantPositions=journalPositions(),plannedPositions=plannedPositions();
+        Set<BlockPos> assistantPositions=journalPositions(batch),plannedPositions=plannedPositions();
         preflightUndo(batch,assistantPositions,plannedPositions);
         while (!journal.isEmpty() && journal.getLast().operation().equals(targetOperation)) {
             Change c = journal.getLast();
@@ -963,31 +968,23 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Undo target is not the latest operation; no older work was changed");
         return batch;
     }
-    private boolean undoAfterMatches(Change change,BlockState actual) {
-        return change.after().is(net.minecraft.world.level.block.Blocks.LEVER)?change.after().equals(actual):Blueprint.matches(change.after(),actual);
-    }
+    private boolean undoAfterMatches(Change change,BlockState actual) {return UndoProjection.matches(change,actual);}
     private void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
+        validateUndoNeighbors(change,assistantPositions,plannedPositions,level()::getBlockState);
+    }
+    private void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions,java.util.function.Function<BlockPos,BlockState> view) {
         for(net.minecraft.core.Direction direction:net.minecraft.core.Direction.values()) {
             BlockPos neighbor=change.pos().relative(direction);
             if(!level().hasChunkAt(neighbor))throw new IllegalStateException("Undo needs loaded neighboring blocks");
-            BlockState actual=level().getBlockState(neighbor);
+            BlockState actual=view.apply(neighbor);
             if(actual.isAir() || assistantPositions.contains(neighbor))continue;
             boolean outside=!plannedPositions.contains(neighbor);
-            boolean playerSupported=(actual.is(net.minecraft.world.level.block.Blocks.LEVER)||actual.is(net.minecraft.world.level.block.Blocks.REPEATER))&&neighbor.below().equals(change.pos());
-            playerSupported|=actual.is(net.minecraft.world.level.block.Blocks.REDSTONE_WALL_TORCH)&&neighbor.relative(actual.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite()).equals(change.pos());
+            BlockPos support=UndoProjection.support(actual,neighbor);
+            boolean playerSupported=change.pos().equals(support);
             if(outside || playerSupported)throw new IllegalStateException("Undo would disturb a player block at "+neighbor.toShortString()+"; remove its dependency or take over this section first");
         }
     }
-    private static <T extends Comparable<T>> BlockState copyProperty(BlockState target,BlockState source,net.minecraft.world.level.block.state.properties.Property<T> property) {
-        return target.hasProperty(property)&&source.hasProperty(property)?target.setValue(property,source.getValue(property)):target;
-    }
-    private static BlockState restoreDynamic(BlockState before,BlockState actual) {
-        if(before.isAir() || !before.is(actual.getBlock()))return before;
-        BlockState restore=before;
-        restore=copyProperty(restore,actual,BlockStateProperties.POWERED);restore=copyProperty(restore,actual,BlockStateProperties.LIT);
-        restore=copyProperty(restore,actual,BlockStateProperties.POWER);restore=copyProperty(restore,actual,BlockStateProperties.LOCKED);
-        return restore;
-    }
+    private static BlockState restoreDynamic(BlockState before,BlockState actual) {return UndoProjection.restored(before,actual);}
     private void finishUndo() {
         baseline.clear();dependencies.clear();repairTargets.clear();pendingPlacement=false;undoRequested=false;undoOperation=null;
         activeOperation="legacy";operationKind="BUILD";originDiagnosis=null;clearDiagnoses();verified="untested";state="READY";
