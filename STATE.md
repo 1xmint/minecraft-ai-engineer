@@ -9,8 +9,11 @@ https://github.com/1xmint/minecraft-ai-engineer/pull/12
 **67014ab** implements transactional component undo. CI **40598801562** passed
 four checks and both undo rejection paths, then hit a root harness race: a wait
 accepted A's previous COMPLETED/pass before its new build packet was processed.
-The proof now waits for the new operation ID and nonempty baseline; runtime
-recovery acceptance is pending the next CI.
+The corrected **428e1b9 / CI40617970716** passed both rejections, production WAL
+preparation and actual third-boot loading with no authority/foreign baseline. It
+then exposed a second root assertion error: restart intentionally stales old pass
+labels. The proof now checks A's exact retained historical scope plus stale status,
+while B remains untested; final undo completion is pending the next CI.
 Java main/client compile passed locally. Tests run only on GitHub. New restart
 acceptance calls the real production prepare/WAL phase, stops the actual server,
 then requires B-only recovery on the third boot; no fabricated target checkpoint.
@@ -158,5 +161,21 @@ https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/c
 Retained artifacts under ../work/: component-proof-40584567109,
 margin-red-40585762989, perception-proof-40586816662, inventory-proof-40595380532.
 Worker inventory-companion1ee545f integrated ase1fe550 plus root formatting/fixes;
-its clean worktree remains. Old clean component worker checkouts were removed
+its clean worktree was removed after status/cherry confirmed integration. Old clean component worker checkouts were removed
 only after git cherry confirmed integration; recoverable branches remain.
+
+Next acceptance architecture challenge: GPT-6.1-Sol recommends a manually chosen,
+one-shot synthetic CI exchange. Local operator invokes the existing isolated
+Codex provider once; authenticated GitHub workflow/artifact transport carries
+only validated synthetic request/Plan, never credentials or real player worlds.
+Bind repository/workflow/reviewed SHA/run+attempt/scenario/nonce/context digest/
+expiry and response actor provenance. Reconstruct allowed request locally; never
+execute downloaded code or auto-spend quota for arbitrary runs. Return through
+PlanningProvider and normal gateway/Fabric validation. Two integration points to
+solve: provider currently lacks full authenticated gateway context (capture at
+validated gateway boundary), and ordinary Minecraft HTTP90s timeout is shorter
+than manual exchange plus provider90s (separate bounded acceptance timeout only).
+Default CI must still reject inference. First replace human fixture blocks with
+real client placement and journal-exclusion proof. A lamp flow proves E4's path,
+not general design capability. Research: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
+and https://docs.github.com/en/rest/actions/artifacts#download-an-artifact.

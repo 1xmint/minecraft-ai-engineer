@@ -926,6 +926,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");
             check(!project.baseline.isEmpty() && project.journal.size()==12 && project.journal.getLast().component().equals("b"),"Undo recovery starts with A's baseline but B's latest journal");
+            write("undo-context-a-scope",assignment(project,"a").getAsJsonObject("lastPassedScope").toString());
             check(project.beginUndo(),"Production undo prepares a durable operation before any world write");
             check(project.activeComponent.equals("b") && project.verified.equals("untested") && project.undoRequested && project.journal.size()==12,"Prepared undo selects only B and retains its journal until execution");
             check(project.baseline.isEmpty() && project.dependencies.isEmpty() && project.repairTargets.isEmpty() && project.originDiagnosis==null && !project.pendingPlacement,"Target WAL never inherits A's recovery context");
@@ -944,7 +945,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");
             check(project.activeComponent.equals("b") && project.undoRequested && project.journal.size()==12,"Actual restart loads B's interrupted undo and exact journals");
             check(project.delegation==null && project.delegationConnection==null && project.baseline.isEmpty() && project.dependencies.isEmpty(),"Restart imports no authority or A baseline");
-            check(!project.verified.startsWith("passed:") && assignment(project,"a").get("verified").getAsString().startsWith("passed:"),"Recovered B is untested while A retains its own pass");
+            var a=assignment(project,"a");
+            check(project.verified.equals("untested") && a.get("verified").getAsString().startsWith("stale:") && a.getAsJsonObject("lastPassedScope").equals(JsonParser.parseString(read("undo-context-a-scope"))),"Recovered B is untested; A needs retesting but preserves its exact historical pass scope");
         });
         send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested);
         server.runOnServer(s->{var project=session(s,"Alice");
