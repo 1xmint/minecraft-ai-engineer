@@ -114,6 +114,22 @@ public final class MechanismGameTests {
         reject(helper,()->GeneratedBlueprint.validate(Blueprint.parse(claimed,"test","minecraft:overworld")),"Generated data cannot claim a functional pass");
         helper.succeed();
     }
+    @GameTest public void generatedEvidenceCannotInventOrRelabelMeasuredEdges(GameTestHelper helper) {
+        var behavior=new BehaviorSpec(12,16);var cases=new com.google.gson.JsonArray();
+        var baseline=new com.google.gson.JsonObject();baseline.addProperty("case",0);baseline.addProperty("tick",108L);baseline.addProperty("elapsedTicks",8);baseline.addProperty("behaviorDigest",behavior.digest());
+        var off=new com.google.gson.JsonObject();off.addProperty("input",false);baseline.add("inputs",off);var output=new com.google.gson.JsonObject();output.addProperty("output",false);baseline.add("outputs",output);
+        var samples=new com.google.gson.JsonArray();for(int tick=0;tick<=8;tick++){var sample=new com.google.gson.JsonObject();sample.addProperty("elapsedTicks",tick);sample.addProperty("observed",false);samples.add(sample);}baseline.add("baselineSamples",samples);cases.add(baseline);
+        long tick=108;
+        for(int edge=1;edge<=2;edge++){boolean on=edge==1;var trace=new TransitionTrace(!on,on,on?12:16,8);for(int elapsed=0;elapsed<=trace.horizon();elapsed++)trace.sample(elapsed,elapsed<(on?12:16)?!on:on);
+            var row=new com.google.gson.JsonObject();row.addProperty("case",edge);tick+=trace.horizon();row.addProperty("tick",tick);row.addProperty("elapsedTicks",trace.horizon());row.addProperty("behaviorDigest",behavior.digest());var in=new com.google.gson.JsonObject();in.addProperty("input",on);row.add("inputs",in);var out=new com.google.gson.JsonObject();out.addProperty("output",on);row.add("outputs",out);row.add("trace",trace.json());cases.add(row);}
+        FunctionalTrial.validateGeneratedEvidence(cases,behavior,true);
+        reject(helper,()->FunctionalTrial.validateGeneratedEvidence(cases,new BehaviorSpec(10,16),true),"An endpoint pass cannot relabel the accepted timing");
+        var forged=cases.deepCopy();forged.get(1).getAsJsonObject().getAsJsonObject("trace").addProperty("transitionTick",10);
+        reject(helper,()->FunctionalTrial.validateGeneratedEvidence(forged,behavior,true),"Stored edge claims are recomputed from samples");
+        var incomplete=cases.deepCopy();incomplete.remove(2);reject(helper,()->FunctionalTrial.validateGeneratedEvidence(incomplete,behavior,true),"A rising edge alone cannot pass an off/on/off test");
+        var gap=cases.deepCopy();gap.get(0).getAsJsonObject().getAsJsonArray("baselineSamples").remove(3);reject(helper,()->FunctionalTrial.validateGeneratedEvidence(gap,behavior,true),"Missing baseline ticks cannot claim stable off behavior");
+        helper.succeed();
+    }
     private static com.google.gson.JsonObject generatedSource(int rising,int falling) {
         var source=com.google.gson.JsonParser.parseString("""
             {"schemaVersion":1,"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","projectId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":2,"worldId":"test","dimension":"minecraft:overworld","name":"Generated serial buffer","explanation":"Raw serial wiring; actual timing requires a game test.","anchor":{"x":2,"y":2,"z":2},"rotation":0,

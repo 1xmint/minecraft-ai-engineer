@@ -353,6 +353,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"Generated preview accepted");
         server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.revision()==revision+1 && project.blueprint.blocks().size()==8,"Confirmed raw geometry uses the normal canonical preview");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)),"Generated intent equals independently accepted timing");check(project.delegation==null && project.journal.isEmpty() && project.verified.equals("untested"),"Confirming inference grants no construction or functional pass");check(project.blueprint.blocks().stream().noneMatch(b->project.level().hasChunkAt(b.pos()) && project.level().getBlockState(b.pos()).is(Blocks.REPEATER)),"Preview does not place generated devices");});
         MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"No current behavior proposal");
+        server.runCommand("forceload add 192 0");
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        server.runOnServer(s->{var project=session(s,"Alice");JsonObject saved;try{saved=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(Exception error){throw new AssertionError(error);}var cases=saved.getAsJsonArray("functionalEvidence");FunctionalTrial.validateGeneratedEvidence(cases,GeneratedBlueprint.behavior(project.blueprint),true);check(cases.get(1).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==12 && cases.get(2).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==16,"Production test measures both accepted edges, not settled endpoint values");check(!project.hasPendingTest() && project.delegation==null,"A passing generated trial restores its input and releases authority");});
         write("generated-confirmation.done","passed");
     }
     private static String confirmationNonce() {
@@ -361,7 +365,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         throw new AssertionError("Owner did not receive its private confirmation nonce");
     }
     private static void generatedConfirmationRecovery(TestDedicatedServerContext server) {
-        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.equals("untested"),"Restart retains accepted behavior without inventing functional evidence or execution authority");});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale"),"Restart retains accepted behavior and invalidates earlier functional authority");});
         write("generated-confirmation-recovery.done","passed");
     }
 
