@@ -6,6 +6,7 @@ import {
   makeGeneratedBlueprint,
   validateGeneratedBlueprint,
 } from "../companion/src/generated.js";
+import { plannerConfig } from "../companion/src/provider.js";
 import type { DesignRequest } from "../companion/src/types.js";
 
 const input: DesignRequest = {
@@ -164,4 +165,26 @@ test("generated initial states cannot hide powered or locked inputs behind a pas
     raw.blocks[index]!.state = state;
     assert.throws(() => makeGeneratedBlueprint(input, raw, behavior));
   }
+});
+
+test("all generated planning stages preserve isolated subscription-only no-tool configuration", () => {
+  for (const mode of ["catalog", "behavior", "geometry"] as const) {
+    const config = plannerConfig(mode);
+    assert.equal(config.forced_login_method, "chatgpt");
+    assert.equal(config.model_provider, "openai");
+    assert.equal(config.web_search, "disabled");
+    for (const value of Object.values(
+      config.features as Record<string, unknown>,
+    ))
+      assert.equal(value, false);
+    assert.deepEqual(config.notify, []);
+  }
+  assert.match(
+    String(plannerConfig("behavior").developer_instructions),
+    /no geometry/iu,
+  );
+  assert.match(
+    String(plannerConfig("geometry").developer_instructions),
+    /accepted behavior/iu,
+  );
 });

@@ -269,3 +269,16 @@ pending. No end-to-end generated capability is claimed by these primitives alone
 Official SDK source checked: https://learn.chatgpt.com/docs/codex-sdk and pinned
 SDK TurnOptions.outputSchema/runStreamed types. Preserve isolated subscription
 adapter; no API key or new separately billed service.
+
+Primitive source95a7663 passed all five gates **CI40720402855**. Fabric log all24
+required tests passed: actual world-time rising12/falling16 serial circuit and
+same-contract disconnected failure, plus pure early/late/glitch/missing proofs.
+This calibrates the sampling phase, not a wired generated app or live model proof.
+Provider now shares the original isolated SDK runner across catalog/behavior/
+geometry purposes. Existing plan remains one curated call; distinct design and
+confirm flow chosen and independently accepted by Sol (no construction consent
+from behavior confirmation). TypeScript check passed. New HTTP proofs require
+separate calls, immutable accepted intent, single-use nonce, unchanged canonical
+revision, stale grants and pre-quota expiry/actor/workspace rejection. Routes not
+implemented yet; observe their expected failure next. PR18 stays draft and whole
+D1-D3 slice remains active.
