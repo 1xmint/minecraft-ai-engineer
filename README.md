@@ -7,8 +7,9 @@ take over, test it, and remember what we're building.**
 
 The source build provides bounded creative-mode workflows for a signal lamp,
 inverter and two-input OR gate: preview, teach, delegate, diagnose, explicitly
-repair, undo and test actual redstone behavior. Larger component projects and
-broader engineering features in the [product brief](docs/product-brief.md) are
+repair, undo and test actual redstone behavior. Bounded component hierarchies
+support independent player/assistant work, with private inventory/material checks.
+Larger engineering designs and broader features in the [product brief](docs/product-brief.md) are
 still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
 

@@ -73,7 +73,7 @@ pauses active repair, and revocation/disconnect expires its authority. A restart
 retains journals and evidence, while requiring fresh explicit authority. This
 slice does not yet support arbitrary circuit rewrites or component relayout.
 
-## Component collaboration in draft PR #12
+## Component collaboration (source build)
 
 The development branch adds a bounded project tree. Set a workspace before
 adding components; give each physical leaf enough room for its circuit and
@@ -114,13 +114,14 @@ blocks and undo groups. B and its dependants need fresh tests; an unchanged A
 retains its original test revision. Diagnose, repair and test B to bring the
 world into line. Repeating an identical revision changes no intention/evidence.
 Undo targets the latest operation's component even if another component is
-selected. After a restart, select the project explicitly and request fresh
+selected. A refused undo keeps the original selection and test result. Before
+changing blocks, undo saves its target operation with separate recovery data.
+After a restart, select the project explicitly and request fresh
 authority; persisted assignments never resume construction automatically.
 
-This draft is still undergoing broader perception and final safety acceptance.
-It is not a new release or completion of phase 1.
+These source features are not a new release or completion of phase 1.
 
-## Targeted inspection in draft PR #12
+## Targeted inspection (source build)
 
 `/engineer inspect block 109 101 0` reads that actual block and its six immediate
 neighbors in the current project. `/engineer inspect view` uses your real server
@@ -134,6 +135,31 @@ and hit face, exact block states, and missing/changed/unplanned counts for those
 seven samples. Orientation and power properties provide support/connection context;
 this is not proof of electrical behavior. No sign text, names, NBT or inventory
 contents are read. Ordinary `/engineer inspect` still exports the selected region.
+
+## Private inventory and material checks (source build)
+
+`/engineer inspect inventory` remembers your own current item IDs and counts.
+`/engineer inspect container` requests a read of the next supported container you
+open normally, within 20 seconds. It never opens storage or changes items for you.
+Supported vanilla storage includes chests (both halves), barrels, hoppers,
+dispensers/droppers, shulker boxes, furnaces, brewing stands and crafters. Virtual
+crafting previews, ender chests and unknown custom containers are excluded.
+Naturally opening a loot chest can generate its contents through Minecraft;
+the observer only reads after that normal open completes.
+
+`/engineer materials b` compares the remembered counts with component B's design;
+omit `b` for the selected component. These are remembered counts with an age,
+not a resource reservation or survival construction. A new capture replaces the
+previous one; it does not add inventories together. The snapshot expires after
+60 seconds and is discarded on service restart, reconnect, project/grant change
+or server restart. Reinspect when asked for a fresh snapshot.
+
+Replies go only to the requesting player. Item names, custom names, NBT and
+contents inside carried bundles/shulker items are excluded. Counts stay in the
+private service's memory and do not enter shared blueprint/model context, audit
+records, project files or SQLite. Normal project view rights, loaded chunks,
+workspace bounds and permission checks on neighboring projects still apply.
+Changing project or losing permission cancels a queued inspection.
 
 ## Published alpha
 
@@ -245,9 +271,9 @@ authentication and the full combined Codex-to-game player experience need
 separate evidence. Do not label the full product shipped from these checks.
 
 The preview currently uses colored translucent block bounds with labels, not
-textured ghost block models. Draft PR #12 adds bounded hierarchies and scoped
-revisions described above. General design generation, deeper neighboring-circuit
-analysis, accessible inventory inspection, world change event indexing, general
+textured ghost block models. The source build adds bounded hierarchies, private
+inventory reads and scoped revisions described above. General design generation,
+deeper neighboring-circuit analysis, world change event indexing, general
 circuit debugging, physical interface verification and full model-to-game
 acceptance still need implementation/proof. The exact source brief remains in
 product-brief.md.

@@ -165,3 +165,23 @@ Fabric must validate and accept the proposal, then synchronize the new revision
 through `/v2/project`; the model response cannot advance canonical authority.
 Every response is protocol 2. Invalid/stale authority returns 403/409, exhausted
 budgets 429, and cancelled/unavailable planning 503. No route mutates Minecraft.
+
+## Ephemeral private inventory
+
+A connected actor's gateway context may include server-generated `connectionId`
+(UUID). POST `/v2/inventory` uses the ordinary fenced context/report sequence and
+strict schema1 fields: `worldId`, `dimension`, `actorId`, `connectionId`, `source`
+(`player`/`container`), `tick`, `slots` (1..128), `containers` (zero own-inventory
+positions or one/two storage positions), and unique item ID/count pairs. Counts
+are positive integers bounded by the slot capacity. Unknown fields, duplicate
+items/positions and mismatched actor/connection are rejected before report order
+is consumed. It records no item data in SQLite or the audit.
+
+POST `/v2/inventory/read` requires current VIEW context and returns protocol2,
+status `private`, context and `inventory` (`{snapshot, ageMs}` or null). Only the
+same current actor, connection, server epoch and project/auth revision can read a
+snapshot for 60 seconds. The bounded in-memory cache replaces each actor/project
+entry, clears on service restart/authority changes, and never joins shared model
+context. `privateContext` is a separate internal interface for future private
+advice; the shared design route never uses it. No inventory fact grants resource
+ownership, access rights or a Minecraft execution lease.

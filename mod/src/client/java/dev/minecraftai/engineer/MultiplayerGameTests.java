@@ -921,7 +921,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var pos=new BlockPos(189,101,0);project.level().setBlockAndUpdate(pos,project.level().getBlockState(pos).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY,1));});
         write("undo-context-failure.done","passed");
         // Re-delegating an already complete A retains A's baseline without adding a journal group.
-        send(context,"engineer component build a");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        String beforeBuild=server.computeOnServer(s->session(s,"Alice").activeOperation);
+        send(context,"engineer component build a");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && !session(s,"Alice").baseline.isEmpty() && !session(s,"Alice").activeOperation.equals(beforeBuild));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");
             check(!project.baseline.isEmpty() && project.journal.size()==12 && project.journal.getLast().component().equals("b"),"Undo recovery starts with A's baseline but B's latest journal");
