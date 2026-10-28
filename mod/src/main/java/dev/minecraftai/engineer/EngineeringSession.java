@@ -47,6 +47,11 @@ final class EngineeringSession implements BuildExecutor {
     long delegationGeneration = -1;
     String operationKind = "BUILD";
     int structuralCursor;
+    private record StructuralPreview(StructuralTransition transition,UUID actor,
+            net.minecraft.server.network.ServerGamePacketListenerImpl connection,long authorization,
+            int revision,BlockPos first,BlockPos second,UUID nonce,long expiresAtNanos) { }
+    private StructuralPreview structuralPreview;
+    void clearStructuralPreview(){structuralPreview=null;}
     UUID originDiagnosis;
     String undoOperation;
     boolean pendingPlacement;
@@ -392,6 +397,39 @@ final class EngineeringSession implements BuildExecutor {
         // Selecting the immutable blueprint and issuing build is the explicit bounded delegation.
         state = "EXECUTING"; detail = "Building remaining blocks inside the selected region"; verified="untested";
         save(); checkpoint(); tell(detail + ". /engineer stop interrupts; /engineer undo reverts only assistant blocks.");
+    }
+    String previewStructural(Blueprint candidate) {
+        requireCreative();access.require(actor(),ProjectAccess.Permission.EDIT);
+        if(!actor().equals(owner))throw new IllegalStateException("Only the project owner can propose a structural revision");
+        ensureComponentContextIdle("preview a structural revision");
+        if(blueprint==null || !GeneratedBlueprint.isGenerated(blueprint) || !GeneratedBlueprint.isGenerated(candidate) || ComponentTree.composite(blueprint) || ComponentTree.composite(candidate))
+            throw new IllegalStateException("Structural previews currently require generated mechanisms");
+        StructuralTransition transition=StructuralTransition.between(blueprint,candidate);
+        for(Blueprint source:List.of(transition.before(),transition.after()))for(var block:source.blocks())
+            if(!contains(block.pos()))throw new IllegalStateException("Expand the workspace explicitly before previewing this layout");
+        if(transition.writes().isEmpty())throw new IllegalStateException("This revision has no physical changes");
+        structuralPreview=new StructuralPreview(transition,actor(),player().connection,access.revision(),revision(),corner1.immutable(),corner2.immutable(),UUID.randomUUID(),System.nanoTime()+java.util.concurrent.TimeUnit.MINUTES.toNanos(5));
+        showStructuralChanges();return structuralPreview.nonce().toString();
+    }
+    void showStructuralChanges() {
+        access.require(actor(),ProjectAccess.Permission.VIEW);
+        var pending=structuralPreview;
+        if(pending==null || System.nanoTime()-pending.expiresAtNanos()>=0) {structuralPreview=null;throw new IllegalStateException("No current structural preview");}
+        var transition=pending.transition();tell("Proposed structural changes: "+transition.added()+" added, "+transition.removed()+" removed, "+transition.changed()+" changed. World and accepted intention are unchanged.");
+        int shown=0;
+        for(var step:transition.steps()) {if(shown++==32){tell("More changes are included in this bounded proposal.");break;}tell(step.pos().toShortString()+": "+Blueprint.describe(step.before())+" -> "+Blueprint.describe(step.after()));}
+        if(actor().equals(pending.actor()))tell("To apply this proposal once within five minutes: /engineer apply "+pending.nonce());
+    }
+    void applyStructuralPreview(String nonce) {
+        var pending=structuralPreview;
+        if(pending==null || !pending.nonce().toString().equals(nonce))throw new IllegalStateException("No current structural preview matches that confirmation");
+        structuralPreview=null;
+        requireCreative();
+        if(!actor().equals(pending.actor()) || player().connection!=pending.connection() || revision()!=pending.revision()
+                || access.revision()!=pending.authorization() || !Objects.equals(corner1,pending.first()) || !Objects.equals(corner2,pending.second())
+                || !projectId.equals(manager.selections.get(actor())) || System.nanoTime()-pending.expiresAtNanos()>=0)
+            throw new IllegalStateException("Structural preview expired or its authority changed; request a new proposal");
+        applyStructural(pending.transition());
     }
     /** Explicit production delegation for an already reviewed generated-layout difference. */
     void applyStructural(StructuralTransition transition) {

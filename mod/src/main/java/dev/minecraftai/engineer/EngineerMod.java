@@ -107,6 +107,8 @@ public final class EngineerMod implements ModInitializer {
                         .then(Commands.argument("delay",IntegerArgumentType.integer(1,4)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.accept(MechanismCatalog.create(StringArgumentType.getString(ctx,"mechanism"),s.worldId,s.dimension,s.anchor(),0,IntegerArgumentType.getInteger(ctx,"delay"))))))))
                 .then(Commands.literal("design").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->{if(PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");s.manager.generated.design(s,StringArgumentType.getString(ctx,"request"));}))))
                 .then(Commands.literal("confirm").then(Commands.argument("nonce",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->s.manager.generated.confirm(s,StringArgumentType.getString(ctx,"nonce")),false))))
+                .then(Commands.literal("changes").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::showStructuralChanges,false)))
+                .then(Commands.literal("apply").then(Commands.argument("nonce",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->s.applyStructuralPreview(StringArgumentType.getString(ctx,"nonce")),false))))
                 .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->plan(s,StringArgumentType.getString(ctx,"request"))))))
                 .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
                 .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner can move its workspace");if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
@@ -180,7 +182,7 @@ public final class EngineerMod implements ModInitializer {
             source.sendSuccess(()->Component.literal("Engineer: World identity forked; the previous identity was backed up. Old projects were not granted authority."),false);return 1;
         }catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
     }
-    static void cancelPlan(EngineeringSession session) {session.manager.generated.cancel(session);var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
+    static void cancelPlan(EngineeringSession session) {session.clearStructuralPreview();session.manager.generated.cancel(session);var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
     private static String safe(Throwable error) {
         Throwable t=error;while(t.getCause()!=null)t=t.getCause();
         String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));

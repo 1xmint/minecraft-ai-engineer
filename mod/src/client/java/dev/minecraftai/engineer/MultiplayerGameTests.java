@@ -397,14 +397,16 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("setblock 260 100 0 minecraft:stone");
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runCommand("setblock 264 100 0 minecraft:stone");
-        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(260,100,0))),"Existing player support is adopted, not journalled");write("structural-original-journal",String.valueOf(project.journal.size()));
-            var after=project.blueprint.source().deepCopy();after.addProperty("id",UUID.randomUUID().toString());after.addProperty("revision",project.revision()+1);
-            var blocks=new com.google.gson.JsonArray();
-            for(int x=0;x<5;x++){var block=after.getAsJsonArray("blocks").get(0).getAsJsonObject().deepCopy();block.getAsJsonObject("pos").addProperty("x",x);blocks.add(block);}
-            for(int x=0;x<5;x++){var block=after.getAsJsonArray("blocks").get(x==0?4:7).getAsJsonObject().deepCopy();block.getAsJsonObject("pos").addProperty("x",x);if(x>0 && x<4)block.addProperty("state","minecraft:repeater[delay=2,facing=west,locked=false,powered=false]");blocks.add(block);}
-            after.add("blocks",blocks);after.getAsJsonObject("bounds").getAsJsonObject("max").addProperty("x",4);after.getAsJsonObject("resources").addProperty("minecraft:stone",5);after.getAsJsonObject("resources").addProperty("minecraft:repeater",3);after.getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos").addProperty("x",4);
-            project.applyStructural(StructuralTransition.between(project.blueprint,Blueprint.parse(after,project.worldId,project.dimension)));
-        });
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(260,100,0))),"Existing player support is adopted, not journalled");write("structural-original-journal",String.valueOf(project.journal.size()));});
+        int priorRevision=server.computeOnServer(s->session(s,"Alice").revision());
+        MESSAGES.clear();send(context,"engineer design CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.");expectChat(context,"/engineer confirm ");String confirmation=confirmationNonce();
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Structural proposal ready");
+        var applicationPattern=java.util.regex.Pattern.compile("/engineer apply ([0-9a-f-]{36})");String application=null;
+        for(String message:MESSAGES){var match=applicationPattern.matcher(message);if(match.find()){application=match.group(1);break;}}
+        check(application!=null,"Owner receives a separate private world-application confirmation");write("structural-nonce",application);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.revision()==priorRevision && project.journal.size()==Integer.parseInt(read("structural-original-journal")) && project.blueprint.blocks().size()==8 && project.delegation==null,"Confirmed inference previews a diff without changing accepted intention, history or world authority");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"The old real circuit remains intact while its revision is only a proposal");});
+        MESSAGES.clear();send(context,"engineer apply 00000000-0000-4000-8000-000000000000");expectChat(context,"No current structural preview matches");
+        send(context,"engineer apply "+read("structural-nonce"));
         server.waitFor(s->session(s,"Alice").structuralCursor>0 && session(s,"Alice").state.equals("EXECUTING"));
         send(context,"engineer stop");server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralCursor>0 && project.structuralCursor<project.operationScopes.transition(project.activeOperation).steps().size(),"Stop interrupts actual ordered structural writes");check(project.operationScopes.sources(project.activeOperation).size()==2 && project.delegation==null,"Interrupted revision retains both real intentions without authority");});
@@ -413,16 +415,18 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Player/world edit conflicts");
         server.runOnServer(s->check(session(s,"Alice").level().getBlockState(conflict.pos()).is(Blocks.GLASS) && !session(s,"Alice").state.equals("EXECUTING"),"Resume preserves an intervening edit and refuses to continue"));
         server.runCommand("setblock "+conflict.pos().getX()+" "+conflict.pos().getY()+" "+conflict.pos().getZ()+" "+Blueprint.describe(conflict.after()));
-        send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
-        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Real executor produces the larger three-repeater layout");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(264,100,0))),"Matching player addition is adopted and stays out of undo");});
-        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
-        server.runOnServer(s->check(session(s,"Alice").operationScopes.sources(session(s,"Alice").activeOperation).size()==2,"Functional testing retains the paired structural history"));
+        server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").structuralCursor>0,"Leave the genuinely interrupted revision paused for the actual server restart"));
         write("structural-revision.done","passed");
     }
     private static void structuralRevisionRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         send(context,"engineer project use "+read("structural-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("structural-project")));
         server.runCommand("tp Alice 262 103 6 180 20");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.operationKind.equals("STRUCTURAL") && project.blueprint.blocks().size()==10,"Actual restart loads the accepted larger intention without a lease");var sources=project.operationScopes.sources(project.activeOperation);check(sources.size()==2 && sources.get(0).source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Actual restart retains the original unmodified before intention");});
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralCursor>0 && project.structuralCursor<project.operationScopes.transition(project.activeOperation).steps().size(),"Actual reboot retains the unfinished structural step cursor");});
+        send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Real executor produces the larger three-repeater layout");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(264,100,0))),"Matching player addition is adopted and stays out of undo");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        server.runOnServer(s->check(session(s,"Alice").operationScopes.sources(session(s,"Alice").activeOperation).size()==2,"Functional testing retains the paired structural history"));
         send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==Integer.parseInt(read("structural-original-journal")));
         server.runOnServer(s->{var project=session(s,"Alice");var before=Blueprint.parse(JsonParser.parseString(read("structural-before")).getAsJsonObject(),project.worldId,project.dimension);check(before.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Production repeated-position undo restores the real previous layout after restart");check(project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE) && project.level().getBlockState(new BlockPos(260,100,0)).is(Blocks.STONE),"Undo preserves both existing and newly adopted player supports");check(project.level().getBlockState(new BlockPos(264,101,0)).isAir(),"Undo removes the assistant's added output");});
         write("structural-recovery.done","passed");

@@ -38,8 +38,7 @@ final class GeneratedPlanning {
         if (pending.containsKey(session) || flights.containsKey(session))
             throw new IllegalStateException("A generated design request is already active");
         requireSafeDesignState(session);
-        if (session.hasBuiltStructure())
-            throw new IllegalStateException("Undo or reconcile built structures before requesting a generated design");
+        session.clearStructuralPreview();
 
         BlockPos corner1 = session.corner1.immutable(), corner2 = session.corner2.immutable();
         BlockPos origin = session.planningAnchor().immutable();
@@ -91,7 +90,6 @@ final class GeneratedPlanning {
             requireCurrentBasis(basis, true);
             if (expired(basis)) throw new IllegalStateException("Behavior proposal expired; request a new one");
             requireSafeDesignState(session);
-            if (session.hasBuiltStructure()) throw new IllegalStateException("Built structures changed; request a new design after reconciling them");
         } catch (RuntimeException invalid) {
             tell(basis.player(), "Generated behavior proposal cancelled: " + safe(invalid));
             throw invalid;
@@ -246,7 +244,6 @@ final class GeneratedPlanning {
             session.state = basis.priorState();
             if (expired(basis)) throw new IllegalStateException("Generated design request expired");
             requireSafeDesignState(session);
-            if (session.hasBuiltStructure()) throw new IllegalStateException("Built structures changed while the model was working");
             if (result == null || !result.has("blueprint") || !result.get("blueprint").isJsonObject())
                 throw new IllegalArgumentException("The companion returned no generated blueprint");
             Blueprint candidate = Blueprint.parse(result.getAsJsonObject("blueprint"), session.worldId, session.dimension);
@@ -259,6 +256,14 @@ final class GeneratedPlanning {
             if (candidate.revision() != Math.addExact(basis.revision(), 1)
                     || !candidate.projectId().equals(session.projectId.toString()))
                 throw new IllegalArgumentException("Generated blueprint belongs to a stale project revision");
+            if(session.hasBuiltStructure()) {
+                UUID previousActor=session.commandActor;session.commandActor=basis.actor();
+                try { session.previewStructural(candidate); }
+                finally { session.commandActor=previousActor; }
+                session.detail="Structural proposal ready; review changes and explicitly apply it";session.save();
+                tell(basis.player(),"Structural proposal ready. The accepted intention and world are unchanged. Review /engineer changes before applying the private confirmation.");
+                return;
+            }
             session.state = "READY";
             session.accept(candidate);
             acceptedToCanonical = true;
@@ -269,6 +274,7 @@ final class GeneratedPlanning {
                 tell(basis.player(), "Generated preview accepted. " + basis.behavior().summary() + " Geometry is untested; checkpoint reporting needs attention.");
                 return;
             }
+            session.clearStructuralPreview();
             session.state = basis.priorState();
             session.detail = "Generated design rejected; existing blueprint and revision kept";
             session.save();
@@ -327,8 +333,10 @@ final class GeneratedPlanning {
     private static void requireSafeDesignState(EngineeringSession session) {
         if (session.state.equals("EXECUTING") || session.state.equals("PLANNING") || session.pendingPlacement
                 || session.undoRequested || session.testTick >= 0 || session.hasPendingTest()
-                || !session.journal.isEmpty() || !session.baseline.isEmpty())
-            throw new IllegalStateException("Stop and reconcile active work, undo, tests or built structures before generated planning");
+                || (!session.baseline.isEmpty() && !session.state.equals("COMPLETED")))
+            throw new IllegalStateException("Stop and reconcile active or interrupted world work before generated planning");
+        if(session.hasBuiltStructure() && (session.blueprint==null || !GeneratedBlueprint.isGenerated(session.blueprint) || ComponentTree.composite(session.blueprint)))
+            throw new IllegalStateException("Built structural revisions currently require a generated root mechanism");
     }
 
     private JsonObject requestBody(Basis basis, boolean geometry, JsonObject behavior) {
