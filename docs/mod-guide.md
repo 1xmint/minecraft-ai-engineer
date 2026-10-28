@@ -81,7 +81,7 @@ pauses active repair, and revocation/disconnect expires its authority. A restart
 retains journals and evidence, while requiring fresh explicit authority. This
 slice does not yet support arbitrary circuit rewrites or component relayout.
 
-## Generated timed buffers (development; live acceptance pending)
+## Generated timed buffers (source build)
 
 This branch adds a separate two-call flow for the configured account-owning
 operator who owns the project. `/engineer plan` retains its existing catalog
@@ -107,7 +107,9 @@ Authorized viewers receive the same generated preview and may ask its timing
 lesson; sharing a preview grants no model access. Accepted behavior remains with
 its canonical blueprint after restart, while execution permissions expire and
 previous passing evidence becomes stale. Generated relayout of built work,
-broader mechanism functions and signed-in generated acceptance are still pending.
+broader mechanism functions are still pending. Signed-in generated wiring has passed
+construction, measured timing and restart; see the evidence and fixture limitation
+in the [acceptance guide](acceptance-guide.md).
 
 ## Component collaboration (source build)
 

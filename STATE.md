@@ -23,9 +23,11 @@ merging green changes are already authorized.
   permissions/conflicts, service/game restart, and an actual signed-in generated
   response through the normal command/HTTP path before merging this slice.
 
-Implemented D1/D2 and deterministic D3 paths. **Actual live geometry has not yet
-passed.** Keep PR18 draft until that remaining flow is proven. Broader functions,
-structural revision and the whole product are still unfinished.
+Implemented the bounded D1-D3 behavior: actual signed-in geometry passed native
+construction, timing, sharing and restart on00e5da5. That manual whole run later
+failed an unrelated creative-inventory fixture check. Final regression CI replays
+the recorded model reply and verifies fixture cleanup before merge. Broader
+functions, structural revision and the whole product remain unfinished.
 
 ## Current evidence and immediate next step
 
@@ -56,16 +58,11 @@ Manual runs (no credentials uploaded; no automatic SDK retry):
   responder hid the controlled error and ephemeral SDK output is gone. Cancelled
   run; **cause unknown**, do not guess or retry that receipt.
 
-Next: ship opt-in bounded private untrusted-result capture plus controlled failure
-categories in provider/responder. Compile/format and required CI, freeze clean
-source, dispatch a fresh `live-acceptance.yml --ref BRANCH -f scenario=generated`.
-Respond once each with `scripts/acceptance/respond.mjs --run RUN --attempt1 --sha SHA
---model gpt-6-luna --stage behavior` then `--stage geometry` when its artifact is
-ready. Use proper separate CLI arguments (`--attempt 1`). Native consent expires
-five minutes after proposal start: respond promptly. Existing receipts live under
-`%APPDATA%/minecraft-ai-engineer/acceptance`; invalid raw output must never be
-published. Actual generated screenshots/receipts and terminal game evidence are
-still required; model output alone is not acceptance.
+Next: run required CI for the fixture cleanup and recorded raw-response replay,
+then merge PR18 without another review cycle. Do not spend more SDK quota merely
+to repeat unchanged production behavior. Keep the original manual run's overall
+failure explicit while reporting its passing generated scope and current complete
+regression evidence. Continue immediately with explicit structural revision.
 
 ## Runtime decisions and constraints
 
@@ -172,3 +169,25 @@ actual timing checks. For extents>65 use a translated signed frame within-64..64
 to preserve all128 representable positions. Geometry reasoning uses medium while
 behavior/catalog stay low; explicit general repeater/lamp timing semantics are
 calibrated by the physical0/4 and12/16 tests. TypeScript compile passes.
+
+Source00e5da5 passed all five gates **CI40765916470**. Real generated request
+40766098371 accepted behavior (response40766960852) and raw geometry (response
+40767111851): actual two serial repeaters4+2, eight blocks, namespaced states.
+Native log records actual12-on/16-off pass. All generated player-support, shared
+Bob lesson/denial/revocation, second companion restart4525->5262 and third game
+boot markers passed. Inspected screenshot: real constructed blocks visibly render
+after restart, unlike the old catalog ghost-only image. Retained artifacts at
+task work/live-proof-40766098371. Behavior request2fce23c64d4bf8023190b66b80352933
+a985729edd139c4c41a67dc9b8c168cb; geometry request7fac846660b19afe4bb367ea4e73
+ee5c6f44ec00158cae2936fb45257cd6097d. Both receipts/accepted digests inspected.
+The whole manual run nevertheless failed afterward: creative fixture item supply
+left64 stone instead of restoring the prior7, breaking the older inventory check.
+Fix only test cleanup, not production behavior. Replay the actual recorded model
+response deterministically in ordinary CI, including the same client support
+placement and full post-restart inventory proof. This avoids unnecessary repeat
+SDK quota while preserving real signed-in feature proof plus current regression
+proof. Do not call that old manual run a successful overall run or replay a fresh
+live call. Required combined CI must pass before merge. Josh says skip heavy
+reviews and ship; no new formal review. D1-D3 feature behavior is now demonstrated;
+next action is final fixture regression CI then merge PR18 and start structural
+revision. Full broader phase1/phase2 objective remains active.

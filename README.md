@@ -9,6 +9,8 @@ The source build provides bounded creative-mode workflows for a signal lamp,
 inverter and two-input OR gate: preview, teach, delegate, diagnose, explicitly
 repair, undo and test actual redstone behavior. Bounded component hierarchies
 support independent player/assistant work, with private inventory/material checks.
+The source also supports separately confirmed raw generated buffers with actual
+on/off transition timing tests; see the [generated flow](docs/mod-guide.md#generated-timed-buffers-source-build).
 Larger engineering designs and broader features in the [product brief](docs/product-brief.md) are
 still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.

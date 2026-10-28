@@ -77,6 +77,30 @@ receipts link it to real client construction, actual redstone tests and service/
 game restart evidence. This proves that fixed path, not general engineering,
 natural follow-up revisions or the entire phase1 brief.
 
+## Recorded generated proof and regression replay
+
+Source `00e5da5` in [request run40766098371](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40766098371)
+used two local signed-in SDK0.164.0/gpt-6-luna calls. Behavior response
+[40766960852](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40766960852)
+returned the requested12/16 contract; geometry response
+[40767111851](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40767111851)
+returned two serial repeaters with delays4+2, rather than a catalog selection.
+Native construction, both actual edge traces, shared preview/lesson revocation,
+companion restart and third game boot all passed their retained markers. The
+restart screenshot visibly contains the constructed blocks.
+
+That manual run's **overall result failed** afterward: its creative player-item
+fixture left64 stone in the held slot, while an earlier inventory recovery proof
+correctly expected the original7. The cleanup fix restores the exact prior held
+stack/components. Ordinary CI replays the recorded raw reply from
+`tests/fixtures/live-generated-buffer.json`, drives the same player support and
+remaining AI construction, and checks the complete post-restart inventory flow.
+This replay performs no new inference and does not claim a fresh signed-in call.
+No production geometry, behavior, timing or authorization code changed for this
+fixture cleanup. Do not label the original manual run as a successful whole run.
+
+![Actual signed-in generated circuit visible after game restart](images/generated-restarted.png)
+
 ## Interrupted publication
 
 A durable started receipt prevents a second SDK call for the same request. If the

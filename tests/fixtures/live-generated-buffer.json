@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "recordedFrom": {
+    "sourceSha": "00e5da5484fb246a2f9292cb83ba6ca6710ec831",
+    "requestRun": "40766098371",
+    "behaviorResponseRun": "40766960852",
+    "geometryResponseRun": "40767111851",
+    "behaviorRequestDigest": "2fce23c64d4bf8023190b66b80352933a985729edd139c4c41a67dc9b8c168cb",
+    "geometryRequestDigest": "7fac846660b19afe4bb367ea4e73ee5c6f44ec00158cae2936fb45257cd6097d",
+    "geometryResultDigest": "60f605fa653125bf41793cf4d95b2d23b630c45470c5a6a0b21861f4e3f5c232"
+  },
+  "proposal": {
+    "behavior": {
+      "schemaVersion": 1,
+      "function": "buffer",
+      "risingGameTicks": 12,
+      "fallingGameTicks": 16
+    },
+    "explanation": "Desired behavior: a lever-controlled lamp turns on 12 game ticks after the lever is switched on and turns off 16 game ticks after it is switched off. This records intent only; it does not establish feasibility or verification."
+  },
+  "geometry": {
+    "name": "Lever to lamp delay circuit",
+    "explanation": "Relative coordinates stay within x=0..3, y=0..1, z=0. The lamp turns on after 12 game ticks from a repeater chain with total delay 12. When power is removed, the lamp's 4-tick shutoff delay brings the falling latency to 16 ticks. Device backing blocks are included.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=4,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "input": {
+      "x": 0,
+      "y": 1,
+      "z": 0
+    },
+    "output": {
+      "x": 3,
+      "y": 1,
+      "z": 0
+    }
+  },
+  "provenance": {
+    "model": "gpt-6-luna",
+    "sdkVersion": "0.164.0",
+    "inputTokens": 11244,
+    "cachedInputTokens": 0,
+    "outputTokens": 334
+  }
+}

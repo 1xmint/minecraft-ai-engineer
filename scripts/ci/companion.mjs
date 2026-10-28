@@ -1,7 +1,7 @@
 // Real HTTP gateway and SQLite persistence for the multiplayer proof. Inference
 // is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
 import { createCompanionServer } from "../../dist/companion/src/server.js";
@@ -11,6 +11,13 @@ if (process.env.CI !== "true" || !process.argv[2]) {
     "This fixture runs only in GitHub CI with a private config directory.",
   );
 }
+// Recorded raw signed-in reply; replay is deterministic and never invokes inference.
+const generatedFixture = JSON.parse(
+  readFileSync(
+    new URL("../../tests/fixtures/live-generated-buffer.json", import.meta.url),
+    "utf8",
+  ),
+);
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
@@ -23,15 +30,7 @@ const server = createCompanionServer({
         "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
       )
         throw new Error("Unexpected generated fixture request");
-      return {
-        behavior: {
-          schemaVersion: 1,
-          function: "buffer",
-          risingGameTicks: 12,
-          fallingGameTicks: 16,
-        },
-        explanation: "Synthetic native confirmation fixture; no inference.",
-      };
+      return structuredClone(generatedFixture.proposal);
     },
     async generateGeometry(input) {
       if (
@@ -41,31 +40,7 @@ const server = createCompanionServer({
         input.behavior.fallingGameTicks !== 16
       )
         throw new Error("Original request or confirmed intent changed");
-      return {
-        name: "Generated native buffer",
-        explanation: "Two serial repeaters; physically untested preview.",
-        input: { x: 0, y: 1, z: 0 },
-        output: { x: 3, y: 1, z: 0 },
-        blocks: [
-          ...[0, 1, 2, 3].map((x) => ({
-            pos: { x, y: 0, z: 0 },
-            state: "minecraft:stone",
-          })),
-          {
-            pos: { x: 0, y: 1, z: 0 },
-            state: "minecraft:lever[face=floor,facing=east,powered=false]",
-          },
-          ...[1, 2].map((x) => ({
-            pos: { x, y: 1, z: 0 },
-            state:
-              "minecraft:repeater[delay=3,facing=west,locked=false,powered=false]",
-          })),
-          {
-            pos: { x: 3, y: 1, z: 0 },
-            state: "minecraft:redstone_lamp[lit=false]",
-          },
-        ],
-      };
+      return structuredClone(generatedFixture.geometry);
     },
     async plan() {
       writeFileSync(

@@ -358,7 +358,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.revision()==revision+1 && (LIVE_GENERATED || project.blueprint.blocks().size()==8),"Confirmed raw geometry uses the normal canonical preview");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)),"Generated intent equals independently accepted timing");check(project.delegation==null && project.journal.isEmpty() && project.verified.equals("untested"),"Confirming inference grants no construction or functional pass");check(project.blueprint.blocks().stream().noneMatch(b->project.level().hasChunkAt(b.pos()) && project.level().getBlockState(b.pos()).is(Blocks.REPEATER)),"Preview does not place generated devices");});
         MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"No current behavior proposal");
         server.runCommand("forceload add 192 0");
-        if(LIVE_GENERATED)generatedPlayerSection(context,server,connection);
+        generatedPlayerSection(context,server,connection);
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");JsonObject saved;try{saved=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(Exception error){throw new AssertionError(error);}var cases=saved.getAsJsonArray("functionalEvidence");FunctionalTrial.validateGeneratedEvidence(cases,GeneratedBlueprint.behavior(project.blueprint),true);check(cases.get(1).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==12 && cases.get(2).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==16,"Production test measures both accepted edges, not settled endpoint values");check(!project.hasPendingTest() && project.delegation==null,"A passing generated trial restores its input and releases authority");});
@@ -385,12 +385,18 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         BlockPos scaffold=target.below();
         server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(scaffold,Blocks.COBBLESTONE.defaultBlockState()));
         server.runCommand("tp Alice "+(target.getX()+1.5)+" "+(target.getY()+1)+" "+(target.getZ()+2.5)+" -90 45");connection.waitForClientboundPackets();
+        var previous=server.computeOnServer(s->player(s,"Alice").getMainHandItem().copy());
+        try {
         equipConstructionItem(context,server,net.minecraft.world.item.Items.STONE);
         context.runOnClient(client->client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(scaffold).add(0,0.5,0),net.minecraft.core.Direction.UP,scaffold,false)));
         server.waitFor(s->session(s,"Alice").level().getBlockState(target).is(Blocks.STONE));
         context.runOnClient(client->{client.gameMode.startDestroyBlock(scaffold,net.minecraft.core.Direction.SOUTH);client.gameMode.stopDestroyBlock();});
         server.waitFor(s->session(s,"Alice").level().getBlockState(scaffold).isAir());
         server.runOnServer(s->check(session(s,"Alice").journal.isEmpty(),"The player's actual generated support is not an assistant edit"));
+        } finally {
+            server.runOnServer(s->{var actor=player(s,"Alice");actor.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,previous.copy());actor.inventoryMenu.broadcastChanges();
+                check(net.minecraft.world.item.ItemStack.listMatches(java.util.List.of(previous),java.util.List.of(actor.getMainHandItem())),"Creative fixture supply restores the original held stack and components");});
+        }
         write("player-generated-section.done","passed");
     }
     private static void generatedConfirmationSaveFailure(ClientGameTestContext context,TestDedicatedServerContext server,String request) throws Exception {

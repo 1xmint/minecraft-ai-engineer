@@ -403,6 +403,7 @@ try {
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
     for (const name of [
       "generated-confirmation.done",
+      "player-generated-section.done",
       "generated-confirmation-recovery.done",
       "generated-wrong-timing.done",
       "generated-confirmation-save-failure.done",
