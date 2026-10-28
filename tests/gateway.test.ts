@@ -1570,7 +1570,12 @@ test("a generated behavior result arriving after grant revision is discarded", a
       ...generatedInput,
       context: context({ connectionId: generatedConnection }),
     });
-    await started;
+    await Promise.race([
+      started,
+      pending.then(() => {
+        throw new Error("Generated request finished before provider dispatch");
+      }),
+    ]);
     await f.sync(context({ authorizationRevision: 2 }));
     release();
     assert.equal((await pending).status, 503);
