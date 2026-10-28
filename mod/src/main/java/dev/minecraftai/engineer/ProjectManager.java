@@ -109,7 +109,7 @@ final class ProjectManager {
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
-        Set<BlockPos> writes=project.reservationWrites(action),reads=project.reservationReads(action,test);
+        Set<BlockPos> writes=project.reservationWrites(action,test),reads=project.reservationReads(action,test);
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || ((test || GeneratedBlueprint.isGenerated(project.reservationBlueprint(action))) && reads.stream().anyMatch(other::contains));

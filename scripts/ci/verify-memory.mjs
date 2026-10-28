@@ -407,6 +407,8 @@ try {
       "workspace-expanded.done",
       "workspace-bob-denied.done",
       "workspace-busy-expansion.done",
+      "structural-revision.done",
+      "structural-recovery.done",
       "generated-confirmation-recovery.done",
       "generated-wrong-timing.done",
       "generated-confirmation-save-failure.done",
