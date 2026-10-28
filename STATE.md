@@ -324,3 +324,21 @@ actual inverse journal order and current-state ownership checks for neighbors.
 This phase is planned, not implemented. Full generated two-repeater timed design,
 moved-output revision, disconnected failure, live model acceptance and subsequent
 broader functions still follow; all remaining product milestones stay active.
+
+Operation-history proof-first c7747a0 / CI40711161879 failed at the missing
+OperationScopes class. GPT-6-Luna worker implemented only the isolated strict
+immutable scope validator (bdbb868, integrated d1ec173); root owns proofs and all
+server integration. New capture deduplicates whole original intention snapshots,
+checks canonical content digest/identity/leaf membership and bounded metadata,
+returns deep copies and prunes orphan scopes. V4 journals require mappings;
+flat/v2/v3 validate under old rules before explicit legacy-position migration.
+Root added native old-version and corrupt-document loader proofs, original A
+revision retention after B revision and actual restart, plus immutable lease
+footprint assertions. Existing baseline/dependency states stay attached to the
+captured original source; stale changed intention cannot resume construction.
+Undo acquires original positions/read closure under fresh current authority.
+Live cross-project permission validation now consumes the actual captured lease
+footprint instead of reconstructing positions from current blueprint metadata.
+No new structural mutation executor is enabled: a future old/new layout transition
+still needs its explicit approved diff, before-state capture and attachment order.
+Scoped compile, independent auth/history review and combined CI pending.

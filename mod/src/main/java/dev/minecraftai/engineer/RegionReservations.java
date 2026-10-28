@@ -50,6 +50,15 @@ final class RegionReservations {
         if(!leases.get(scope).writes.contains(target))
             throw new IllegalStateException("Mutation target is outside the reserved write set");
     }
+    /** The exact immutable footprint acquired by this lease, after normal authority validation. */
+    Set<BlockPos> permissionFootprint(Scope scope,Fence fence,boolean includeReads,long now) {
+        Lease lease=leases.get(scope);
+        if(fence==null || lease==null || !lease.fence.equals(fence) || !epoch.equals(fence.epoch()) || lease.expires<=now)
+            throw new IllegalStateException("Execution footprint expired or changed");
+        Set<BlockPos> footprint=new HashSet<>(lease.writes);
+        if(includeReads)footprint.addAll(lease.reads);
+        return Set.copyOf(footprint);
+    }
     void release(Scope scope, Fence fence) {
         Lease current = leases.get(scope);
         if (current != null && current.fence.equals(fence)) leases.remove(scope);

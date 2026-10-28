@@ -474,6 +474,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer reference or-gate 4");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.blocks().size()==10);
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{for(int version:new int[]{1,2,3})assertLegacyScopeMigration(session(s,"Alice"),version);});
         send(context,"engineer project share Bob editor");
         server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
         write("or-test",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
@@ -1013,9 +1014,30 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("lesson-followup.done","passed");
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
+    private static void assertLegacyScopeMigration(EngineeringSession project,int version) {
+        var legacy=saved(project);legacy.remove("operationScopes");
+        if(version==1)legacy.remove("journalVersion");else legacy.addProperty("journalVersion",version);
+        var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,legacy);
+        check(loaded.delegation==null && loaded.state.equals("PAUSED") && loaded.journal.size()==project.journal.size(),"Validated old journals migrate as paused descriptions without authority or lost changes");
+        var migrated=loaded.operationScopes.json();
+        check(!migrated.getAsJsonArray("snapshots").isEmpty(),"A valid legacy journal retains its validated position scope");
+        for(var entry:migrated.getAsJsonArray("snapshots"))check(entry.getAsJsonObject().get("kind").getAsString().equals("legacy-position"),"Legacy migration never invents an original intended revision");
+        var escaped=legacy.deepCopy();escaped.getAsJsonArray("journal").get(0).getAsJsonObject().add("pos",Blueprint.jsonPos(new BlockPos(11,101,1)));
+        boolean escapedRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,escaped);}
+        catch(IllegalStateException invalidLegacy){escapedRejected=true;}
+        check(escapedRejected,"Legacy position validation runs before migration and refuses escaped targets");
+    }
+
     private static void assertOperationScope(EngineeringSession project,int originalRevision) {
         var checkpoint=saved(project);
         check(checkpoint.get("journalVersion").getAsInt()==4,"New operation journals persist immutable intention scopes");
+        assertLegacyScopeMigration(project,3);
+        var missing=checkpoint.deepCopy();missing.remove("operationScopes");
+        boolean missingRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,missing);}
+        catch(IllegalStateException corruptScope){missingRejected=true;}
+        check(missingRejected,"A v4 journal cannot silently fall back to current geometry when original scopes are missing");
         var scopes=checkpoint.getAsJsonObject("operationScopes");
         var operation=project.journal.getFirst().operation();
         var mapping=scopes.getAsJsonArray("operations").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals(operation)).findFirst().orElseThrow();

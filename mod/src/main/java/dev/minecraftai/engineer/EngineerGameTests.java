@@ -79,6 +79,8 @@ public final class EngineerGameTests {
         reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(1,0,0)),java.util.Set.of(),1),"A neighboring write cannot invalidate another task's read dependency");
         leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(10,0,0)),java.util.Set.of(),1);
         leases.validate(a,first,editor,1,policy.revision(),2);
+        helper.assertTrue(leases.permissionFootprint(a,first,true,2).equals(java.util.Set.of(BlockPos.ZERO,new BlockPos(1,0,0))),"Live permission checks use the lease's captured writes and isolation reads");
+        reject(helper,()->leases.permissionFootprint(a,first,true,2).add(new BlockPos(2,0,0)),"Callers cannot expand a captured lease footprint");
         leases.validateWrite(a,first,editor,1,policy.revision(),BlockPos.ZERO,2);
         reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(1,0,0),2),"A reserved read dependency never grants write authority");
         reject(helper,()->leases.validateWrite(a,first,editor,1,policy.revision(),new BlockPos(2,0,0),2),"A valid lease never authorizes an unreserved block in its workspace");
