@@ -8,21 +8,36 @@ Working on **phase/5-live-acceptance**, based on PR13 merge **c80b8cd**.
 PR13 source **767feea / CI40623373036 passed all five gates**. Root inspected
 native client-construction/recovery markers, logs and SQLite proof. P1 actual
 client placement/tutorial/journal-exclusion passed. P2 bootstrap provenance,
-privacy/cancellation/expiry/one-use checks passed; signed-in combined runtime is
-still UNPROVEN. PR12/#2 merged asc01a3e7 with full component/inventory proofs.
+privacy/cancellation/expiry/one-use checks passed; the live lamp path is now
+proven below. PR12/#2 merged asc01a3e7 with full component/inventory proofs.
 No new release, full phase1 completion or phase2 feature is claimed.
 
-Next: verify both manual workflow definitions are active on GitHub, dispatch
-live-acceptance.yml on this reviewed branch, wait for its request artifact, then
-invoke scripts/acceptance/respond.mjs with that exact run/attempt/SHA and explicit
-model. Use existing efficient gpt-6-luna unless unavailable; no automatic fallback.
-No SDK call has run for this combined flow. Normal CI never invokes it.
-Freeze this branch while the manual run is live: the local CLI requires its HEAD
-and remote branch to keep the reviewed SHA. Inspect actual terminal state before
-editing or restarting. Record request/result digests, real model usage and all
-native construction/test/service/game-restart evidence. Only after the run ends
-update this note and continue the broader #3 work. Tests stay on GitHub; the local
-manual SDK call and scoped compilation do not run Minecraft on Josh's PC.
+The actual signed-in lamp path PASSED: request workflow **40624276545** and
+response workflow **40624742436**, both source **a64f352**, owner-dispatched
+attempt1. One local official SDK0.164.0/gpt-6-luna call used10529 input/73 output
+tokens, returning signal-lamp/delay1/rotation0. Local receipt and retained CI
+request/result/accepted digests match; acceptedAt was within15min. No login or
+SDK event payload was published. The run is terminal success; source freeze ended.
+
+Root inspected live-model-design, actual player-client-construction, original
+functional cases, SQL proof, companion restart3472->5449, game/component/undo
+recovery markers and native chat. First constructed-client PNG visibly shows the
+six correct blocks. The final post-teleport restart PNG shows ghost bounds only;
+do not use it to claim post-restart visual rendering. Actual server restart and
+functional evidence passed. Richer visualization still needs its own driven proof.
+
+Request digest: fb61cac0cfb1b0b61bde69a633712ef3828f073f9d237926f5f645181964b594
+Result digest: 67fd6d677a3188194990ab694a905db7e87e663249a3776a59cca02d87947027
+Artifacts: task work/live-proof-40624276545 (synthetic fixtures only).
+
+Next: broader #3 engineering and teaching. This fixed lamp call is selection,
+not general design generation or natural-language modification/clarification.
+Its model explanation even calls teaching outside the selector, while the actual
+catalog tutorial advanced correctly; make model context accurately describe the
+app and add useful followups. Durable objectives/rationale/preferences/decisions,
+new connected designs, timing transition diagnostics, textured ghosts and later
+project explanation remain. Phase2's six features are all still unstarted.
+Tests stay on GitHub; only the operator SDK call and scoped compile ran locally.
 
 ## Acceptance Outcomes and bootstrap proof (#3/E4)
 
@@ -30,7 +45,7 @@ manual SDK call and scoped compilation do not run Minecraft on Josh's PC.
   advanced step1->2->3, client removed initial scaffold, assistant journal stayed
   empty until actual delegation. Initial creative item/scaffold supply is fixture
   setup. CI40620567886 and final combined CI40623373036 passed.
-- P2 bootstrap PASS, live result UNPROVEN: the normal gateway supplies an immutable
+- P2 bootstrap and live lamp path PASS: the normal gateway supplies an immutable
   authenticated frame separately from model text. A CI-only one-shot file provider
   accepts only the reconstructed fresh lamp scenario, refuses arbitrary memory,
   crosstalk, replay, expiry and cancellation. Local responder verifies reviewed
@@ -39,8 +54,8 @@ manual SDK call and scoped compilation do not run Minecraft on Josh's PC.
   another call. Separate owner-only manual workflows transport bounded data, never
   login credentials. CI40621899855 failed missing modules before implementation;
   all new rejection proofs passed final CI40623373036.
-- P2 manual proof NEXT: actual validated model plan must match one-tick lamp,
-  rotation0/selected anchor, then drive real player/AI/construction/conflict/test
+- P2 manual proof PASS on40624276545: actual validated model plan matched one-tick lamp,
+  rotation0/selected anchor, then drove real player/AI/construction/conflict/test
   and service/game restart markers together. A model answer or published workflow
   alone is not this proof. A passing lamp path does not prove general engineering.
 
