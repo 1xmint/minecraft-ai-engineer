@@ -49,8 +49,8 @@ const nullableBehaviorSchema = {
       properties: {
         schemaVersion: { type: "integer", enum: [1] },
         function: { type: "string", enum: ["buffer"] },
-        risingGameTicks: { type: "integer", minimum: 1, maximum: 128 },
-        fallingGameTicks: { type: "integer", minimum: 1, maximum: 128 },
+        risingGameTicks: { type: "integer", minimum: 0, maximum: 128 },
+        fallingGameTicks: { type: "integer", minimum: 0, maximum: 128 },
       },
     },
   ],
@@ -125,8 +125,8 @@ export function validateBehavior(value: unknown): Behavior {
   return {
     schemaVersion: 1,
     function: "buffer",
-    risingGameTicks: integer(v.risingGameTicks, "risingGameTicks", 1, 128),
-    fallingGameTicks: integer(v.fallingGameTicks, "fallingGameTicks", 1, 128),
+    risingGameTicks: integer(v.risingGameTicks, "risingGameTicks", 0, 128),
+    fallingGameTicks: integer(v.fallingGameTicks, "fallingGameTicks", 0, 128),
   };
 }
 export function behaviorDigest(value: unknown): string {

@@ -80,7 +80,7 @@ test("generated geometry uses an independently supplied behavior and derives its
 
 test("timing intent rejects unknown fields, wrong units, unbounded values and model-chosen tests", () => {
   for (const bad of [
-    { ...behavior, risingGameTicks: 0 },
+    { ...behavior, risingGameTicks: -1 },
     { ...behavior, fallingGameTicks: 129 },
     { ...behavior, risingGameTicks: 1.5 },
     { ...behavior, schemaVersion: 99 },
@@ -89,6 +89,10 @@ test("timing intent rejects unknown fields, wrong units, unbounded values and mo
     { ...behavior, fallingRedstoneTicks: 8 },
   ])
     assert.throws(() => validateBehavior(bad));
+  assert.equal(
+    validateBehavior({ ...behavior, risingGameTicks: 0 }).risingGameTicks,
+    0,
+  );
   assert.notEqual(
     behaviorDigest(validateBehavior(behavior)),
     behaviorDigest(validateBehavior({ ...behavior, risingGameTicks: 10 })),

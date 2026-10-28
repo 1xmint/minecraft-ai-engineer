@@ -297,3 +297,23 @@ strictly; curated registration remains unchanged. TypeScript compile passed.
 Combined HTTP CI next; native confirmation/registry dispatch/production trial and
 live SDK acceptance still pending. Worker was clean and git cherry confirmed
 both commits integrated before its worktree removal; branch recoverable.
+
+Timing boundary correction before publication: observable latency may be zero
+(the activation tick); a positive-only minimum was an artificial restriction.
+Behavior/trace now permit0..128 game ticks. Updated negative-value rejection and
+added native direct lever/lamp0-on/4-off proof alongside the serial12/16 proof.
+This changes no prior curated or accepted generated source: generated app wiring
+is not released yet. Exact observed contracts still require real game proof;
+allowing a requested value does not claim a feasible or verified design.
+
+Sol focused service AUTH/QUOTA review accepted18a598b (not whole phase): private
+native caller remains trusted consent authority; nonce/digest are correlation.
+Queue and current rights/TTL are rechecked, replay ledger precedes quota, provider
+behavior is frozen, canonical revision is unchanged, late grants reject results.
+A429 after nonce claim conservatively consumes that confirmation without an SDK
+call; explain fresh confirmation after reset rather than adding retry machinery.
+Native must store original request and all captured fields, consume confirmation
+before dispatch, cancel on invalidation and compare returned behavior/digest before
+acceptance. Service cannot independently prove physical connection/consent.
+TypeScript and Java compile passed on the immediate-edge correction. Next CI
+covers direct0/4 lamp alongside serial12/16 and all new HTTP rejection proofs.

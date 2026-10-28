@@ -112,6 +112,17 @@ public final class MechanismGameTests {
         reject(helper,()->new TransitionTrace(false,false,12,8),"An edge trace cannot invent a transition between equal values");
         helper.succeed();
     }
+    @GameTest(maxTicks=40) public void directLampMeasuresImmediateOnAndDelayedOff(GameTestHelper helper) {
+        var rotation=Rotation.NONE;
+        block(helper,0,0,0,"minecraft:stone",rotation);block(helper,1,0,0,"minecraft:stone",rotation);
+        input(helper,0,1,0,false,rotation);block(helper,1,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
+        var input=at(0,1,0,rotation);var output=at(1,1,0,rotation);long[] starts=new long[2];
+        var on=new TransitionTrace(false,true,0,8);var off=new TransitionTrace(true,false,4,8);
+        helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.pullLever(input);starts[0]=helper.getLevel().getGameTime();on.sample(0,lamp(helper,output));});
+        for(int elapsed=1;elapsed<=8;elapsed++){final int tick=elapsed;helper.runAtTickTime(8+tick,()->{on.sample(helper.getLevel().getGameTime()-starts[0],lamp(helper,output));if(tick==8)helper.assertTrue(on.passed(),"Immediate lamp edges must measure zero, not an invented one-tick minimum: "+on.json());});}
+        helper.runAtTickTime(20,()->{helper.pullLever(input);starts[1]=helper.getLevel().getGameTime();off.sample(0,lamp(helper,output));});
+        for(int elapsed=1;elapsed<=12;elapsed++){final int tick=elapsed;helper.runAtTickTime(20+tick,()->{off.sample(helper.getLevel().getGameTime()-starts[1],lamp(helper,output));if(tick==12){helper.assertTrue(off.passed(),"Observed lamp off timing includes four game ticks: "+off.json());helper.succeed();}});}
+    }
     @GameTest(maxTicks=65) public void serialRepeatersMeasureBothObservableLampEdges(GameTestHelper helper) {
         serialTrace(helper,false);
     }

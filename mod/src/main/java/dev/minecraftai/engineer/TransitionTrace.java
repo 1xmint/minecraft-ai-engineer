@@ -13,7 +13,7 @@ final class TransitionTrace {
     private String mismatch,missing;
 
     TransitionTrace(boolean from,boolean to,int expectedTicks,int stableTicks) {
-        if(from==to || expectedTicks<1 || expectedTicks>128 || stableTicks<1 || stableTicks>32)
+        if(from==to || expectedTicks<0 || expectedTicks>128 || stableTicks<1 || stableTicks>32)
             throw new IllegalArgumentException("Invalid bounded transition expectation");
         this.from=from;this.to=to;this.expectedTicks=expectedTicks;this.stableTicks=stableTicks;
     }
