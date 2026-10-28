@@ -1044,6 +1044,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var snapshot=scopes.getAsJsonArray("snapshots").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").equals(mapping.get("snapshot"))).findFirst().orElseThrow();
         check(mapping.get("component").getAsString().equals("a") && snapshot.get("kind").getAsString().equals("intended"),"Original operation keeps its component and exact intended provenance");
         check(snapshot.getAsJsonObject("blueprint").get("revision").getAsInt()==originalRevision && project.revision()==originalRevision+1,"A later component revision never relabels an older operation's original intention");
+        var wrongActive=checkpoint.deepCopy();wrongActive.addProperty("activeOperation",operation);wrongActive.addProperty("undoOperation",operation);
+        wrongActive.addProperty("activeComponent","b");wrongActive.addProperty("undoRequested",true);
+        wrongActive.add("baseline",new JsonArray());wrongActive.add("dependencies",new JsonArray());
+        boolean activeRejected=false;
+        try {new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,wrongActive);}
+        catch(IllegalStateException wrongComponent){activeRejected=true;}
+        check(activeRejected,"Even an empty pending undo must keep its operation's original component label");
     }
 
     private static void lessonRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

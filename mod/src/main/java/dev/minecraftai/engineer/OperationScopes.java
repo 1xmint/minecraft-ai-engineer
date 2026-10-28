@@ -15,7 +15,8 @@ final class OperationScopes {
     private static final int MAX_BYTES = 8 * 1024 * 1024;
     private static final Gson GSON = new Gson();
 
-    private record Snapshot(String id, String kind, JsonObject blueprint, Blueprint parsed) { }
+    private record Snapshot(String id, String kind, JsonObject blueprint, Blueprint parsed,
+                            Map<String,Set<BlockPos>> positions,Map<String,String> bases) { }
     private record Operation(String id, String component, String snapshot) { }
 
     private final Map<String, Snapshot> snapshots = new HashMap<>();
@@ -47,7 +48,7 @@ final class OperationScopes {
 
         Map<String, Snapshot> nextSnapshots = new HashMap<>(snapshots);
         Map<String, Operation> nextOperations = new HashMap<>(operations);
-        nextSnapshots.putIfAbsent(snapshotId, new Snapshot(snapshotId, kind, source.deepCopy(), parsed));
+        nextSnapshots.putIfAbsent(snapshotId, new Snapshot(snapshotId, kind, source.deepCopy(), parsed,new HashMap<>(),new HashMap<>()));
         nextOperations.put(operation, new Operation(operation, component, snapshotId));
         checkBudget(nextSnapshots, nextOperations);
         world = nextWorld;
@@ -106,7 +107,7 @@ final class OperationScopes {
             Blueprint parsed = Blueprint.parse(source, world, dimension);
             if (!parsed.projectId().equals(project.toString())) throw new IllegalArgumentException("Operation scope project mismatch");
             ComponentTree.validate(parsed);
-            if (out.snapshots.putIfAbsent(id, new Snapshot(id, kind, source, parsed)) != null)
+            if (out.snapshots.putIfAbsent(id, new Snapshot(id, kind, source, parsed,new HashMap<>(),new HashMap<>())) != null)
                 throw new IllegalArgumentException("Duplicate operation snapshot");
         }
         Set<String> referenced = new HashSet<>();
@@ -118,7 +119,7 @@ final class OperationScopes {
             validateOperationId(id); validateComponentId(component);
             Snapshot snapshot = out.snapshots.get(snapshotId);
             if (snapshot == null) throw new IllegalArgumentException("Operation references a missing snapshot");
-            componentBlueprint(snapshot.parsed(), component);
+            componentPositions(snapshot,component);
             if (out.operations.putIfAbsent(id, new Operation(id, component, snapshotId)) != null)
                 throw new IllegalArgumentException("Duplicate operation identity");
             referenced.add(snapshotId);
@@ -128,11 +129,14 @@ final class OperationScopes {
         return out;
     }
 
+    void validateComponent(String operation, String component) {
+        Operation mapping=operations.get(operation);
+        if(mapping==null || !mapping.component().equals(component))throw new IllegalArgumentException("Operation scope component mismatch");
+    }
     void validate(String operation, String component, BlockPos target) {
+        validateComponent(operation,component);
         Operation mapping = operations.get(operation);
-        if (mapping == null || !mapping.component().equals(component)) throw new IllegalArgumentException("Operation scope component mismatch");
-        Blueprint selected = componentBlueprint(snapshots.get(mapping.snapshot()).parsed(), mapping.component());
-        if (selected.blocks().stream().noneMatch(block -> block.pos().equals(target)))
+        if (!componentPositions(snapshots.get(mapping.snapshot()),mapping.component()).contains(target))
             throw new IllegalArgumentException("Target is outside the captured operation geometry");
     }
 
@@ -147,12 +151,26 @@ final class OperationScopes {
         nextOperations.values().forEach(operation -> used.add(operation.snapshot()));
         Map<String, Snapshot> nextSnapshots = new HashMap<>();
         used.forEach(id -> nextSnapshots.put(id, snapshots.get(id)));
-        checkBudget(nextSnapshots, nextOperations);
+        // Pruning only removes previously validated metadata; it cannot exceed a budget.
         operations.clear(); operations.putAll(nextOperations);
         snapshots.clear(); snapshots.putAll(nextSnapshots);
         if (operations.isEmpty()) { world = null; dimension = null; project = null; }
     }
 
+    Set<String> operationIds(){return Set.copyOf(operations.keySet());}
+    String basis(String operation) {
+        Operation mapping=operations.get(operation);
+        if(mapping==null)throw new IllegalArgumentException("Unknown operation scope");
+        Snapshot snapshot=snapshots.get(mapping.snapshot());
+        return snapshot.bases().computeIfAbsent(mapping.component(),id->ComponentAssignments.basis(snapshot.parsed(),id));
+    }
+    private static Set<BlockPos> componentPositions(Snapshot snapshot,String component) {
+        return snapshot.positions().computeIfAbsent(component,id->{
+            Set<BlockPos> positions=new HashSet<>();
+            componentBlueprint(snapshot.parsed(),id).blocks().forEach(block->positions.add(block.pos()));
+            return Set.copyOf(positions);
+        });
+    }
     Blueprint blueprint(String operation) {
         Operation mapping = operations.get(operation);
         if (mapping == null) throw new IllegalArgumentException("Unknown operation scope");

@@ -342,3 +342,14 @@ footprint instead of reconstructing positions from current blueprint metadata.
 No new structural mutation executor is enabled: a future old/new layout transition
 still needs its explicit approved diff, before-state capture and attachment order.
 Scoped compile, independent auth/history review and combined CI pending.
+
+GPT-6.1-Sol independent review found P2 synchronous geometry regeneration on each
+retained journal validation. Root memoized immutable per-snapshot component
+position sets and basis hashes, changed runtime checks to set/map membership and
+existing current assignment basis, removed full-JSON counting and redundant
+budget serialization when pruning only removes data. Root also found and fixed
+active-frame component mismatch when an empty interrupted undo retains an
+operation without journal entries; native corrupt-document proof added. Reviewer
+accepted remaining auth/recovery lifecycle and old position-only migration;
+focused verification of the cache fix follows. No changed-state hardening was
+added to legacy journals because that would invent original intended semantics.

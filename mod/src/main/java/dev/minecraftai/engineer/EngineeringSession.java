@@ -139,8 +139,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     private void validateOperationIntention() {
         if(baseline.isEmpty() || undoRequested)return;
-        Blueprint original=operationScopes.blueprint(activeOperation);
-        if(!Objects.equals(ComponentAssignments.basis(original,activeComponent),ComponentAssignments.basis(blueprint,activeComponent)))
+        if(!Objects.equals(operationScopes.basis(activeOperation),assignments.task(blueprint,activeComponent).basis))
             throw new IllegalStateException("Interrupted operation intention changed; inspect and explicitly undo or choose a new assignment");
     }
     void validateAssignmentFence() {
@@ -1021,8 +1020,8 @@ final class EngineeringSession implements BuildExecutor {
     private void pruneOperationScopes(){operationScopes.retain(retainedOperationIds());}
     private void validateOperationScopes() {
         Set<String> required=retainedOperationIds();
-        if(required.size()!=operationScopes.json().getAsJsonArray("operations").size())throw new IllegalStateException("Operation history does not match its retained journal/frame");
-        for(String operation:required)if(!operationScopes.contains(operation))throw new IllegalStateException("Operation history is missing its original scope");
+        if(!required.equals(operationScopes.operationIds()))throw new IllegalStateException("Operation history does not match its retained journal/frame");
+        if(!baseline.isEmpty() || pendingPlacement || undoRequested)operationScopes.validateComponent(activeOperation,activeComponent);
         for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
     }
     void save() {
