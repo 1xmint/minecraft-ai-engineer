@@ -355,17 +355,45 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer confirm "+accepted);expectChat(context,"No current behavior proposal");
         server.runCommand("forceload add 192 0");
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
-        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");JsonObject saved;try{saved=JsonParser.parseString(Files.readString(project.file)).getAsJsonObject();}catch(Exception error){throw new AssertionError(error);}var cases=saved.getAsJsonArray("functionalEvidence");FunctionalTrial.validateGeneratedEvidence(cases,GeneratedBlueprint.behavior(project.blueprint),true);check(cases.get(1).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==12 && cases.get(2).getAsJsonObject().getAsJsonObject("trace").get("transitionTick").getAsInt()==16,"Production test measures both accepted edges, not settled endpoint values");check(!project.hasPendingTest() && project.delegation==null,"A passing generated trial restores its input and releases authority");});
+        send(context,"engineer project share Bob viewer");
+        server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
+        write("generated-shared","ready");awaitFile(context,"generated-bob.done");
+        send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
+        var correct=server.computeOnServer(s->session(s,"Alice").blueprint.source().deepCopy());
+        send(context,"engineer project new");send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
+        server.runOnServer(s->{var project=session(s,"Alice");var intent=new BehaviorSpec(10,16);correct.add("behavior",intent.json());correct.getAsJsonObject("provenance").addProperty("behaviorDigest",intent.digest());var test=correct.getAsJsonArray("tests").get(0).getAsJsonObject();test.addProperty("description",test.get("description").getAsString().replace("rising 12","rising 10"));project.commandActor=player(s,"Alice").getUUID();try{project.accept(Blueprint.parse(correct,project.worldId,project.dimension));}finally{project.commandActor=null;}});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("failed:"));
+        server.runOnServer(s->{var project=session(s,"Alice");var cases=saved(project).getAsJsonArray("functionalEvidence");var trace=cases.get(1).getAsJsonObject().getAsJsonObject("trace");check(trace.get("expectedGameTicks").getAsInt()==10 && trace.get("transitionTick").getAsInt()==12 && trace.get("verdict").getAsString().equals("failed"),"Matching physical geometry fails when actual timing differs from independently accepted intent");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Failure is behavioral even though all declared blocks match");check(!project.hasPendingTest() && project.delegation==null,"Failed generated test restores its input before releasing authority");});
+        write("generated-wrong-timing.done","passed");
+        generatedConfirmationSaveFailure(context,server,request);
         write("generated-confirmation.done","passed");
+    }
+    private static void generatedConfirmationSaveFailure(ClientGameTestContext context,TestDedicatedServerContext server,String request) throws Exception {
+        send(context,"engineer project new");send(context,"engineer select1 220 100 0");send(context,"engineer select2 223 101 0");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(223,101,0)));
+        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ");String nonce=confirmationNonce();
+        Path file=server.computeOnServer(s->session(s,"Alice").file),backup=file.resolveSibling(file.getFileName()+".proof-backup");
+        try {
+            // A directory at the checkpoint path models an atomic-write failure without changing grants or authority.
+            server.runOnServer(s->{try{Files.move(file,backup);Files.createDirectory(file);}catch(Exception failure){throw new AssertionError(failure);}});
+            MESSAGES.clear();send(context,"engineer confirm "+nonce);expectChat(context,"Engineer:");
+            server.runOnServer(s->{var project=session(s,"Alice");check(!project.state.equals("PLANNING") && project.blueprint==null && project.delegation==null,"Checkpoint failure before geometry dispatch restores the previous live state without granting authority");});
+        } finally {server.runOnServer(s->{try{Files.delete(file);Files.move(backup,file);}catch(Exception failure){throw new AssertionError(failure);}});}
+        MESSAGES.clear();send(context,"engineer confirm "+nonce);expectChat(context,"No current behavior proposal");
+        write("generated-confirmation-save-failure.done","passed");
     }
     private static String confirmationNonce() {
         var pattern=java.util.regex.Pattern.compile("/engineer confirm ([0-9a-f-]{36})");
         for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find())return match.group(1);}
         throw new AssertionError("Owner did not receive its private confirmation nonce");
     }
-    private static void generatedConfirmationRecovery(TestDedicatedServerContext server) {
+    private static void generatedConfirmationRecovery(TestDedicatedServerContext server) throws Exception {
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale"),"Restart retains accepted behavior and invalidates earlier functional authority");});
+        var checkpoint=server.computeOnServer(s->{var project=EngineerMod.managerFor(s).projects.get(UUID.fromString(read("generated-project")));project.checkpoint();return project.lastCheckpoint;});
+        check(checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Restart reports generated intent against the new service/server epoch");
         write("generated-confirmation-recovery.done","passed");
     }
 
@@ -441,6 +469,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         write("lesson-denied.done","passed");
+        if(!LIVE_ACCEPTANCE) {
+            awaitFile(context,"generated-shared");MESSAGES.clear();send(context,"engineer project use "+read("generated-project"));
+            await(context,()->view(context)!=null && view(context).projectId().equals(read("generated-project")),"Bob receives the generated preview only after a server grant");
+            send(context,"engineer ask explain the timing");expectChat(context,"turning on after 12 game ticks and off after 16 game ticks");
+            send(context,"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"permission");
+            write("generated-bob.done","passed");awaitFile(context,"generated-revoked");
+            await(context,()->view(context)==null,"Generated preview is cleared when view access is revoked");write("generated-bob-revoked.done","passed");
+        }
         awaitFile(context, "finish");
         disconnect(context);
     }

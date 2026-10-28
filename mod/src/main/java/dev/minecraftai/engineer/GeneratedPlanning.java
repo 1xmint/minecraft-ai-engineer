@@ -122,7 +122,12 @@ final class GeneratedPlanning {
 
         session.state = "PLANNING";
         session.detail = "One explicitly confirmed generated geometry request";
-        session.save();
+        try { session.save(); }
+        catch (RuntimeException failure) {
+            session.state = basis.priorState();
+            session.detail = "Generated request was not dispatched; checkpoint could not be saved";
+            throw failure;
+        }
         CompletableFuture<JsonObject> future;
         try {
             future = Companion.gateway(session, "/v2/design/generated", body, basis.actor());

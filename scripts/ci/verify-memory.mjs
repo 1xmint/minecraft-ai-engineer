@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  validateGeneratedBlueprint,
+  behaviorDigest,
+} from "../../dist/companion/src/generated.js";
 
 if (process.env.CI !== "true")
   throw new Error("This verifier only reads the disposable CI database");
@@ -395,6 +399,94 @@ try {
         "Custom item names never enter companion payloads or persistence",
       );
     }
+  }
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+    for (const name of [
+      "generated-confirmation.done",
+      "generated-confirmation-recovery.done",
+      "generated-wrong-timing.done",
+      "generated-confirmation-save-failure.done",
+      "generated-bob.done",
+      "generated-bob-revoked.done",
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${name}`, "utf8").trim(),
+        "passed",
+      );
+    const generatedId = readFileSync(
+      `${coordination}/generated-project`,
+      "utf8",
+    ).trim();
+    const generated = db
+      .prepare(
+        "SELECT * FROM gateway_projects WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, generatedId);
+    assert.ok(
+      generated,
+      "Confirmed generated intent reaches durable project memory",
+    );
+    const source = validateGeneratedBlueprint(
+      JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, generatedId, generated.project_revision)
+          .document,
+      ),
+    );
+    assert.deepEqual(source.behavior, {
+      schemaVersion: 1,
+      function: "buffer",
+      risingGameTicks: 12,
+      fallingGameTicks: 16,
+    });
+    const digest = behaviorDigest(source.behavior);
+    const report = JSON.parse(
+      db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:generated-buffer:%' ORDER BY id DESC LIMIT 1",
+        )
+        .get(server.serverId, generatedId).document,
+    );
+    const rows = report.checkpoint.observed.testEvidence;
+    assert.equal(rows.length, 3);
+    assert.equal(
+      report.checkpoint.observed.testScope.blueprintRevision,
+      source.revision,
+    );
+    assert.deepEqual(
+      rows[0].baselineSamples,
+      Array.from({ length: 9 }, (_, elapsedTicks) => ({
+        elapsedTicks,
+        observed: false,
+      })),
+    );
+    for (const [index, on, ticks] of [
+      [1, true, 12],
+      [2, false, 16],
+    ]) {
+      const row = rows[index],
+        trace = row.trace;
+      assert.equal(row.behaviorDigest, digest);
+      assert.equal(trace.verdict, "passed");
+      assert.equal(trace.expectedGameTicks, ticks);
+      assert.equal(trace.transitionTick, ticks);
+      assert.equal(trace.stableGameTicks, 8);
+      assert.deepEqual(
+        trace.samples,
+        Array.from({ length: ticks + 9 }, (_, elapsedTicks) => ({
+          elapsedTicks,
+          observed: elapsedTicks < ticks ? !on : on,
+        })),
+      );
+    }
+    assert.equal(
+      generated.synced_epoch,
+      server.serverEpoch,
+      "Generated restart synchronizes against the current server epoch",
+    );
   }
   console.log(
     JSON.stringify({

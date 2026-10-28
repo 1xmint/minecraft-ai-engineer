@@ -209,3 +209,38 @@ and read closure under current grants; live permission checks use the exact
 captured lease footprint. Persisted metadata never restores a connection or lease.
 Structural revisions still require a separately approved old/new transition and
 are not enabled by journalv4 alone.
+
+## Generated behavior and geometry (development)
+
+POST `/v2/behavior/propose` uses the design context, explicit model authorization
+and operator fields, and a required bounded workspace `maxSize`. It requires the
+current owner with PLAN permission and a connected native `connectionId`. It
+returns `proposal:{behavior,explanation}` without changing canonical revision.
+Behavior is null for unsupported/unclear intent, or exact schema1 buffer intent
+with integer `risingGameTicks` and `fallingGameTicks`, each0..128. These describe
+observable output latency, independently of block geometry or repeater labels.
+
+POST `/v2/design/generated` additionally requires the accepted `behavior` and an
+exact schema1 `acceptance`: `proposalId`, `behaviorDigest`, `basis`, `worldId`,
+`dimension`, `corner1`, `corner2`, `rotation`, `expiresAt`. Basis contains all
+gateway context fields except requestId and requires connectionId. Corners must
+match the request anchor/size; expiry is in the next five minutes. The native
+server is the trusted consent authority. Nonce/digest are consistency and replay
+checks, never standalone authentication. The existing durable replay ledger
+consumes each proposal nonce before inference budget; quota failure may therefore
+require a fresh proposal. Both stages use the existing queue, rate limits, epoch/
+grant/revision fences, cancellation and isolated subscription adapter.
+
+The model returns only name, explanation, supported block positions/states and
+one declared input/output. Code derives bounds, resources, support/device stages,
+ports, untested verification and the accepted behavior test. Generated provenance
+is `{kind:"generated",minecraft:"26.3",generatorRevision:1,behaviorDigest}`.
+The digest is SHA-256 of UTF-8 `buffer-v1|RISING|FALLING`. Both runtimes validate
+this exact generated kind without weakening curated catalog validation. The
+proposal is revision+1 and audit-only until native acceptance/synchronization.
+
+Generated functional evidence binds the exact original functional scope and
+behavior digest. Case0 contains bounded baseline samples; cases1/2 contain
+replayable schema1 transition traces. Stored verdicts/first-transition claims are
+recomputed from samples and compared with independently accepted timings. Partial,
+failed or interrupted evidence restores no authority and cannot become a pass.

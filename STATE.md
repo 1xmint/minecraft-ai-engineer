@@ -375,3 +375,19 @@ Source51ef1bd CI40734124481 passed Companion, Windows, integrated client and all
 denied inference because ordinary CI had never configured a model operator.
 Configure only the synthetic fixture offline Alice UUID; keep production checks.
 Sol review failed to run due account usage limit, so no review acceptance claimed.
+
+2026-10-28 Josh: skip heavy reviews; build and ship. Do not request more formal
+reviews for routine slices. Keep required checks and concrete runtime proof.
+Sourcee1d34f0 passed all five gates **CI40756807660**; Fabric all28 required
+tests. Downloaded dedicated artifacts under task work/generated-proof-40756807660;
+generated confirmation and restart markers passed, actual service restart3354->
+4658 in the earlier run and new run retains its own receipt. Native12/16 generated
+construction/test passed through normal HTTP and command paths with synthetic
+provider data. Full signed-in generated acceptance remains pending.
+Luna's focused native review found one P2: geometry-confirmation checkpoint failure
+could strand PLANNING without a flight. Restore prior live state before rethrow.
+Regression now injects a failing checkpoint path; additional native proof requires
+wrong10-vs-actual12 timing failure despite matching geometry, shared Bob preview/
+timing lesson with denied inference/revoked clearing, and durable generated
+source/baseline/edge linkage after restart. Scoped Java main/client compile passed.
+No further heavy review is scheduled; continue implementation and required CI.
