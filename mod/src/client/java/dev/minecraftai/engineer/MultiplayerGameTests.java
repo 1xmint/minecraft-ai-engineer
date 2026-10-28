@@ -991,6 +991,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer component test a");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         int passedRevision=server.computeOnServer(s->session(s,"Alice").revision());
         send(context,"engineer component revise b 2");server.waitFor(s->session(s,"Alice").revision()==passedRevision+1);
+        server.runOnServer(s->assertOperationScope(session(s,"Alice"),passedRevision));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+passedRevision);
         send(context,"engineer ask "+"x".repeat(241));expectChat(context,"within 240 characters");
         write("lesson-project",id);write("lesson-a-revision",String.valueOf(passedRevision));
@@ -1012,12 +1013,24 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("lesson-followup.done","passed");
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
+    private static void assertOperationScope(EngineeringSession project,int originalRevision) {
+        var checkpoint=saved(project);
+        check(checkpoint.get("journalVersion").getAsInt()==4,"New operation journals persist immutable intention scopes");
+        var scopes=checkpoint.getAsJsonObject("operationScopes");
+        var operation=project.journal.getFirst().operation();
+        var mapping=scopes.getAsJsonArray("operations").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").getAsString().equals(operation)).findFirst().orElseThrow();
+        var snapshot=scopes.getAsJsonArray("snapshots").asList().stream().map(value->value.getAsJsonObject()).filter(value->value.get("id").equals(mapping.get("snapshot"))).findFirst().orElseThrow();
+        check(mapping.get("component").getAsString().equals("a") && snapshot.get("kind").getAsString().equals("intended"),"Original operation keeps its component and exact intended provenance");
+        check(snapshot.getAsJsonObject("blueprint").get("revision").getAsInt()==originalRevision && project.revision()==originalRevision+1,"A later component revision never relabels an older operation's original intention");
+    }
+
     private static void lessonRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("lesson-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
         server.runOnServer(s->{var project=session(s,"Alice");var bob=project.cursors.get(UUID.fromString(read("lesson-bob-actor")));
             var alice=project.cursors.get(player(s,"Alice").getUUID());
             check(bob==null && alice!=null && alice.stage==3 && !alice.teaching,"Actual restart preserves the member's paused B lesson and never recreates the revoked member's cursor");
             check(project.delegation==null && project.journal.size()==6 && project.verified.startsWith("stale:"),"A question never restores authority or a fresh pass after restart");});
+        server.runOnServer(s->assertOperationScope(session(s,"Alice"),Integer.parseInt(read("lesson-a-revision"))));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
         server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
         write("lesson-recovery.done","passed");

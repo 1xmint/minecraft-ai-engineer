@@ -31,6 +31,35 @@ public final class EngineerGameTests {
         helper.succeed();
     }
     @GameTest
+    public void operationScopesFreezeIntentWithoutGrantingAuthority(GameTestHelper helper){
+        var plan=Blueprint.reference("test","minecraft:overworld",BlockPos.ZERO,0);
+        var operation=java.util.UUID.randomUUID().toString();
+        var second=java.util.UUID.randomUUID().toString();
+        var scopes=new OperationScopes();
+        scopes.capture(operation,"root",plan,false);scopes.capture(second,"root",plan,false);
+        var saved=scopes.json();
+        helper.assertTrue(saved.getAsJsonArray("snapshots").size()==1 && saved.getAsJsonArray("operations").size()==2,"Identical immutable intention is stored once across operation groups");
+        plan.source().addProperty("name","Changed mutable source after delegation");
+        helper.assertTrue(scopes.json().equals(saved),"An operation's captured intention cannot change through Blueprint.source access");
+        var project=java.util.UUID.fromString(plan.projectId());
+        var restored=OperationScopes.read(saved,"test","minecraft:overworld",project);
+        restored.validate(operation,"root",BlockPos.ZERO);
+        reject(helper,()->restored.validate(operation,"root",new BlockPos(40,0,0)),"Frozen scope refuses an unrecorded target");
+        reject(helper,()->restored.validate(operation,"other",BlockPos.ZERO),"Operation scope cannot be relabelled as another component");
+        var forged=saved.deepCopy();forged.getAsJsonArray("snapshots").get(0).getAsJsonObject().addProperty("id","0".repeat(64));
+        reject(helper,()->OperationScopes.read(forged,"test","minecraft:overworld",project),"A changed immutable snapshot fails its content digest");
+        var duplicate=saved.deepCopy();duplicate.getAsJsonArray("operations").add(duplicate.getAsJsonArray("operations").get(0).deepCopy());
+        reject(helper,()->OperationScopes.read(duplicate,"test","minecraft:overworld",project),"Repeated operation identities are not silently overwritten");
+        var unknown=saved.deepCopy();unknown.addProperty("schemaVersion",99);
+        reject(helper,()->OperationScopes.read(unknown,"test","minecraft:overworld",project),"Unknown scope versions fail closed");
+        reject(helper,()->OperationScopes.read(saved,"test","minecraft:overworld",java.util.UUID.randomUUID()),"Frozen intentions cannot move between projects");
+        restored.retain(java.util.Set.of(operation));
+        helper.assertTrue(restored.json().getAsJsonArray("operations").size()==1 && restored.json().getAsJsonArray("snapshots").size()==1,"Pruning an operation retains a shared snapshot still in use");
+        restored.retain(java.util.Set.of());
+        helper.assertTrue(restored.json().getAsJsonArray("snapshots").isEmpty(),"Unreferenced intention snapshots do not accumulate");
+        helper.succeed();
+    }
+    @GameTest
     public void serverProjectPolicyAndLeases(GameTestHelper helper){
         var owner=java.util.UUID.randomUUID();var editor=java.util.UUID.randomUUID();var viewer=java.util.UUID.randomUUID();
         var policy=new ProjectAccess(owner);
