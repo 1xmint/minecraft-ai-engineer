@@ -288,3 +288,14 @@ Keep ordinary CI inference disabled. Extend only bounded manual acceptance waits
 retain ordinary90s product timeout/default900s harness. Require request/result
 digests, acceptedAt and usual actual construction/test/service/game-restart proof.
 Finish transport implementation and independent auth/data review before merging.
+
+2026-10-28 E2 independent challenge completed: GPT-6.1-Sol supports bounded raw
+geometry and independently accepted behavior. Confirmed immutable transition
+frame must cover baseline/dependencies as well as journal; acquisition AND live
+cross-project revalidation must consume that frame. Found missing individual
+write-target membership in RegionReservations; first prerequisite task (Serves
+G2/G3) adds that guard at every production mutation. Proofs first reject writes
+to read-only dependencies, unreserved positions, foreign project scope and stale
+grants. No layout revision or journalv4 support is claimed by this guard alone.
+Later transition executor must explicitly preview removals and compare exact
+fresh before states; recorded neighbor membership alone is not ownership proof.
