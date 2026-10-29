@@ -299,6 +299,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
+            if(!LIVE_ACCEPTANCE)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationFlow(context,server,connection);
             send(context,"engineer project use "+projectId);
@@ -327,6 +328,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
+            if(!LIVE_ACCEPTANCE)generatedTruthRecovery(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationRecovery(context,server,connection);
             if(!LIVE_ACCEPTANCE)structuralRevisionRecovery(context,server);
             send(context,"engineer project use "+read("inventory-project"));
@@ -730,6 +732,61 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var receipt=checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS);
         check(receipt.get("protocol").getAsInt()==2,"The real companion gateway must acknowledge the functional result");
     }
+    /** Hand-authored raw geometry proves the production runner, not model inference. */
+    private static void generatedTruthFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 402 103 6 180 20");server.runCommand("forceload add 384 -16 416 16");
+        send(context,"engineer project new");send(context,"engineer select1 400 100 0");send(context,"engineer select2 405 102 3");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(405,102,3)));
+        server.runOnServer(s->{
+            var project=session(s,"Alice");JsonObject source;
+            try(var stream=MultiplayerGameTests.class.getResourceAsStream("/fixtures/generated-and.json")) {
+                if(stream==null)throw new IllegalStateException("Missing raw AND reference");
+                source=JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            }catch(java.io.IOException invalid){throw new AssertionError(invalid);}
+            source.addProperty("id",project.projectId.toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);
+            source.add("anchor",Blueprint.jsonPos(new BlockPos(400,100,0)));project.accept(Blueprint.parse(source,project.worldId,project.dimension));
+            check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Raw AND preview grants no world execution or verification");
+            // Synthetic existing player section: two supports and two differently powered levers.
+            for(BlockPos pos:java.util.List.of(new BlockPos(403,101,0),new BlockPos(400,101,3)))project.level().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());
+            for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input()) {
+                var planned=project.blueprint.blocks().stream().filter(b->b.pos().equals(port.pos())).findFirst().orElseThrow();
+                project.level().setBlockAndUpdate(port.pos(),planned.state().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,port.name().equals("a")));
+            }
+            write("truth-project",project.projectId.toString());
+        });
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==9,"AI remainder excludes four existing player-section blocks"));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-truth-table:"),30_000);assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");FunctionalTrial.validateGeneratedEvidence(project.trial.evidence(),GeneratedBlueprint.behavior(project.blueprint),true);assertTruthInputs(project);check(!project.hasPendingTest() && project.delegation==null,"Truth pass restores all originals and releases authority");});
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        send(context,"engineer test");
+        server.waitFor(s->{var project=session(s,"Alice");
+            if(!project.state.equals("VERIFYING") || project.trial.evidence().size()<4)return false;
+            commandAs(s,"Alice","engineer project revoke Bob");return true;
+        },30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.hasPendingTest(),"Revocation pauses the live truth runner with original inputs retained");
+            check(saved(project).getAsJsonArray("testInputs").size()==2,"Both original named inputs survive interruption");
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(loaded.delegation==null && loaded.hasPendingTest(),"Deserialized truth evidence grants no authority");loaded.restoreTest();
+            check(loaded.hasPendingTest(),"Deserialization cannot restore live inputs without a fresh lease");
+        });
+        write("truth-interrupted.done","passed");
+    }
+    private static void assertTruthInputs(EngineeringSession project) {
+        for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input())
+            check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a"),"Every named input returns to its own original state");
+    }
+    private static void generatedTruthRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 402 103 6 180 20");send(context,"engineer project use "+read("truth-project"));
+        server.waitFor(s->read("truth-project").equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.hasPendingTest(),"Actual third boot retains both truth input journals and no lease");FunctionalTrial.validateGeneratedEvidence(project.trial.evidence(),GeneratedBlueprint.behavior(project.blueprint),false);});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->assertTruthInputs(session(s,"Alice")));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-truth-table:"),30_000);assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");assertTruthInputs(project);check(project.delegation==null && !project.hasPendingTest(),"Fresh post-restart truth trial releases restored input authority");});
+        write("truth-recovery.done","passed");
+    }
+
     private static void catalogFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         send(context,"engineer project new");send(context,"engineer select1 10 100 0");send(context,"engineer select2 12 101 2");
         send(context,"engineer reference or-gate 4");

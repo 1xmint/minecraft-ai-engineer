@@ -265,3 +265,22 @@ TypeScript scoped compile passed. Shared hand-authored raw AND fixture is expres
 not model inference; new native game tests must establish actual AND operation and
 reject the same geometry against OR intent. No local tests run. Model schemas stay
 buffer-only pending deterministic runtime/authority/recovery proofs.
+
+2026-10-29 deterministic native physics evidence: source1063b64, Fabric job
+123536420796 / CI40899001903 logged all39 required tests passed at15:13:02 UTC,
+including complete forward/reverse generated AND and rejection against independent
+OR intent. Companion, Windows and integrated Minecraft client passed too; dedicated
+multiplayer was still running when this next acceptance change was prepared.
+Do not describe that whole older workflow as green without checking its terminal
+state. Downloaded fabric-evidence to task work/logic-proof-40899001903.
+
+Added deterministic dedicated native truth flow (not fresh inference): synthetic
+existing player section with two differently powered levers plus supports, AI
+remainder, actual production FunctionalTrial pass, both originals restored, then
+a second test interrupted by real permission revocation. It must retain both input
+journals without authority, survive the actual third saved-world boot, require
+explicit owner resume, and pass another actual trial. SQLite verifier replays
+all eight case traces from exact immutable accepted blueprint and requires two
+distinct completion times plus both recovery markers. Scoped client compilation
+and verifier syntax check passed. Full native authority/recovery proof is pending
+the next GitHub run; do not claim it from compilation or the lower-level AND test.

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -72,6 +73,76 @@ try {
       .blocks.some((block) => block.state.startsWith("minecraft:repeater")),
     "Restart inspection must contain the real built repeater",
   );
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+    assert.equal(
+      readFileSync(`${coordination}/truth-interrupted.done`, "utf8").trim(),
+      "passed",
+    );
+    assert.equal(
+      readFileSync(`${coordination}/truth-recovery.done`, "utf8").trim(),
+      "passed",
+    );
+    const truthProject = readFileSync(
+      `${coordination}/truth-project`,
+      "utf8",
+    ).trim();
+    const passes = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:generated-truth-table:%' ORDER BY id",
+      )
+      .all(server.serverId, truthProject);
+    const finishes = new Set();
+    for (const entry of passes) {
+      const report = JSON.parse(entry.document);
+      const saved = db
+        .prepare(
+          "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+        )
+        .get(server.serverId, truthProject, report.context.projectRevision);
+      assert.ok(saved, "Truth evidence has its immutable accepted blueprint");
+      const blueprint = validateGeneratedBlueprint(JSON.parse(saved.document));
+      const behavior = blueprint.behavior;
+      assert.equal(behavior.function, "truth-table");
+      assert.deepEqual(behavior.inputs, ["a", "b"]);
+      assert.deepEqual(behavior.outputs, [false, false, false, true]);
+      const cases = report.checkpoint.observed.testEvidence;
+      assert.equal(cases.length, 8);
+      let previous;
+      for (const [index, row] of cases.entries()) {
+        const expectedRow = index < 4 ? index : 7 - index;
+        assert.equal(row.case, index);
+        assert.equal(row.row, expectedRow);
+        assert.equal(row.behaviorDigest, behaviorDigest(behavior));
+        assert.deepEqual(row.inputs, {
+          a: Boolean(expectedRow & 2),
+          b: Boolean(expectedRow & 1),
+        });
+        const trace = validateSettledTrace(
+          row.trace,
+          behavior,
+          expectedRow,
+          true,
+        );
+        assert.deepEqual(row.outputs, {
+          output: trace.samples.at(-1).observed,
+        });
+        assert.equal(row.elapsedTicks, trace.samples.at(-1).elapsedTicks);
+        if (previous !== undefined)
+          assert.equal(row.tick - row.elapsedTicks, previous);
+        previous = row.tick;
+      }
+      finishes.add(cases.at(-1).tick);
+      assert.deepEqual(
+        report.checkpoint.observed.testInputs,
+        [],
+        "Successful truth trial leaves no pending input journal",
+      );
+    }
+    assert.ok(
+      finishes.size >= 2,
+      "Distinct actual truth trials before and after saved-server restart reach SQLite",
+    );
+  }
   const catalogEvidence = [];
   for (const template of ["or-gate", "not-gate"]) {
     const row = db
