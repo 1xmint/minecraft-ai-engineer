@@ -207,6 +207,25 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
+    @GameTest public void settledTruthTraceRequiresEveryStableTickAndAcceptedIntent(GameTestHelper helper) {
+        var behavior = new TruthTableSpec(java.util.List.of("a","b"), java.util.List.of(false,false,false,true), 2);
+        var good = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=good.horizon();tick++)good.sample(tick,tick>=2);
+        helper.assertTrue(good.passed() && SettledTrace.read(good.json(),behavior).passed(),"Complete accepted trace replays");
+        var bad = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=bad.horizon();tick++)bad.sample(tick,tick!=5);
+        helper.assertTrue(!bad.passed() && bad.verdict().equals("failed"),"One transient wrong output fails despite correct endpoint");
+        var gap = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=gap.horizon();tick++)if(tick!=5)gap.sample(tick,true);
+        helper.assertTrue(!gap.passed() && gap.verdict().equals("inconclusive"),"Missing ticks cannot prove stability");
+        var forged=gap.json();forged.addProperty("verdict","passed");
+        reject(helper,()->SettledTrace.read(forged,behavior),"Forged verdict rejects");
+        var different=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,false),2);
+        reject(helper,()->SettledTrace.read(good.json(),different),"Trace binds independent accepted intent");
+        reject(helper,()->good.sample(10,true),"Duplicate samples reject");
+        helper.succeed();
+    }
+
     @GameTest public void truthTableBehaviorIsCompleteIndependentAndImmutable(GameTestHelper helper) {
         var names=new java.util.ArrayList<>(java.util.List.of("a","b"));var outputs=new java.util.ArrayList<>(java.util.List.of(false,false,false,true));
         var truth=new TruthTableSpec(names,outputs,20);names.set(0,"changed");outputs.set(3,false);

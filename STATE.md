@@ -239,3 +239,16 @@ revision1 and byte format remain unchanged. TypeScript no-emit check passed.
 Model proposal schemas intentionally remain buffer-only until server runtime
 and replayable per-tick evidence support truth tables. Java server/client compile
 passed on0d6004d. Tests remain in GitHub CI, not run locally.
+
+T3 evidence implementation: Java SettledTrace and companion validateSettledTrace
+replay bounded every-tick observations against the accepted truth-table digest,
+row, settling bound and fixed8-tick stability window. Incorrect transient outputs
+fail even with a correct endpoint; gaps are inconclusive; forged summaries, row
+substitution, duplicate ticks and altered accepted intent reject. Added Java native
+proof and companion rejection tests; neither is a claim of actual AND operation.
+Java server/client compilation and TypeScript no-emit check passed locally; tests
+run only on CI. Prior source3f3b40e CI40898095932 has Companion, Windows and Fabric
+passing while native client/multiplayer jobs were still running when checked.
+Next integrate typed behavior/ports in GeneratedBlueprint and GeneratedPlanning,
+wire settled traces into FunctionalTrial and stored evidence, then enable model
+schemas and drive actual AND/handoff/recovery acceptance before shipping PR22.
