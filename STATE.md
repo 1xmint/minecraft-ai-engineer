@@ -7,8 +7,8 @@ green CI substitutes for the full objective.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 Branch: **phase/13-generated-logic**, draft **PR22**. Main includes PR21,
 mergee3f26d88f40270854005a339cba67e17d157eb9a. Latest fully verified Phase13 source:
-**52b12967f59f051b81348948bcb5d76926c6c04f**, all five required checks passed
-**CI40899770666**. Later adapter/confirmation/proof changes require new CI.
+**18ff3d122b1f8c88ed97edf60bc61d33c9a863f1**, all five required checks passed
+**CI40903991573**. Later live-route wiring requires new CI.
 Read actual git status, PR and workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -212,3 +212,27 @@ rejection tests are CI-only. Workflows, CLI, provenance allowlist and live nativ
 scenario are NOT wired yet, so do not dispatch it or claim fresh inference. Next
 finish the expanded deterministic command flow, wire the complete bounded live
 path and prove setup before spending exactly two new exclusive stage receipts.
+
+Boolean live-path wiring prepared after18ff3d1: explicit boolean workflow/response
+choice, MCE_BOOLEAN_ACCEPTANCE flag, local responder scenario selection, fixed
+provenance allowlist and per-stage transport all bind the new scenario. Native
+LIVE_BOOLEAN path skips unrelated buffer inference/Bob buffer choreography, checks
+exact independently requested AND summary before confirming, uses actual returned
+geometry (not parallel reference coordinates), seeds its supports/lever originals,
+tests, restarts the companion, revokes during another trial, and performs actual
+third-boot resume/retest/source/world/screenshot checks. Boolean transport requires
+its own four completion markers. SQLite replays the exact accepted blueprint and
+requires two planning starts and two distinct successful trials. This is newly
+wired, NOT a live success claim. No fresh SDK calls have been made. Scoped client
+Java/TypeScript compilation and script syntax passed; required CI and manual setup
+proof must precede the two new exclusive SDK receipts. Local tests remain forbidden.
+
+Verified expanded command flow: source18ff3d1 / CI40903991573 passed all5 gates.
+Inspected task work/truth-confirm-proof-40903991573: native truth-table trials
+passed at15:47:00 and15:48:38; truth-interrupted.done and truth-recovery.done both
+passed. Real HTTP/SQLite design -> separate confirm -> no-edit preview -> explicit
+build -> actual tests -> revoked interruption -> actual third boot -> fresh resume/
+retest succeeded. SQLite replay required exactly two planning starts. Replies were
+explicit hand-authored fixtures, not fresh model calls. The prior7f1e6e7 budget
+failure remains recorded; the CI-only12/minute setting fixed that synthetic burst.
+New Boolean live-route changes now need their own regression run before dispatch.

@@ -126,6 +126,7 @@ test("only one bounded unexpired artifact from the verified run and SHA is reada
 for (const scenario of [
   "generated-buffer-owner-confirmation-v1",
   "structural-buffer-owner-confirmation-v1",
+  "generated-boolean-owner-confirmation-v1",
 ]) {
   test(`generated stage artifacts retain exact owner/run/source provenance: ${scenario}`, () => {
     const generated = {

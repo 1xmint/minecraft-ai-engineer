@@ -73,7 +73,10 @@ try {
       .blocks.some((block) => block.state.startsWith("minecraft:repeater")),
     "Restart inspection must contain the real built repeater",
   );
-  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+  if (
+    process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
+    process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+  ) {
     assert.equal(
       readFileSync(`${coordination}/truth-interrupted.done`, "utf8").trim(),
       "passed",

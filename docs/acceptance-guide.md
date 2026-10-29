@@ -176,3 +176,42 @@ initial reference is hand-authored; this proves its live model modification, not
 fresh initial generation, general engineering, human mouse use or Mojang sign-in.
 The earlier failed run is still a failure; source-grounded direction guidance and
 one new bounded run produced the successful result above.
+
+## Complete Boolean design (development, live proof pending)
+
+The explicit `boolean` scenario requests a new AND design with named lever inputs
+`a` and `b`, one lamp output, and a20-game-tick settling bound. It uses a fresh
+6x3x4 workspace at400,100,0 and empty synthetic project memory. Existing buffer
+and structural scenarios and their consumed receipts remain separate.
+
+After required regression checks pass on the exact clean source branch, dispatch
+`live-acceptance.yml` with `scenario=boolean`. Validate the actual first request
+and its run/source/owner/stage binding before invoking the local responder. Each
+command is one explicit bounded model call, only after its request artifact exists:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior --scenario boolean
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry --scenario boolean
+```
+
+The native owner checks the entire independently requested table before confirming
+geometry. A proposal is not building authority. The flow uses the actual returned
+layout, seeds its supports and two differently powered levers as an explicitly
+synthetic existing player section, then delegates the remaining devices. It tests
+all rows forward/reverse using every-tick stability, restarts the actual companion,
+interrupts a second trial by revoking a grant, and boots the saved server again.
+Fresh owner resume must restore both original inputs; a new trial must pass.
+
+Retain and inspect both accepted receipts, `truth-accepted-source`,
+`truth-interrupted.done`, `truth-recovery.done`, `live-boolean-model.done`,
+`live-boolean-recovery.done` and screenshot
+`engineer-live-boolean-restarted-build`. SQLite proof requires exactly two planning
+starts and distinct completed trials before/after restart. Missing ticks are
+inconclusive; a correct geometry or final reading alone cannot pass. Preserve
+failed raw replies unchanged and never retry consumed started receipts.
+
+This path is newly wired and has no fresh signed-in proof yet. Existing hand-authored
+AND physics/recovery evidence is not model inference. Synthetic support/lever
+seeding is not human mouse placement, Mojang authentication or the full Phase1
+player-built functional-component experience. Credentials remain local; no paid
+API fallback or automatic model retry is used.

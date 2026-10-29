@@ -39,6 +39,7 @@ export function requireAcceptanceRun(
       "signal-lamp-client-handoff-v1",
       "generated-buffer-owner-confirmation-v1",
       "structural-buffer-owner-confirmation-v1",
+      "generated-boolean-owner-confirmation-v1",
     ]).has(expected.scenario) ||
     (kind !== "request" && kind !== "response")
   )
