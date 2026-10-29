@@ -1,3 +1,11 @@
+import { randomUUID } from "node:crypto";
+import { actorId } from "./gateway-types.js";
+import {
+  validateProjectNote,
+  readProjectNote,
+  type ProjectNote,
+  type ProjectKnowledge,
+} from "./project-knowledge.js";
 import type { DatabaseSync } from "node:sqlite";
 import { validateInventory, type InventorySnapshot } from "./inventory.js";
 import {
@@ -57,6 +65,9 @@ export class GatewayMemory {
   constructor(private readonly db: DatabaseSync) {
     db.exec(`
       INSERT OR IGNORE INTO metadata VALUES('gateway_schema_version','1');
+      INSERT OR IGNORE INTO metadata VALUES('project_knowledge_schema_version','1');
+      CREATE TABLE IF NOT EXISTS gateway_knowledge_revisions(server_id TEXT NOT NULL,project_id TEXT NOT NULL,revision INTEGER NOT NULL CHECK(revision>=0),PRIMARY KEY(server_id,project_id));
+      CREATE TABLE IF NOT EXISTS gateway_project_notes(server_id TEXT NOT NULL,project_id TEXT NOT NULL,note_revision INTEGER NOT NULL CHECK(note_revision>0),document TEXT NOT NULL,PRIMARY KEY(server_id,project_id,note_revision));
       CREATE TABLE IF NOT EXISTS gateway_servers(server_id TEXT PRIMARY KEY,current_epoch TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS gateway_epochs(server_id TEXT NOT NULL,epoch TEXT NOT NULL,retired INTEGER NOT NULL,PRIMARY KEY(server_id,epoch));
       CREATE TABLE IF NOT EXISTS gateway_boots(server_id TEXT PRIMARY KEY,generation INTEGER NOT NULL,epoch TEXT NOT NULL);
@@ -75,6 +86,127 @@ export class GatewayMemory {
       throw new Error(
         "Unsupported gateway database version; preserve the server data before upgrading.",
       );
+    const knowledgeVersion = db
+      .prepare(
+        "SELECT value FROM metadata WHERE key='project_knowledge_schema_version'",
+      )
+      .get() as { value: string };
+    if (knowledgeVersion.value !== "1")
+      throw new Error(
+        "Unsupported project knowledge database version; preserve the server data before upgrading.",
+      );
+  }
+  private noteRevision(context: GatewayContext): number {
+    const row = this.db
+      .prepare(
+        "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
+      )
+      .get(context.serverId, context.projectId) as
+      { revision: number } | undefined;
+    return integer(
+      row?.revision ?? 0,
+      "project knowledge revision",
+      0,
+      Number.MAX_SAFE_INTEGER,
+    );
+  }
+  /** Append-only literal project knowledge; this never changes design/evidence or grants a lease. */
+  rememberNote(
+    context: GatewayContext,
+    value: unknown,
+    expectedRevision: number,
+  ): ProjectNote {
+    const input = validateProjectNote(value);
+    integer(
+      expectedRevision,
+      "expected knowledge revision",
+      0,
+      Number.MAX_SAFE_INTEGER - 1,
+    );
+    if (!context.connectionId)
+      throw new RequestError(
+        "Project notes require a current connected owner.",
+        403,
+      );
+    actorId(context.connectionId);
+    return this.atomic(() => {
+      const project = this.assertCurrent(context, "edit");
+      if (
+        project.members.find((member) => member.actorId === context.actorId)
+          ?.role !== "owner"
+      )
+        throw new RequestError(
+          "Only the project owner may author shared project notes.",
+          403,
+        );
+      if (this.knowledge(context).revision !== expectedRevision)
+        throw new RequestError(
+          "Project knowledge changed; read it before authoring another note.",
+          409,
+        );
+      this.claim(context, "project-note");
+      const note = readProjectNote({
+        ...input,
+        id: randomUUID(),
+        revision: expectedRevision + 1,
+        authorId: context.actorId,
+        createdAt: Date.now(),
+        source: "owner-authored",
+      });
+      this.db
+        .prepare("INSERT INTO gateway_project_notes VALUES(?,?,?,?)")
+        .run(
+          context.serverId,
+          context.projectId,
+          note.revision,
+          JSON.stringify(note),
+        );
+      this.db
+        .prepare(
+          "INSERT INTO gateway_knowledge_revisions VALUES(?,?,?) ON CONFLICT(server_id,project_id) DO UPDATE SET revision=excluded.revision",
+        )
+        .run(context.serverId, context.projectId, note.revision);
+      this.audit(context.serverId, context.projectId, "project-note", {
+        context,
+        note,
+      });
+      return note;
+    });
+  }
+  knowledge(context: GatewayContext, limit = 32): ProjectKnowledge {
+    this.assertCurrent(context, "read");
+    integer(limit, "project-note page size", 1, 32);
+    const revision = this.noteRevision(context);
+    const rows = this.db
+      .prepare(
+        "SELECT note_revision,document FROM gateway_project_notes WHERE server_id=? AND project_id=? ORDER BY note_revision DESC LIMIT ?",
+      )
+      .all(context.serverId, context.projectId, limit) as {
+      note_revision: number;
+      document: string;
+    }[];
+    const notes = rows
+      .map((row, index) => {
+        const note = readProjectNote(JSON.parse(row.document));
+        if (
+          note.revision !== row.note_revision ||
+          note.revision !== revision - index
+        )
+          throw new RequestError(
+            "Stored project-note revision is inconsistent.",
+            409,
+          );
+        return note;
+      })
+      .reverse();
+    if (notes.length !== Math.min(revision, limit))
+      throw new RequestError("Stored project-note history is incomplete.", 409);
+    return Object.freeze({
+      schemaVersion: 1,
+      revision,
+      notes: Object.freeze(notes),
+      hasEarlier: revision > notes.length,
+    });
   }
   private atomic<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

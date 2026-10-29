@@ -9,8 +9,8 @@ Branch **phase/14-project-conversation**, based on merged **PR22** commit
 **bb4e81ff238293ffbce92e94c3a52fc275396572**. Final Phase13 source
 **a3a3fcf9f90ba5ce9529b3460a3e7cb6a425de26** passed all5 **CI40913824351**;
 whole actual signed-in Boolean **run40910817937** passed on d3c8486. Phase13 is
-shipped in source, not a complete-product release. Phase14 implementation has
-not started; its written outcomes/tasks below are the next work.
+shipped in source, not a complete-product release. Phase14 note codec/storage foundation is implemented; HTTP/native note commands,
+conversation and context integration remain unfinished. Required checks are next.
 Read actual git status, PR and live workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -260,3 +260,20 @@ is untrusted data, never executable code. Current execution is creative, not sur
    multiple coordinated independent builders.
 6. Package the completed multiplayer release and setup instructions; published
    alpha remains the older single-player reference.
+
+Phase14 C2 foundation: strict literal note codec (goal/constraint/preference/
+decision), immutable server-assigned identity/authorship/revision and append-only
+SQLite tables, separate from accepted blueprint revisions and observations. Only
+a current connected owner can append; authorized members can read bounded pages.
+Optimistic revision + existing replay ledger + note append + version + audit share
+one transaction. Stored row/counter inconsistency rejects reads and further
+appends. Older records remain stored beyond the32-note read bound. Planning
+context is deliberately unchanged until versioned stale-reasoning fences exist.
+
+Tests written before implementation cover forged metadata, foreign-project and
+editor denial, stale/replayed append, rollback including request consumption,
+service/epoch/auth changes, corrupt stored identity and bounded reads. No local
+tests run; TypeScript no-emit passed. One GPT-6-Luna/high focused auth boundary
+check (required by AGENTS for auth-sensitive changes) reported no blocking findings;
+no broad review cycle. HTTP/native routes and free-form discussion are NOT built
+yet; do not claim an in-game note/conversation feature from this foundation.
