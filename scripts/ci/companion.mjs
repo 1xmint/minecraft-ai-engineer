@@ -46,6 +46,9 @@ const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
   token: config.token,
   store,
+  // Fixed synthetic stages can burst across several projects in this suite.
+  // This provider cannot invoke the SDK; production retains its default4/minute.
+  actorPlansPerMinute: 12,
   provider: {
     async proposeBehavior(input) {
       if (input.request === truthRequest)

@@ -191,3 +191,24 @@ is untrusted data, never executable code. Current execution is creative, not sur
    multiple coordinated independent builders.
 6. Package the completed multiplayer release and setup instructions; published
    alpha remains the older single-player reference.
+
+2026-10-29 source7f1e6e7 / CI40902469058: Companion, Windows, integrated client
+and Fabric passed (all40 required native tests). Dedicated workflow FAILED after
+the new command-level AND trial passed at15:37:37 and its interruption marker
+passed: the following buffer confirmation correctly exhausted the production
+4-per-minute actor budget because the suite now adds two preceding Boolean calls.
+The third-boot truth recovery was not reached; never call this whole run green.
+Artifacts: work/truth-confirm-proof-40902469058. Fix only the guarded synthetic
+CI companion to actorPlansPerMinute12 for the fixed multi-scenario burst; it
+cannot call the SDK. Production defaults4/minute and24/hour are unchanged, and
+existing durable budget/replay rejection tests remain. Syntax check passed.
+
+Signed-in Boolean acceptance preparation: new data-only fixed scenario
+generated-boolean-owner-confirmation-v1 reconstructs exact AND inputs a/b, complete
+0001 table,20 settling ticks, anchor400,100,0 and6x3x4 workspace. It rejects buffer
+intent, OR substitutions, changed settling bounds and cross-scenario raw replies.
+Legacy buffer/structural scopes remain unchanged. TypeScript no-emit passed;
+rejection tests are CI-only. Workflows, CLI, provenance allowlist and live native
+scenario are NOT wired yet, so do not dispatch it or claim fresh inference. Next
+finish the expanded deterministic command flow, wire the complete bounded live
+path and prove setup before spending exactly two new exclusive stage receipts.
