@@ -70,6 +70,15 @@ from local responder JSON to the response workflow and enforce stage/scenario
 agreement there. Do not spend model quota before this handoff is present. Inspect
 terminal status/artifacts, publish the complete routing fix, then start a new run.
 
+Manual run40803884854 / source75df455 reached and published its behavior request,
+then failed immediately in wait-response. Retained artifacts:
+`work/live-structural-proof-40803884854`; no SDK call was made. The GitHub
+provenance validator still allowed only catalog/generated scenarios. Add only the
+fixed structural name, with request/response owner/SHA tests and unknown-scenario
+rejection. Keep all other workflow/run/actor/artifact checks. New source75df455
+regression CI40803612487 passed all five gates before this missing integration
+edge was found; those checks did not prove the manual path.
+
 Use `gh workflow run live-acceptance.yml --ref phase/12-live-structural-proof
 -f scenario=structural`. Once each corresponding artifact exists, run the local
 responder with explicit `--run ID --attempt N --sha SHA --model gpt-6-luna
