@@ -2,6 +2,10 @@ name: Publish validated acceptance response
 on:
   workflow_dispatch:
     inputs:
+      scenario:
+        type: choice
+        options: [catalog, generated, structural]
+        default: catalog
       stage:
         type: choice
         options: [catalog, behavior, geometry]
@@ -40,6 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MCE_ACCEPTANCE_STAGE: ${{ inputs.stage }}
+          MCE_STRUCTURAL_ACCEPTANCE: ${{ inputs.scenario == 'structural' && 'true' || 'false' }}
         run: node scripts/ci/live-transport.mjs publish-response
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

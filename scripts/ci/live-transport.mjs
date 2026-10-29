@@ -190,6 +190,14 @@ async function main() {
         readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"),
       ),
       inputs = event.inputs;
+    check(
+      inputs.scenario ===
+        (generated
+          ? process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+            ? "structural"
+            : "generated"
+          : "catalog"),
+    );
     const expected = envelope(
       inputs.request_run,
       inputs.request_attempt,

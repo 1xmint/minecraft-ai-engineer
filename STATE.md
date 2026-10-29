@@ -62,6 +62,14 @@ unexpected-inference marker appears. The corrected source passed TypeScript,
 client Java compile and script syntax; publish it and freeze its exact clean SHA
 for the new live run. Do not reuse the old run or any consumed receipt.
 
+Manual run40803355719 was started at corrected source7e18742 but is being stopped
+before any local SDK call: source inspection found the response workflow lacked
+the structural scenario input/env flag. The request path is fixed, but a real
+response would have been rejected by the publisher. Forward the explicit scenario
+from local responder JSON to the response workflow and enforce stage/scenario
+agreement there. Do not spend model quota before this handoff is present. Inspect
+terminal status/artifacts, publish the complete routing fix, then start a new run.
+
 Use `gh workflow run live-acceptance.yml --ref phase/12-live-structural-proof
 -f scenario=structural`. Once each corresponding artifact exists, run the local
 responder with explicit `--run ID --attempt N --sha SHA --model gpt-6-luna

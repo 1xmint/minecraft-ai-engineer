@@ -522,6 +522,7 @@ async function main() {
       source_sha: expected.sourceSha,
       result: JSON.stringify(response),
       stage,
+      scenario,
     },
   });
   const input = join(
