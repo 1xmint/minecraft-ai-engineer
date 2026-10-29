@@ -1,16 +1,15 @@
 # Now
 
 2026-10-29. Active goal: **complete all milestones**: the entire Phase1 engineering
-partner and all six Phase2 features. No catalog, buffer, screenshot, release or
-green CI substitutes for the full objective.
+partner and all six Phase2 features. A catalog, buffer, screenshot, release or
+green CI never substitutes for the full objective.
 
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch: **phase/13-generated-logic**, draft **PR22**. Main includes PR21,
-mergee3f26d88f40270854005a339cba67e17d157eb9a. Latest fully verified Phase13 source:
-**ee2745f573ccda24181d44e6159f66e38f089b88**, all five required checks passed
-**CI40905604442**. The first fresh Boolean geometry reply was rejected locally;
-its guidance fix requires new CI and one new bounded live attempt.
-Read actual git status, PR and workflow state before continuing.
+Branch **phase/13-generated-logic**, draft **PR22**; main includes PR21 mergee3f26d8.
+Latest fully checked source **d3c84865d4045e8c182224ee4c8ea7a1d2c44add** passed all5
+**CI40908760538** and the entire actual signed-in **Boolean run40910817937**.
+New recorded-reply replay/model-policy changes require final CI before shipping.
+Read actual git status, PR and live workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
 merging green PRs are authorized. No approval is pending. Tests run on GitHub,
@@ -18,89 +17,122 @@ never on his slow PC. Locally scoped compile/format/syntax only, one Gradle work
 No separately billed service or API key. Only the configured account-owning
 operator invokes AI. Keep project memory only in AGENTS.md and this file.
 
-## Outcomes for current slice: generated Boolean logic
+## Current slice: generated Boolean logic (T1/T2/T3)
 
-- T1: independently accept complete behavior for one to four named Boolean inputs,
-  without geometry defining its own specification. Proof: strict schema, exhaustive
-  rows, immutable data, matching Java/TS digest and rejection of malformed data.
-- T2: raw generated geometry binds each accepted input to a distinct actual lever
-  and the output to one lamp. Proof: unchanged preview, separate owner confirmation
-  and build, actual AND physics across every forward/reverse row. No catalog shape
-  substitution or geometry-only functional pass.
-- T3: every-game-tick settled evidence and safe input recovery. Proof: transient
-  wrong outputs fail, gaps are inconclusive, forged/reordered summaries reject;
-  revocation and saved-world restart retain originals without authority, fresh
-  owner resume restores them, and another actual trial passes.
+- T1: independently accepted complete Boolean intent, strict schema and stable
+  Java/TS identity. Preserve legacy buffer JSON/digests/exact-edge tests.
+- T2: raw geometry with actual distinct named levers/lamp, separate owner confirm,
+  no-edit preview and explicit build. Actual generated AND must work in Minecraft.
+- T3: every-tick settled evidence for every row forward/reverse; reject gaps,
+  transient errors and forged/reordered evidence. Preserve input originals across
+  revocation/restart without a lease; fresh owner resume and another trial prove
+  recovery. Geometry and a correct endpoint alone cannot pass.
 
-### Implemented and proven
+### Implemented contracts
 
-Behavior is a typed EngineeringBehavior union. Existing schema1 buffer JSON,
-`buffer-v1|RISING|FALLING` digests, revision1 metadata and exact-edge tests remain
-unchanged. New TruthTableSpec / truth-table.ts use exact schema2:
-`function=truth-table`, `inputs`, `outputs`, `settleGameTicks`.
-Inputs:1..4 unique `[a-z][a-z0-9_]{0,31}`, excluding reserved output. Outputs:
-exactly2^N strict Booleans, binary row order with first input most significant.
-Settling integer0..128; stable window fixed8. Digest SHA256 UTF8:
+EngineeringBehavior is buffer/TruthTableSpec. Schema1 buffers retain
+`buffer-v1|RISING|FALLING` digests and generatorRevision1. New exact schema2:
+function=truth-table, inputs, outputs, settleGameTicks. Inputs1..4 unique
+`[a-z][a-z0-9_]{0,31}`, excluding output; outputs exactly2^N strict Booleans,
+binary row order with first input most significant. Settling integer0..128;
+fixed8-tick stable window. Digest SHA256 UTF8
 `truth-v2|comma-joined-inputs|0/1-output-string|settle`.
 
-Generated Boolean metadata uses generatorRevision2 and the unchanged outer
-blueprint schema1. Raw geometry inputs:[{name,pos}] must match accepted name/order,
-with distinct actual levers and exactly one lamp. Both runtimes reconstruct all
-canonical metadata. GeneratedPlanning retains typed accepted intent; task identity
-includes its digest. Geometry/model output never grants world authority.
+Boolean blueprints keep outer schema1, generatorRevision2. Raw inputs:[{name,pos}]
+match accepted order/count and distinct actual levers; one lamp, no hidden ports.
+Both runtimes re-derive canonical metadata. GeneratedPlanning retains typed intent.
+FunctionalTrial samples tick0 through settle+8, all rows ascending then descending
+(including repeated last row). SettledTrace/companion replay bind row/digest/bound,
+samples, verdict and summaries; outer Java replay also binds input vector, case
+order and adjacent game-time boundaries. Existing per-input write-ahead restore,
+current authority and player-edit preservation remain. No persisted execution lease.
 
-FunctionalTrial has a separate settled truth-table runner; buffer exact timing is
-not weakened. Cases ascend then descend through every row, including repeated last
-row. Samples include activation tick0 through settle+8; output must match at settle
-and every tick thereafter. SettledTrace and companion replay validate accepted
-row/digest/bound, contiguous samples, verdict and output summary. Outer Java evidence
-also binds case order, observed input vector and adjacent game-time boundaries.
-Existing per-input write-ahead restoration, current authority and conflict checks
-remain in use. Saved evidence never resumes a test or grants a lease.
+Dedicated command-level deterministic proof18ff3d1 / all5 CI40903991573 passed:
+design -> separate confirm -> preview -> build -> tests -> revoked interruption ->
+actual third boot -> fresh resume/retest. Trials15:47:00 and15:48:38 UTC; both truth
+recovery markers passed and SQLite required two planning starts. Hand-authored raw
+AND reply, not inference. Artifacts work/truth-confirm-proof-40903991573.
+CI's guarded no-inference provider allows12 actor stages/minute for the expanded
+fixture burst; production4/minute and24/hour are unchanged. Earlier7f1e6e7 /
+CI40902469058 failed at that budget before the following buffer call; preserve failure.
 
-Shared `mod/src/main/resources/fixtures/generated-and.json` is a **hand-authored raw
-reference**, not model inference. Companion validates the exact bytes; native game
-tests prove all8 forward/reverse AND cases and reject OR intent for the same wiring.
-Source1063b64 / Fabric job123536420796 logged all39 required tests passed at15:13:02
-UTC. Its full CI40899001903 was later cancelled by a newer push; do not call the
-whole cancelled workflow successful. Artifacts: task work/logic-proof-40899001903.
+### Fresh signed-in result: whole run passed
 
-**Source52b1296 / CI40899770666 passed all five gates.** Inspected retained
-`work/truth-proof-40899770666`: actual production truth trials passed at15:22:06
-and15:23:46; coordination/truth-interrupted.done and truth-recovery.done both passed.
-Existing synthetic player section had two supports and differently powered levers
-(a ON, b OFF), excluded from the AI's nine placement entries. First trial restored
-both originals. Permission revocation interrupted a later trial with two journals
-and no lease. Actual third saved-server boot retained them; fresh owner resume and
-another actual trial passed. SQLite verifier replayed all8 cases against immutable
-accepted intent and required two distinct completion times. This is offline CI,
-not Mojang authentication or human mouse placement.
+Source **d3c8486**, all5 CI40908760538 (all40 required native tests). Entire actual
+**run40910817937 SUCCESS**. Behavior response **40911887391**, geometry response
+**40912161087** both accepted. Official SDK0.164.0 with ChatGPT sign-in: Luna behavior
+10795in/97out; Sol geometry12322in/1020out. Exact AND0001/a,b/settle20 and13 raw
+blocks, layout distinct from the hand-authored reference. No result repaired.
 
-### Latest changes requiring CI
+Actual native separate confirmation, no-edit preview, explicit build, all8 measured
+forward/reverse rows, actual companion restart4778->5851, permission revocation
+interrupting another trial, actual third saved-server boot, fresh owner resume,
+original a ON/b OFF restoration and another actual test passed. Trials16:30:43 and
+16:31:11 UTC. Both live-boolean markers and truth interruption/recovery markers
+passed; SQLite required exactly two planning starts and distinct completed trials.
+Synthetic existing section seeded its actual supports and levers, not human mouse
+placement. This does not prove Mojang authentication or full E4 player construction.
 
-Model behavior schema/config/prompt now supports complete Boolean intent alongside
-buffers. If no Boolean settling bound is requested, propose20 and explicitly explain
-that the owner must confirm this proposed test bound; never promise exact latency.
-Named geometry schema binds accepted names/count and rotated workspace bounds.
-Geometry adapter validates against the accepted behavior. All existing isolated
-subscription/tool restrictions remain. Both Boolean calls from the first live attempt are consumed (see below).
+Inspected artifacts: work/live-boolean-proof-40910817937. Inspected screenshot shows
+real stone/levers/repeaters/torches/lamp after restart; copied unchanged to
+`docs/images/boolean-restarted.png`. Both accepted digests match private receipts:
+behavior request4febf74810910fbe30d09649791fceb8cae65b0ed15fc7f5ff2d658f1f299075,
+result e9949d8b3350f5a4de5df234368392922dad6d8078e5fbab98ccc006c6cd8060;
+geometry request9b8034e843cfc17d03a4922d6cf91d1d4c4a7b74b7ac75ac583d262479fd7c9d,
+result2344abb47d868b3eb7c710f0fa75756e788dc1b785430fe4d2ccae67d51e9faa.
 
-Gateway proof covers separate Boolean proposal/geometry calls, immutable intent,
-nonce replay denial, untested preview and unchanged canonical revision. Native CI
-truth setup now goes through actual design/confirm commands and real HTTP/SQLite
-with a fixed, explicitly hand-authored reply, rather than direct native accept.
-Its verifier requires exactly two planning starts, so replay/recovery adds none.
-Additional Java evidence proofs reject swapped cases/inputs, forged timestamps,
-wrong output summaries and progress past an unfinished case. Protocol and mod guide
-describe truth tables. Scoped TypeScript/Java compilation and script syntax passed;
-new required checks and this expanded native flow are still pending.
+`tests/fixtures/live-boolean-and.json` retains exact successful proposal/raw geometry
+and separate model provenance. Ordinary CI now replays this instead of a parallel
+hand-authored reply. Synthetic existing lever/backing positions are derived from
+the actual accepted attachment states in both paths; no reference coordinates.
+Replay starts untested and actual native tests must establish behavior again.
+It is not fresh inference. The low-level hand-authored native reference stays an
+independent physics oracle. Final replay changes have not passed CI yet.
 
-Next: push latest adapter/confirmation changes, inspect all required CI and native
-artifacts; fix any failure without restarting solely for an observation timeout.
-Then establish an explicitly bounded fresh signed-in multi-input design acceptance
-if needed, ship PR22 only when proven, and continue the full roadmap below.
-Do not claim fresh Boolean model generation from fixtures or a complete product
-from this slice. The earlier structural receipts below are consumed.
+### Failed replies retained, not corrected
+
+First actual40906470078 on ee2745f (all5 CI40905604442) accepted behavior response
+40907741010, then locally rejected13-block Luna geometry for missing wall-lever
+backing; it also falsely called serial repeaters AND. No Boolean construction.
+The workflow was cancelled after terminal local rejection, not a timeout.
+Fixture `live-boolean-missing-support.json`; artifacts work/live-boolean-proof-40906470078.
+Behavior request6e110abd53481202a38e698f1ab705e0aa97662f26d8b0730e66f5e181fadd60,
+result971236c2e0fc8b6d88a589e5a7646368504ac770fced8398e1f5308dbe4b057f;
+geometry request33ae3c92f3ea8491b96f9130a6a592987b50f640be358cb912a92199993af0bd.
+Usage10787in/105out +11417in/434out. Precise attachment/Boolean physical guidance
+was added, grounded in the native AND oracle, without coordinates/template lock.
+
+Second actual40908843817 on d3c8486 accepted behavior40910202563, then locally
+rejected34-block Luna geometry: torch and lamp both at5,1,1. No construction;
+workflow cancelled after rejection. Fixture `live-boolean-overlap.json`; artifacts
+work/live-boolean-proof-40908843817. Behavior request1031bcf1cd41a3cb078586f0fd592fa85b8173761a3be4340e147591b872fff5,
+result b1a6328c1b70ff3d755214f594a1e038be823674625a759850ff9a4cc166a628;
+geometry request35bef5af8274593a01bcab53fa5af29a71fd1e4ad39ac5eafab305bb9af4bb89.
+Usage10792in/89out +11625in/884out. Root decision: stop repeating Luna geometry,
+use Sol for the next explicitly bounded geometry call; the successful run above
+used the same source/constraints, not a relaxed problem. Official model guidance
+and local account model metadata confirmed Sol availability before that call.
+
+All six Boolean calls across these three runs are consumed. Private started,
+failure and untrusted receipts stay under AppData/minecraft-ai-engineer/acceptance.
+Do not reuse started receipts, silently repair outputs or make more SDK calls for
+this slice. A cancelled failed attempt is never the successful whole run.
+
+### Current final changes and next action
+
+Model policy now keeps Luna for catalog/behavior/timed buffers and uses Sol medium
+for Boolean geometry. Explicit MCE_MODEL overrides all defaults; optional
+MCE_GEOMETRY_MODEL overrides geometry only. Doctor says catalog probe does not
+check Boolean-model availability. No silent retry/fallback. This matches the
+successful explicit stage-model choices; no new SDK calls needed to test policy.
+Added policy/replay tests and the second unchanged rejection fixture. Scoped
+TypeScript and client Java compilation passed; tests run only in GitHub.
+
+Next: push final model-policy/recorded-reply changes, inspect all required CI and
+native artifacts, then ship PR22 when green, without heavy review. Continue full
+roadmap; next user-facing slice should broaden free-form engineering followups
+and durable project goals/rationale (E1), alongside the remaining engineering scope.
+No complete-product claim. Shared-subscription eligibility remains unresolved.
 
 ## Shipped foundations and retained evidence
 
@@ -192,84 +224,3 @@ is untrusted data, never executable code. Current execution is creative, not sur
    multiple coordinated independent builders.
 6. Package the completed multiplayer release and setup instructions; published
    alpha remains the older single-player reference.
-
-2026-10-29 source7f1e6e7 / CI40902469058: Companion, Windows, integrated client
-and Fabric passed (all40 required native tests). Dedicated workflow FAILED after
-the new command-level AND trial passed at15:37:37 and its interruption marker
-passed: the following buffer confirmation correctly exhausted the production
-4-per-minute actor budget because the suite now adds two preceding Boolean calls.
-The third-boot truth recovery was not reached; never call this whole run green.
-Artifacts: work/truth-confirm-proof-40902469058. Fix only the guarded synthetic
-CI companion to actorPlansPerMinute12 for the fixed multi-scenario burst; it
-cannot call the SDK. Production defaults4/minute and24/hour are unchanged, and
-existing durable budget/replay rejection tests remain. Syntax check passed.
-
-Signed-in Boolean acceptance preparation: new data-only fixed scenario
-generated-boolean-owner-confirmation-v1 reconstructs exact AND inputs a/b, complete
-0001 table,20 settling ticks, anchor400,100,0 and6x3x4 workspace. It rejects buffer
-intent, OR substitutions, changed settling bounds and cross-scenario raw replies.
-Legacy buffer/structural scopes remain unchanged. TypeScript no-emit passed;
-rejection tests are CI-only. Workflows, CLI, provenance allowlist and live native
-scenario are NOT wired yet, so do not dispatch it or claim fresh inference. Next
-finish the expanded deterministic command flow, wire the complete bounded live
-path and prove setup before spending exactly two new exclusive stage receipts.
-
-Boolean live-path wiring prepared after18ff3d1: explicit boolean workflow/response
-choice, MCE_BOOLEAN_ACCEPTANCE flag, local responder scenario selection, fixed
-provenance allowlist and per-stage transport all bind the new scenario. Native
-LIVE_BOOLEAN path skips unrelated buffer inference/Bob buffer choreography, checks
-exact independently requested AND summary before confirming, uses actual returned
-geometry (not parallel reference coordinates), seeds its supports/lever originals,
-tests, restarts the companion, revokes during another trial, and performs actual
-third-boot resume/retest/source/world/screenshot checks. Boolean transport requires
-its own four completion markers. SQLite replays the exact accepted blueprint and
-requires two planning starts and two distinct successful trials. This is newly
-wired, NOT a live success claim. The first Boolean receipt pair is consumed; see the retained failed attempt below. Scoped client
-Java/TypeScript compilation and script syntax passed; required CI and manual setup
-proof must precede the two new exclusive SDK receipts. Local tests remain forbidden.
-
-Verified expanded command flow: source18ff3d1 / CI40903991573 passed all5 gates.
-Inspected task work/truth-confirm-proof-40903991573: native truth-table trials
-passed at15:47:00 and15:48:38; truth-interrupted.done and truth-recovery.done both
-passed. Real HTTP/SQLite design -> separate confirm -> no-edit preview -> explicit
-build -> actual tests -> revoked interruption -> actual third boot -> fresh resume/
-retest succeeded. SQLite replay required exactly two planning starts. Replies were
-explicit hand-authored fixtures, not fresh model calls. The prior7f1e6e7 budget
-failure remains recorded; the CI-only12/minute setting fixed that synthetic burst.
-New Boolean live-route changes now need their own regression run before dispatch.
-
-## First fresh signed-in Boolean attempt: rejected geometry, preserved
-
-Sourceee2745f passed all5 CI40905604442, including all40 native tests and new
-scenario provenance/fit checks. Actual manual40906470078 reached its exact fixed
-Boolean request with empty synthetic memory. ChatGPT sign-in was confirmed;
-o API key, paid fallback or credential upload. Two explicit SDK0.164.0/gpt-6-luna
-calls were made, and both exclusive started receipts are now consumed.
-
-Behavior request6e110abd53481202a38e698f1ab705e0aa97662f26d8b0730e66f5e181fadd60
-returned the exact AND0001 table/a,b/settle20; response workflow40907741010 passed
-and the native accepted marker matches result digest
-971236c2e0fc8b6d88a589e5a7646368504ac770fced8398e1f5308dbe4b057f.
-Usage10787in/105out. Native owner separately confirmed before geometry request.
-
-Geometry request33ae3c92f3ea8491b96f9130a6a592987b50f640be358cb912a92199993af0bd
-returned13 raw blocks (usage11417in/434out). Local validation rejected it for
-missing stone support: wall levers at0,1,0 and0,1,1 faced east but had no west
-backing at the same Y. It also falsely described serial repeaters as AND and left
-b without a causal signal path. Raw reply was not altered or published as valid,
-no Boolean blueprint/construction/timing/restart proof occurred. The manual run
-was explicitly cancelled after this terminal local rejection (not a timeout).
-Artifacts: work/live-boolean-proof-40906470078; raw/provenance negative fixture:
-tests/fixtures/live-boolean-missing-support.json. Private started/failure/untrusted
-receipts remain under AppData/minecraft-ai-engineer/acceptance. Do not retry either
-consumed receipt, silently repair the result or call the whole run successful.
-
-Root fix: geometry guidance now specifies exact backing coordinates for floor,
-ceiling and wall attachments, and explains Boolean physical composition grounded
-in passing native tests: serial repeaters relay a signal; common strong-powered
-stone combines OR; input torches plus common OR plus output inversion implement
-NOT(NOT a OR NOT b). No reference coordinates, template enforcement or easier
-behavior replaces raw generation. Added rejection proof for the unchanged failed
-reply. TypeScript scoped check passed; tests run only in CI. Next required checks,
-then one causally justified new two-stage live attempt on new exclusive receipts.
-No automatic retry loop or separately billed service. Full roadmap stays active.

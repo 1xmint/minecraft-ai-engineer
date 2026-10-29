@@ -177,7 +177,7 @@ fresh initial generation, general engineering, human mouse use or Mojang sign-in
 The earlier failed run is still a failure; source-grounded direction guidance and
 one new bounded run produced the successful result above.
 
-## Complete Boolean design (development, live proof pending)
+## Complete Boolean design (source build)
 
 The explicit `boolean` scenario requests a new AND design with named lever inputs
 `a` and `b`, one lamp output, and a20-game-tick settling bound. It uses a fresh
@@ -191,7 +191,7 @@ command is one explicit bounded model call, only after its request artifact exis
 
 ```text
 node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior --scenario boolean
-node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry --scenario boolean
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6.1-sol --stage geometry --scenario boolean
 ```
 
 The native owner checks the entire independently requested table before confirming
@@ -210,8 +210,8 @@ starts and distinct completed trials before/after restart. Missing ticks are
 inconclusive; a correct geometry or final reading alone cannot pass. Preserve
 failed raw replies unchanged and never retry consumed started receipts.
 
-This path is newly wired and has no fresh signed-in proof yet. Existing hand-authored
-AND physics/recovery evidence is not model inference. Synthetic support/lever
+The successful signed-in Boolean proof is recorded below. Existing hand-authored
+AND physics/recovery evidence remains separate from fresh model inference. Synthetic support/lever
 seeding is not human mouse placement, Mojang authentication or the full Phase1
 player-built functional-component experience. Credentials remain local; no paid
 API fallback or automatic model retry is used.
@@ -232,3 +232,31 @@ The unchanged failed reply and usage are retained in
 precise attachment rules and native-proven Boolean composition. Regression checks
 and a new bounded receipt pair must establish whether that guidance produces a
 working model design. A passing hand-authored AND remains separate evidence.
+
+### Second Luna reply rejected; Sol geometry passed
+
+Source `d3c8486` passed all five checks in
+[CI40908760538](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40908760538).
+The second Luna attempt40908843817 returned a torch and lamp at the same position;
+local validation rejected it before construction. Its unchanged raw reply is
+`tests/fixtures/live-boolean-overlap.json`; both receipts are consumed. The run was
+cancelled after that rejection. No failed reply was silently repaired.
+
+The full [signed-in Boolean run40910817937](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40910817937)
+then passed on the same source and constraints. Behavior response40911887391 used
+Luna; geometry response40912161087 used Sol. The actual13-block layout differs from
+the hand-authored reference. Native confirmation, preview without edits, explicit
+build, all8 forward/reverse cases, companion restart4778->5851, revoked interruption,
+actual saved-server restart, fresh owner restoration and a second trial all passed.
+Trials completed at16:30:43 and16:31:11. Both accepted request/result digests match
+the exclusive local receipts. The inspected screenshot shows real blocks:
+
+![Actual model-generated AND after restart](images/boolean-restarted.png)
+
+`tests/fixtures/live-boolean-and.json` retains the exact successful proposal/raw
+geometry and separate model provenance. Ordinary CI replays that data, starting
+untested and deriving the synthetic existing lever/backing section from its real
+ports. Actual tests must establish behavior again; replay is not fresh inference.
+The bounded result does not prove general engineering, human mouse placement or
+Mojang authentication. All six Boolean calls across the three attempts are consumed.
+Do not make further calls or reuse their exclusive started receipts for this slice.

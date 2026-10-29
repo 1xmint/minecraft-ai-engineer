@@ -10,7 +10,7 @@ import {
   makeGeneratedBlueprint,
   validateGeneratedBlueprint,
 } from "../companion/src/generated.js";
-import { plannerConfig } from "../companion/src/provider.js";
+import { plannerConfig, plannerModel } from "../companion/src/provider.js";
 import type { DesignRequest } from "../companion/src/types.js";
 
 const input: DesignRequest = {
@@ -537,4 +537,85 @@ test("unaltered first live Boolean reply rejects before preview because wall lev
       { x: 0, y: 1, z: 1 },
     ],
   );
+});
+
+test("model policy reserves stronger spatial reasoning for Boolean geometry and honors explicit choices", () => {
+  assert.equal(plannerModel("catalog"), "gpt-6-luna");
+  assert.equal(plannerModel("behavior"), "gpt-6-luna");
+  assert.equal(plannerModel("geometry", {}, "buffer"), "gpt-6-luna");
+  assert.equal(plannerModel("geometry", {}, "truth-table"), "gpt-6.1-sol");
+  assert.equal(
+    plannerModel("geometry", { model: "chosen-model" }, "truth-table"),
+    "chosen-model",
+  );
+  assert.equal(
+    plannerModel(
+      "geometry",
+      { model: "chosen-model", geometryModel: "spatial-model" },
+      "truth-table",
+    ),
+    "spatial-model",
+  );
+  assert.equal(
+    plannerModel("behavior", {
+      model: "chosen-model",
+      geometryModel: "spatial-model",
+    }),
+    "chosen-model",
+  );
+});
+test("recorded Sol AND reply stays untested on replay and retains actual independent behavior", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL("../../tests/fixtures/live-boolean-and.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+    recorded.geometry,
+    recorded.proposal.behavior,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(recorded.provenance.model, "gpt-6.1-sol");
+  assert.deepEqual(
+    validateGeneratedBlueprint(blueprint).behavior,
+    recorded.proposal.behavior,
+  );
+  assert.deepEqual(
+    blueprint.ports.map((p) => p.name),
+    ["a", "b", "output"],
+  );
+});
+test("second unchanged Luna reply rejects overlapping torch and lamp positions", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-boolean-overlap.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  assert.throws(
+    () => validateGeneratedGeometry(recorded.geometry, behavior),
+    /duplicate generated block position/i,
+  );
+  const colliding = recorded.geometry.blocks.filter(
+    (b: { pos: { x: number; y: number; z: number } }) =>
+      b.pos.x === 5 && b.pos.y === 1 && b.pos.z === 1,
+  );
+  assert.equal(colliding.length, 2);
+  assert.equal(
+    colliding[0].state,
+    "minecraft:redstone_wall_torch[facing=west,lit=false]",
+  );
+  assert.equal(colliding[1].state, "minecraft:redstone_lamp[lit=false]");
 });

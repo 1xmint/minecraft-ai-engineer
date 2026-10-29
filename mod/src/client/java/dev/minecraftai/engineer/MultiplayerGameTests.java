@@ -746,23 +746,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String confirmation=confirmationNonce();
         MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Generated preview accepted",LIVE_BOOLEAN?900_000:20_000);
         MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"No current behavior proposal");
+        var existingSection=new java.util.HashSet<BlockPos>();
         server.runOnServer(s->{
             var project=session(s,"Alice");check(GeneratedBlueprint.behavior(project.blueprint) instanceof TruthTableSpec,"Separately confirmed behavior reaches native generated Boolean preview");
             check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Raw AND preview grants no world execution or verification");
             check(project.blueprint.blocks().stream().allMatch(b->project.level().getBlockState(b.pos()).isAir()),"Confirmed Boolean geometry does not edit the world before build");
-            // Synthetic existing player section: supports and two differently powered levers.
-            if(LIVE_BOOLEAN) {
-                // The actual reply may use a different valid layout: seed its real supports, never a parallel fixture.
-                for(var block:project.blueprint.blocks())if(block.state().is(Blocks.STONE))project.level().setBlockAndUpdate(block.pos(),block.state());
-            } else for(BlockPos pos:java.util.List.of(new BlockPos(403,101,0),new BlockPos(400,101,3)))project.level().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());
+            // Derive the synthetic existing section from each actual accepted lever attachment.
             for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input()) {
                 var planned=project.blueprint.blocks().stream().filter(b->b.pos().equals(port.pos())).findFirst().orElseThrow();
+                var state=planned.state();var face=state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE);
+                BlockPos backing=switch(face) {
+                    case FLOOR->port.pos().below();case CEILING->port.pos().above();
+                    case WALL->port.pos().relative(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING).getOpposite());
+                };
+                var support=project.blueprint.blocks().stream().filter(b->b.pos().equals(backing) && b.state().is(Blocks.STONE)).findFirst().orElseThrow();
+                project.level().setBlockAndUpdate(backing,support.state());existingSection.add(backing);
                 project.level().setBlockAndUpdate(port.pos(),planned.state().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,port.name().equals("a")));
+                existingSection.add(port.pos());
             }
             write("truth-project",project.projectId.toString());write("truth-accepted-source",project.blueprint.source().toString());
         });
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
-        server.runOnServer(s->{var project=session(s,"Alice");long expected=LIVE_BOOLEAN?project.blueprint.blocks().stream().filter(b->!b.state().is(Blocks.STONE) && !b.state().is(Blocks.LEVER)).count():9;
+        server.runOnServer(s->{var project=session(s,"Alice");long expected=project.blueprint.blocks().size()-existingSection.size();
             check(project.journal.size()==expected,"AI remainder excludes the existing synthetic player section, using the actual accepted layout");});
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-truth-table:"),30_000);assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");FunctionalTrial.validateGeneratedEvidence(project.trial.evidence(),GeneratedBlueprint.behavior(project.blueprint),true);assertTruthInputs(project);check(!project.hasPendingTest() && project.delegation==null,"Truth pass restores all originals and releases authority");});

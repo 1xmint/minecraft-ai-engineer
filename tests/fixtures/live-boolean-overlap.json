@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "kind": "rejected-live-model-geometry",
+  "sourceSha": "d3c84865d4045e8c182224ee4c8ea7a1d2c44add",
+  "requestRun": "40908843817",
+  "behaviorResponseRun": "40910202563",
+  "geometryRequestDigest": "35bef5af8274593a01bcab53fa5af29a71fd1e4ad39ac5eafab305bb9af4bb89",
+  "model": "gpt-6-luna",
+  "sdkVersion": "0.164.0",
+  "usage": {
+    "input_tokens": 11625,
+    "cached_input_tokens": 0,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 884,
+    "reasoning_output_tokens": 0
+  },
+  "localValidation": "Duplicate generated block position.",
+  "geometry": {
+    "name": "Two-input AND circuit",
+    "explanation": "Two inverted lever paths feed a common stone through repeaters. A wall torch on that common stone produces AND; the lamp sits above the torch.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 3
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 3
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_wall_torch[facing=south,lit=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 3
+        },
+        "state": "minecraft:redstone_wall_torch[facing=north,lit=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:repeater[delay=4,facing=east,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:repeater[delay=4,facing=east,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:redstone_wall_torch[facing=west,lit=false]"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "output": {
+      "x": 5,
+      "y": 1,
+      "z": 1
+    },
+    "inputs": [
+      {
+        "name": "a",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        }
+      },
+      {
+        "name": "b",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 3
+        }
+      }
+    ]
+  }
+}

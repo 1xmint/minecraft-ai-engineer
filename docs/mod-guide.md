@@ -373,8 +373,10 @@ a fresh test.
 
 Dedicated CI has proved this runner with hand-authored raw AND geometry, including
 permission revocation, saved-world restart and different original lever states.
-This proves that bounded fixture, not fresh model-generated Boolean design or
-arbitrary electrical/mechanical engineering. The model can propose invalid or
+A separate signed-in run40910817937 also passed with a new Sol-generated13-block
+AND layout, actual companion/game restarts and both original input states restored.
+Ordinary CI replays that exact reply without fresh inference. This remains a
+bounded Boolean proof, not arbitrary electrical/mechanical engineering. The model can propose invalid or
 nonfunctional wiring; validation and actual Minecraft tests still decide whether
 it works. Execution remains creative placement, with optional bounds overlays.
 

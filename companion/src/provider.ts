@@ -95,6 +95,24 @@ export const PLAN_SCHEMA = {
 // Template selection is focused classification; use the efficient Codex model
 // rather than inheriting a potentially expensive account default.
 export const DEFAULT_PLANNER_MODEL = "gpt-6-luna";
+export const DEFAULT_BOOLEAN_GEOMETRY_MODEL = "gpt-6.1-sol";
+/** Preserve explicit choices; use the stronger model only for Boolean spatial synthesis. */
+export function plannerModel(
+  purpose: "catalog" | "behavior" | "geometry",
+  options: { model?: string; geometryModel?: string } = {},
+  generatedFunction?: "buffer" | "truth-table",
+): string {
+  if (purpose === "geometry")
+    return (
+      options.geometryModel ??
+      options.model ??
+      (generatedFunction === "truth-table"
+        ? DEFAULT_BOOLEAN_GEOMETRY_MODEL
+        : DEFAULT_PLANNER_MODEL)
+    );
+  return options.model ?? DEFAULT_PLANNER_MODEL;
+}
+
 export function validatePlan(value: unknown): Plan {
   const v = object(value);
   if (
@@ -154,6 +172,7 @@ export class CodexPlanningProvider implements PlanningProvider {
     private readonly options: {
       configDir: string;
       model?: string;
+      geometryModel?: string;
       timeoutMs?: number;
       onUntrustedResult?: (value: unknown) => Promise<void>;
     },
@@ -198,7 +217,13 @@ export class CodexPlanningProvider implements PlanningProvider {
         : "Rising and falling lamp latency must satisfy the frozen accepted behavior, including the lamp off delay.";
     const prompt = `Generate genuine raw circuit coordinates, not a catalog template, for the separately accepted observable behavior. Return relative positions and vanilla block states, ${portsDescription}. The output schema derives exact coordinate ranges and maximum block count from this delegated workspace and rotation. Every block and port must obey those ranges. Use only the exact minecraft:-prefixed state strings enumerated in the schema. Available blocks: stone, lever, repeater, redstone_lamp, redstone_wall_torch. Every lever/repeater/torch needs its explicit stone backing. State all lever face/facing/powered=false, repeater delay1..4/facing/locked=false/powered=false, lamp lit=false, wall torch facing/lit properties. Repeaters read from their facing side and output opposite it: a west-facing repeater reads the neighbor at x-1 and powers the neighbor at x+1. Each repeater adds 2 times its delay in game ticks per edge. A lamp lights immediately when powered and takes 4 game ticks to turn off after losing power. Use no commands, entities, inventories, dust or other blocks. The server builds stone supports before devices and derives materials, stages and all tests. Respect the delegated size. No IDs, expected tests, timings or verification fields belong in geometry. ${contractDescription}\nTRUSTED_ACCEPTED_BEHAVIOR_JSON=${JSON.stringify(behavior)}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
     return validateGeneratedGeometry(
-      await this.run(prompt, outputSchema, signal, "geometry"),
+      await this.run(
+        prompt,
+        outputSchema,
+        signal,
+        "geometry",
+        behavior.function,
+      ),
       behavior,
     );
   }
@@ -207,6 +232,7 @@ export class CodexPlanningProvider implements PlanningProvider {
     outputSchema: unknown,
     externalSignal: AbortSignal,
     purpose: "catalog" | "behavior" | "geometry",
+    generatedFunction?: "buffer" | "truth-table",
   ): Promise<unknown> {
     this.lastUsage = null;
     this.lastDiagnostic = "starting";
@@ -228,7 +254,7 @@ export class CodexPlanningProvider implements PlanningProvider {
         env: plannerEnvironment(launcher.binary, directory),
       });
       const thread = codex.startThread({
-        model: this.options.model ?? DEFAULT_PLANNER_MODEL,
+        model: plannerModel(purpose, this.options, generatedFunction),
         workingDirectory: directory,
         skipGitRepoCheck: true,
         sandboxMode: "read-only",

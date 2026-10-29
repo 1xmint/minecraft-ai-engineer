@@ -29,18 +29,17 @@ const structuralFixture = JSON.parse(
     "utf8",
   ),
 );
-// Hand-authored Boolean fixture; this branch never invokes signed-in inference.
+// Fixed request; recorded data below is replayed without signed-in inference.
 const truthRequest =
   "CI generated AND: named inputs a and b; settle within 20 game ticks.";
+// Exact successful signed-in Boolean reply; deterministic replay never invokes inference.
 const truthFixture = JSON.parse(
   readFileSync(
-    new URL(
-      "../../mod/src/main/resources/fixtures/generated-and.json",
-      import.meta.url,
-    ),
+    new URL("../../tests/fixtures/live-boolean-and.json", import.meta.url),
     "utf8",
   ),
 );
+
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
@@ -52,11 +51,7 @@ const server = createCompanionServer({
   provider: {
     async proposeBehavior(input) {
       if (input.request === truthRequest)
-        return {
-          behavior: structuredClone(truthFixture.behavior),
-          explanation:
-            "Confirm complete AND behavior and20-game-tick settling before raw geometry.",
-        };
+        return structuredClone(truthFixture.proposal);
       if (
         ![
           "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
@@ -68,22 +63,9 @@ const server = createCompanionServer({
     },
     async generateGeometry(input) {
       if (input.request === truthRequest) {
-        if (!isDeepStrictEqual(input.behavior, truthFixture.behavior))
+        if (!isDeepStrictEqual(input.behavior, truthFixture.proposal.behavior))
           throw new Error("Confirmed Boolean intent changed");
-        return {
-          name: truthFixture.name,
-          explanation: truthFixture.explanation,
-          blocks: truthFixture.blocks.map((b) => ({
-            pos: { ...b.pos },
-            state: b.state,
-          })),
-          inputs: truthFixture.ports
-            .filter((p) => p.kind === "input")
-            .map((p) => ({ name: p.name, pos: { ...p.pos } })),
-          output: {
-            ...truthFixture.ports.find((p) => p.kind === "output").pos,
-          },
-        };
+        return structuredClone(truthFixture.geometry);
       }
 
       if (
