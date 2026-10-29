@@ -155,7 +155,7 @@ final class OperationScopes {
                 String expectedId = transitionDigest(transitionJson);
                 if (!expectedId.equals(id)) throw new IllegalArgumentException("Operation transition digest mismatch");
                 Blueprint before = parsed.before(), after = parsed.after();
-                blockCount += before.blocks().size() + after.blocks().size();
+                blockCount += parsed.storedBlockCount();
                 if (blockCount > MAX_BLOCKS) throw new IllegalArgumentException("Operation scopes exceed block limit");
                 snapshot = new Snapshot(id, kind, null, null, parsed, new HashMap<>(), new HashMap<>());
                 hasTransition = true;
@@ -290,7 +290,7 @@ final class OperationScopes {
         int blocks = 0;
         for (Snapshot snapshot : snapshots.values()) {
             if (snapshot.transition() == null) blocks += snapshot.blueprint().getAsJsonArray("blocks").size();
-            else blocks += snapshot.transition().before().blocks().size() + snapshot.transition().after().blocks().size();
+            else blocks += snapshot.transition().storedBlockCount();
         }
         if (blocks > MAX_BLOCKS) throw new IllegalArgumentException("Operation scopes exceed block limit");
         if (scopeJson(snapshots, operations).toString().getBytes(StandardCharsets.UTF_8).length > MAX_BYTES)

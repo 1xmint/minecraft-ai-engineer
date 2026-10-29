@@ -51,6 +51,19 @@ final class EngineeringSession implements BuildExecutor {
             net.minecraft.server.network.ServerGamePacketListenerImpl connection,long authorization,
             int revision,BlockPos first,BlockPos second,UUID nonce,long expiresAtNanos) { }
     private StructuralPreview structuralPreview;
+    private StructuralTransition restoredLayout;
+    Blueprint structuralBefore() {
+        return restoredLayout!=null && blueprint!=null && restoredLayout.after().source().equals(blueprint.source())?restoredLayout.before():blueprint;
+    }
+    void requireStructuralPlanningBasis() {
+        Blueprint source=structuralBefore();
+        if(source==null)throw new IllegalStateException("No physical design basis");
+        for(var block:source.blocks()) {
+            validateTarget(block.pos());
+            if(!structuralMatches(block.state(),level().getBlockState(block.pos())))
+                throw new IllegalStateException("Existing structure changed before planning at "+block.pos().toShortString()+"; inspect and reconcile it first");
+        }
+    }
     void clearStructuralPreview(){structuralPreview=null;}
     UUID originDiagnosis;
     String undoOperation;
@@ -404,7 +417,7 @@ final class EngineeringSession implements BuildExecutor {
         ensureComponentContextIdle("preview a structural revision");
         if(blueprint==null || !GeneratedBlueprint.isGenerated(blueprint) || !GeneratedBlueprint.isGenerated(candidate) || ComponentTree.composite(blueprint) || ComponentTree.composite(candidate))
             throw new IllegalStateException("Structural previews currently require generated mechanisms");
-        StructuralTransition transition=StructuralTransition.between(blueprint,candidate);
+        StructuralTransition transition=StructuralTransition.between(structuralBefore(),candidate,blueprint);
         for(Blueprint source:List.of(transition.before(),transition.after()))for(var block:source.blocks())
             if(!contains(block.pos()))throw new IllegalStateException("Expand the workspace explicitly before previewing this layout");
         if(transition.writes().isEmpty())throw new IllegalStateException("This revision has no physical changes");
@@ -436,15 +449,15 @@ final class EngineeringSession implements BuildExecutor {
         requireCreative();access.require(actor(),ProjectAccess.Permission.EDIT);access.require(actor(),ProjectAccess.Permission.BUILD);
         if(!actor().equals(owner))throw new IllegalStateException("Only the project owner can apply a structural revision");
         ensureComponentContextIdle("apply a structural revision");
-        if(blueprint==null || !blueprint.source().equals(transition.before().source()))
+        if(blueprint==null || !blueprint.source().equals(transition.accepted().source()) || !structuralBefore().source().equals(transition.before().source()))
             throw new IllegalStateException("Structural preview is stale; preview the current design again");
-        Blueprint after=transition.after();
-        if(!GeneratedBlueprint.isGenerated(blueprint) || !GeneratedBlueprint.isGenerated(after)
-                || ComponentTree.composite(blueprint) || ComponentTree.composite(after))
+        Blueprint before=transition.before(),after=transition.after();
+        if(!GeneratedBlueprint.isGenerated(before) || !GeneratedBlueprint.isGenerated(after)
+                || ComponentTree.composite(before) || ComponentTree.composite(after))
             throw new IllegalStateException("Structural execution currently requires generated root mechanisms");
         if(transition.writes().isEmpty())throw new IllegalStateException("This revision has no physical changes");
         Map<BlockPos,BlockState> old=new HashMap<>(),next=new HashMap<>(),owned=new HashMap<>();
-        blueprint.blocks().forEach(b->old.put(b.pos(),b.state()));after.blocks().forEach(b->next.put(b.pos(),b.state()));
+        before.blocks().forEach(b->old.put(b.pos(),b.state()));after.blocks().forEach(b->next.put(b.pos(),b.state()));
         journal.forEach(change->owned.put(change.pos(),change.after()));
         Set<BlockPos> geometry=new HashSet<>(old.keySet());geometry.addAll(next.keySet());
         Map<BlockPos,BlockState> proposedBaseline=new LinkedHashMap<>(),proposedDependencies=new LinkedHashMap<>();
@@ -458,7 +471,7 @@ final class EngineeringSession implements BuildExecutor {
                 throw new IllegalStateException("New structural target is occupied at "+pos.toShortString());
             if(transition.writes().contains(pos))proposedBaseline.put(pos,actual);
         }
-        Set<BlockPos> reads=new LinkedHashSet<>(dependencyPositions(blueprint,"root",true));reads.addAll(dependencyPositions(after,"root",true));
+        Set<BlockPos> reads=new LinkedHashSet<>(dependencyPositions(before,"root",true));reads.addAll(dependencyPositions(after,"root",true));
         if(reads.size()>65536)throw new IllegalStateException("Structural dependencies exceed their limit");
         for(BlockPos pos:reads) {
             if(!level().hasChunkAt(pos))throw new IllegalStateException("Structural dependencies must be loaded");
@@ -470,7 +483,7 @@ final class EngineeringSession implements BuildExecutor {
         String operation=UUID.randomUUID().toString();
         pruneOperationScopes();operationScopes.captureTransition(operation,"root",transition);
         trial.resetEvidence();manager.release(this);clearDiagnoses();
-        blueprint=after;projectRevision=after.revision();activeComponent="root";activeOperation=operation;operationKind="STRUCTURAL";structuralCursor=0;
+        restoredLayout=null;blueprint=after;projectRevision=after.revision();activeComponent="root";activeOperation=operation;operationKind="STRUCTURAL";structuralCursor=0;
         baseline.clear();baseline.putAll(proposedBaseline);dependencies.clear();dependencies.putAll(proposedDependencies);
         repairTargets.clear();originDiagnosis=null;undoOperation=null;undoRequested=false;pendingPlacement=false;
         cursors.values().forEach(cursor->cursor.stage=0);stage=0;verified="untested";state="PAUSED";
@@ -1106,6 +1119,8 @@ final class EngineeringSession implements BuildExecutor {
     }
     private static BlockState restoreDynamic(BlockState before,BlockState actual) {return UndoProjection.restored(before,actual);}
     private void finishUndo() {
+        StructuralTransition restored=undoOperation!=null && operationScopes.contains(undoOperation) && operationScopes.isTransition(undoOperation)?operationScopes.transition(undoOperation):null;
+        restoredLayout=restored!=null && blueprint!=null && restored.after().source().equals(blueprint.source())?restored:null;
         baseline.clear();dependencies.clear();repairTargets.clear();pendingPlacement=false;undoRequested=false;undoOperation=null;
         activeOperation="legacy";operationKind="BUILD";originDiagnosis=null;clearDiagnoses();verified="untested";state="READY";
         detail="Latest assistant operation undone; earlier sections and player-built blocks kept";
@@ -1177,6 +1192,7 @@ final class EngineeringSession implements BuildExecutor {
         for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
     }
     void save() {
+        if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
         pruneOperationScopes();validateOperationScopes();
         if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
@@ -1186,6 +1202,7 @@ final class EngineeringSession implements BuildExecutor {
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
         json.addProperty("journalVersion",4);json.add("operationScopes",operationScopes.json());json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
+        if(restoredLayout!=null)json.add("restoredLayout",restoredLayout.json());
         if(operationKind.equals("STRUCTURAL"))json.addProperty("structuralCursor",structuralCursor);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
@@ -1221,6 +1238,13 @@ final class EngineeringSession implements BuildExecutor {
             if(json.has("corner1")) corner1=Blueprint.pos(json.getAsJsonObject("corner1")); if(json.has("corner2")) corner2=Blueprint.pos(json.getAsJsonObject("corner2"));
             if(json.has("blueprint")) blueprint=Blueprint.parse(json.getAsJsonObject("blueprint"),worldId,dimension);
             if(blueprint!=null && (blueprint.revision()!=projectRevision || !blueprint.projectId().equals(projectId.toString())))throw new IllegalStateException("Intended blueprint identity mismatch");
+            if(json.has("restoredLayout")) {
+                restoredLayout=StructuralTransition.read(json.getAsJsonObject("restoredLayout"),worldId,dimension,projectId);
+                if(blueprint==null || !restoredLayout.after().source().equals(blueprint.source()) || !GeneratedBlueprint.isGenerated(restoredLayout.before()) || ComponentTree.composite(restoredLayout.before()))
+                    throw new IllegalStateException("Restored layout does not match the current accepted intention");
+                for(Blueprint source:List.of(restoredLayout.before(),restoredLayout.after()))for(var block:source.blocks())
+                    if(!contains(block.pos()))throw new IllegalStateException("Restored layout escaped its workspace");
+            }
             stage=json.get("stage").getAsInt();
             if(stage<0 || (blueprint!=null && stage>=blueprint.stages().size())) throw new IllegalStateException("Checkpoint has an invalid tutorial stage");
             for(JsonElement entry:json.getAsJsonArray("tutorials")){var item=entry.getAsJsonObject();var actor=UUID.fromString(item.get("actorId").getAsString());var cursor=cursor(actor);cursor.stage=item.get("stage").getAsBigDecimal().intValueExact();cursor.teaching=false;if(cursor.stage<0 || (blueprint!=null && cursor.stage>=blueprint.stages().size()))throw new IllegalStateException("Invalid personal tutorial stage");}

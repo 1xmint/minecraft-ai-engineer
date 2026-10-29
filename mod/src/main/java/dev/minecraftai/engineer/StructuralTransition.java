@@ -28,6 +28,7 @@ final class StructuralTransition {
 
     private final JsonObject beforeSource;
     private final JsonObject afterSource;
+    private final JsonObject acceptedSource;
     private final String digest;
     private final Set<BlockPos> writes;
     private final List<Step> steps;
@@ -36,12 +37,13 @@ final class StructuralTransition {
     private final int changed;
 
     private StructuralTransition(JsonObject beforeSource, JsonObject afterSource,
-                                 Blueprint before, Blueprint after) {
+                                 Blueprint before, Blueprint after, Blueprint accepted) {
+        this.acceptedSource=before.source().equals(accepted.source())?null:accepted.source().deepCopy();
         this.beforeSource = beforeSource.deepCopy();
         this.afterSource = afterSource.deepCopy();
-        if (serializedSize(this.beforeSource, this.afterSource) > MAX_BYTES)
+        if (serializedSize(this.beforeSource, this.afterSource, this.acceptedSource) > MAX_BYTES)
             throw invalid("Structural transition exceeds storage limit");
-        this.digest = digest(this.beforeSource, this.afterSource);
+        this.digest = digest(this.beforeSource, this.afterSource, this.acceptedSource);
 
         Map<BlockPos, BlockState> oldStates = states(before);
         Map<BlockPos, BlockState> newStates = states(after);
@@ -92,50 +94,48 @@ final class StructuralTransition {
     }
 
     static StructuralTransition between(Blueprint before, Blueprint after) {
-        Objects.requireNonNull(before, "before");
-        Objects.requireNonNull(after, "after");
-        JsonObject oldSource = before.source().deepCopy();
-        JsonObject newSource = after.source().deepCopy();
-        Blueprint oldSnapshot = snapshot(oldSource, before);
-        Blueprint newSnapshot = snapshot(newSource, after);
-        validatePair(oldSnapshot, newSnapshot);
-        return new StructuralTransition(oldSource, newSource, oldSnapshot, newSnapshot);
+        return between(before,after,before);
     }
-
-    static StructuralTransition read(JsonObject saved, String world, String dimension, UUID project) {
-        Objects.requireNonNull(saved, "saved");
-        Objects.requireNonNull(world, "world");
-        Objects.requireNonNull(dimension, "dimension");
-        Objects.requireNonNull(project, "project");
-        if (!saved.keySet().equals(Set.of("schemaVersion", "before", "after", "digest")))
+    static StructuralTransition between(Blueprint before,Blueprint after,Blueprint accepted) {
+        Objects.requireNonNull(before,"before");Objects.requireNonNull(after,"after");Objects.requireNonNull(accepted,"accepted");
+        Blueprint oldSnapshot=snapshot(before.source().deepCopy(),before),newSnapshot=snapshot(after.source().deepCopy(),after);
+        Blueprint acceptedSnapshot=snapshot(accepted.source().deepCopy(),accepted);
+        validatePair(oldSnapshot,newSnapshot,acceptedSnapshot);
+        return new StructuralTransition(oldSnapshot.source(),newSnapshot.source(),oldSnapshot,newSnapshot,acceptedSnapshot);
+    }
+    static StructuralTransition read(JsonObject saved,String world,String dimension,UUID project) {
+        Objects.requireNonNull(saved,"saved");Objects.requireNonNull(world,"world");Objects.requireNonNull(dimension,"dimension");Objects.requireNonNull(project,"project");
+        int schema=integer(saved.get("schemaVersion"));
+        if(schema!=1 && schema!=2)throw invalid("Unsupported structural transition schema");
+        if(!saved.keySet().equals(schema==1?Set.of("schemaVersion","before","after","digest"):Set.of("schemaVersion","before","after","accepted","digest")))
             throw invalid("Invalid structural transition fields");
-        if (integer(saved.get("schemaVersion")) != 1) throw invalid("Unsupported structural transition schema");
-        String claimedDigest = string(saved.get("digest"));
-        if (!claimedDigest.matches("[0-9a-f]{64}")) throw invalid("Invalid structural transition digest");
-        if (saved.toString().getBytes(StandardCharsets.UTF_8).length > MAX_BYTES)
-            throw invalid("Structural transition exceeds storage limit");
-        JsonObject oldSource = object(saved.get("before")).deepCopy();
-        JsonObject newSource = object(saved.get("after")).deepCopy();
-        Blueprint oldSnapshot = Blueprint.parse(oldSource, world, dimension);
-        Blueprint newSnapshot = Blueprint.parse(newSource, world, dimension);
-        if (!oldSnapshot.projectId().equals(project.toString()) || !newSnapshot.projectId().equals(project.toString()))
+        String claimedDigest=string(saved.get("digest"));
+        if(!claimedDigest.matches("[0-9a-f]{64}"))throw invalid("Invalid structural transition digest");
+        if(saved.toString().getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw invalid("Structural transition exceeds storage limit");
+        Blueprint before=Blueprint.parse(object(saved.get("before")).deepCopy(),world,dimension);
+        Blueprint after=Blueprint.parse(object(saved.get("after")).deepCopy(),world,dimension);
+        Blueprint accepted=schema==1?before:Blueprint.parse(object(saved.get("accepted")).deepCopy(),world,dimension);
+        if(!before.projectId().equals(project.toString()) || !after.projectId().equals(project.toString()) || !accepted.projectId().equals(project.toString()))
             throw invalid("Structural transition project mismatch");
-        ComponentTree.validate(oldSnapshot);
-        ComponentTree.validate(newSnapshot);
-        validatePair(oldSnapshot, newSnapshot);
-        StructuralTransition result = new StructuralTransition(oldSource, newSource, oldSnapshot, newSnapshot);
-        if (!result.digest.equals(claimedDigest)) throw invalid("Structural transition digest mismatch");
+        ComponentTree.validate(before);ComponentTree.validate(after);ComponentTree.validate(accepted);
+        validatePair(before,after,accepted);
+        if(schema==2 && before.source().equals(accepted.source()))throw invalid("Redundant accepted context requires schema1");
+        StructuralTransition result=new StructuralTransition(before.source(),after.source(),before,after,accepted);
+        if(!result.digest.equals(claimedDigest))throw invalid("Structural transition digest mismatch");
         return result;
     }
 
     Blueprint before() { return copy(beforeSource); }
     Blueprint after() { return copy(afterSource); }
+    Blueprint accepted() { return copy(acceptedSource==null?beforeSource:acceptedSource); }
+    int storedBlockCount() {return beforeSource.getAsJsonArray("blocks").size()+afterSource.getAsJsonArray("blocks").size()+(acceptedSource==null?0:acceptedSource.getAsJsonArray("blocks").size());}
 
     JsonObject json() {
         JsonObject out = new JsonObject();
-        out.addProperty("schemaVersion", 1);
+        out.addProperty("schemaVersion", acceptedSource==null?1:2);
         out.add("before", beforeSource.deepCopy());
         out.add("after", afterSource.deepCopy());
+        if(acceptedSource!=null)out.add("accepted",acceptedSource.deepCopy());
         out.addProperty("digest", digest);
         return out;
     }
@@ -158,13 +158,15 @@ final class StructuralTransition {
         return Blueprint.parse(source.deepCopy(), source.get("worldId").getAsString(), source.get("dimension").getAsString());
     }
 
-    private static void validatePair(Blueprint before, Blueprint after) {
-        if (!before.worldId().equals(after.worldId()) || !before.dimension().equals(after.dimension())
-                || !before.projectId().equals(after.projectId()))
+    private static void validatePair(Blueprint before,Blueprint after,Blueprint accepted) {
+        if(!before.worldId().equals(after.worldId()) || !before.dimension().equals(after.dimension()) || !before.projectId().equals(after.projectId())
+                || !before.worldId().equals(accepted.worldId()) || !before.dimension().equals(accepted.dimension()) || !before.projectId().equals(accepted.projectId()))
             throw invalid("Structural transition identity mismatch");
-        if (Math.addExact(before.revision(), 1) != after.revision())
-            throw invalid("Structural transition revision must advance exactly once");
-        if (before.id().equals(after.id())) throw invalid("A new intention requires a new blueprint identity");
+        if(Math.addExact(accepted.revision(),1)!=after.revision() || before.revision()>accepted.revision()
+                || (before.revision()==accepted.revision() && !before.source().equals(accepted.source())))
+            throw invalid("Structural transition must advance the current accepted context exactly once");
+        if(before.id().equals(after.id()) || accepted.id().equals(after.id()) || (!before.source().equals(accepted.source()) && before.id().equals(accepted.id())))
+            throw invalid("Distinct intentions require distinct blueprint identities");
     }
 
     private static Map<BlockPos, BlockState> states(Blueprint blueprint) {
@@ -176,22 +178,24 @@ final class StructuralTransition {
     private static boolean isStone(BlockState state) { return state.is(Blocks.STONE); }
     private static boolean isDevice(BlockState state) { return !isStone(state); }
 
-    private static String digest(JsonObject before, JsonObject after) {
+    private static String digest(JsonObject before, JsonObject after,JsonObject accepted) {
         try {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
-            sha.update(DIGEST_PREFIX.getBytes(StandardCharsets.UTF_8));
+            sha.update((accepted==null?DIGEST_PREFIX:"structural-transition-v2\n").getBytes(StandardCharsets.UTF_8));
             sha.update(canonical(before).getBytes(StandardCharsets.UTF_8));
             sha.update((byte) '\n');
             sha.update(canonical(after).getBytes(StandardCharsets.UTF_8));
+            if(accepted!=null){sha.update((byte) '\n');sha.update(canonical(accepted).getBytes(StandardCharsets.UTF_8));}
             return HexFormat.of().formatHex(sha.digest());
         } catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
-    private static int serializedSize(JsonObject before, JsonObject after) {
+    private static int serializedSize(JsonObject before, JsonObject after,JsonObject accepted) {
         JsonObject value = new JsonObject();
-        value.addProperty("schemaVersion", 1);
+        value.addProperty("schemaVersion", accepted==null?1:2);
         value.add("before", before);
         value.add("after", after);
+        if(accepted!=null)value.add("accepted",accepted);
         value.addProperty("digest", "0".repeat(64));
         return value.toString().getBytes(StandardCharsets.UTF_8).length;
     }

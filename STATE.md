@@ -3,7 +3,7 @@
 2026-10-28: Active goal: **complete all milestones**, all remaining phase1 and
 all six phase2 features. Do not redefine done around a catalog, buffer or green CI.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/11-restored-layouts**, based on PR19 final noteb17ba07 (auto-merge pending; inspect GitHub before opening the next PR).
+Branch **phase/11-restored-layouts**, PR20. PR19 merged as **1e97bc385c3296ea037eaaf4689b7eeec982243b**, final CI40797460992 all five green.
 
 Josh: **skip heavy reviews; build and ship**. No more formal review cycles.
 Keep required checks and concrete runtime proof. Tests run on GitHub, never on
@@ -276,3 +276,23 @@ add boundary proofs (R1), persist/validate restored reference and accepted conte
 (R1), adapt native planning/apply without new authority (R1/R3), actual repeated
 revision/reboot/timing/undo proof (R2/R3), required GitHub checks then ship. No heavy
 reviews; tests only in CI. Signed-in structural acceptance remains separate work.
+
+R1 proofdbe90f0 / CI40797799375 failed at the absent three-source transition API
+before implementation. The implementation now preserves exact schema1 encoding,
+adds schema2 accepted-context metadata only when distinct, hashes all sources and
+counts all stored blocks toward the existing bounds. Undo retains a bounded
+immutable restored-layout reference; it is validated on load, grants no authority,
+and is consumed only when a new accepted operation starts. Planning and apply
+select true restored before geometry while fencing the separate canonical context.
+Known changed/incomplete base blocks are refused before dispatch. Scoped Java
+main/client compilation and verifier syntax passed; no local tests.
+
+Native R1-R3 proof now boots a genuine fourth server after the first structural
+undo, checks the retained true source and no lease, refuses corrupt/stale restored
+metadata, preserves a real glass edit before any quota, and drives a second full
+HTTP/native design/confirm/apply -> timing -> undo. SQLite must show exactly four
+starts for the two explicit behavior/geometry pairs, with no start for the rejected
+edit. It separately records the fourth boot context; existing third-boot proofs
+retain their actual epoch instead of being relabelled. New native proof remains
+pending. Fresh signed-in structural inference, broader functions, conversation,
+debugging/visuals, full acceptance and all six Phase2 items remain outstanding.
