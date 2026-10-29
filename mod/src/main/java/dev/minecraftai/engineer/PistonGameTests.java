@@ -13,8 +13,46 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
-    private static Set<BlockPos> footprint(GameTestHelper helper){return Set.of(helper.absolutePos(at(1,1,Rotation.NONE)),helper.absolutePos(at(2,1,Rotation.NONE)),helper.absolutePos(at(3,1,Rotation.NONE)));}
+    private static Set<BlockPos> footprint(GameTestHelper helper){return footprint(helper,Rotation.NONE);}
+    private static Set<BlockPos> footprint(GameTestHelper helper,Rotation rotation){return Set.of(helper.absolutePos(at(1,1,rotation)),helper.absolutePos(at(2,1,rotation)),helper.absolutePos(at(3,1,rotation)));}
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
+    private static ShutterJournal.Scope journalScope(GameTestHelper helper){return new ShutterJournal.Scope("native-motion-proof",helper.getLevel().dimension().identifier().toString(),UUID.fromString("11111111-1111-4111-8111-111111111111"),UUID.fromString("22222222-2222-4222-8222-222222222222"),1,"root",UUID.fromString("33333333-3333-4333-8333-333333333333"),helper.absolutePos(at(1,1,Rotation.NONE)),Direction.EAST);}
+    private static ShutterJournal reloadJournal(java.nio.file.Path file){try{return ShutterJournal.read(com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject());}catch(java.io.IOException failure){throw new IllegalStateException(failure);}}
+    @GameTest public void journalReloadDescribesMotionWithoutRecreatingAPermit(GameTestHelper helper) throws Exception {
+        setup(helper,true,Rotation.NONE);var file=java.nio.file.Files.createTempDirectory("engineer-motion-journal-").resolve("motion.json");
+        var scope=journalScope(helper);ShutterJournal[] journal={null},prepared={null};PistonMotionGate.Ticket[] ticket={null};int[] commits={0};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));
+            ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->{journal[0]=journal[0].commitRecorded(id);LocalFiles.write(file,journal[0].json());commits[0]++;});
+            journal[0]=ShutterJournal.prepare(scope,snapshot,ticket[0].id());LocalFiles.write(file,journal[0].json());prepared[0]=reloadJournal(file);
+            helper.assertTrue(prepared[0].phase()==ShutterJournal.Phase.PREPARED && prepared[0].positionState(helper.getLevel(),scope)==ShutterJournal.PositionState.BEFORE,"A durable prepared record describes the unchanged world");helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{
+            assertClosed(helper,Rotation.NONE);journal[0]=null;var restored=reloadJournal(file);
+            helper.assertTrue(restored.phase()==ShutterJournal.Phase.COMMIT_RECORDED && restored.positionState(helper.getLevel(),scope)==ShutterJournal.PositionState.TERMINAL,"The real event's write-ahead phase survives object reconstruction from disk");
+            rejects(helper,()->prepared[0].endpointObserved(helper.getLevel(),scope),"Matching geometry cannot invent a missing recorded commit");
+            var observed=restored.endpointObserved(helper.getLevel(),scope);LocalFiles.write(file,observed.json());
+            helper.assertTrue(reloadJournal(file).phase()==ShutterJournal.Phase.ENDPOINT_OBSERVED && commits[0]==1,"A later endpoint observation is stored separately from execution permission");
+            helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(19,()->{assertClosed(helper,Rotation.NONE);helper.assertTrue(commits[0]==1 && ticket[0].phase()==PistonMotionGate.Phase.COMMITTED,"Reloading records grants no fresh retraction ticket");helper.succeed();});
+    }
+    @GameTest public void journalRejectsForgedGeometryAndAuthorityFields(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);
+        helper.runAtTickTime(8,()->{
+            var scope=journalScope(helper);var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));var original=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());
+            for(String field:List.of("lease","authority","verified","serverEpoch")){
+                var forged=original.json();forged.addProperty(field,"granted");boolean rejected=false;try{ShutterJournal.read(forged);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"A motion journal cannot store authority: "+field);
+            }
+            var geometry=original.json();geometry.getAsJsonObject("motion").getAsJsonObject("before").addProperty("aperture","minecraft:stone");
+            boolean rejected=false;try{ShutterJournal.read(geometry);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"An extra payload cannot masquerade as the fixed shutter's captured basis");
+            var foreign=new ShutterJournal.Scope(scope.worldId(),scope.dimension(),UUID.randomUUID(),scope.blueprint(),scope.revision(),scope.component(),scope.operation(),scope.piston(),scope.facing());
+            rejects(helper,()->original.positionState(helper.getLevel(),foreign),"Another project's context cannot inspect this recovery record");
+            rejects(helper,()->original.commitRecorded(UUID.randomUUID()),"A different motion ticket cannot advance the journal");rejects(helper,()->original.cancel().commitRecorded(original.motion()),"A cancelled preparation cannot be committed");
+            place(helper,3,1,Blocks.GLASS.defaultBlockState(),Rotation.NONE);
+            helper.assertTrue(ShutterJournal.read(original.json()).positionState(helper.getLevel(),scope)==ShutterJournal.PositionState.CONFLICT && state(helper,3,1,Rotation.NONE).is(Blocks.GLASS),"Recovery describes a player replacement without restoring over it");helper.succeed();
+        });
+    }
     @GameTest(maxTicks=45) public void eventGateCommitsOnceAndRequiresAnotherArmForPull(GameTestHelper helper){
         setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] tickets=new PistonMotionGate.Ticket[2];
         helper.runAtTickTime(8,()->{
@@ -105,6 +143,8 @@ public final class PistonGameTests {
             assertClosed(helper,Rotation.NONE);helper.assertTrue(snapshots[0].matchesTerminalState(helper.getLevel()),"Actual extension matches the projected terminal states");
             rejects(helper,()->snapshots[0].requireFresh(helper.getLevel(),footprint(helper)),"An old open-pose snapshot is stale after extension");
             snapshots[1]=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),false,footprint(helper));
+            var journal=ShutterJournal.prepare(journalScope(helper),snapshots[1],UUID.randomUUID());var restored=ShutterJournal.read(journal.json());
+            helper.assertTrue(restored.json().equals(journal.json()) && restored.positionState(helper.getLevel(),journal.scope())==ShutterJournal.PositionState.BEFORE,"The closed-pose retraction basis survives exact journal encoding");
             snapshots[1].requireFresh(helper.getLevel(),footprint(helper));assertClosed(helper,Rotation.NONE);helper.pullLever(at(0,2,Rotation.NONE));
         });
         helper.runAtTickTime(24,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(snapshots[1].matchesTerminalState(helper.getLevel()),"The phase-aware projection matches actual sticky retraction without editing a preview");helper.succeed();});
@@ -154,23 +194,26 @@ public final class PistonGameTests {
         helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(at(2,1,rotation)))==null && helper.getLevel().getBlockEntity(helper.absolutePos(at(3,1,rotation)))==null,"Motion must finish; transient moving blocks are not settled proof");
     }
     private static void shutter(GameTestHelper helper,Rotation rotation){
-        setup(helper,true,rotation);
+        setup(helper,true,rotation);ShutterMotion.Snapshot[] snapshots=new ShutterMotion.Snapshot[2];
         helper.runAtTickTime(8,()->{
             assertOpen(helper,rotation);
             var projection=resolve(helper,rotation,true);
             helper.assertTrue(projection.resolve() && Set.copyOf(projection.getToPush()).equals(Set.of(helper.absolutePos(at(2,1,rotation)))) && projection.getToDestroy().isEmpty(),"Vanilla projects exactly the payload, without destructive writes");
             helper.assertTrue(projection.getPushDirection()==rotation.rotate(Direction.EAST),"Movement direction follows the actual rotated piston");
             assertOpen(helper,rotation); // Projection itself must not edit the world.
+            snapshots[0]=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,rotation)),true,footprint(helper,rotation));
             helper.pullLever(at(0,2,rotation));
             helper.assertTrue(state(helper,3,1,rotation).isAir(),"Power schedules movement; the payload does not move synchronously with the lever write");
         });
         helper.runAtTickTime(16,()->{
             assertClosed(helper,rotation);
+            helper.assertTrue(snapshots[0].matchesTerminalState(helper.getLevel()),"The rotated extension matches its bounded motion description");
+            snapshots[1]=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,rotation)),false,footprint(helper,rotation));
             // Vanilla removes the head before constructing its retraction resolver.
             // Resolve(false) against the untouched extended world is not that phase.
             helper.pullLever(at(0,2,rotation));
         });
-        helper.runAtTickTime(24,()->{assertOpen(helper,rotation);helper.pullLever(at(0,2,rotation));});
+        helper.runAtTickTime(24,()->{assertOpen(helper,rotation);helper.assertTrue(snapshots[1].matchesTerminalState(helper.getLevel()),"The rotated retraction matches its bounded motion description");helper.pullLever(at(0,2,rotation));});
         helper.runAtTickTime(32,()->{assertClosed(helper,rotation);helper.pullLever(at(0,2,rotation));});
         helper.runAtTickTime(40,()->{assertOpen(helper,rotation);helper.succeed();});
     }

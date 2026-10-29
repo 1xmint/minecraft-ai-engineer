@@ -10,10 +10,11 @@ Current branch **phase/15-piston-motion**, based on PR23 main merge
 **d3167a8f0a13c69ed6e301555802481a4bef559d** (2026-10-29T22:05:12Z). Phase14 final
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
 merge. Its first conversation/knowledge slice was also proven on b858364 by all5
-CI40959246919 and whole signed-in manual40960496759. Phase15 is building its
-the deferred-event gate after proven native physics and snapshots, not a shipped
-piston feature. Snapshot sourced04e1fc passed all5 CI40964080695, including all53
-required native tests (job log22:14:07 UTC inspected).
+CI40959246919 and whole signed-in manual40960496759. Phase15 is building durable
+motion records after proven physics, snapshots and the event gate, not a shipped
+piston feature. Gate sourcedc08309 passed all5 CI40965363414, including all60
+required native tests (job log22:23:20 UTC inspected). Snapshot sourced04e1fc
+previously passed all5 CI40964080695/all53 native tests.
 Draft PR24 holds Phase15. Full objective unfinished.
 Inspect actual git/PR/workflow state before continuing.
 
@@ -115,10 +116,30 @@ revocation after lever write, intervening replacement, failed journal hook,
 cancelled input pulse, expired arm and cancellation during actual moving-block
 animation. Scoped server/client Java compile passed. GPT-6-Luna/high narrow
 mutation-boundary check found no concrete core blockers; no tests/SDK were run by
-the helper. These new proofs await CI. Production construction/generation still
+the helper. All seven gate proofs passed in CI40965363414. Production construction/generation still
 does not arm the gate. Durable WAL/session/permission integration, read-dependency
 closure, passive release and restart recovery are NOT implemented by this core;
 they remain required before M3 or public piston support can ship.
+
+ShutterJournal core now compiles: bounded strict versioned descriptions bind
+world/dimension/project/blueprint/revision/component/operation plus accepted
+piston position/facing and motion UUID. Phases prepared/commit-recorded/endpoint-
+observed and cancellation are physical facts, never leases or functional passes.
+Terminal states are derived from the fixed mechanism's validated before-image;
+authority/lease/verification fields reject. A fresh server-derived Scope must
+match before inspecting recovery. Unloaded/moving/replaced cells stay explicitly
+unknown/unsettled/conflicted. Reading the record performs no writes or rearming.
+
+New native tests persist preparation, write the commit via the actual gate's
+pre-motion callback, reload from disk, record a later endpoint, and prove no
+implicit retraction permit. They also reject forged payload/authority, foreign
+scope/wrong motion/cancelled preparation and preserve a replacement. Opening-pose
+codec coverage and all rotated snapshot/actual terminal comparisons are added.
+Shared pure pose validation keeps live snapshots and stored descriptions aligned.
+Scoped Java server/client compile passed; these new runtime proofs await CI.
+This proves neither actual saved-server recovery nor production session wiring:
+startup denial before queued events, input restoration, read-dependency capture,
+fresh actor permissions and safe release still must land before public actuation.
 
 ## Proven Phase14 Outcomes
 

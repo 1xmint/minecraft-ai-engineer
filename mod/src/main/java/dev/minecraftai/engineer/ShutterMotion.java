@@ -60,25 +60,35 @@ final class ShutterMotion {
             if(level.getBlockEntity(pos)!=null)throw new IllegalStateException("Moving or block-entity state must settle before projection");
             before.put(pos,level.getBlockState(pos));
         }
-        BlockState payload=before.get(closing?front:aperture);
-        if(!payload.is(Blocks.STONE))throw new IllegalStateException("The shutter payload changed; no extra blocks may be pushed or destroyed");
-        BlockState head=Blocks.PISTON_HEAD.defaultBlockState().setValue(BlockStateProperties.FACING,direction).setValue(BlockStateProperties.PISTON_TYPE,PistonType.STICKY).setValue(BlockStateProperties.SHORT,false);
+        var terminal=terminalFor(base,closing,before);
         if(closing){
-            if(!before.get(aperture).isAir())throw new IllegalStateException("The aperture was edited or obstructed; replacement preserved");
             // Exact stone/air preconditions bound vanilla's reads and exclude sticky branching/destruction.
             var resolver=new PistonStructureResolver(level,base,direction,true);
             if(!resolver.resolve() || resolver.getPushDirection()!=direction || !resolver.getToDestroy().isEmpty()
                     || resolver.getToPush().size()!=1 || !resolver.getToPush().getFirst().equals(front))throw new IllegalStateException("Vanilla motion no longer matches the captured shutter");
-        }else if(!before.get(front).equals(head)){
-            throw new IllegalStateException("The extended sticky head changed; reconcile before retraction");
         }
+        return new Snapshot(level,base,closing,before,terminal);
+    }
+    /** Pure fixed-mechanism validation shared with durable descriptions; never a world write. */
+    static Map<BlockPos,BlockState> terminalFor(BlockPos position,boolean closing,Map<BlockPos,BlockState> before){
+        BlockPos base=position.immutable();BlockState piston=before.get(base);
+        if(piston==null || !piston.is(Blocks.STICKY_PISTON))throw new IllegalStateException("The shutter requires a sticky piston");
+        Direction direction=piston.getValue(BlockStateProperties.FACING);
+        if(direction.getAxis()==Direction.Axis.Y || piston.getValue(BlockStateProperties.EXTENDED)==closing)throw new IllegalStateException("The shutter pose or orientation changed");
+        BlockPos front=base.relative(direction).immutable(),aperture=base.relative(direction,2).immutable();
+        if(!before.keySet().equals(Set.of(base,front,aperture)))throw new IllegalStateException("Unexpected shutter motion cells");
+        BlockState payload=before.get(closing?front:aperture);
+        if(payload==null || !payload.is(Blocks.STONE))throw new IllegalStateException("The shutter payload changed; no extra blocks may be pushed or destroyed");
+        BlockState head=Blocks.PISTON_HEAD.defaultBlockState().setValue(BlockStateProperties.FACING,direction).setValue(BlockStateProperties.PISTON_TYPE,PistonType.STICKY).setValue(BlockStateProperties.SHORT,false);
+        if(closing){if(before.get(aperture)==null || !before.get(aperture).isAir())throw new IllegalStateException("The aperture was edited or obstructed; replacement preserved");}
+        else if(!head.equals(before.get(front)))throw new IllegalStateException("The extended sticky head changed; reconcile before retraction");
         // Retraction removes the head before vanilla resolves the pull. These exact one-stone
         // preconditions describe that phase without removing anything merely to preview it.
         var terminal=new LinkedHashMap<BlockPos,BlockState>();
         terminal.put(base,piston.setValue(BlockStateProperties.EXTENDED,closing));
         terminal.put(front,closing?head:payload);
         terminal.put(aperture,closing?payload:Blocks.AIR.defaultBlockState());
-        return new Snapshot(level,base,closing,before,terminal);
+        return Map.copyOf(terminal);
     }
     private static void checkReadable(ServerLevel level,BlockPos pos,Set<BlockPos> allowed){
         if(!allowed.contains(pos))throw new IllegalStateException("Piston motion exceeds the delegated write footprint");
