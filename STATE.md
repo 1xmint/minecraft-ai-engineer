@@ -6,13 +6,13 @@ never substitutes for that full objective. Original requirements and multiplayer
 amendment: docs/product-brief.md. Public repo:
 https://github.com/1xmint/minecraft-ai-engineer.
 
-Current branch **phase/14-project-conversation**, draft PR23, based on main PR22
-merge **bb4e81ff238293ffbce92e94c3a52fc275396572**. Phase14 first conversation/knowledge
-slice is implemented and proven on **b858364b5880a4ade5476b89c8f162643a45442a**:
-all five CI40959246919 checks and the entire fresh signed-in manual40960496759
-passed. Final evidence/docs/archive regression changes now need their own CI,
-then ready/merge PR23. Inspect actual git/PR/workflow state before continuing.
-This does not finish all E1 natural action interpretation or the complete product.
+Current branch **phase/15-piston-motion**, based on PR23 main merge
+**d3167a8f0a13c69ed6e301555802481a4bef559d** (2026-10-29T22:05:12Z). Phase14 final
+source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
+merge. Its first conversation/knowledge slice was also proven on b858364 by all5
+CI40959246919 and whole signed-in manual40960496759. Phase15 is building its
+native physics oracles, not a shipped piston feature. Full objective unfinished.
+Inspect actual git/PR/workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
 merging green PRs are authorized; no approval pending. Tests run on GitHub, never
@@ -20,7 +20,52 @@ on his slow PC. Locally scoped compile/format/syntax only; one Gradle worker.
 No separately billed service/API key. Only the configured account-owning operator
 invokes AI. Keep project memory only in AGENTS.md and this file.
 
-## Current Phase14 Outcomes
+## Phase15 plan: mechanical output and bounded piston motion
+
+- M1: a real sticky-piston shutter closes/opens an aperture when its lever is
+  toggled. Proof: native Minecraft26.3 tests in all horizontal rotations, actual
+  payload/head positions and settling; ordinary piston leaves the payload behind,
+  obstruction/excess push does not invent movement.
+- M2: queued motion cannot expand AI work into undelegated, unloaded or changed
+  space. Proof: actual vanilla resolver sources/destinations/head/base, rejection
+  of destruction/extra payload/conflicting regions, human edits, revocation,
+  delayed events, moving-block finalization and restart. Distinguish direct writes
+  from physics commit/finalization; no restored lease or player-edit overwrite.
+- M3: preview, learn, explicitly build and functionally test the shutter as a
+  project component. Proof: dedicated native commands, authorized/denied sharing,
+  interrupt/reconcile/restart and actual aperture observations. New model/block
+  allowlists require the validated contract. Geometry alone cannot pass or stand
+  in for the remaining larger piston-door capability.
+
+Decision2026-10-29: reuse vanilla PistonStructureResolver for movement projection,
+with server-thread reservations/WAL. Start with a complete shutter slice toward
+doors. Merely adding piston states leaves deferred physics unguarded; a fake
+player adds Phase2 machinery without solving that boundary. Leaving mechanics
+unsupported cannot finish the product. Do not widen public construction yet.
+
+Research: Mojang's push/pull/12-block description:
+https://www.minecraft.net/en-us/article/block-week-piston. Fabric event/mixin hooks:
+https://docs.fabricmc.net/develop/events/. Exact26.3 behavior comes from the pinned
+common jar and native tests. Local javap: checkIfExtend queues blockEvent;
+triggerEvent calls moveBlocks; PistonStructureResolver exposes resolve/toPush/
+toDestroy/pushDirection. PistonMovingBlockEntity finalizes on later ticks only
+while its destination remains MOVING_PISTON. Current leases guard direct writes
+and current trials assume lamp outputs. This needs a spatial transaction around
+deferred physics, with explicit commit/recovery semantics.
+
+Tasks: native physical oracles first (M1/M2); typed movement footprint and failure
+proofs (M2); deferred-physics authority/recovery boundary before enabling blocks
+(M2); mechanical contract/execution/trials and native component flow (M1/M3);
+required CI and narrow auth/mutation check, then ship when Outcomes pass. Tests
+only on GitHub; scoped local compile. No heavy reviews. Current work: physical
+oracles. Production piston construction/generation is not implemented yet.
+
+Eight native piston oracles are written: four rotated repeated shutter cycles,
+ordinary piston negative, obstruction, changed payload footprint and external
+replacement during real animation. Scoped Java server/client compilation passed;
+no local tests run. GitHub runtime proof is next. Public block allowlist unchanged.
+
+## Proven Phase14 Outcomes
 
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
