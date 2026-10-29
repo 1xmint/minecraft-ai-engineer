@@ -244,6 +244,28 @@ public final class MechanismGameTests {
         });
     }
 
+    @GameTest public void completeTruthEvidenceCannotSwapCasesInputsOrTime(GameTestHelper helper) {
+        var behavior=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,true),2);
+        var cases=new com.google.gson.JsonArray();long tick=100;
+        for(int index=0;index<8;index++) {
+            int number=GeneratedBlueprint.truthRow(behavior,index);var trace=new SettledTrace(behavior,number);
+            for(int elapsed=0;elapsed<=trace.horizon();elapsed++)trace.sample(elapsed,behavior.outputs().get(number));
+            var row=new com.google.gson.JsonObject();row.addProperty("case",index);row.addProperty("row",number);
+            row.addProperty("behaviorDigest",behavior.digest());tick+=trace.horizon();row.addProperty("tick",tick);row.addProperty("elapsedTicks",trace.horizon());
+            var inputs=new com.google.gson.JsonObject();inputs.addProperty("a",behavior.inputValue(number,0));inputs.addProperty("b",behavior.inputValue(number,1));row.add("inputs",inputs);
+            var outputs=new com.google.gson.JsonObject();outputs.addProperty("output",behavior.outputs().get(number));row.add("outputs",outputs);row.add("trace",trace.json());cases.add(row);
+        }
+        FunctionalTrial.validateTruthEvidence(cases,behavior,true);
+        var missing=cases.deepCopy();missing.remove(7);reject(helper,()->FunctionalTrial.validateTruthEvidence(missing,behavior,true),"Every reverse row is required");
+        var wrongCase=cases.deepCopy();wrongCase.get(1).getAsJsonObject().addProperty("row",2);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongCase,behavior,true),"Rows cannot be reordered");
+        var wrongInput=cases.deepCopy();wrongInput.get(1).getAsJsonObject().getAsJsonObject("inputs").addProperty("a",true);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongInput,behavior,true),"Inputs are checked against the independent vector");
+        var wrongTime=cases.deepCopy();wrongTime.get(1).getAsJsonObject().addProperty("tick",121);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongTime,behavior,true),"Phase game-time boundaries must agree");
+        var wrongSummary=cases.deepCopy();wrongSummary.get(3).getAsJsonObject().getAsJsonObject("outputs").addProperty("output",false);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongSummary,behavior,true),"Output summary must equal observed trace");
+        var unfinished=cases.deepCopy();var first=unfinished.get(0).getAsJsonObject();var trace=new SettledTrace(behavior,0);trace.sample(0,false);first.add("trace",trace.json());first.addProperty("elapsedTicks",0);first.addProperty("tick",100);
+        reject(helper,()->FunctionalTrial.validateTruthEvidence(unfinished,behavior,false),"An unfinished case cannot authorize progress to another case");
+        helper.succeed();
+    }
+
     @GameTest public void settledTruthTraceRequiresEveryStableTickAndAcceptedIntent(GameTestHelper helper) {
         var behavior = new TruthTableSpec(java.util.List.of("a","b"), java.util.List.of(false,false,false,true), 2);
         var good = new SettledTrace(behavior,3);

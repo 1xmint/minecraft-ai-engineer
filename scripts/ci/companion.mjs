@@ -1,6 +1,7 @@
 // Real HTTP gateway and SQLite persistence for the multiplayer proof. Inference
 // is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { writeFileSync, readFileSync } from "node:fs";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
@@ -28,6 +29,18 @@ const structuralFixture = JSON.parse(
     "utf8",
   ),
 );
+// Hand-authored Boolean fixture; this branch never invokes signed-in inference.
+const truthRequest =
+  "CI generated AND: named inputs a and b; settle within 20 game ticks.";
+const truthFixture = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../mod/src/main/resources/fixtures/generated-and.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
@@ -35,6 +48,12 @@ const server = createCompanionServer({
   store,
   provider: {
     async proposeBehavior(input) {
+      if (input.request === truthRequest)
+        return {
+          behavior: structuredClone(truthFixture.behavior),
+          explanation:
+            "Confirm complete AND behavior and20-game-tick settling before raw geometry.",
+        };
       if (
         ![
           "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
@@ -45,6 +64,25 @@ const server = createCompanionServer({
       return structuredClone(generatedFixture.proposal);
     },
     async generateGeometry(input) {
+      if (input.request === truthRequest) {
+        if (!isDeepStrictEqual(input.behavior, truthFixture.behavior))
+          throw new Error("Confirmed Boolean intent changed");
+        return {
+          name: truthFixture.name,
+          explanation: truthFixture.explanation,
+          blocks: truthFixture.blocks.map((b) => ({
+            pos: { ...b.pos },
+            state: b.state,
+          })),
+          inputs: truthFixture.ports
+            .filter((p) => p.kind === "input")
+            .map((p) => ({ name: p.name, pos: { ...p.pos } })),
+          output: {
+            ...truthFixture.ports.find((p) => p.kind === "output").pos,
+          },
+        };
+      }
+
       if (
         ![
           "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",

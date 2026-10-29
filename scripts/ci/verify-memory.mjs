@@ -91,6 +91,16 @@ try {
         "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:generated-truth-table:%' ORDER BY id",
       )
       .all(server.serverId, truthProject);
+    const starts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+      )
+      .get(server.serverId, truthProject);
+    assert.equal(
+      starts.count,
+      2,
+      "Exactly one behavior and one separately confirmed raw geometry request; recovery/replay starts no inference",
+    );
     const finishes = new Set();
     for (const entry of passes) {
       const report = JSON.parse(entry.document);

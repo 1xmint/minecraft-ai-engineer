@@ -46,6 +46,34 @@ const strictObject = (
     throw new RequestError("Unknown generated data field.");
   return v;
 };
+export const TRUTH_TABLE_BEHAVIOR_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "schemaVersion",
+    "function",
+    "inputs",
+    "outputs",
+    "settleGameTicks",
+  ],
+  properties: {
+    schemaVersion: { type: "integer", enum: [2] },
+    function: { type: "string", enum: ["truth-table"] },
+    inputs: {
+      type: "array",
+      minItems: 1,
+      maxItems: 4,
+      items: { type: "string", pattern: "^[a-z][a-z0-9_]{0,31}$" },
+    },
+    outputs: {
+      type: "array",
+      minItems: 2,
+      maxItems: 16,
+      items: { type: "boolean" },
+    },
+    settleGameTicks: { type: "integer", minimum: 0, maximum: 128 },
+  },
+} as const;
 const nullableBehaviorSchema = {
   anyOf: [
     { type: "null" },
@@ -65,6 +93,7 @@ const nullableBehaviorSchema = {
         fallingGameTicks: { type: "integer", minimum: 0, maximum: 128 },
       },
     },
+    TRUTH_TABLE_BEHAVIOR_SCHEMA,
   ],
 } as const;
 export const BEHAVIOR_PROPOSAL_SCHEMA = {
@@ -192,6 +221,37 @@ export function generatedGeometrySchema(input: DesignRequest) {
       },
       input: pos,
       output: pos,
+    },
+  };
+}
+
+/** Named-port output schema; enabling it in the model adapter requires native acceptance. */
+export function generatedTruthGeometrySchema(
+  input: DesignRequest,
+  accepted: TruthTableBehavior,
+) {
+  const behavior = validateTruthTableBehavior(accepted);
+  const legacy = generatedGeometrySchema(input);
+  const { input: inputPosition, ...properties } = legacy.properties;
+  return {
+    ...legacy,
+    required: ["name", "explanation", "blocks", "inputs", "output"],
+    properties: {
+      ...properties,
+      inputs: {
+        type: "array",
+        minItems: behavior.inputs.length,
+        maxItems: behavior.inputs.length,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["name", "pos"],
+          properties: {
+            name: { type: "string", enum: [...behavior.inputs] },
+            pos: inputPosition,
+          },
+        },
+      },
     },
   };
 }

@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import {
   validateBehavior,
+  generatedTruthGeometrySchema,
+  BEHAVIOR_PROPOSAL_SCHEMA,
   behaviorDigest,
   makeGeneratedBlueprint,
   validateGeneratedBlueprint,
@@ -437,4 +439,62 @@ test("shared generated AND bytes validate identically in companion and Fabric", 
   assert.deepEqual(validateGeneratedBlueprint(blueprint), blueprint);
   assert.equal(blueprint.behavior.function, "truth-table");
   assert.equal(blueprint.ports.length, 3);
+});
+
+test("named geometry output schema binds accepted names and rotated workspace bounds", () => {
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["left", "right"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  assert.ok(behavior.function === "truth-table");
+  const schema = generatedTruthGeometrySchema(
+    { ...input, rotation: 90, maxSize: { x: 6, y: 3, z: 4 } },
+    behavior,
+  );
+  assert.deepEqual(schema.required, [
+    "name",
+    "explanation",
+    "blocks",
+    "inputs",
+    "output",
+  ]);
+  assert.equal("input" in schema.properties, false);
+  assert.equal(schema.properties.inputs.minItems, 2);
+  assert.equal(schema.properties.inputs.maxItems, 2);
+  assert.deepEqual(schema.properties.inputs.items.properties.name.enum, [
+    "left",
+    "right",
+  ]);
+  assert.deepEqual(schema.properties.inputs.items.properties.pos.properties.x, {
+    type: "integer",
+    minimum: 0,
+    maximum: 3,
+  });
+  assert.deepEqual(schema.properties.output.properties.z, {
+    type: "integer",
+    minimum: 0,
+    maximum: 5,
+  });
+  assert.equal(schema.properties.blocks.maxItems, 72);
+  assert.equal(schema.additionalProperties, false);
+});
+
+test("model behavior stage permits independent Boolean intent without reducing it to buffer timing", () => {
+  const variants = BEHAVIOR_PROPOSAL_SCHEMA.properties.behavior.anyOf;
+  assert.equal(variants.length, 3);
+  assert.ok(
+    variants.some(
+      (v) =>
+        "properties" in v &&
+        v.properties.function.enum.some((name) => name === "truth-table"),
+    ),
+  );
+  const instructions = String(plannerConfig("behavior").developer_instructions);
+  assert.match(instructions, /one to four unique named lever inputs/);
+  assert.match(instructions, /first input most significant/);
+  assert.match(instructions, /requires owner confirmation/);
+  assert.doesNotMatch(instructions, /Only a one-lever one-lamp buffer/);
 });

@@ -353,6 +353,31 @@ Offline reference projects persist in the mod's local checkpoint; they are not
 registered as companion projects. Companion-backed designs also checkpoint
 their state to SQLite. Chat and world text are never interpreted as code.
 
+## Generated Boolean logic (source build)
+
+The same design/confirm/preview/build/test flow also supports complete Boolean
+behavior with one to four named lever inputs and one lamp output. For example:
+`/engineer design Make an AND circuit with inputs a and b and a lamp output, settling within 20 game ticks.`
+Read every proposed truth-table row and its settling bound before confirming.
+If you omit the bound, the AI may propose20 game ticks and explain that choice;
+confirmation accepts that proposal. The settling bound does not promise an exact
+transition latency.
+
+The server requires a complete table and distinct named lever ports. Testing
+visits every combination forward and backward, records every game tick, and
+requires the output to stay correct for eight ticks after settling. It restores
+each input to its own original state. Missing ticks are inconclusive; a brief wrong
+output fails even when the final reading is correct. Interrupted input journals
+survive restart without a lease; explicitly resume to reconcile them, then request
+a fresh test.
+
+Dedicated CI has proved this runner with hand-authored raw AND geometry, including
+permission revocation, saved-world restart and different original lever states.
+This proves that bounded fixture, not fresh model-generated Boolean design or
+arbitrary electrical/mechanical engineering. The model can propose invalid or
+nonfunctional wiring; validation and actual Minecraft tests still decide whether
+it works. Execution remains creative placement, with optional bounds overlays.
+
 ## Evidence and remaining scope
 
 Local evidence: main and client Java source, including the client integration

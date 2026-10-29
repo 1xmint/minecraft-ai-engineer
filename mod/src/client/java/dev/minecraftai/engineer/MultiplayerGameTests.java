@@ -737,15 +737,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice 402 103 6 180 20");server.runCommand("forceload add 384 -16 416 16");
         send(context,"engineer project new");send(context,"engineer select1 400 100 0");send(context,"engineer select2 405 102 3");
         server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(405,102,3)));
+        MESSAGES.clear();send(context,"engineer design CI generated AND: named inputs a and b; settle within 20 game ticks.");
+        expectChat(context,"/engineer confirm ");String confirmation=confirmationNonce();
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Generated preview accepted");
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"No current behavior proposal");
         server.runOnServer(s->{
-            var project=session(s,"Alice");JsonObject source;
-            try(var stream=MultiplayerGameTests.class.getResourceAsStream("/fixtures/generated-and.json")) {
-                if(stream==null)throw new IllegalStateException("Missing raw AND reference");
-                source=JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            }catch(java.io.IOException invalid){throw new AssertionError(invalid);}
-            source.addProperty("id",project.projectId.toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);
-            source.add("anchor",Blueprint.jsonPos(new BlockPos(400,100,0)));project.accept(Blueprint.parse(source,project.worldId,project.dimension));
+            var project=session(s,"Alice");check(GeneratedBlueprint.behavior(project.blueprint) instanceof TruthTableSpec,"Separately confirmed behavior reaches native generated Boolean preview");
             check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Raw AND preview grants no world execution or verification");
+            check(project.blueprint.blocks().stream().allMatch(b->project.level().getBlockState(b.pos()).isAir()),"Confirmed Boolean geometry does not edit the world before build");
             // Synthetic existing player section: two supports and two differently powered levers.
             for(BlockPos pos:java.util.List.of(new BlockPos(403,101,0),new BlockPos(400,101,3)))project.level().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());
             for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input()) {

@@ -1,286 +1,193 @@
 # Now
 
-2026-10-28: Active goal: **complete all milestones**, including the entire phase1
-engineering partner and all six phase2 features. Do not redefine completion around
-a catalog, buffer, screenshot, release or green CI.
+2026-10-29. Active goal: **complete all milestones**: the entire Phase1 engineering
+partner and all six Phase2 features. No catalog, buffer, screenshot, release or
+green CI substitutes for the full objective.
 
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/13-generated-logic**, based on merged PR21 **e3f26d88f40270854005a339cba67e17d157eb9a**. Final replay sourcea504014 passed all five gates **CI40808845287**. PR20 merged55a4858; PR19 merged1e97bc3.
-Read actual GitHub/worktree state before continuing. AGENTS.md and this file are
-our only project memory; product requirements remain in docs/product-brief.md.
+Branch: **phase/13-generated-logic**, draft **PR22**. Main includes PR21,
+mergee3f26d88f40270854005a339cba67e17d157eb9a. Latest fully verified Phase13 source:
+**52b12967f59f051b81348948bcb5d76926c6c04f**, all five required checks passed
+**CI40899770666**. Later adapter/confirmation/proof changes require new CI.
+Read actual git status, PR and workflow state before continuing.
 
-Josh: **skip heavy reviews; build and ship**. No formal review cycles. Public
-implementation, branches and merging green PRs are authorized. No question or
-approval is pending. Tests run on GitHub, never on his slow PC. Locally run only
-scoped compile, formatting and syntax checks; one Gradle worker. Use no separately
-billed service or API key. Only the configured account-owning operator starts AI.
+Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
+merging green PRs are authorized. No approval is pending. Tests run on GitHub,
+never on his slow PC. Locally scoped compile/format/syntax only, one Gradle worker.
+No separately billed service or API key. Only the configured account-owning
+operator invokes AI. Keep project memory only in AGENTS.md and this file.
 
-## Current slice: actual model structural modification (G2/G3/E4)
+## Outcomes for current slice: generated Boolean logic
 
-- L1: reconstruct only the fixed structural scenario's exact request, five-wide
-  bounds, completed seed context, run/SHA/stage and receipt identity. Reject
-  cross-scenario data; preserve the old four-wide generated scenario unchanged.
-- L2: in the actual game, the player places a reference support, AI completes a
-  known two-repeater buffer, and original12/16 timing passes. Two actual signed-in
-  calls propose behavior and raw three-repeater geometry. Separate owner apply,
-  real stop/client edit/conflict/resume, new timing, service/game restarts and
-  rendered blocks must prove the modification, without fabricated inference.
-- L3: credentials remain local; two explicit bounded calls retain separate private
-  started/response receipts and exact digests. Ordinary CI stays deterministic.
-  Never retry a consumed started receipt or upload credentials/private world data.
+- T1: independently accept complete behavior for one to four named Boolean inputs,
+  without geometry defining its own specification. Proof: strict schema, exhaustive
+  rows, immutable data, matching Java/TS digest and rejection of malformed data.
+- T2: raw generated geometry binds each accepted input to a distinct actual lever
+  and the output to one lamp. Proof: unchanged preview, separate owner confirmation
+  and build, actual AND physics across every forward/reverse row. No catalog shape
+  substitution or geometry-only functional pass.
+- T3: every-game-tick settled evidence and safe input recovery. Proof: transient
+  wrong outputs fail, gaps are inconclusive, forged/reordered summaries reject;
+  revocation and saved-world restart retain originals without authority, fresh
+  owner resume restores them, and another actual trial passes.
 
-Decision: use an explicitly hand-authored reference before the two modification
-calls, rather than four SDK calls or arbitrary CI inputs. The reference is not a
-fresh model design. Actual modification and full bounded live acceptance now
-passed; final recorded-reply regression checks and shipping remain. Task order: fix/publish exact synthetic
-setup (L1/L3), regressions, actual two responses and inspect all native artifacts
-(L2/L3), then ship only the proven bounded feature and continue the full roadmap.
+### Implemented and proven
 
-### Verified live result and next action
+Behavior is a typed EngineeringBehavior union. Existing schema1 buffer JSON,
+`buffer-v1|RISING|FALLING` digests, revision1 metadata and exact-edge tests remain
+unchanged. New TruthTableSpec / truth-table.ts use exact schema2:
+`function=truth-table`, `inputs`, `outputs`, `settleGameTicks`.
+Inputs:1..4 unique `[a-z][a-z0-9_]{0,31}`, excluding reserved output. Outputs:
+exactly2^N strict Booleans, binary row order with first input most significant.
+Settling integer0..128; stable window fixed8. Digest SHA256 UTF8:
+`truth-v2|comma-joined-inputs|0/1-output-string|settle`.
 
-Source **ccd89d2e6a03c6241463ec11da779ec1dfd67395** passed all five regression
-gates **CI40806790413**, including all35 required Minecraft tests. Actual manual
-**run40806992766 completed successfully**, with behavior response40807645397 and
-geometry response40807742547. Both actual SDK0.164.0/gpt-6-luna replies were accepted;
-behavior is12/16, geometry is ten blocks with three west-facing two-tick repeaters.
-No result was silently changed. Usage: behavior10566in/83out; geometry11466in/816out.
-All four local SDK calls across the failed and successful runs are consumed; do
-not make more calls or reuse their exclusive started receipts for this slice.
+Generated Boolean metadata uses generatorRevision2 and the unchanged outer
+blueprint schema1. Raw geometry inputs:[{name,pos}] must match accepted name/order,
+with distinct actual levers and exactly one lamp. Both runtimes reconstruct all
+canonical metadata. GeneratedPlanning retains typed accepted intent; task identity
+includes its digest. Geometry/model output never grants world authority.
 
-Inspected retained artifacts: task `work/live-structural-proof-40806992766`.
-Actual player first-support construction, AI remainder and original timing passed.
-Actual model diff/apply, real stop, client glass placement, conflict refusal,
-client glass removal, resume and new12/16 test passed at02:40:53. Companion really
-restarted4537->5429; Bob's shared lesson, EDIT-but-not-owner expansion denial and
-revocation passed. The actual third game boot retained the exact accepted source
-and actual blocks without an execution lease. Both structural completion/recovery
-markers and the entire workflow passed. Inspected PNG visibly shows five supports,
-lever, three repeaters and lamp after restart; copy unchanged to
-`docs/images/structural-restarted.png`. Offline CI is not Mojang authentication.
+FunctionalTrial has a separate settled truth-table runner; buffer exact timing is
+not weakened. Cases ascend then descend through every row, including repeated last
+row. Samples include activation tick0 through settle+8; output must match at settle
+and every tick thereafter. SettledTrace and companion replay validate accepted
+row/digest/bound, contiguous samples, verdict and output summary. Outer Java evidence
+also binds case order, observed input vector and adjacent game-time boundaries.
+Existing per-input write-ahead restoration, current authority and conflict checks
+remain in use. Saved evidence never resumes a test or grants a lease.
 
-Behavior request digest dd774b24ab571cc39987f4f1082861eb4388e29fc8a407666294027592e487be;
-geometry request6f3463878ab272adc7682a405501348c36c60a1a547d948d551be2236c33591e.
-Accepted result digests8189e9bf653079448dbcd12f93aba1fb33bf37ba2936c9222387930ba9f7f35b
-andfa3a2e89c7cab9d2a74e8dcac1e08fd98d1299708acb7f2c6dec51ea472cd71c match the
-local private receipts under AppData/minecraft-ai-engineer/acceptance. Credentials
-stayed local and the planner forced ChatGPT sign-in; no API-key fallback.
+Shared `mod/src/main/resources/fixtures/generated-and.json` is a **hand-authored raw
+reference**, not model inference. Companion validates the exact bytes; native game
+tests prove all8 forward/reverse AND cases and reject OR intent for the same wiring.
+Source1063b64 / Fabric job123536420796 logged all39 required tests passed at15:13:02
+UTC. Its full CI40899001903 was later cancelled by a newer push; do not call the
+whole cancelled workflow successful. Artifacts: task work/logic-proof-40899001903.
 
-The exact positive raw reply is `tests/fixtures/live-structural-buffer.json`.
-Ordinary native CI now replays that result for its structural request instead of
-constructing a parallel hand-authored three-repeater reply. It remains untested
-on replay until actual Minecraft tests run; this is not fresh inference evidence.
-Run the final required checks, inspect replay results, then ship PR21 without a
-formal review. Broad phase1 engineering and all phase2 work remain unfinished.
+**Source52b1296 / CI40899770666 passed all five gates.** Inspected retained
+`work/truth-proof-40899770666`: actual production truth trials passed at15:22:06
+and15:23:46; coordination/truth-interrupted.done and truth-recovery.done both passed.
+Existing synthetic player section had two supports and differently powered levers
+(a ON, b OFF), excluded from the AI's nine placement entries. First trial restored
+both originals. Permission revocation interrupted a later trial with two journals
+and no lease. Actual third saved-server boot retained them; fresh owner resume and
+another actual trial passed. SQLite verifier replayed all8 cases against immutable
+accepted intent and required two distinct completion times. This is offline CI,
+not Mojang authentication or human mouse placement.
 
-### Failure retained, not hidden
+### Latest changes requiring CI
 
-Earlier source1e20635 / actual run40805062670 accepted behavior40805687857 and
-geometry40805786982 but all repeaters faced east. Actual client conflict/resume
-worked and geometry matched; FunctionalTrial failed at tick12 (expected true,
-observed false). That whole run failed before restart/screenshot proof. Exact bad
-reply remains `tests/fixtures/live-structural-reversed.json`, artifacts in task
-`work/live-structural-proof-40805062670`. Usage10558in/67out +11367in/910out. The
-old receipts are consumed and were never reused. Geometry guidance was corrected
-using actual passing west-facing references and pinned26.3 DiodeBlock input-side
-bytecode; CI now tests both west-positive and east-negative traces. The single
-bounded new two-call run above succeeded. Do not present the old failure as success.
+Model behavior schema/config/prompt now supports complete Boolean intent alongside
+buffers. If no Boolean settling bound is requested, propose20 and explicitly explain
+that the owner must confirm this proposed test bound; never promise exact latency.
+Named geometry schema binds accepted names/count and rotated workspace bounds.
+Geometry adapter validates against the accepted behavior. All existing isolated
+subscription/tool restrictions remain. No new actual SDK calls have been made.
 
-Setup runs40801664492 and40803355719 were cancelled before SDK calls;40803884854
-published a request then failed at the provenance allowlist before a call. Fixes:
-seed blueprint ID equals projectId before construction, reconstructed task ID
-matches it (not projectId:root), explicit scenario crosses the response workflow,
-and owner/workflow/source/stage/artifact guards allow only the three fixed names.
-Unknown scenarios reject. Transport fails promptly on unexpected-inference.
+Gateway proof covers separate Boolean proposal/geometry calls, immutable intent,
+nonce replay denial, untested preview and unchanged canonical revision. Native CI
+truth setup now goes through actual design/confirm commands and real HTTP/SQLite
+with a fixed, explicitly hand-authored reply, rather than direct native accept.
+Its verifier requires exactly two planning starts, so replay/recovery adds none.
+Additional Java evidence proofs reject swapped cases/inputs, forged timestamps,
+wrong output summaries and progress past an unfinished case. Protocol and mod guide
+describe truth tables. Scoped TypeScript/Java compilation and script syntax passed;
+new required checks and this expanded native flow are still pending.
 
-The live fixture is explicitly hand-authored before modification; the two model
-calls do not prove initial design generation. The earlier PR18 flow separately
-proved bounded raw generation. This combined body of bounded evidence still does
-not establish the entire phase1 engineering partner or advanced phase2 features.
+Next: push latest adapter/confirmation changes, inspect all required CI and native
+artifacts; fix any failure without restarting solely for an observation timeout.
+Then establish an explicitly bounded fresh signed-in multi-input design acceptance
+if needed, ship PR22 only when proven, and continue the full roadmap below.
+Do not claim fresh Boolean model generation from fixtures or a complete product
+from this slice. The earlier structural receipts below are consumed.
 
-## Shipped bounded foundations
+## Shipped foundations and retained evidence
 
-Dedicated Fabric server first, integrated-compatible core, server-owned project
-permissions, real connections/epochs, component assignments, bounded reservations,
-private per-player tutorials, creative build/repair/undo, targeted inspection and
-private inventory reads. Intended, observed and verified state remain distinct.
-Restart/disconnect/revocation/conflict restores no execution lease. Inputs and
-block changes use before-state WAL. Optional overlays currently show colored
-bounds/labels, not textured directional ghosts. Published alpha remains the older
-single-player reference; current multiplayer features are in source.
+Dedicated Fabric server first, integrated-compatible logical-server core;
+server-owned identity/permissions/project ownership, real connection/epoch fences,
+shared authorized blueprints, private per-player tutorial cursors, component
+assignments and bounded write/read reservations. Creative build/repair/undo,
+inspection and private inventory reads. Intended/observed/verified remain distinct.
+Disconnect, revocation, conflict and restart restore no lease. Optional overlays
+currently show colored bounds/labels, not textured directional ghosts. Published
+alpha is the older single-player reference; multiplayer features are in source.
 
-PR19 explicit structural edits: source8c3aa39 passed CI40796411413; final note
-sourceb17ba07 passed all five gates CI40797460992 before merge1e97bc3. Native proof
-covers owner expansion, EDIT-but-not-owner denial, no-edit diff, separate one-use
-apply, real stop/conflict, unfinished cursor across third boot, explicit resume,
-12/16 timing, and repeated-position inverse undo preserving player supports.
-Artifacts: task `work/structural-proof-40796411413`.
+PR19 structural revisions merged1e97bc385c3296ea037eaaf4689b7eeec982243b.
+Final sourceb17ba07 passed all5 CI40797460992; source8c3aa39 native evidence
+CI40796411413 covers explicit old/new diff, owner expansion, no-edit preview,
+separate one-use apply, stop/conflict, unfinished cursor across third boot,
+12/16 timing and inverse repeated-position undo preserving player supports.
+Artifacts: work/structural-proof-40796411413.
 
-PR20 restored layouts: sourceaa73e65 passed all five **CI40800347568**; final note
-source8c4e21e passed all five **CI40801344596** before merge55a4858. Inspected
-`work/restored-proof-40800347568`: actual fourth boot, unchanged true source IDs,
-corrupt/stale restored data rejection, real edit refused before quota, second
-request/apply, actual12/16 timing at01:31:47 and second undo. SQLite verifies four
-starts for the two explicit pairs and current epoch4 metadata separately from
-immutable epoch3 recovery evidence. These are hand-authored response fixtures,
-not fresh structural model inference.
+PR20 restored layouts merged55a48582003b2b91ffb50d26dd74b8846679ff9e.
+Sourceaa73e65 CI40800347568; final8c4e21e all5 CI40801344596. Actual fourth boot,
+true old IDs, corrupt/stale reference rejection, changed base rejected before
+quota, new request/apply, actual timing and second undo. Artifacts:
+work/restored-proof-40800347568. StructuralTransition schema1 preserves adjacent
+sources; schema2 adds distinct accepted canonical context without relabelling true
+before/after. OperationScopes hashes/bounds all captured sources. Undo retains
+immutable restoredLayout; planning validates the physical basis before dispatch.
 
-StructuralTransition schema1 preserves adjacent old/new sources exactly. Schema2
-adds current accepted context only when different from the restored physical
-before source; never relabel the old ID/revision. All sources are hashed/count
-against budgets. OperationScopes stores paired snapshots; sources(operation)
-means physical before/after, accepted() means canonical correlation. Exact diff
-writes and both real read closures fence world work. Undo persists one immutable
-restoredLayout reference; load validates it against canonical after and workspace.
-It grants no authority. Changed/incomplete physical bases reject before dispatch.
+PR21 signed-in structural proof merged e3f26d8. Sourceccd89d2 passed all5
+CI40806790413; full actual manual40806992766 SUCCESS. Official SDK0.164.0 /
+gpt-6-luna behavior40807645397 and geometry40807742547 accepted12/16 and ten raw
+blocks with three west-facing delay2 repeaters. Actual player first support, AI
+rest, separate modification apply, stop/client glass conflict/removal/resume,
+actual new timing, companion restart4537->5429, shared Bob lesson/revocation and
+third game boot passed. Inspected real-block PNG docs/images/structural-restarted.png;
+artifacts work/live-structural-proof-40806992766. Final recorded-reply replay
+sourcea504014 passed all5 CI40808845287 before merge. Replay is not fresh inference.
 
-PR18 generated buffers: mergebebf6ca, final source076e4dc, all five gates
-CI40768389557. Actual signed-in source00e5da5/request40766098371 used behavior
-response40766960852 and geometry40767111851: desired12/16 and eight raw blocks,
-two serial repeaters4+2. Actual player support, AI remainder, measured edges,
-shared Bob lesson/revocation, companion restart and game restart passed. Inspected
-real-block PNG: docs/images/generated-restarted.png. Full manual run later failed
-because its creative fixture left64 stone instead of restoring7; do not call that
-whole run successful. Fixture cleanup was fixed; final CI replays the recorded
-raw reply through complete inventory/restart acceptance with no new inference.
-Artifacts: `work/live-proof-40766098371`, `work/generated-proof-40768389557`.
-Earlier catalog request40624276545 proved only a fixed lamp; its old final PNG
-was ghost-only. Never broaden those claims.
+Positive private receipt digests: behavior request
+dd774b24ab571cc39987f4f1082861eb4388e29fc8a407666294027592e487be,
+result8189e9bf653079448dbcd12f93aba1fb33bf37ba2936c9222387930ba9f7f35b;
+geometry request6f3463878ab272adc7682a405501348c36c60a1a547d948d551be2236c33591e,
+resultfa3a2e89c7cab9d2a74e8dcac1e08fd98d1299708acb7f2c6dec51ea472cd71c.
+Earlier actual40805062670 FAILED: accepted east-facing repeaters matched geometry
+but failed true output at tick12; exact fixture live-structural-reversed.json,
+artifacts work/live-structural-proof-40805062670. Do not hide that failure or flip
+the raw reply. All four SDK calls across failed/successful attempts are consumed;
+never reuse their exclusive started receipts or make more calls for that old slice.
+MC26.3 repeater facing is its INPUT side, opposite signal travel; native positive/
+negative traces and pinned DiodeBlock bytecode ground the corrected guidance.
+
+PR18 generated buffers mergedbebf6ca; final076e4dc all5 CI40768389557. Signed-in
+source00e5da5/request40766098371 used behavior40766960852 and geometry40767111851,
+12/16 with eight raw blocks and repeaters4+2. Actual timing, sharing and restarts
+passed, but whole manual run failed at creative inventory fixture cleanup. Fixed
+cleanup and final recorded replay passed; never call that whole old run successful.
+Real-block PNG docs/images/generated-restarted.png. Artifacts work/live-proof-40766098371
+and work/generated-proof-40768389557. Older catalog40624276545 proved only a fixed
+lamp; its ghost-only screenshot did not prove built blocks.
 
 ## Runtime and operating constraints
 
-Java25/Minecraft26.3/FabricLoader0.20.1/API0.165.0+26.3/Loom1.17.21/Gradle9.6;
-Node24.14/TypeScript/SQLite; official SDK/CLI0.164.0. Java toolchain is in task
-`work/fabric-tools/jdk-25.0.5+8`. Use login:false on PowerShell; no local test suites.
-One private companion beside the operator's server/PC. No hosting purchase,
-public AI endpoint, credential sharing, paid API or API-key fallback. General
-shared-subscription eligibility remains unresolved; solo SDK proof is not proof
-that other players may spend the subscription. Existing planner forces ChatGPT
-login, disables tools and isolates read-only SDK work. Retain official sign-in.
-
-`plan` is curated; `design` -> `confirm` separately proposes behavior/raw geometry.
-Confirming inference never grants building. Structural candidates remain outside
-canonical revision until the separate owner apply nonce. Native fences bind
-actor/current connection, epoch, revision/auth, selection, workspace, expiry and
-assignment basis/generation. Generated buffers use loaded clear two-block margins,
-exact lever states and every-game-tick transition traces, including sample0.
-Private inventory data never enters shared model context/SQLite/audit. Model
-output and world text remain untrusted data, never commands. Current execution
-is creative direct placement, not survival. Offline CI actors and scripted client
-placement do not prove human mouse use or Mojang authentication.
+Java25 / Minecraft26.3 / FabricLoader0.20.1 / API0.165.0+26.3 / Loom1.17.21 /
+Gradle9.6; Node24.14 / TypeScript / SQLite / official SDK+CLI0.164.0. Toolchain:
+task work/fabric-tools/jdk-25.0.5+8. PowerShell login:false; max-workers1.
+No local test suites. One private companion beside the operator's own server/PC;
+no public AI endpoint, hosting purchase, credentials sharing or paid API fallback.
+General shared multi-user subscription eligibility remains unresolved: operator
+approval is not provider eligibility. Planner forces ChatGPT login/openai provider,
+disables tools/apps and uses isolated read-only SDK work. Credentials stay local.
+Private inventories never enter shared model context/SQLite/audit. World/model text
+is untrusted data, never executable code. Current execution is creative, not survival.
 
 ## Remaining full roadmap
 
-1. Ship the verified L1-L3 bounded structural feature, then broaden generated
-   functions and electrical interfaces: comparators/observers/pistons, connections,
-   mechanical semantics and larger multicomponent engineering. No buffer-only or
-   catalog-only substitute for the requested engineering partner.
-2. E1: free-form followups/clarification and durable goals, rationale, preferences,
-   decisions and later identification/explanation. Exact ask phrases are a slice.
+1. Finish Phase13 multi-input generation/acceptance, then broader electrical and
+   mechanical engineering: comparator/observer/piston behavior, connections and
+   larger multicomponent systems. No buffer/catalog-only substitute.
+2. E1: free-form followups/clarification, durable goals/rationale/preferences/
+   decisions and later project identification/explanation. Exact ask phrases
+   remain a limited slice.
 3. E3: broader missing/orientation/connection/timing/interference/inconclusive
    diagnosis, explicit repair previews and textured directional ghosts.
-4. E4: full signed-in preview -> player section -> AI rest -> interrupt/modify/
-   resume -> actual test -> service/game restarts -> later explanation and richer
-   visuals. Bounded existing proofs do not establish the entire experience.
+4. E4: full signed-in preview -> player functional section -> AI rest -> interrupt/
+   modify/resume -> actual tests -> service/game restart -> later explanation and
+   richer visuals. Existing bounded proofs do not establish this complete flow.
 5. Phase2, all unstarted: voice; physical NPC; genuine survival gathering/placement;
    schematic import/export; measured size/resources/latency/reliability optimization;
    multiple coordinated independent builders.
-
-2026-10-28 memory cleanup: replace superseded chronological notes with this current
-map and exact proof handles; keep the full objective and honest limitations.
-
-## Active slice: generated combinational logic (G2/interfaces)
-
-- T1: independently accept named one-to-four Boolean inputs and a complete output
-  table, without treating geometry as its own specification. Proof: exact schema2,
-  exhaustive row count, unique bounded names, strict Booleans, stable cross-runtime
-  digest and rejection of incomplete/extra/ambiguous data. Schema1 buffer bytes,
-  digests, geometry and exact-edge tests remain unchanged.
-- T2: generate/preview/build a real two-input AND circuit from raw geometry, with
-  all input ports bound to actual distinct levers and the output to a lamp. Proof:
-  no-edit preview, separate owner authorization, all four Boolean cases in actual
-  Minecraft and player/AI handoff. The circuit is not restricted to a catalog shape.
-- T3: test all declared vectors forward and backward, sampling every game tick
-  after the accepted settling bound through eight stable ticks. Proof: wrong logic,
-  incomplete/gapped/forged evidence and changed inputs fail honestly; actual
-  interruption/revocation/restart restores original inputs under fresh authority.
-  A settled truth table does not claim exact latency or universal formal proof.
-
-Decision: add a typed truth-table behavior beside the existing buffer type, not
-fake extra buffer timing fields or a shape-only catalog restriction. Schema2 has
-function=truth-table, inputs (1..4 unique [a-z][a-z0-9_]{0,31}, excluding output),
-outputs (2^n Booleans, row index bits in declared-input order, first input MSB),
-settleGameTicks (0..128). Stable window is server-fixed8. Digest UTF8 SHA256 of
-truth-v2|comma-joined-inputs|0/1-output-string|settle. Preserve buffer-v1 digest.
-New generated logic metadata uses generatorRevision2; buffer remains1. Add a
-shared behavior interface, reuse named port/test/restore infrastructure and bound
-world authority independently. Existing block library can build an AND reference;
-comparators/observers/pistons, memory and broader mechanics remain later work.
-
-Tasks: boundary proofs first (T1), pure data validators/digest (T1), runtime typed
-behavior and multi-input geometry/model schemas (T1/T2), actual sampled truth-table
-runner/evidence validation (T3), actual AND/native handoff/failure/restart proof
-(T2/T3), GitHub required checks then ship. No heavy review. Tests only in CI;
-local scoped compile/format checks. No new SDK calls until deterministic proofs
-are established; the earlier structural slice's receipts remain consumed.
-
-2026-10-29 T1 implementation progress: added immutable Java TruthTableSpec and
-pure TypeScript truth-table validation, matching SHA256 identity/summary, complete
-1..4-input row counts and strict rejection of ambiguous/extra/non-Boolean data.
-Added cross-runtime golden digest and arity/rejection proofs. No local tests run.
-PR22 remains draft: multi-input geometry/runtime/evidence integration and actual
-Minecraft AND proof are unfinished; initial CI40810537325 failed on the deliberately
-incomplete boundary-first source. Do not merge or claim generated logic works yet.
-
-T1/T2 companion integration: behavior is now a discriminated buffer/truth-table
-union; canonical generation derives named ports and revision2 from the accepted
-table. Validation binds name/order/count/distinct lever positions and re-derives
-all blueprint metadata; forged ports/digest/revision reject. Legacy buffer
-revision1 and byte format remain unchanged. TypeScript no-emit check passed.
-Model proposal schemas intentionally remain buffer-only until server runtime
-and replayable per-tick evidence support truth tables. Java server/client compile
-passed on0d6004d. Tests remain in GitHub CI, not run locally.
-
-T3 evidence implementation: Java SettledTrace and companion validateSettledTrace
-replay bounded every-tick observations against the accepted truth-table digest,
-row, settling bound and fixed8-tick stability window. Incorrect transient outputs
-fail even with a correct endpoint; gaps are inconclusive; forged summaries, row
-substitution, duplicate ticks and altered accepted intent reject. Added Java native
-proof and companion rejection tests; neither is a claim of actual AND operation.
-Java server/client compilation and TypeScript no-emit check passed locally; tests
-run only on CI. Prior source3f3b40e CI40898095932 has Companion, Windows and Fabric
-passing while native client/multiplayer jobs were still running when checked.
-Next integrate typed behavior/ports in GeneratedBlueprint and GeneratedPlanning,
-wire settled traces into FunctionalTrial and stored evidence, then enable model
-schemas and drive actual AND/handoff/recovery acceptance before shipping PR22.
-
-T1/T2/T3 server integration in progress: GeneratedBlueprint now validates revision2
-truth tables, exact ordered named lever ports, distinct positions, derived metadata
-and matching companion bytes; GeneratedPlanning retains typed accepted behavior.
-Its contract derives all forward/reverse vectors independently from accepted intent.
-FunctionalTrial now samples each truth-table case every tick, requires settled
-stability, replays saved evidence against exact case order/digest/time/ports and
-uses the existing per-input write-ahead restore and authority checks. Buffer exact
-edge behavior remains its existing separate runner/format. Java server/client and
-TypeScript scoped compile passed. Shared hand-authored raw AND fixture is expressly
-not model inference; new native game tests must establish actual AND operation and
-reject the same geometry against OR intent. No local tests run. Model schemas stay
-buffer-only pending deterministic runtime/authority/recovery proofs.
-
-2026-10-29 deterministic native physics evidence: source1063b64, Fabric job
-123536420796 / CI40899001903 logged all39 required tests passed at15:13:02 UTC,
-including complete forward/reverse generated AND and rejection against independent
-OR intent. Companion, Windows and integrated Minecraft client passed too; dedicated
-multiplayer was still running when this next acceptance change was prepared.
-Do not describe that whole older workflow as green without checking its terminal
-state. Downloaded fabric-evidence to task work/logic-proof-40899001903.
-
-Added deterministic dedicated native truth flow (not fresh inference): synthetic
-existing player section with two differently powered levers plus supports, AI
-remainder, actual production FunctionalTrial pass, both originals restored, then
-a second test interrupted by real permission revocation. It must retain both input
-journals without authority, survive the actual third saved-world boot, require
-explicit owner resume, and pass another actual trial. SQLite verifier replays
-all eight case traces from exact immutable accepted blueprint and requires two
-distinct completion times plus both recovery markers. Scoped client compilation
-and verifier syntax check passed. Full native authority/recovery proof is pending
-the next GitHub run; do not claim it from compilation or the lower-level AND test.
+6. Package the completed multiplayer release and setup instructions; published
+   alpha remains the older single-player reference.
