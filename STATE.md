@@ -287,3 +287,12 @@ native strict-note DTO test; these tests await GitHub CI. The existing foundatio
 commit fc5b9e3 passed all five checks in CI40917639392. Native command/restart
 acceptance and model conversation/context integration remain unfinished. Do not
 claim this branch is a shipped in-game memory feature yet.
+
+Phase14 acceptance added: ordinary CI now drives owner note commands, shared
+editor reads, denied editor authorship, revocation, unchanged blueprint/world
+state, actual later server boot reads and a third append. SQLite verification
+requires the exact three literal notes and immutable owner identities. This is
+written coverage, not a passed runtime claim. Scoped client Java compilation and
+verifier syntax passed. On prior source57668f9, Companion and Windows checks passed
+in live CI40955973499; native jobs were still running at inspection. The new
+acceptance source must pass its own complete CI before it is considered proven.

@@ -24,6 +24,53 @@ if (restoredBoot) {
 
 const db = new DatabaseSync(database, { readOnly: true });
 try {
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+    for (const marker of [
+      "knowledge-no-world-changes.done",
+      "knowledge-bob.done",
+      "knowledge-bob-denied.done",
+      "knowledge-recovery.done",
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+        "passed",
+      );
+    const knowledgeProject = readFileSync(
+      `${coordination}/knowledge-project`,
+      "utf8",
+    ).trim();
+    const counter = db
+      .prepare(
+        "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, knowledgeProject);
+    assert.equal(
+      counter?.revision,
+      3,
+      "Restart appends knowledge without losing or duplicating notes",
+    );
+    const notes = db
+      .prepare(
+        "SELECT document FROM gateway_project_notes WHERE server_id=? AND project_id=? ORDER BY note_revision",
+      )
+      .all(server.serverId, knowledgeProject)
+      .map((row) => JSON.parse(row.document));
+    assert.equal(notes.length, 3, "Denied editor append creates no note");
+    assert.deepEqual(
+      notes.map((note) => [note.revision, note.kind, note.text]),
+      [
+        [1, "goal", "Keep the entrance within six blocks."],
+        [2, "decision", "Use a visible lamp for the output."],
+        [3, "constraint", "Preserve the entrance clearance."],
+      ],
+    );
+    for (const note of notes) {
+      assert.equal(note.authorId, "10920508-d5d8-3eed-93d2-92f193afe7d7");
+      assert.equal(note.source, "owner-authored");
+      assert.equal(note.schemaVersion, 1);
+    }
+    assert.equal(new Set(notes.map((note) => note.id)).size, 3);
+  }
   const row = db
     .prepare(
       "SELECT * FROM gateway_projects WHERE server_id=? AND project_id=?",
