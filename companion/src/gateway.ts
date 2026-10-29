@@ -1,3 +1,4 @@
+import { discussionGrounding, validateDiscussionReply } from "./discussion.js";
 import {
   validateBehavior,
   validateBehaviorProposal,
@@ -17,6 +18,7 @@ import {
 import { PlanningQueue } from "./planning-queue.js";
 import { validateInventory } from "./inventory.js";
 import {
+  text,
   identifier,
   integer,
   object,
@@ -132,6 +134,7 @@ export class ServerGateway {
         "/v2/project/read",
         "/v2/knowledge/read",
         "/v2/knowledge/note",
+        "/v2/discuss",
         "/v2/design",
         "/v2/behavior/propose",
         "/v2/design/generated",
@@ -248,6 +251,7 @@ export class ServerGateway {
         blueprint: memory.blueprint(context) ?? null,
       };
     }
+    if (pathname === "/v2/discuss") return this.discuss(v, context, signal);
     if (
       pathname === "/v2/behavior/propose" ||
       pathname === "/v2/design/generated"
@@ -297,6 +301,7 @@ export class ServerGateway {
     fittingMechanisms(input); // Fit validation before spending quota.
     if (context.projectRevision >= Number.MAX_SAFE_INTEGER)
       throw new RequestError("Project revision exhausted.", 409);
+    const reasoning = memory.reasoning(context);
     memory.claim(context, "design");
     const controller = new AbortController(),
       active = { context, controller };
@@ -310,7 +315,7 @@ export class ServerGateway {
         controller.signal,
         async () => {
           this.requireEpoch(context);
-          memory.assertCurrent(context, "plan");
+          memory.assertReasoningCurrent(context, reasoning.knowledgeRevision);
           memory.consumePlanningBudget(
             context,
             this.options.actorPlansPerMinute ?? 4,
@@ -319,7 +324,7 @@ export class ServerGateway {
           const plan = await this.options.provider.plan(
             input,
             controller.signal,
-            memory.context(context),
+            reasoning.text,
             Object.freeze({ ...context }),
           );
           if (controller.signal.aborted)
@@ -328,7 +333,7 @@ export class ServerGateway {
               503,
             );
           this.requireEpoch(context);
-          memory.assertCurrent(context, "plan");
+          memory.assertReasoningCurrent(context, reasoning.knowledgeRevision);
           if (plan.template === "unsupported")
             throw new RequestError(
               plan.explanation || "Unsupported mechanism.",
@@ -350,6 +355,114 @@ export class ServerGateway {
             blueprint,
             projectId: context.projectId,
             message: plan.explanation,
+          };
+        },
+      );
+    } finally {
+      signal.removeEventListener("abort", abort);
+      this.planning.delete(active);
+    }
+  }
+  private async discuss(
+    v: Record<string, unknown>,
+    context: GatewayContext,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    const memory = this.options.memory;
+    const project = memory.assertCurrent(context, "plan");
+    const fields = [
+      "context",
+      "message",
+      "componentId",
+      "modelAuthorized",
+      "isOperator",
+    ];
+    if (Object.keys(v).some((key) => !fields.includes(key)))
+      throw new RequestError("Unknown discussion field.");
+    if (
+      !context.connectionId ||
+      !optionalBoolean(v.modelAuthorized, "modelAuthorized") ||
+      !optionalBoolean(v.isOperator, "isOperator")
+    )
+      throw new RequestError(
+        "Discussion requires the connected account-owning operator's explicit request.",
+        403,
+      );
+    const message = text(v.message, "discussion message", 1000);
+    const componentId =
+      v.componentId === undefined
+        ? undefined
+        : identifier(v.componentId, "discussion component");
+    const grounding = discussionGrounding(
+      project.name,
+      context.projectRevision,
+      memory.blueprint(context),
+      memory.knowledge(context),
+      componentId,
+    );
+    const discuss = this.options.provider.discuss?.bind(this.options.provider);
+    if (!discuss)
+      throw new RequestError(
+        "This provider does not support project discussion.",
+        503,
+      );
+    memory.claim(context, "project-discussion");
+    const controller = new AbortController(),
+      active = { context, controller };
+    const abort = () => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) controller.abort();
+    this.planning.add(active);
+    try {
+      return await this.options.queue.run(
+        `${context.serverId}:${context.actorId}`,
+        controller.signal,
+        async () => {
+          this.requireEpoch(context);
+          memory.assertReasoningCurrent(context, grounding.knowledgeRevision);
+          memory.consumePlanningBudget(
+            context,
+            this.options.actorPlansPerMinute ?? 4,
+            this.options.serverPlansPerHour ?? 24,
+          );
+          const reply = validateDiscussionReply(
+            await discuss(
+              Object.freeze({
+                message,
+                ...(componentId === undefined ? {} : { componentId }),
+              }),
+              controller.signal,
+              grounding.text,
+              Object.freeze({ ...context }),
+            ),
+            grounding.availableBasis,
+          );
+          if (controller.signal.aborted)
+            throw new RequestError(
+              "Discussion cancelled; no answer accepted.",
+              503,
+            );
+          this.requireEpoch(context);
+          memory.assertReasoningCurrent(context, grounding.knowledgeRevision);
+          memory.audit(
+            context.serverId,
+            context.projectId,
+            "discussion-reply",
+            {
+              context,
+              knowledgeRevision: grounding.knowledgeRevision,
+              message,
+              componentId: componentId ?? null,
+              reply,
+              worldEvidence: "not-inspected",
+            },
+          );
+          return {
+            protocol: 2,
+            context,
+            knowledgeRevision: grounding.knowledgeRevision,
+            worldEvidence: "not-inspected",
+            reply,
           };
         },
       );
@@ -423,6 +536,7 @@ export class ServerGateway {
         "This planning provider does not support generated designs.",
         503,
       );
+    const reasoning = memory.reasoning(context);
     memory.claim(
       context,
       geometry ? "generated-geometry" : "generated-behavior",
@@ -439,7 +553,7 @@ export class ServerGateway {
         controller.signal,
         async () => {
           this.requireEpoch(context);
-          memory.assertCurrent(context, "plan");
+          memory.assertReasoningCurrent(context, reasoning.knowledgeRevision);
           if (acceptance && behavior) {
             validateGeneratedAcceptance(acceptance, context, input, behavior);
             // Reuse the existing durable replay ledger, not a new authorization system.
@@ -462,7 +576,7 @@ export class ServerGateway {
               await propose!(
                 input,
                 controller.signal,
-                memory.context(context),
+                reasoning.text,
                 authority,
               ),
             );
@@ -472,7 +586,7 @@ export class ServerGateway {
                 503,
               );
             this.requireEpoch(context);
-            memory.assertCurrent(context, "plan");
+            memory.assertReasoningCurrent(context, reasoning.knowledgeRevision);
             memory.audit(
               context.serverId,
               context.projectId,
@@ -490,7 +604,7 @@ export class ServerGateway {
           const raw = await generate!(
             request,
             controller.signal,
-            memory.context(context),
+            reasoning.text,
             authority,
           );
           if (controller.signal.aborted)
@@ -499,7 +613,7 @@ export class ServerGateway {
               503,
             );
           this.requireEpoch(context);
-          memory.assertCurrent(context, "plan");
+          memory.assertReasoningCurrent(context, reasoning.knowledgeRevision);
           validateGeneratedAcceptance(acceptance, context, input, behavior!);
           const blueprint = {
             ...makeGeneratedBlueprint(input, raw, behavior),

@@ -49,6 +49,43 @@ const server = createCompanionServer({
   // This provider cannot invoke the SDK; production retains its default4/minute.
   actorPlansPerMinute: 12,
   provider: {
+    async discuss(input, _signal, context) {
+      const source = JSON.parse(context);
+      if (source.worldEvidence !== "not-inspected")
+        throw new Error("Discussion fixture has invented world evidence");
+      const expected =
+        input.message === "CI explain entrance decision."
+          ? {
+              revision: 2,
+              kind: "decision",
+              text: "Use a visible lamp for the output.",
+            }
+          : input.message === "CI explain entrance constraint."
+            ? {
+                revision: 3,
+                kind: "constraint",
+                text: "Preserve the entrance clearance.",
+              }
+            : null;
+      if (!expected || source.knowledgeRevision !== expected.revision)
+        throw new Error(
+          "Unexpected discussion fixture request or knowledge version",
+        );
+      const note = source.sources.find(
+        (item) =>
+          item.kind === "owner-authored-requirement" &&
+          item.data.kind === expected.kind &&
+          item.data.text === expected.text,
+      );
+      if (!note)
+        throw new Error("Discussion lacks the explicit owner requirement");
+      return {
+        schemaVersion: 1,
+        kind: "explanation",
+        text: `Owner-authored ${expected.kind}: ${expected.text} This is a requirement, not a measured world fact.`,
+        basis: ["project", note.id],
+      };
+    },
     async proposeBehavior(input) {
       if (input.request === truthRequest)
         return structuredClone(truthFixture.proposal);

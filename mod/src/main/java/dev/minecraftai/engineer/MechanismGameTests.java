@@ -420,6 +420,19 @@ public final class MechanismGameTests {
         if(!current.is(Blocks.LEVER))block(helper,x,y,z,"minecraft:lever[face=floor,facing=east,powered="+on+"]",rotation);
         else if(current.getValue(BlockStateProperties.POWERED)!=on)helper.pullLever(pos);
     }
+    @GameTest
+    public void discussionReplyCannotBecomeConstructionAuthority(GameTestHelper helper) {
+        var answer=new com.google.gson.JsonObject();answer.addProperty("schemaVersion",1);answer.addProperty("kind","clarification");answer.addProperty("text","Which component do you mean?");answer.add("basis",new com.google.gson.JsonArray());
+        ProjectKnowledgeClient.validateDiscussion(answer,null);
+        for(String field:java.util.List.of("verified","commands","authority")) {
+            var forged=answer.deepCopy();forged.addProperty(field,"granted");boolean rejected=false;
+            try {ProjectKnowledgeClient.validateDiscussion(forged,null);}catch(IllegalArgumentException expected){rejected=true;}
+            if(!rejected)throw new AssertionError("Discussion accepted extra authority: "+field);
+        }
+        var foreign=answer.deepCopy();foreign.getAsJsonArray("basis").add("component:other");boolean rejected=false;
+        try {ProjectKnowledgeClient.validateDiscussion(foreign,"root");}catch(IllegalArgumentException expected){rejected=true;}
+        if(!rejected)throw new AssertionError("Discussion accepted a foreign component reference");helper.succeed();
+    }
     private static void inverter(GameTestHelper helper,Rotation rotation){
         block(helper,0,0,0,"minecraft:stone",rotation);
         input(helper,0,1,0,false,rotation);

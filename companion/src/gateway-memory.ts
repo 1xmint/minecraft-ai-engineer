@@ -865,6 +865,42 @@ export class GatewayMemory {
       tasks,
     }).slice(0, 6000);
   }
+  /** Capture explicit shared requirements separately from geometry and world evidence. */
+  reasoning(
+    context: GatewayContext,
+  ): Readonly<{ knowledgeRevision: number; text: string }> {
+    const knowledge = this.knowledge(context);
+    const legacy = this.context(context);
+    // Preserve byte-for-byte empty-note contexts used by existing acceptance receipts.
+    if (knowledge.revision === 0)
+      return Object.freeze({ knowledgeRevision: 0, text: legacy });
+    const notes = knowledge.notes.slice(-8);
+    return Object.freeze({
+      knowledgeRevision: knowledge.revision,
+      text: JSON.stringify({
+        projectContext: legacy,
+        knowledge: {
+          revision: knowledge.revision,
+          source:
+            "owner-authored requirements; not observed or verified world state",
+          notes,
+          hasEarlier:
+            knowledge.hasEarlier || knowledge.notes.length > notes.length,
+        },
+      }),
+    });
+  }
+  assertReasoningCurrent(
+    context: GatewayContext,
+    knowledgeRevision: number,
+  ): void {
+    this.assertCurrent(context, "plan");
+    if (this.knowledge(context).revision !== knowledgeRevision)
+      throw new RequestError(
+        "Project requirements changed; request fresh reasoning explicitly.",
+        409,
+      );
+  }
   consumePlanningBudget(
     context: GatewayContext,
     actorPerMinute: number,

@@ -311,3 +311,53 @@ test("bounded reads retain older notes durably instead of truncating project his
     store.close();
   }
 });
+
+test("reasoning snapshots include bounded literal requirements and reject obsolete knowledge versions", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    const empty = store.gateway.reasoning(frame());
+    assert.equal(empty.text, store.gateway.context(frame()));
+    assert.equal(empty.knowledgeRevision, 0);
+    store.gateway.assertReasoningCurrent(frame(), 0);
+    for (let i = 0; i < 10; i++)
+      store.gateway.rememberNote(
+        frame(),
+        { ...note, text: `Requirement ${i + 1}` },
+        i,
+      );
+    assert.throws(() =>
+      store.gateway.assertReasoningCurrent(frame(), empty.knowledgeRevision),
+    );
+    const snapshot = store.gateway.reasoning(frame());
+    assert.equal(snapshot.knowledgeRevision, 10);
+    const context = JSON.parse(snapshot.text);
+    assert.equal(context.knowledge.notes.length, 8);
+    assert.equal(context.knowledge.notes[0].revision, 3);
+    assert.equal(context.knowledge.notes[7].text, "Requirement 10");
+    assert.equal(context.knowledge.hasEarlier, true);
+    assert.match(context.knowledge.source, /not observed or verified/);
+    assert.equal(
+      context.knowledge.notes.every(
+        (n: { authorId: string }) => n.authorId === OWNER,
+      ),
+      true,
+    );
+    store.gateway.assertReasoningCurrent(frame(), snapshot.knowledgeRevision);
+    store.gateway.rememberNote(
+      frame(),
+      { ...note, text: "New requirement" },
+      10,
+    );
+    assert.throws(() =>
+      store.gateway.assertReasoningCurrent(frame(), snapshot.knowledgeRevision),
+    );
+    assert.equal(
+      JSON.parse(snapshot.text).knowledge.revision,
+      10,
+      "Captured context never silently changes underneath a model call",
+    );
+  } finally {
+    store.close();
+  }
+});

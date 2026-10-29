@@ -177,7 +177,12 @@ test("generated initial states cannot hide powered or locked inputs behind a pas
 });
 
 test("all generated planning stages preserve isolated subscription-only no-tool configuration", () => {
-  for (const mode of ["catalog", "behavior", "geometry"] as const) {
+  for (const mode of [
+    "catalog",
+    "behavior",
+    "geometry",
+    "discussion",
+  ] as const) {
     const config = plannerConfig(mode);
     assert.equal(config.forced_login_method, "chatgpt");
     assert.equal(config.model_provider, "openai");
@@ -540,6 +545,7 @@ test("unaltered first live Boolean reply rejects before preview because wall lev
 });
 
 test("model policy reserves stronger spatial reasoning for Boolean geometry and honors explicit choices", () => {
+  assert.equal(plannerModel("discussion"), "gpt-6-luna");
   assert.equal(plannerModel("catalog"), "gpt-6-luna");
   assert.equal(plannerModel("behavior"), "gpt-6-luna");
   assert.equal(plannerModel("geometry", {}, "buffer"), "gpt-6-luna");

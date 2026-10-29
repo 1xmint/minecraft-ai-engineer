@@ -667,6 +667,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             send(context,"engineer project use "+read("knowledge-project"));
             send(context,"engineer notes");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();send(context,"engineer remember decision An editor cannot author this.");expectChat(context,"Only the project owner");
+            MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-revoked");
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Engineer:");
@@ -1429,6 +1430,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer remember goal Keep the entrance within six blocks.");expectChat(context,"knowledge revision 1");
         MESSAGES.clear();send(context,"engineer remember decision Use a visible lamp for the output.");expectChat(context,"knowledge revision 2");
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Owner-authored requirements");expectChat(context,"Use a visible lamp for the output.");
+        MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"AI explanation | design revision");expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
@@ -1442,6 +1444,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Keep the entrance within six blocks.");expectChat(context,"Use a visible lamp for the output.");
         MESSAGES.clear();send(context,"engineer remember constraint Preserve the entrance clearance.");expectChat(context,"knowledge revision 3");
+        MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
 

@@ -70,6 +70,34 @@ try {
       assert.equal(note.schemaVersion, 1);
     }
     assert.equal(new Set(notes.map((note) => note.id)).size, 3);
+    const discussions = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='discussion-reply' ORDER BY rowid",
+      )
+      .all(server.serverId, knowledgeProject)
+      .map((row) => JSON.parse(row.document));
+    assert.deepEqual(
+      discussions.map((reply) => reply.knowledgeRevision),
+      [2, 3],
+    );
+    assert.equal(
+      discussions.every(
+        (reply) =>
+          reply.worldEvidence === "not-inspected" &&
+          reply.reply.kind === "explanation",
+      ),
+      true,
+    );
+    const starts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+      )
+      .get(server.serverId, knowledgeProject);
+    assert.equal(
+      starts.count,
+      2,
+      "Only the two explicit owner discussions can dispatch the deterministic fixture",
+    );
   }
   const row = db
     .prepare(

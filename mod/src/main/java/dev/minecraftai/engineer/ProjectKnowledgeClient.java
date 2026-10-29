@@ -16,18 +16,20 @@ final class ProjectKnowledgeClient {
         final EngineeringSession session;final UUID actor,epoch;final ServerPlayer player;
         final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
         final String connectionId;final int revision;final long authorization,startedNanos=System.nanoTime();
+        final boolean discussion;final String component;final int lessonStage;
         CompletableFuture<JsonObject> future;
-        Frame(EngineeringSession s,ServerPlayer p,String id){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();}
+        Frame(EngineeringSession s,ServerPlayer p,String id,boolean discussion){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();this.discussion=discussion;component=LessonAssistant.currentComponent(s,actor,false);var cursor=s.cursors.get(actor);lessonStage=cursor==null?-1:cursor.stage;}
     }
     ProjectKnowledgeClient(ProjectManager manager){this.manager=manager;}
-    private Frame start(EngineeringSession s) {
+    private Frame start(EngineeringSession s) {return start(s,false);}
+    private Frame start(EngineeringSession s,boolean discussion) {
         if(closed || !manager.server.isSameThread())throw new IllegalStateException("Project notes require an active server thread");
         s.access.require(s.actor(),ProjectAccess.Permission.VIEW);var player=s.player();
         if(player==null || player.hasDisconnected() || !Objects.equals(manager.selections.get(player.getUUID()),s.projectId)
                 || !s.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose this project in your current dimension first");
         if(active.containsKey(player.getUUID()))throw new IllegalStateException("A project-note request is active; read notes before retrying an unconfirmed write");
         if(active.size()>=128)throw new IllegalStateException("Too many pending note requests");
-        var frame=new Frame(s,player,manager.connectionId(player));active.put(frame.actor,frame);return frame;
+        var frame=new Frame(s,player,manager.connectionId(player),discussion);active.put(frame.actor,frame);return frame;
     }
     private boolean sameScope(Frame f) {
         var s=f.session;
@@ -35,15 +37,18 @@ final class ProjectKnowledgeClient {
                 && manager.server.getPlayerList().getPlayer(f.actor)==f.player && f.player.connection==f.connection && !f.player.hasDisconnected()
                 && manager.connectionId(f.player).equals(f.connectionId) && Objects.equals(manager.selections.get(f.actor),s.projectId)
                 && s.revision()==f.revision && s.access.revision()==f.authorization && s.access.allows(f.actor,ProjectAccess.Permission.VIEW)
-                && s.dimension.equals(f.player.level().dimension().identifier().toString());
+                && s.dimension.equals(f.player.level().dimension().identifier().toString())
+                && (!f.discussion || (manager.modelOperator(f.player) && s.owner.equals(f.actor)
+                    && Objects.equals(f.component,LessonAssistant.currentComponent(s,f.actor,false))
+                    && (s.cursors.get(f.actor)==null?-1:s.cursors.get(f.actor).stage)==f.lessonStage));
     }
-    private boolean current(Frame f){return sameScope(f) && System.nanoTime()-f.startedNanos<=30_000_000_000L;}
+    private boolean current(Frame f){return sameScope(f) && System.nanoTime()-f.startedNanos<=(f.discussion?100_000_000_000L:30_000_000_000L);}
     private CompletableFuture<JsonObject> request(Frame f,String route,JsonObject body) {
         try{return Companion.gateway(f.session,route,body,f.actor);}catch(RuntimeException failure){finish(f);throw failure;}
     }
     private void tell(Frame f,String message){if(current(f))f.player.sendSystemMessage(Component.literal("Engineer: "+message));}
     private void finish(Frame f){active.remove(f.actor,f);if(f.future!=null && !f.future.isDone())f.future.cancel(true);}
-    void tick(){for(var f:new ArrayList<>(active.values()))if(!current(f)){if(sameScope(f))f.player.sendSystemMessage(Component.literal("Engineer: Project-note result not confirmed. Read notes before retrying a write."));finish(f);}}
+    void tick(){for(var f:new ArrayList<>(active.values()))if(!current(f)){if(sameScope(f))f.player.sendSystemMessage(Component.literal(f.discussion?"Engineer: Discussion timed out; ask again explicitly. No automatic retry.":"Engineer: Project-note result not confirmed. Read notes before retrying a write."));finish(f);}}
     void close(){closed=true;for(var f:new ArrayList<>(active.values()))finish(f);}
 
     void read(EngineeringSession s) {
@@ -67,8 +72,8 @@ final class ProjectKnowledgeClient {
     void remember(EngineeringSession s,String kind,String text) {
         if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner may author shared project notes");
         if(!KINDS.contains(kind) || text==null || text.isBlank() || text.length()>512 || text.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))
-            throw new IllegalArgumentException("Choose goal, constraint, preference or decision and literal text within512 characters");
-        var f=start(s);try{EngineerMod.knowledgeChanging(s);}catch(RuntimeException failure){finish(f);throw failure;}
+            throw new IllegalArgumentException("Choose goal, constraint, preference or decision and literal text within 512 characters");
+        cancelDiscussion(s);var f=start(s);try{EngineerMod.knowledgeChanging(s);}catch(RuntimeException failure){finish(f);throw failure;}
         tell(f,"Recording an owner-authored shared project "+kind+"; no model request or world changes.");
         f.future=request(f,"/v2/knowledge/read",new JsonObject());
         f.future.whenComplete((reply,error)->manager.server.execute(()->{
@@ -93,6 +98,36 @@ final class ProjectKnowledgeClient {
                 }));
             }catch(RuntimeException invalid){tell(f,"Project-note write not confirmed. Read notes before retrying.");finish(f);}
         }));
+    }
+    void cancelDiscussion(EngineeringSession s) {for(var f:new ArrayList<>(active.values()))if(f.session==s && f.discussion)finish(f);}
+    void discuss(EngineeringSession s,String message) {
+        if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Discussion requires the single configured account-owning operator");
+        if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the engineering question within 1000 characters");
+        var f=start(s,true);var body=new JsonObject();body.addProperty("message",message);body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
+        if(f.component!=null)body.addProperty("componentId",f.component);
+        tell(f,"One project-grounded AI discussion request. Advice does not inspect, build or test the world.");
+        f.future=request(f,"/v2/discuss",body);
+        f.future.whenComplete((reply,error)->manager.server.execute(()->{
+            if(!current(f)){finish(f);return;}
+            try {
+                if(error!=null)throw new IllegalStateException("Discussion unavailable");
+                if(!"not-inspected".equals(string(reply.get("worldEvidence"),32)))throw new IllegalArgumentException("Unexpected discussion evidence claim");
+                long knowledgeRevision=number(reply.get("knowledgeRevision"));var answer=reply.getAsJsonObject("reply");validateDiscussion(answer,f.component);
+                tell(f,"AI "+string(answer.get("kind"),32)+" | design revision "+f.revision+", knowledge revision "+knowledgeRevision+". Advice only; no fresh world inspection or functional verification.");
+                tell(f,string(answer.get("text"),2000));
+                if(!answer.getAsJsonArray("basis").isEmpty())tell(f,"Project sources: "+String.join(", ",answer.getAsJsonArray("basis").asList().stream().map(JsonElement::getAsString).toList()));
+            }catch(RuntimeException invalid){tell(f,"Discussion result not confirmed. Ask again explicitly after checking the selected project; no automatic retry.");}
+            finally{finish(f);}
+        }));
+    }
+    static void validateDiscussion(JsonObject answer,String component) {
+        if(answer==null || !answer.keySet().equals(Set.of("schemaVersion","kind","text","basis")) || number(answer.get("schemaVersion"))!=1
+                || !Set.of("explanation","clarification","unsupported").contains(string(answer.get("kind"),32)) || !answer.get("basis").isJsonArray())throw new IllegalArgumentException("Invalid read-only advice");
+        string(answer.get("text"),2000);var basis=answer.getAsJsonArray("basis");if(basis.size()>12)throw new IllegalArgumentException("Too many advice references");
+        var seen=new HashSet<String>();for(var element:basis){String id=string(element,128);if(!seen.add(id))throw new IllegalArgumentException("Duplicate advice source");
+            if(id.equals("project") || (component!=null && id.equals("component:"+component)))continue;
+            if(!id.startsWith("note:") || !UUID.fromString(id.substring(5)).toString().equals(id.substring(5)))throw new IllegalArgumentException("Invalid advice source");
+        }
     }
     static long validateKnowledge(JsonObject value,UUID owner) {
         if(value==null || !value.keySet().equals(Set.of("schemaVersion","revision","notes","hasEarlier")) || number(value.get("schemaVersion"))!=1

@@ -427,6 +427,30 @@ and its own knowledge revision. Notes persist in the local companion database,
 separately from blueprints and measured world evidence. Recording a note cancels
 pending design reasoning, but does not build, inspect or test anything. If a write
 is unconfirmed, read notes before retrying. Recent notes are shown; earlier
-records remain stored. Notes do not yet inform model discussion or planning.
+records remain stored. Recent notes inform later planning as owner-authored requirements. A knowledge
+change invalidates pending reasoning. Free-form discussion remains unfinished.
 
 These commands are under development and still require native acceptance proof.
+
+## Project-grounded discussion (development branch)
+
+The configured account-owning operator can explicitly ask a free-form question:
+
+```text
+/engineer discuss Why did we choose this output, and what constraint matters here?
+```
+
+The selected project, your current lesson component when uniquely identified,
+recent owner notes and intended design facts ground the answer. The reply names
+its project sources and knowledge/design revisions. It is AI advice with no fresh
+world inspection or functional verification. Asking does not change your lesson,
+construction assignment, blocks or test evidence. Ambiguous references should
+produce a clarification; unsupported requests should explain the limit.
+
+Each explicit question uses one bounded model request through the existing local
+Codex subscription connection. Only the configured owner/operator can dispatch it.
+The shared queue and planning budget apply, with no automatic retry. Changing the
+project, lesson reference, permissions, connection or knowledge discards stale
+answers. `/engineer stop` cancels pending discussion. Routine `/engineer ask`
+lesson questions remain offline. Native fixture acceptance and a fresh signed-in
+conversation proof are still pending; this is not a completed release.

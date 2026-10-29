@@ -9,8 +9,10 @@ Branch **phase/14-project-conversation**, based on merged **PR22** commit
 **bb4e81ff238293ffbce92e94c3a52fc275396572**. Final Phase13 source
 **a3a3fcf9f90ba5ce9529b3460a3e7cb6a425de26** passed all5 **CI40913824351**;
 whole actual signed-in Boolean **run40910817937** passed on d3c8486. Phase13 is
-shipped in source, not a complete-product release. Phase14 note codec/storage foundation is implemented; HTTP/native note commands,
-conversation and context integration remain unfinished. Required checks are next.
+shipped in source, not a complete-product release. Phase14 literal notes, HTTP/native commands and bounded versioned planning context
+and the first free-form discussion path are implemented on the working branch.
+Native acceptance is running; fresh signed-in conversation proof and remaining
+Phase14 failure/restart proofs are unfinished. Required checks are next.
 Read actual git status, PR and live workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -296,3 +298,39 @@ written coverage, not a passed runtime claim. Scoped client Java compilation and
 verifier syntax passed. On prior source57668f9, Companion and Windows checks passed
 in live CI40955973499; native jobs were still running at inspection. The new
 acceptance source must pass its own complete CI before it is considered proven.
+
+Phase14 context integration: reasoning captures the current knowledge revision and
+latest eight literal notes, explicitly labeled owner-authored requirements rather
+than world evidence. Queued dispatch and completed replies recheck the captured
+revision, alongside existing epoch/project/auth fences. Note changes abort active
+reasoning. Empty-note contexts remain byte-for-byte compatible with older signed-in
+acceptance receipts. Snapshot/fencing and HTTP provider-context tests are written;
+TypeScript no-emit passed. No local tests run. Native-note source9198c2a is running
+CI40956149245; Companion and Windows passed, native jobs were still live at last
+inspection. Prior source57668f9 CI40955973499 was superseded/cancelled, not passed.
+
+Phase14 conversation implementation on working tree: strict bounded read-only
+reply schema (explanation/clarification/unsupported, text, supplied-source IDs),
+intended project/component + latest eight owner-note grounding, optional official
+Codex provider discussion using Luna and the existing no-tools/read-only isolated
+runner. `/v2/discuss` reuses owner plan grants, explicit operator flags, current
+connection, queue, durable request claim/budget and pre/post knowledge fences.
+Accepted replies are audit records, never geometry, tests or executable commands.
+Native `/engineer discuss` captures real connection, project/auth revision,
+operator, current lesson component/stage; stale callbacks drop. Notes and stop
+cancel pending discussion. No private inventory enters grounding. Existing offline
+lesson `ask` unchanged. Narrow GPT-6-Luna/high auth check reported no blockers;
+no heavy review. Native deterministic discussion flows before/after game restart
+and exact SQLite audit/source checks are written, not yet passed. Fresh signed-in
+conversation proof remains required. TypeScript checks and scoped Java compile
+passed before the latest native DTO test/stop cancellation edits; compile again.
+
+Latest scoped server/client Java compilation passed, including the read-only
+reply DTO rejection test and stop cancellation. The ordinary CI discussion
+provider is a strict two-message deterministic fixture: it validates the real
+note context/version and returns labeled owner requirements, never invokes the
+SDK. Native acceptance after restart must show its answer and immutable world
+state; SQLite must contain exactly two owner discussion audits/dispatches. These
+fixtures do not prove fresh model behavior. The prior note-only CI40956149245 was
+still running its dedicated multiplayer step at last inspection; do not restart
+or label it terminal based on duration alone.
