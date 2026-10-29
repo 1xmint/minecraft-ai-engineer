@@ -13,6 +13,45 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    private static Set<BlockPos> footprint(GameTestHelper helper){return Set.of(helper.absolutePos(at(1,1,Rotation.NONE)),helper.absolutePos(at(2,1,Rotation.NONE)),helper.absolutePos(at(3,1,Rotation.NONE)));}
+    private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
+    @GameTest(maxTicks=35) public void motionSnapshotsAreReadOnlyAndMatchBothActualTerminalPoses(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);ShutterMotion.Snapshot[] snapshots=new ShutterMotion.Snapshot[2];
+        helper.runAtTickTime(8,()->{
+            var base=helper.absolutePos(at(1,1,Rotation.NONE)).mutable();
+            snapshots[0]=ShutterMotion.capture(helper.getLevel(),base,true,footprint(helper));base.move(Direction.UP);
+            helper.assertTrue(snapshots[0].base().equals(helper.absolutePos(at(1,1,Rotation.NONE))),"Captured coordinates cannot alias a caller's mutable position");
+            helper.assertTrue(snapshots[0].writes().equals(footprint(helper)) && !snapshots[0].matchesTerminalState(helper.getLevel()),"Projection captures exactly base/head/payload, without a premature terminal match");
+            snapshots[0].requireFresh(helper.getLevel(),footprint(helper));assertOpen(helper,Rotation.NONE);
+            boolean immutable=false;try{snapshots[0].before().clear();}catch(UnsupportedOperationException expected){immutable=true;}helper.assertTrue(immutable,"Captured states cannot be rewritten by callers");
+            helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{
+            assertClosed(helper,Rotation.NONE);helper.assertTrue(snapshots[0].matchesTerminalState(helper.getLevel()),"Actual extension matches the projected terminal states");
+            rejects(helper,()->snapshots[0].requireFresh(helper.getLevel(),footprint(helper)),"An old open-pose snapshot is stale after extension");
+            snapshots[1]=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),false,footprint(helper));
+            snapshots[1].requireFresh(helper.getLevel(),footprint(helper));assertClosed(helper,Rotation.NONE);helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(24,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(snapshots[1].matchesTerminalState(helper.getLevel()),"The phase-aware projection matches actual sticky retraction without editing a preview");helper.succeed();});
+    }
+    @GameTest public void motionSnapshotRejectsChangedOrUndelegatedSpace(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);
+        helper.runAtTickTime(8,()->{
+            var base=helper.absolutePos(at(1,1,Rotation.NONE));var writes=footprint(helper);var captured=ShutterMotion.capture(helper.getLevel(),base,true,writes);
+            var missing=new HashSet<>(writes);missing.remove(helper.absolutePos(at(3,1,Rotation.NONE)));
+            rejects(helper,()->ShutterMotion.capture(helper.getLevel(),base,true,missing),"A preview cannot expand its delegated write set");
+            place(helper,3,1,Blocks.GLASS.defaultBlockState(),Rotation.NONE);
+            rejects(helper,()->captured.requireFresh(helper.getLevel(),writes),"A changed aperture invalidates the earlier projection");
+            rejects(helper,()->ShutterMotion.capture(helper.getLevel(),base,true,writes),"A replacement is not extra material to push or destroy");
+            helper.assertTrue(state(helper,3,1,Rotation.NONE).is(Blocks.GLASS),"Failed projection preserves the replacement");helper.succeed();
+        });
+    }
+    @GameTest public void motionSnapshotNeverLoadsAnUnknownChunk(GameTestHelper helper){
+        var far=helper.absolutePos(new BlockPos(1_000_000,3,1_000_000));
+        var allowed=Set.of(far,far.east(),far.east(2));helper.assertTrue(!helper.getLevel().hasChunkAt(far),"Probe starts outside loaded chunks");
+        rejects(helper,()->ShutterMotion.capture(helper.getLevel(),far,true,allowed),"Unloaded state is unknown, never an empty aperture");
+        helper.assertTrue(!helper.getLevel().hasChunkAt(far),"Refused projection must not load the chunk");helper.succeed();
+    }
     @GameTest(maxTicks=50) public void stickyShutterEast(GameTestHelper helper){shutter(helper,Rotation.NONE);}
     @GameTest(maxTicks=50) public void stickyShutterSouth(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_90);}
     @GameTest(maxTicks=50) public void stickyShutterWest(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_180);}

@@ -11,7 +11,8 @@ Current branch **phase/15-piston-motion**, based on PR23 main merge
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
 merge. Its first conversation/knowledge slice was also proven on b858364 by all5
 CI40959246919 and whole signed-in manual40960496759. Phase15 is building its
-native physics oracles, not a shipped piston feature. Full objective unfinished.
+motion snapshots after the native physics oracles, not a shipped piston feature.
+Draft PR24 holds Phase15. Full objective unfinished.
 Inspect actual git/PR/workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -77,6 +78,25 @@ tick harness deadline for the planned24-tick ordinary-piston test. Give the40-ti
 cycle tests50 ticks and the24-tick negative35 ticks, retaining all physical
 settling assertions. Other jobs were still live; the new source needs full CI.
 No production piston support is claimed.
+
+Corrected0bf063a Fabric job passed all50 required native tests in CI40963599032,
+at22:11:17 UTC. This includes all8 piston oracles; inspected the actual job log.
+Other runtime jobs were still live at inspection, not claimed complete.
+
+ShutterMotion now captures immutable base/head/payload before and terminal states
+for the fixed one-stone sticky shutter, with no writes. It checks delegated cells,
+loaded chunks, horizontal orientation, exact stone/head/air poses, no block entity,
+and vanilla's exact single-source non-destructive extension projection. Retraction
+accounts for the head-removal prelude without mutating preview state. Freshness
+recaptures the live basis; endpoint comparison is explicitly not tick-history
+verification. Snapshot holds level identity and immutable coordinates; it grants
+no execution authority. Production build/generation paths remain unchanged.
+
+Three new native tests cover actual matching terminal poses, immutable/mutable-
+coordinate isolation, stale/replaced/undelegated cells and no chunk loading.
+Scoped Java server/client compilation passed; new runtime proofs await GitHub.
+Next: integrate deferred-motion commit/finalization fences and recovery before
+exposing piston construction, then complete M3's actual player flow.
 
 ## Proven Phase14 Outcomes
 
