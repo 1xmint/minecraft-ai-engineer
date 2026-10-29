@@ -207,6 +207,43 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
+    @GameTest(maxTicks=280) public void generatedAndObservesEveryForwardReverseTruthRow(GameTestHelper helper) { generatedAnd(helper,false); }
+    @GameTest(maxTicks=280) public void generatedAndCannotPassAnIndependentlyRequestedOrTable(GameTestHelper helper) { generatedAnd(helper,true); }
+    private static void generatedAnd(GameTestHelper helper,boolean wrongIntent) {
+        com.google.gson.JsonObject source;
+        try(var stream=MechanismGameTests.class.getResourceAsStream("/fixtures/generated-and.json")) {
+            if(stream==null)throw new IllegalStateException("Missing shared generated AND fixture");
+            source=com.google.gson.JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch(java.io.IOException invalid){throw new IllegalStateException(invalid);}
+        var blueprint=Blueprint.parse(source,"test","minecraft:overworld");GeneratedBlueprint.validate(blueprint);
+        var behavior=(TruthTableSpec)GeneratedBlueprint.behavior(blueprint);var contract=GeneratedBlueprint.contract(blueprint);
+        helper.assertTrue(contract.ports().size()==3 && contract.cases().size()==8,"Server and companion agree on named ports and complete forward/reverse cases");
+        var forged=source.deepCopy();forged.getAsJsonArray("ports").get(0).getAsJsonObject().addProperty("name","other");
+        reject(helper,()->GeneratedBlueprint.validate(Blueprint.parse(forged,"test","minecraft:overworld")),"Names cannot diverge from accepted intent");
+        for(var block:blueprint.blocks())helper.setBlock(block.pos(),block.state());
+        var expected=wrongIntent?new TruthTableSpec(behavior.inputs(),java.util.List.of(false,true,true,true),behavior.settleGameTicks()):behavior;
+        var traces=new java.util.ArrayList<SettledTrace>();
+        for(int index=0;index<contract.cases().size();index++) {
+            int row=GeneratedBlueprint.truthRow(expected,index);var trace=new SettledTrace(expected,row);traces.add(trace);
+            int start=30+index*(trace.horizon()+1);var vector=contract.cases().get(index);
+            helper.runAtTickTime(start,()->{
+                for(var port:contract.ports())if(port.input()) {
+                    boolean actual=helper.getBlockState(port.pos()).getValue(BlockStateProperties.POWERED);
+                    if(actual!=vector.inputs().get(port.name()))helper.pullLever(port.pos());
+                }
+                var output=contract.ports().getLast();trace.sample(0,helper.getBlockState(output.pos()).getValue(BlockStateProperties.LIT));
+            });
+            for(int elapsed=1;elapsed<=trace.horizon();elapsed++) {
+                int at=elapsed;helper.runAtTickTime(start+elapsed,()->trace.sample(at,helper.getBlockState(contract.ports().getLast().pos()).getValue(BlockStateProperties.LIT)));
+            }
+        }
+        helper.runAtTickTime(264,()->{
+            if(wrongIntent)helper.assertTrue(traces.stream().anyMatch(t->!t.passed()),"The same blocks cannot pass a different independently requested function");
+            else for(var trace:traces)helper.assertTrue(trace.passed(),"Actual generated AND must satisfy every stable row: "+trace.failure());
+            helper.succeed();
+        });
+    }
+
     @GameTest public void settledTruthTraceRequiresEveryStableTickAndAcceptedIntent(GameTestHelper helper) {
         var behavior = new TruthTableSpec(java.util.List.of("a","b"), java.util.List.of(false,false,false,true), 2);
         var good = new SettledTrace(behavior,3);

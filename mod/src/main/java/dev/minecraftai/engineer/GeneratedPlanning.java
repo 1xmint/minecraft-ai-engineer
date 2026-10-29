@@ -18,7 +18,7 @@ final class GeneratedPlanning {
                          String connectionId, UUID epoch, int revision, long authorization,
                          UUID selectedProject, BlockPos corner1, BlockPos corner2,
                          BlockPos origin, int rotation, JsonObject maxSize,
-                         String request, String priorState, BehaviorSpec behavior,
+                         String request, String priorState, EngineeringBehavior behavior,
                          String explanation, UUID nonce, long expiresAtMillis,
                          long expiresAtNanos) { }
     private record Flight(Basis basis, CompletableFuture<JsonObject> future) { }
@@ -217,7 +217,7 @@ final class GeneratedPlanning {
                 return;
             }
             JsonObject behaviorJson = proposal.getAsJsonObject("behavior");
-            BehaviorSpec behavior = BehaviorSpec.read(behaviorJson);
+            EngineeringBehavior behavior = EngineeringBehavior.read(behaviorJson);
             restoreState(session, basis.priorState(), "Behavior proposed; geometry not requested");
             Basis accepted = new Basis(session, basis.actor(), basis.player(), basis.connection(), basis.connectionId(), basis.epoch(),
                     basis.revision(), basis.authorization(), basis.selectedProject(), basis.corner1(), basis.corner2(), basis.origin(),
@@ -248,7 +248,7 @@ final class GeneratedPlanning {
                 throw new IllegalArgumentException("The companion returned no generated blueprint");
             Blueprint candidate = Blueprint.parse(result.getAsJsonObject("blueprint"), session.worldId, session.dimension);
             GeneratedBlueprint.validate(candidate);
-            BehaviorSpec accepted = GeneratedBlueprint.behavior(candidate);
+            EngineeringBehavior accepted = GeneratedBlueprint.behavior(candidate);
             if (!GeneratedBlueprint.isGenerated(candidate) || !accepted.digest().equals(basis.behavior().digest())
                     || candidate.rotation() != basis.rotation()
                     || candidate.blocks().stream().anyMatch(block -> !session.contains(block.pos())))

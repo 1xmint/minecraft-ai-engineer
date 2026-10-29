@@ -41,9 +41,10 @@ final class GeneratedBlueprint {
         exactKeys(provenance, Set.of("kind", "minecraft", "generatorRevision", "behaviorDigest"), "provenance");
         if (!text(provenance.get("kind"), 64).equals("generated")
                 || !text(provenance.get("minecraft"), 32).equals("26.3")
-                || integer(provenance.get("generatorRevision")) != 1)
+                )
             throw invalid("Generated provenance is unsupported");
-        BehaviorSpec behavior = BehaviorSpec.read(object(source.get("behavior"), "behavior"));
+        EngineeringBehavior behavior = EngineeringBehavior.read(object(source.get("behavior"), "behavior"));
+        if(integer(provenance.get("generatorRevision")) != (behavior instanceof BehaviorSpec ? 1 : 2)) throw invalid("Generated behavior revision mismatch");
         if (!text(provenance.get("behaviorDigest"), 64).equals(behavior.digest()))
             throw invalid("Generated behavior digest mismatch");
 
@@ -79,21 +80,27 @@ final class GeneratedBlueprint {
         }
 
         JsonArray portJson = array(source.get("ports"), "ports");
-        if (portJson.size() != 2) throw invalid("Generated blueprints require one input and one output port");
-        JsonObject inputPort = object(portJson.get(0), "input port"), outputPort = object(portJson.get(1), "output port");
-        exactKeys(inputPort, Set.of("name", "pos", "kind"), "input port");
-        exactKeys(outputPort, Set.of("name", "pos", "kind"), "output port");
-        if (!text(inputPort.get("name"), 128).equals("input") || !text(inputPort.get("kind"), 32).equals("input")
-                || !text(outputPort.get("name"), 128).equals("output") || !text(outputPort.get("kind"), 32).equals("output"))
-            throw invalid("Generated ports must be input then output");
-        BlockPos input = position(object(inputPort.get("pos"), "input port position"), -64, 64);
-        BlockPos output = position(object(outputPort.get("pos"), "output port position"), -64, 64);
-        if (input.equals(output) || at.get(input) == null || !at.get(input).parsedState().is(Blocks.LEVER)
-                || at.get(output) == null || !at.get(output).parsedState().is(Blocks.REDSTONE_LAMP))
-            throw invalid("Generated ports must identify the unique lever and lamp");
-        if (blocks.stream().filter(b -> b.parsedState().is(Blocks.LEVER)).count() != 1
-                || blocks.stream().filter(b -> b.parsedState().is(Blocks.REDSTONE_LAMP)).count() != 1)
-            throw invalid("Generated geometry must contain exactly one lever and lamp");
+        List<String> names = behavior instanceof TruthTableSpec truth ? truth.inputs() : List.of("input");
+        if (portJson.size() != names.size()+1) throw invalid("Generated ports differ from accepted input count");
+        List<BlockPos> inputPositions = new ArrayList<>();
+        for(int i=0;i<names.size();i++) {
+            JsonObject port=object(portJson.get(i),"input port");exactKeys(port,Set.of("name","pos","kind"),"input port");
+            if(!text(port.get("name"),32).equals(names.get(i)) || !text(port.get("kind"),32).equals("input"))
+                throw invalid("Generated input names/order differ from accepted behavior");
+            BlockPos pos=position(object(port.get("pos"),"input position"),-64,64);
+            if(inputPositions.contains(pos) || at.get(pos)==null || !at.get(pos).parsedState().is(Blocks.LEVER))
+                throw invalid("Generated inputs require distinct actual levers");
+            inputPositions.add(pos);
+        }
+        JsonObject outputPort=object(portJson.get(names.size()),"output port");
+        exactKeys(outputPort,Set.of("name","pos","kind"),"output port");
+        if(!text(outputPort.get("name"),32).equals("output") || !text(outputPort.get("kind"),32).equals("output"))
+            throw invalid("Generated output must be named output");
+        BlockPos output=position(object(outputPort.get("pos"),"output position"),-64,64);
+        if(at.get(output)==null || !at.get(output).parsedState().is(Blocks.REDSTONE_LAMP)
+                || blocks.stream().filter(b -> b.parsedState().is(Blocks.LEVER)).count()!=names.size()
+                || blocks.stream().filter(b -> b.parsedState().is(Blocks.REDSTONE_LAMP)).count()!=1)
+            throw invalid("Generated devices differ from accepted ports");
 
         Set<BlockPos> stone = new HashSet<>();
         blocks.stream().filter(b -> b.parsedState().is(Blocks.STONE)).forEach(b -> stone.add(b.pos()));
@@ -115,37 +122,52 @@ final class GeneratedBlueprint {
             if (required != null && !stone.contains(required)) throw invalid("Generated mechanism is missing stone support");
         }
 
-        JsonObject expected = derive(blocks, input, output, behavior, id, projectId, revision, world, dimension,
+        JsonObject expected = derive(blocks, inputPositions, output, behavior, id, projectId, revision, world, dimension,
                 name, explanation, anchor, rotation);
         if (!expected.equals(source)) throw invalid("Generated blueprint derived fields were changed");
         verifyParsedBlueprint(blueprint, blocks, id, projectId, revision, world, dimension, name, anchor, rotation);
     }
 
-    static BehaviorSpec behavior(Blueprint blueprint) {
+    static EngineeringBehavior behavior(Blueprint blueprint) {
         validate(blueprint);
-        return BehaviorSpec.read(blueprint.source().getAsJsonObject("behavior"));
+        return EngineeringBehavior.read(blueprint.source().getAsJsonObject("behavior"));
     }
 
     static MechanismCatalog.Contract contract(Blueprint blueprint) {
         validate(blueprint);
-        BehaviorSpec behavior = BehaviorSpec.read(blueprint.source().getAsJsonObject("behavior"));
-        List<MechanismCatalog.Port> ports = List.of(
-                new MechanismCatalog.Port("input", position(blueprint.source().getAsJsonArray("ports").get(0).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
-                        .rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()), true),
-                new MechanismCatalog.Port("output", position(blueprint.source().getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos"), -64, 64)
-                        .rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()), false));
-        List<MechanismCatalog.Vector> cases = List.of(
-                vector(false, false), vector(true, true), vector(false, false));
-        return new MechanismCatalog.Contract("generated-buffer", ports, cases,
-                Math.max(behavior.risingGameTicks(), behavior.fallingGameTicks()) + 8);
+        EngineeringBehavior behavior = EngineeringBehavior.read(blueprint.source().getAsJsonObject("behavior"));
+        List<MechanismCatalog.Port> ports=new ArrayList<>();
+        for(var raw:blueprint.source().getAsJsonArray("ports")) {
+            var port=raw.getAsJsonObject();
+            ports.add(new MechanismCatalog.Port(port.get("name").getAsString(),
+                    position(port.getAsJsonObject("pos"),-64,64).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()),
+                    port.get("kind").getAsString().equals("input")));
+        }
+        if(behavior instanceof TruthTableSpec truth) {
+            List<MechanismCatalog.Vector> cases=new ArrayList<>();
+            for(int i=0;i<truth.outputs().size()*2;i++) {
+                int row=truthRow(truth,i);Map<String,Boolean> inputs=new LinkedHashMap<>();
+                for(int j=0;j<truth.inputs().size();j++)inputs.put(truth.inputs().get(j),truth.inputValue(row,j));
+                cases.add(new MechanismCatalog.Vector(Map.copyOf(inputs),Map.of("output",truth.outputs().get(row))));
+            }
+            return new MechanismCatalog.Contract("generated-truth-table",List.copyOf(ports),List.copyOf(cases),truth.settleGameTicks()+8);
+        }
+        var buffer=(BehaviorSpec)behavior;
+        return new MechanismCatalog.Contract("generated-buffer",List.copyOf(ports),List.of(vector(false,false),vector(true,true),vector(false,false)),
+                Math.max(buffer.risingGameTicks(),buffer.fallingGameTicks())+8);
+    }
+    static int truthRow(TruthTableSpec behavior,int index) {
+        int count=behavior.outputs().size();
+        if(index<0 || index>=count*2)throw invalid("Invalid truth-table case index");
+        return index<count?index:count*2-1-index;
     }
 
     private static MechanismCatalog.Vector vector(boolean input, boolean output) {
         return new MechanismCatalog.Vector(Map.of("input", input), Map.of("output", output));
     }
 
-    private static JsonObject derive(List<RawBlock> blocks, BlockPos input, BlockPos output,
-            BehaviorSpec behavior, String id, String projectId, int revision, String world, String dimension,
+    private static JsonObject derive(List<RawBlock> blocks, List<BlockPos> inputPositions, BlockPos output,
+            EngineeringBehavior behavior, String id, String projectId, int revision, String world, String dimension,
             String name, String explanation, BlockPos anchor, int rotation) {
         JsonObject expected = new JsonObject();
         expected.addProperty("schemaVersion", 1); expected.addProperty("id", id);
@@ -185,14 +207,20 @@ final class GeneratedBlueprint {
         JsonObject bounds = new JsonObject(); bounds.add("min", Blueprint.jsonPos(new BlockPos(minX, minY, minZ)));
         bounds.add("max", Blueprint.jsonPos(new BlockPos(maxX, maxY, maxZ))); expected.add("bounds", bounds);
         JsonObject resourceJson = new JsonObject(); resources.forEach(resourceJson::addProperty); expected.add("resources", resourceJson);
-        JsonArray ports = new JsonArray(); ports.add(port("input", input, "input")); ports.add(port("output", output, "output"));
+        JsonArray ports = new JsonArray();
+        List<String> names=behavior instanceof TruthTableSpec truth?truth.inputs():List.of("input");
+        for(int i=0;i<names.size();i++)ports.add(port(names.get(i),inputPositions.get(i),"input"));
+        ports.add(port("output", output, "output"));
         expected.add("ports", ports);
-        JsonArray tests = new JsonArray(); JsonObject test = new JsonObject(); test.addProperty("id", "buffer-timing");
-        test.addProperty("description", "Measure the lamp transition after input edges: rising " + behavior.risingGameTicks()
-                + " game ticks and falling " + behavior.fallingGameTicks() + " game ticks; confirm stable off/on/off behavior.");
+        JsonArray tests = new JsonArray(); JsonObject test = new JsonObject();
+        if(behavior instanceof BehaviorSpec buffer) {
+            test.addProperty("id","buffer-timing");
+            test.addProperty("description","Measure the lamp transition after input edges: rising " + buffer.risingGameTicks()
+                    + " game ticks and falling " + buffer.fallingGameTicks() + " game ticks; confirm stable off/on/off behavior.");
+        } else {test.addProperty("id","truth-table");test.addProperty("description",behavior.summary());}
         tests.add(test); expected.add("tests", tests);
         JsonObject provenance = new JsonObject(); provenance.addProperty("kind", "generated");
-        provenance.addProperty("minecraft", "26.3"); provenance.addProperty("generatorRevision", 1);
+        provenance.addProperty("minecraft", "26.3"); provenance.addProperty("generatorRevision", behavior instanceof BehaviorSpec ? 1 : 2);
         provenance.addProperty("behaviorDigest", behavior.digest()); expected.add("provenance", provenance);
         expected.add("behavior", behavior.json()); expected.addProperty("verification", "untested");
         return expected;

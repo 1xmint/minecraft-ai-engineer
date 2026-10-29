@@ -423,3 +423,18 @@ test("generated truth-table ports come from the independent complete behavior", 
     ),
   );
 });
+
+test("shared generated AND bytes validate identically in companion and Fabric", () => {
+  const blueprint = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../mod/src/main/resources/fixtures/generated-and.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(validateGeneratedBlueprint(blueprint), blueprint);
+  assert.equal(blueprint.behavior.function, "truth-table");
+  assert.equal(blueprint.ports.length, 3);
+});

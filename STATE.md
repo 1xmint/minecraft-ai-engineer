@@ -252,3 +252,16 @@ passing while native client/multiplayer jobs were still running when checked.
 Next integrate typed behavior/ports in GeneratedBlueprint and GeneratedPlanning,
 wire settled traces into FunctionalTrial and stored evidence, then enable model
 schemas and drive actual AND/handoff/recovery acceptance before shipping PR22.
+
+T1/T2/T3 server integration in progress: GeneratedBlueprint now validates revision2
+truth tables, exact ordered named lever ports, distinct positions, derived metadata
+and matching companion bytes; GeneratedPlanning retains typed accepted behavior.
+Its contract derives all forward/reverse vectors independently from accepted intent.
+FunctionalTrial now samples each truth-table case every tick, requires settled
+stability, replays saved evidence against exact case order/digest/time/ports and
+uses the existing per-input write-ahead restore and authority checks. Buffer exact
+edge behavior remains its existing separate runner/format. Java server/client and
+TypeScript scoped compile passed. Shared hand-authored raw AND fixture is expressly
+not model inference; new native game tests must establish actual AND operation and
+reject the same geometry against OR intent. No local tests run. Model schemas stay
+buffer-only pending deterministic runtime/authority/recovery proofs.
