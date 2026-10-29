@@ -32,65 +32,71 @@ billed service or API key. Only the configured account-owning operator starts AI
 
 Decision: use an explicitly hand-authored reference before the two modification
 calls, rather than four SDK calls or arbitrary CI inputs. The reference is not a
-fresh model design. The structural source now compiles, but actual inference and
-full new live acceptance remain unproven. Task order: fix/publish exact synthetic
+fresh model design. Actual modification and full bounded live acceptance now
+passed; final recorded-reply regression checks and shipping remain. Task order: fix/publish exact synthetic
 setup (L1/L3), regressions, actual two responses and inspect all native artifacts
 (L2/L3), then ship only the proven bounded feature and continue the full roadmap.
 
-### Latest evidence and next action
+### Verified live result and next action
 
-Source **1e20635dee7fd2a1034c20ab0ec1c74a88549784** passed all five regression
-gates **CI40804731435**. Actual manual run **40805062670** used that frozen source:
-behavior response **40805687857**, geometry response **40805786982**, both official
-SDK0.164.0/gpt-6-luna and both accepted by GitHub/native receipts. Behavior is the
-requested12/16. Geometry has ten blocks and three two-tick repeaters, but all face
-east. The actual client preserved/resolved a glass edit, resumed and matched the
-raw geometry; FunctionalTrial then failed at game tick12: expected true, observed
-false. The overall manual run failed. No service/game restart or final screenshot
-was reached. Never silently flip that model output or claim a working live design.
+Source **ccd89d2e6a03c6241463ec11da779ec1dfd67395** passed all five regression
+gates **CI40806790413**, including all35 required Minecraft tests. Actual manual
+**run40806992766 completed successfully**, with behavior response40807645397 and
+geometry response40807742547. Both actual SDK0.164.0/gpt-6-luna replies were accepted;
+behavior is12/16, geometry is ten blocks with three west-facing two-tick repeaters.
+No result was silently changed. Usage: behavior10566in/83out; geometry11466in/816out.
+All four local SDK calls across the failed and successful runs are consumed; do
+not make more calls or reuse their exclusive started receipts for this slice.
 
-Retained artifacts: task `work/live-structural-proof-40805062670`. Exact failed raw
-reply/provenance is now `tests/fixtures/live-structural-reversed.json`. Behavior
-request digest c4f133d85a9b6c25e031a6fb3284a06fa0c1bc40b94db2bea988cb08fa83cf98;
-geometry request c96dd9391301510a79e3d2517bfa8abdd50c6c14478e746efe6e1792e5d22ab0.
-Private exclusive started/response receipts remain under the user's AppData
-minecraft-ai-engineer/acceptance directory. Both requests are consumed; no retry.
-Usage: behavior10558in/67out; geometry11367in/910out. Result digests remain in the
-accepted artifact receipts. No API key or separately billed service was used.
+Inspected retained artifacts: task `work/live-structural-proof-40806992766`.
+Actual player first-support construction, AI remainder and original timing passed.
+Actual model diff/apply, real stop, client glass placement, conflict refusal,
+client glass removal, resume and new12/16 test passed at02:40:53. Companion really
+restarted4537->5429; Bob's shared lesson, EDIT-but-not-owner expansion denial and
+revocation passed. The actual third game boot retained the exact accepted source
+and actual blocks without an execution lease. Both structural completion/recovery
+markers and the entire workflow passed. Inspected PNG visibly shows five supports,
+lever, three repeaters and lamp after restart; copy unchanged to
+`docs/images/structural-restarted.png`. Offline CI is not Mojang authentication.
 
-Source-grounded correction: actual passing west-facing references and pinned26.3
-DiodeBlock.getInputSignal bytecode both show input is read at pos.relative(FACING).
-Teach the geometry model that repeater facing names the INPUT direction, opposite
-signal travel, with all four compass mappings and coordinate axes. Keep other
-block conventions separate and raw model results unchanged. Add actual Minecraft
-positive three-west/two-tick edge tests and negative three-east traces, plus a
-regression test that the recorded failed reply stays untested despite valid shape.
-Run these on GitHub. After those pass, allow **one** new explicit two-call proof
-from a new frozen source; do not blindly loop further if it fails. The live
-acceptance still requires actual functional success, not just correct block count.
+Behavior request digest dd774b24ab571cc39987f4f1082861eb4388e29fc8a407666294027592e487be;
+geometry request6f3463878ab272adc7682a405501348c36c60a1a547d948d551be2236c33591e.
+Accepted result digests8189e9bf653079448dbcd12f93aba1fb33bf37ba2936c9222387930ba9f7f35b
+andfa3a2e89c7cab9d2a74e8dcac1e08fd98d1299708acb7f2c6dec51ea472cd71c match the
+local private receipts under AppData/minecraft-ai-engineer/acceptance. Credentials
+stayed local and the planner forced ChatGPT sign-in; no API-key fallback.
 
-Earlier setup runs40801664492 and40803355719 were cancelled before any SDK call;
-40803884854 published a request then failed before a call at the missing structural
-provenance allowlist. Fixes are present: seed blueprint ID equals projectId before
-construction, reconstructed task ID equals that ID (not projectId:root), explicit
-scenario travels through response workflow, and request/response owner/SHA guards
-allow only catalog/generated/structural names. Unknown scenarios still reject.
-Transport fails promptly on unexpected-inference. No old receipts were reused.
+The exact positive raw reply is `tests/fixtures/live-structural-buffer.json`.
+Ordinary native CI now replays that result for its structural request instead of
+constructing a parallel hand-authored three-repeater reply. It remains untested
+on replay until actual Minecraft tests run; this is not fresh inference evidence.
+Run the final required checks, inspect replay results, then ship PR21 without a
+formal review. Broad phase1 engineering and all phase2 work remain unfinished.
 
-The native path is MultiplayerGameTests.liveStructuralFlow: hand-authored seed,
-actual player support and AI completion, initial timing, explicit expansion,
-behavior/geometry confirmation, separate apply, actual client glass edit/conflict/
-removal, exact held-stack restoration, resume, new timing, companion restart,
-Bob lesson/revocation, third game boot and screenshot. Setup contract seed name,
-completed status/detail and blueprint task ID must match the real checkpoint.
+### Failure retained, not hidden
 
-Use `gh workflow run live-acceptance.yml --ref phase/12-live-structural-proof
--f scenario=structural` only after the direction checks pass. Once each matching
-artifact appears, run the local responder with explicit `--run ID --attempt N
---sha SHA --model gpt-6-luna --stage behavior --scenario structural`, then geometry
-with the same source/run. See docs/acceptance-guide.md. Do not edit/rebase the
-checkout during calls. Inspect both receipts, native completion/restart markers,
-actual before/after sources, timing and screenshot before any completion claim.
+Earlier source1e20635 / actual run40805062670 accepted behavior40805687857 and
+geometry40805786982 but all repeaters faced east. Actual client conflict/resume
+worked and geometry matched; FunctionalTrial failed at tick12 (expected true,
+observed false). That whole run failed before restart/screenshot proof. Exact bad
+reply remains `tests/fixtures/live-structural-reversed.json`, artifacts in task
+`work/live-structural-proof-40805062670`. Usage10558in/67out +11367in/910out. The
+old receipts are consumed and were never reused. Geometry guidance was corrected
+using actual passing west-facing references and pinned26.3 DiodeBlock input-side
+bytecode; CI now tests both west-positive and east-negative traces. The single
+bounded new two-call run above succeeded. Do not present the old failure as success.
+
+Setup runs40801664492 and40803355719 were cancelled before SDK calls;40803884854
+published a request then failed at the provenance allowlist before a call. Fixes:
+seed blueprint ID equals projectId before construction, reconstructed task ID
+matches it (not projectId:root), explicit scenario crosses the response workflow,
+and owner/workflow/source/stage/artifact guards allow only the three fixed names.
+Unknown scenarios reject. Transport fails promptly on unexpected-inference.
+
+The live fixture is explicitly hand-authored before modification; the two model
+calls do not prove initial design generation. The earlier PR18 flow separately
+proved bounded raw generation. This combined body of bounded evidence still does
+not establish the entire phase1 engineering partner or advanced phase2 features.
 
 ## Shipped bounded foundations
 
@@ -165,7 +171,7 @@ placement do not prove human mouse use or Mojang authentication.
 
 ## Remaining full roadmap
 
-1. Finish L1-L3 actual structural model modification proof. Then broaden generated
+1. Ship the verified L1-L3 bounded structural feature, then broaden generated
    functions and electrical interfaces: comparators/observers/pistons, connections,
    mechanical semantics and larger multicomponent engineering. No buffer-only or
    catalog-only substitute for the requested engineering partner.

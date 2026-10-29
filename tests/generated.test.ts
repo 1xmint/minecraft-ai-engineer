@@ -275,3 +275,32 @@ test("recorded reversed live geometry remains untested despite valid bounds and 
   );
   assert.equal(validateGeneratedBlueprint(blueprint).verification, "untested");
 });
+
+test("recorded working structural reply is replayed as untested raw geometry", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-structural-buffer.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 5, y: 2, z: 1 } },
+    recorded.geometry,
+    recorded.proposal.behavior,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(blueprint.blocks.length, 10);
+  assert.equal(
+    blueprint.blocks.filter((b) =>
+      b.state.startsWith("minecraft:repeater[delay=2,facing=west"),
+    ).length,
+    3,
+  );
+  assert.deepEqual(recorded.seed, {
+    kind: "hand-authored-reference",
+    repeaters: [4, 2],
+  });
+});

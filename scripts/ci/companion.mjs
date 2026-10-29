@@ -18,6 +18,16 @@ const generatedFixture = JSON.parse(
     "utf8",
   ),
 );
+// Recorded successful structural reply; replay never invokes a model.
+const structuralFixture = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../tests/fixtures/live-structural-buffer.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
@@ -44,31 +54,8 @@ const server = createCompanionServer({
         input.behavior.fallingGameTicks !== 16
       )
         throw new Error("Original request or confirmed intent changed");
-      if (input.request.startsWith("CI structural buffer:")) {
-        // Hand-authored structural fixture, not a recorded or live model reply.
-        const geometry = structuredClone(generatedFixture.geometry);
-        geometry.name = "Three-repeater structural buffer fixture";
-        geometry.explanation =
-          "Three serial two-tick repeaters; actual game tests establish behavior.";
-        geometry.blocks = [];
-        for (let x = 0; x < 5; x++) {
-          geometry.blocks.push({
-            pos: { x, y: 0, z: 0 },
-            state: "minecraft:stone",
-          });
-          geometry.blocks.push({
-            pos: { x, y: 1, z: 0 },
-            state:
-              x === 0
-                ? "minecraft:lever[face=floor,facing=north,powered=false]"
-                : x === 4
-                  ? "minecraft:redstone_lamp[lit=false]"
-                  : "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]",
-          });
-        }
-        geometry.output = { x: 4, y: 1, z: 0 };
-        return geometry;
-      }
+      if (input.request.startsWith("CI structural buffer:"))
+        return structuredClone(structuralFixture.geometry);
       return structuredClone(generatedFixture.geometry);
     },
     async plan() {

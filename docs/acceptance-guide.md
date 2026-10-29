@@ -150,3 +150,29 @@ run failed before restart acceptance. Its exact raw reply is retained in
 Direction guidance and positive/negative Minecraft regressions address that cause
 before one new bounded two-call run. Do not label the working scenario proven
 from receipt acceptance, valid geometry, unit tests or the older generated run.
+
+## Verified structural modification and deterministic replay
+
+Source `ccd89d2` passed all five regression gates in
+[CI40806790413](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40806790413).
+The entire actual signed-in
+[structural run40806992766](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40806992766)
+then passed. Separate behavior response40807645397 and geometry response40807742547
+preserved12/16 intent and returned three west-facing two-tick repeaters. The raw
+reply was applied unchanged after separate owner confirmation.
+
+The real player placed the reference's first support, AI completed it, and initial
+timing passed. Actual stop/client glass edit/conflict/resolution/resume, new12/16
+timing, companion process restart4537->5429, Bob's lesson/revocation and third game
+boot all passed. Both accepted receipts match local request/result digests. The
+inspected screenshot shows actual constructed blocks after restart:
+
+![Actual model-modified circuit after game restart](images/structural-restarted.png)
+
+`tests/fixtures/live-structural-buffer.json` retains the exact successful raw reply
+and provenance. Ordinary CI replays it through real construction/testing without
+new inference, while the earlier reversed reply remains a negative fixture. The
+initial reference is hand-authored; this proves its live model modification, not
+fresh initial generation, general engineering, human mouse use or Mojang sign-in.
+The earlier failed run is still a failure; source-grounded direction guidance and
+one new bounded run produced the successful result above.
