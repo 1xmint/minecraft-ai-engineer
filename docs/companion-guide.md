@@ -39,9 +39,12 @@ availability. A successful probe
 establishes access at that moment, not unlimited or unattended entitlement.
 Public CI never receives sign-in credentials and never invokes a paid model.
 
-The first supported template is a lever/repeater/lamp. Other mechanisms are
-reported as unsupported. Model explanations cannot grant world permissions,
-change the template, execute shell commands or mark a design verified.
+The curated planner supports a lever/repeater/lamp, inverter and two-input OR.
+The separately confirmed generated flow additionally supports timed buffers and
+complete Boolean truth tables with named inputs. Other electrical/mechanical
+behavior remains unsupported until its validators and actual tests exist. Model
+explanations cannot grant world permissions, execute commands or mark a design
+verified.
 
 The SQLite database keeps immutable blueprint revisions, projects, components,
 task reports and audit entries. Observations are separate from intended

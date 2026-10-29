@@ -5,10 +5,12 @@ partner and all six Phase2 features. A catalog, buffer, screenshot, release or
 green CI never substitutes for the full objective.
 
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/13-generated-logic**, draft **PR22**; main includes PR21 mergee3f26d8.
-Latest fully checked source **d3c84865d4045e8c182224ee4c8ea7a1d2c44add** passed all5
-**CI40908760538** and the entire actual signed-in **Boolean run40910817937**.
-New recorded-reply replay/model-policy changes require final CI before shipping.
+Branch **phase/14-project-conversation**, based on merged **PR22** commit
+**bb4e81ff238293ffbce92e94c3a52fc275396572**. Final Phase13 source
+**a3a3fcf9f90ba5ce9529b3460a3e7cb6a425de26** passed all5 **CI40913824351**;
+whole actual signed-in Boolean **run40910817937** passed on d3c8486. Phase13 is
+shipped in source, not a complete-product release. Phase14 implementation has
+not started; its written outcomes/tasks below are the next work.
 Read actual git status, PR and live workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -17,7 +19,7 @@ never on his slow PC. Locally scoped compile/format/syntax only, one Gradle work
 No separately billed service or API key. Only the configured account-owning
 operator invokes AI. Keep project memory only in AGENTS.md and this file.
 
-## Current slice: generated Boolean logic (T1/T2/T3)
+## Shipped generated Boolean logic (T1/T2/T3)
 
 - T1: independently accepted complete Boolean intent, strict schema and stable
   Java/TS identity. Preserve legacy buffer JSON/digests/exact-edge tests.
@@ -87,7 +89,7 @@ hand-authored reply. Synthetic existing lever/backing positions are derived from
 the actual accepted attachment states in both paths; no reference coordinates.
 Replay starts untested and actual native tests must establish behavior again.
 It is not fresh inference. The low-level hand-authored native reference stays an
-independent physics oracle. Final replay changes have not passed CI yet.
+independent physics oracle. Final recorded-reply replay/model-policy sourcea3a3fcf passed all5 CI40913824351 before mergebb4e81f.
 
 ### Failed replies retained, not corrected
 
@@ -118,7 +120,7 @@ failure and untrusted receipts stay under AppData/minecraft-ai-engineer/acceptan
 Do not reuse started receipts, silently repair outputs or make more SDK calls for
 this slice. A cancelled failed attempt is never the successful whole run.
 
-### Current final changes and next action
+### Phase13 finalization
 
 Model policy now keeps Luna for catalog/behavior/timed buffers and uses Sol medium
 for Boolean geometry. Explicit MCE_MODEL overrides all defaults; optional
@@ -128,11 +130,45 @@ successful explicit stage-model choices; no new SDK calls needed to test policy.
 Added policy/replay tests and the second unchanged rejection fixture. Scoped
 TypeScript and client Java compilation passed; tests run only in GitHub.
 
-Next: push final model-policy/recorded-reply changes, inspect all required CI and
-native artifacts, then ship PR22 when green, without heavy review. Continue full
-roadmap; next user-facing slice should broaden free-form engineering followups
-and durable project goals/rationale (E1), alongside the remaining engineering scope.
-No complete-product claim. Shared-subscription eligibility remains unresolved.
+Final sourcea3a3fcf passed all required CI and merged as PR22/bb4e81f. No further
+Boolean SDK calls are needed. Broader engineering and the complete product remain
+unfinished; the old single-player alpha is still the published reference release.
+
+## Phase14 plan: grounded conversation and project knowledge (first E1 slice)
+
+- C1: the configured account-owning operator can ask a free-form engineering
+  followup about the selected project/component and get a grounded explanation
+  or clarification. Proof: actual native command -> fenced companion -> bounded
+  provider reply; ambiguous references clarify, unsupported requests say so;
+  no world mutation, invented test pass or change to lesson/assignment selection.
+- C2: explicit owner-authored project goals, constraints, preferences and decisions
+  survive service/game restart and inform later discussion/planning. Proof: real
+  SQLite persistence, authorized member read, foreign-project denial, immutable
+  authorship/revision and unchanged blueprint/evidence identity. Notes are shared
+  project knowledge, not private inventory snapshots or a personal account profile.
+- C3: stale/unauthorized conversation cannot spend another player's quota or leak
+  project data. Proof: owner/operator/current connection gates before dispatch,
+  revocation/disconnect/selection/knowledge-change cancellation, replay rejection,
+  bounded queue/budget, one call per explicit message and no automatic retry.
+  Existing cached lesson questions remain offline and do not gain hidden AI calls.
+
+Decision: preserve deterministic lesson/stop/build controls. Add an explicit
+free-form engineering conversation path, with read-only structured answers;
+model text never becomes executable commands. Add bounded explicit literal project
+notes before automatic conversation summarization or inferred memory writes.
+Their revision is separate from canonical blueprint revisions and world evidence;
+knowledge edits invalidate stale in-flight reasoning without relabelling geometry.
+Keep empty-note context compatible with existing bounded acceptance scenarios.
+Do not feed private inventory captures into shared conversation or persistence.
+
+Tasks: schema and failure proofs (C1/C2/C3); literal-note codec and durable storage
+(C2); fenced grounded-context discussion/provider route (C1/C3); native commands,
+current-reference/callback handling and separate note authoring (C1/C2/C3); actual
+native/service/game restart, revocation and failure acceptance (C1/C2/C3); required
+CI, bounded signed-in proof where needed, then ship. Tests only on GitHub; locally
+scoped compile/format/syntax. No heavy review cycle, paid API or new credential.
+This first slice does not finish all E1 natural action interpretation or the full
+engineering scope. Keep the full roadmap below, including every Phase2 feature.
 
 ## Shipped foundations and retained evidence
 
