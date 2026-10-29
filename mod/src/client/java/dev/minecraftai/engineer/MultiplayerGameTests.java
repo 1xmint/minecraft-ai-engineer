@@ -399,6 +399,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("setblock 264 100 0 minecraft:stone");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(260,100,0))),"Existing player support is adopted, not journalled");write("structural-original-journal",String.valueOf(project.journal.size()));});
         int priorRevision=server.computeOnServer(s->session(s,"Alice").revision());
+        // Earlier confirmation/rejection cases deliberately use the real four-start
+        // budget. Wait out its real wall-clock window; never bypass quota or retry a consumed nonce.
+        long planningWindow=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        await(context,()->System.nanoTime()>=planningWindow,"planning rate window reset");
         MESSAGES.clear();send(context,"engineer design CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.");expectChat(context,"/engineer confirm ");String confirmation=confirmationNonce();
         MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Structural proposal ready");
         var applicationPattern=java.util.regex.Pattern.compile("/engineer apply ([0-9a-f-]{36})");String application=null;
