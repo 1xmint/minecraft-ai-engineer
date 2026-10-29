@@ -91,7 +91,8 @@ test("timing intent rejects unknown fields, wrong units, unbounded values and mo
   ])
     assert.throws(() => validateBehavior(bad));
   assert.equal(
-    validateBehavior({ ...behavior, risingGameTicks: 0 }).risingGameTicks,
+    (validateBehavior({ ...behavior, risingGameTicks: 0 }) as typeof behavior)
+      .risingGameTicks,
     0,
   );
   assert.notEqual(
@@ -374,8 +375,45 @@ test("generated truth-table ports come from the independent complete behavior", 
     blueprint.ports.map((p) => p.name),
     ["a", "b", "output"],
   );
+  assert.equal(blueprint.provenance.kind, "generated");
+  assert.ok(blueprint.provenance.kind === "generated");
   assert.equal(blueprint.provenance.generatorRevision, 2);
   assert.deepEqual(validateGeneratedBlueprint(blueprint).behavior, truth);
+  // Geometry cannot rename, alias, omit or invent independently accepted inputs.
+  for (const inputs of [
+    [...logic.inputs].reverse(),
+    [logic.inputs[0], { ...logic.inputs[1], pos: logic.inputs[0]!.pos }],
+    [logic.inputs[0], { ...logic.inputs[1], name: "other" }],
+    [...logic.inputs, { name: "hidden", pos: { x: 1, y: 2, z: 3 } }],
+  ])
+    assert.throws(() =>
+      makeGeneratedBlueprint(
+        { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+        { ...logic, inputs },
+        truth,
+      ),
+    );
+  for (const mutate of [
+    (b: typeof blueprint) => {
+      b.ports.reverse();
+    },
+    (b: typeof blueprint) => {
+      b.ports[0]!.name = "other";
+    },
+    (b: typeof blueprint) => {
+      if (b.provenance.kind === "generated") b.provenance.generatorRevision = 1;
+    },
+    (b: typeof blueprint) => {
+      b.behavior = {
+        ...truth,
+        outputs: [true, true, true, true],
+      } as NonNullable<typeof b.behavior>;
+    },
+  ]) {
+    const forged = structuredClone(blueprint);
+    mutate(forged);
+    assert.throws(() => validateGeneratedBlueprint(forged));
+  }
   const missing = { ...logic, inputs: [logic.inputs[0]] };
   assert.throws(() =>
     makeGeneratedBlueprint(

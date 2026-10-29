@@ -230,3 +230,12 @@ Added cross-runtime golden digest and arity/rejection proofs. No local tests run
 PR22 remains draft: multi-input geometry/runtime/evidence integration and actual
 Minecraft AND proof are unfinished; initial CI40810537325 failed on the deliberately
 incomplete boundary-first source. Do not merge or claim generated logic works yet.
+
+T1/T2 companion integration: behavior is now a discriminated buffer/truth-table
+union; canonical generation derives named ports and revision2 from the accepted
+table. Validation binds name/order/count/distinct lever positions and re-derives
+all blueprint metadata; forged ports/digest/revision reject. Legacy buffer
+revision1 and byte format remain unchanged. TypeScript no-emit check passed.
+Model proposal schemas intentionally remain buffer-only until server runtime
+and replayable per-tick evidence support truth tables. Java server/client compile
+passed on0d6004d. Tests remain in GitHub CI, not run locally.

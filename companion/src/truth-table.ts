@@ -27,7 +27,7 @@ export function validateTruthTableBehavior(value: unknown): TruthTableBehavior {
     !Array.isArray(v.inputs) ||
     v.inputs.length < 1 ||
     v.inputs.length > 4 ||
-    v.inputs.some(
+    Array.from(v.inputs).some(
       (n) =>
         typeof n !== "string" ||
         !/^[a-z][a-z0-9_]{0,31}$/.test(n) ||
@@ -36,7 +36,7 @@ export function validateTruthTableBehavior(value: unknown): TruthTableBehavior {
     new Set(v.inputs).size !== v.inputs.length ||
     !Array.isArray(v.outputs) ||
     v.outputs.length !== 2 ** v.inputs.length ||
-    v.outputs.some((b) => typeof b !== "boolean") ||
+    Array.from(v.outputs).some((b) => typeof b !== "boolean") ||
     !Number.isInteger(v.settleGameTicks) ||
     (v.settleGameTicks as number) < 0 ||
     (v.settleGameTicks as number) > 128

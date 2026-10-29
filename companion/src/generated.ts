@@ -4,7 +4,15 @@ import { rotatePosition } from "./geometry.js";
 import type { Blueprint, DesignRequest, Position, Rotation } from "./types.js";
 import { RequestError, integer, object, position, text } from "./types.js";
 
-export interface Behavior {
+import {
+  validateTruthTableBehavior,
+  truthTableDigest,
+  truthTableSummary,
+  type TruthTableBehavior,
+} from "./truth-table.js";
+
+export type Behavior = BufferBehavior | TruthTableBehavior;
+export interface BufferBehavior {
   schemaVersion: 1;
   function: "buffer";
   risingGameTicks: number;
@@ -14,13 +22,17 @@ export interface BehaviorProposal {
   behavior: Behavior | null;
   explanation: string;
 }
-export interface GeneratedGeometry {
+interface GeometryBase {
   name: string;
   explanation: string;
   blocks: { pos: Position; state: string }[];
-  input: Position;
   output: Position;
 }
+export type GeneratedGeometry = GeometryBase &
+  (
+    | { input: Position; inputs?: never }
+    | { inputs: { name: string; pos: Position }[]; input?: never }
+  );
 export interface GeneratedRequest extends DesignRequest {
   behavior: Behavior;
 }
@@ -185,6 +197,8 @@ export function generatedGeometrySchema(input: DesignRequest) {
 }
 
 export function validateBehavior(value: unknown): Behavior {
+  if (object(value).function === "truth-table")
+    return validateTruthTableBehavior(value);
   const v = strictObject(value, [
     "schemaVersion",
     "function",
@@ -202,6 +216,7 @@ export function validateBehavior(value: unknown): Behavior {
 }
 export function behaviorDigest(value: unknown): string {
   const b = validateBehavior(value);
+  if (b.function === "truth-table") return truthTableDigest(b);
   return createHash("sha256")
     .update(`buffer-v1|${b.risingGameTicks}|${b.fallingGameTicks}`, "utf8")
     .digest("hex");
@@ -322,12 +337,15 @@ function rawPosition(value: unknown): Position {
     z: integer(v.z, "z", -64, 64),
   };
 }
-function validateGeometry(value: unknown): GeneratedGeometry {
+function validateGeometry(
+  value: unknown,
+  behavior: Behavior,
+): GeneratedGeometry {
   const v = strictObject(value, [
     "name",
     "explanation",
     "blocks",
-    "input",
+    ...(behavior.function === "buffer" ? ["input"] : ["inputs"]),
     "output",
   ]);
   if (!Array.isArray(v.blocks) || v.blocks.length < 1 || v.blocks.length > 4096)
@@ -342,15 +360,31 @@ function validateGeometry(value: unknown): GeneratedGeometry {
       seen.add(key);
       return { pos, state: parseState(b.state).state };
     });
-  const input = rawPosition(v.input),
-    output = rawPosition(v.output),
+  let inputs: { name: string; pos: Position }[];
+  if (behavior.function === "buffer")
+    inputs = [{ name: "input", pos: rawPosition(v.input) }];
+  else {
+    if (!Array.isArray(v.inputs) || v.inputs.length !== behavior.inputs.length)
+      throw new RequestError(
+        "Generated inputs must match the accepted truth table.",
+      );
+    inputs = v.inputs.map((entry, i) => {
+      const port = strictObject(entry, ["name", "pos"]);
+      if (port.name !== behavior.inputs[i])
+        throw new RequestError(
+          "Generated input names/order differ from accepted behavior.",
+        );
+      return { name: behavior.inputs[i]!, pos: rawPosition(port.pos) };
+    });
+  }
+  if (new Set(inputs.map((p) => JSON.stringify(p.pos))).size !== inputs.length)
+    throw new RequestError("Generated inputs require distinct levers.");
+  const output = rawPosition(v.output),
     at = (p: Position) =>
       blocks.find((b) => b.pos.x === p.x && b.pos.y === p.y && b.pos.z === p.z);
-  const lever = at(input),
-    lamp = at(output);
+  const lamp = at(output);
   if (
-    !lever ||
-    !lever.state.startsWith("minecraft:lever[") ||
+    inputs.some((p) => !at(p.pos)?.state.startsWith("minecraft:lever[")) ||
     !lamp ||
     !lamp.state.startsWith("minecraft:redstone_lamp[")
   )
@@ -358,7 +392,8 @@ function validateGeometry(value: unknown): GeneratedGeometry {
       "Generated ports must identify their unique lever and lamp blocks.",
     );
   if (
-    blocks.filter((b) => b.state.startsWith("minecraft:lever[")).length !== 1 ||
+    blocks.filter((b) => b.state.startsWith("minecraft:lever[")).length !==
+      inputs.length ||
     blocks.filter((b) => b.state.startsWith("minecraft:redstone_lamp["))
       .length !== 1
   )
@@ -390,7 +425,9 @@ function validateGeometry(value: unknown): GeneratedGeometry {
     name: text(v.name, "generated name", 256),
     explanation: text(v.explanation, "generated explanation", 4000),
     blocks,
-    input,
+    ...(behavior.function === "buffer"
+      ? { input: inputs[0]!.pos }
+      : { inputs }),
     output,
   };
 }
@@ -407,8 +444,16 @@ function offset(p: Position, direction: string, amount: number): Position {
     z: p.z + d[direction]!.z * amount,
   };
 }
-export function validateGeneratedGeometry(value: unknown): GeneratedGeometry {
-  return validateGeometry(value);
+export function validateGeneratedGeometry(
+  value: unknown,
+  behavior: Behavior = {
+    schemaVersion: 1,
+    function: "buffer",
+    risingGameTicks: 0,
+    fallingGameTicks: 0,
+  },
+): GeneratedGeometry {
+  return validateGeometry(value, behavior);
 }
 function getBounds(blocks: { pos: Position }[]) {
   return {
@@ -530,19 +575,26 @@ function derive(
     bounds: getBounds(blocks),
     resources,
     ports: [
-      { name: "input", pos: { ...geom.input }, kind: "input" },
+      ...(geom.inputs ?? [{ name: "input", pos: geom.input! }]).map((p) => ({
+        name: p.name,
+        pos: { ...p.pos },
+        kind: "input" as const,
+      })),
       { name: "output", pos: { ...geom.output }, kind: "output" },
     ],
     tests: [
       {
-        id: "buffer-timing",
-        description: `Measure the lamp transition after input edges: rising ${behavior.risingGameTicks} game ticks and falling ${behavior.fallingGameTicks} game ticks; confirm stable off/on/off behavior.`,
+        id: behavior.function === "buffer" ? "buffer-timing" : "truth-table",
+        description:
+          behavior.function === "truth-table"
+            ? truthTableSummary(behavior)
+            : `Measure the lamp transition after input edges: rising ${behavior.risingGameTicks} game ticks and falling ${behavior.fallingGameTicks} game ticks; confirm stable off/on/off behavior.`,
       },
     ],
     provenance: {
       kind: "generated",
       minecraft: "26.3",
-      generatorRevision: 1,
+      generatorRevision: behavior.function === "buffer" ? 1 : 2,
       behaviorDigest: behaviorDigest(behavior),
     },
     behavior: { ...behavior },
@@ -557,7 +609,8 @@ export function makeGeneratedBlueprint(
   geometry: unknown,
   behavior: unknown,
 ): Blueprint {
-  return derive(input, validateGeometry(geometry), validateBehavior(behavior));
+  const accepted = validateBehavior(behavior);
+  return derive(input, validateGeometry(geometry, accepted), accepted);
 }
 export function validateGeneratedBlueprint(value: unknown): Blueprint {
   const v = strictObject(value, [
@@ -596,11 +649,14 @@ export function validateGeneratedBlueprint(value: unknown): Blueprint {
   if (
     p.kind !== "generated" ||
     p.minecraft !== "26.3" ||
-    p.generatorRevision !== 1
+    ![1, 2].includes(Number(p.generatorRevision))
   )
     throw new RequestError("Invalid generated provenance.");
   const behavior = validateBehavior(v.behavior);
-  if (p.behaviorDigest !== behaviorDigest(behavior))
+  if (
+    p.generatorRevision !== (behavior.function === "buffer" ? 1 : 2) ||
+    p.behaviorDigest !== behaviorDigest(behavior)
+  )
     throw new RequestError("Generated behavior digest mismatch.");
   const rawBlocks = v.blocks;
   if (!Array.isArray(rawBlocks))
@@ -612,28 +668,37 @@ export function validateGeneratedBlueprint(value: unknown): Blueprint {
   );
   const inputPort = ports.find((port) => port.name === "input");
   const outputPort = ports.find((port) => port.name === "output");
-  const geometry = validateGeometry({
-    name: v.name,
-    explanation: v.explanation,
-    blocks: rawBlocks.map((b) => {
-      const x = strictObject(b, [
-        "pos",
-        "state",
-        "stage",
-        "component",
-        "prerequisites",
-      ]);
-      if (
-        typeof x.stage !== "string" ||
-        typeof x.component !== "string" ||
-        !Array.isArray(x.prerequisites)
-      )
-        throw new RequestError("Invalid derived block metadata.");
-      return { pos: x.pos, state: x.state };
-    }),
-    input: inputPort?.pos,
-    output: outputPort?.pos,
-  });
+  const geometry = validateGeometry(
+    {
+      name: v.name,
+      explanation: v.explanation,
+      blocks: rawBlocks.map((b) => {
+        const x = strictObject(b, [
+          "pos",
+          "state",
+          "stage",
+          "component",
+          "prerequisites",
+        ]);
+        if (
+          typeof x.stage !== "string" ||
+          typeof x.component !== "string" ||
+          !Array.isArray(x.prerequisites)
+        )
+          throw new RequestError("Invalid derived block metadata.");
+        return { pos: x.pos, state: x.state };
+      }),
+      ...(behavior.function === "buffer"
+        ? { input: inputPort?.pos }
+        : {
+            inputs: ports
+              .filter((p) => p.kind === "input")
+              .map((p) => ({ name: p.name, pos: p.pos })),
+          }),
+      output: outputPort?.pos,
+    },
+    behavior,
+  );
   const id = text(v.id, "blueprint id", 128),
     projectId = text(v.projectId, "projectId", 128),
     revision = integer(v.revision, "revision", 1, Number.MAX_SAFE_INTEGER),
@@ -661,7 +726,7 @@ export function validateGeneratedBlueprint(value: unknown): Blueprint {
     revision,
     projectId,
   });
-  if (!inputPort || !outputPort || !isDeepStrictEqual(expected, v))
+  if (!outputPort || !isDeepStrictEqual(expected, v))
     throw new RequestError("Generated blueprint derived fields were changed.");
   return expected;
 }

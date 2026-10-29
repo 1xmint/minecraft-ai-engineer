@@ -41,6 +41,12 @@ test("incomplete, ambiguous, unbounded and authority-bearing tables reject", () 
   ])
     assert.throws(() => validateTruthTableBehavior({ ...table(), ...patch }));
   assert.throws(() => validateTruthTableBehavior(null));
+  assert.throws(() =>
+    validateTruthTableBehavior({ ...table(), outputs: new Array(4) }),
+  );
+  assert.throws(() =>
+    validateTruthTableBehavior({ ...table(), inputs: new Array(2) }),
+  );
 });
 test("all bounded arities require exactly every Boolean combination", () => {
   for (let n = 1; n <= 4; n++) {
