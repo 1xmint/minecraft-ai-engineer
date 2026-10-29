@@ -31,6 +31,46 @@ export const GENERATED_ACCEPTANCE_REQUEST =
   "Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.";
 export const GENERATED_ACCEPTANCE_SCENARIO =
   "generated-buffer-owner-confirmation-v1";
+export const BOOLEAN_ACCEPTANCE_SCENARIO =
+  "generated-boolean-owner-confirmation-v1";
+export const BOOLEAN_ACCEPTANCE_REQUEST =
+  "Make an AND circuit with named lever inputs a and b and one lamp output. Settle to the requested output within 20 game ticks. Teach me its construction.";
+export const BOOLEAN_ACCEPTANCE_BEHAVIOR: Behavior = Object.freeze({
+  schemaVersion: 2,
+  function: "truth-table",
+  inputs: Object.freeze(["a", "b"]),
+  outputs: Object.freeze([false, false, false, true]),
+  settleGameTicks: 20,
+});
+function fixedBehavior(scenario: string): Behavior {
+  return scenario === BOOLEAN_ACCEPTANCE_SCENARIO
+    ? BOOLEAN_ACCEPTANCE_BEHAVIOR
+    : GENERATED_ACCEPTANCE_BEHAVIOR;
+}
+function scenarioDesign(scenario: string) {
+  return {
+    rotation: 0 as const,
+    request:
+      scenario === BOOLEAN_ACCEPTANCE_SCENARIO
+        ? BOOLEAN_ACCEPTANCE_REQUEST
+        : scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
+          ? STRUCTURAL_ACCEPTANCE_REQUEST
+          : GENERATED_ACCEPTANCE_REQUEST,
+    anchor: {
+      x: scenario === BOOLEAN_ACCEPTANCE_SCENARIO ? 400 : 200,
+      y: 100,
+      z: 0,
+    },
+    maxSize:
+      scenario === BOOLEAN_ACCEPTANCE_SCENARIO
+        ? { x: 6, y: 3, z: 4 }
+        : {
+            x: scenario === STRUCTURAL_ACCEPTANCE_SCENARIO ? 5 : 4,
+            y: 2,
+            z: 1,
+          },
+  };
+}
 export const STRUCTURAL_ACCEPTANCE_SCENARIO =
   "structural-buffer-owner-confirmation-v1";
 export const STRUCTURAL_ACCEPTANCE_REQUEST =
@@ -103,7 +143,8 @@ function runIdentity(value: unknown): AcceptanceRun {
     v.repository !== "1xmint/minecraft-ai-engineer" ||
     v.workflow !== ".github/workflows/live-acceptance.yml" ||
     (v.scenario !== GENERATED_ACCEPTANCE_SCENARIO &&
-      v.scenario !== STRUCTURAL_ACCEPTANCE_SCENARIO)
+      v.scenario !== STRUCTURAL_ACCEPTANCE_SCENARIO &&
+      v.scenario !== BOOLEAN_ACCEPTANCE_SCENARIO)
   )
     throw new RequestError("Unrecognized generated acceptance scenario.");
   if (typeof v.runId !== "string" || !/^[1-9][0-9]{0,19}$/u.test(v.runId))
@@ -142,6 +183,7 @@ function stage(value: unknown): GeneratedAcceptanceStage {
 function requestBehavior(
   value: unknown,
   requestStage: GeneratedAcceptanceStage,
+  scenario: string,
 ): Behavior | null {
   if (requestStage === "behavior") {
     if (value !== null)
@@ -151,7 +193,7 @@ function requestBehavior(
     return null;
   }
   const result = validateBehavior(value);
-  if (JSON.stringify(result) !== JSON.stringify(GENERATED_ACCEPTANCE_BEHAVIOR))
+  if (JSON.stringify(result) !== JSON.stringify(fixedBehavior(scenario)))
     throw new RequestError(
       "Geometry stage requires the fixed accepted behavior.",
     );
@@ -182,16 +224,17 @@ function payload(value: unknown): Omit<GeneratedAcceptanceRequest, "digest"> {
   if (v.expiresAt !== createdAt + TTL)
     throw new RequestError("Invalid generated acceptance expiry.");
   const requestStage = stage(v.stage);
+  const run = runIdentity(v.run);
   return {
     schemaVersion: 1,
-    run: runIdentity(v.run),
+    run,
     stage: requestStage,
     context: frame(v.context),
     worldId: identifier(v.worldId, "worldId"),
     nonce: hex(v.nonce, 64),
     createdAt,
     expiresAt: createdAt + TTL,
-    behavior: requestBehavior(v.behavior, requestStage),
+    behavior: requestBehavior(v.behavior, requestStage, run.scenario),
   };
 }
 export function createGeneratedAcceptanceRequest(
@@ -246,24 +289,14 @@ export function readGeneratedAcceptanceRequest(
       409,
     );
   const base: DesignRequest = {
-    request:
-      body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
-        ? STRUCTURAL_ACCEPTANCE_REQUEST
-        : GENERATED_ACCEPTANCE_REQUEST,
+    ...scenarioDesign(body.run.scenario),
     worldId: body.worldId,
     dimension: "minecraft:overworld",
     projectId: body.context.projectId,
-    anchor: { x: 200, y: 100, z: 0 },
-    rotation: 0,
-    maxSize: {
-      x: body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO ? 5 : 4,
-      y: 2,
-      z: 1,
-    },
   };
   const input: GeneratedAcceptanceInput =
     body.stage === "geometry"
-      ? { ...base, behavior: GENERATED_ACCEPTANCE_BEHAVIOR }
+      ? { ...base, behavior: fixedBehavior(body.run.scenario) }
       : base;
   return {
     ...body,
@@ -297,28 +330,18 @@ function resultValue(
   scenario: string,
 ): BehaviorProposal | GeneratedGeometry {
   if (requestStage === "behavior") return validateBehaviorProposal(value);
-  const geometry = validateGeneratedGeometry(value);
+  const geometry = validateGeneratedGeometry(value, fixedBehavior(scenario));
   // Run all server-derived bounds, support, state, and fit checks without
   // replacing the raw geometry sent by the model in the acceptance receipt.
   makeGeneratedBlueprint(
     {
-      request:
-        scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
-          ? STRUCTURAL_ACCEPTANCE_REQUEST
-          : GENERATED_ACCEPTANCE_REQUEST,
+      ...scenarioDesign(scenario),
       worldId: "acceptance-world",
       dimension: "minecraft:overworld",
       projectId: "acceptance-project",
-      anchor: { x: 200, y: 100, z: 0 },
-      rotation: 0,
-      maxSize: {
-        x: scenario === STRUCTURAL_ACCEPTANCE_SCENARIO ? 5 : 4,
-        y: 2,
-        z: 1,
-      },
     },
     value,
-    GENERATED_ACCEPTANCE_BEHAVIOR,
+    fixedBehavior(scenario),
   );
   return geometry;
 }

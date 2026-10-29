@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import type { Blueprint } from "../companion/src/types.js";
 import {
   createGeneratedAcceptanceRequest,
   readGeneratedAcceptanceRequest,
   createGeneratedAcceptanceResponse,
   readGeneratedAcceptanceResponse,
   GENERATED_ACCEPTANCE_REQUEST,
+  BOOLEAN_ACCEPTANCE_SCENARIO,
+  BOOLEAN_ACCEPTANCE_REQUEST,
+  BOOLEAN_ACCEPTANCE_BEHAVIOR,
   GENERATED_ACCEPTANCE_BEHAVIOR,
 } from "../companion/src/generated-acceptance.js";
 const now = 1_800_000_000_000;
@@ -258,5 +263,77 @@ test("structural acceptance reconstructs only the fixed existing-circuit revisio
     () =>
       createGeneratedAcceptanceResponse(request("geometry"), wider, provenance),
     /fit|bound|space|size|dimension/i,
+  );
+});
+
+test("Boolean acceptance reconstructs one fixed AND intent and its own bounded workspace", () => {
+  const booleanRun = { ...run, scenario: BOOLEAN_ACCEPTANCE_SCENARIO };
+  const envelope = createGeneratedAcceptanceRequest({
+    run: booleanRun,
+    stage: "geometry",
+    context,
+    worldId: "synthetic-world",
+    nonce: "d".repeat(64),
+    createdAt: now,
+    behavior: BOOLEAN_ACCEPTANCE_BEHAVIOR,
+  });
+  const read = readGeneratedAcceptanceRequest(envelope, booleanRun, now + 1);
+  assert.equal(read.input.request, BOOLEAN_ACCEPTANCE_REQUEST);
+  assert.equal(read.input.rotation, 0);
+  assert.deepEqual(read.input.anchor, { x: 400, y: 100, z: 0 });
+  assert.deepEqual(read.input.maxSize, { x: 6, y: 3, z: 4 });
+  assert.deepEqual(read.behavior, BOOLEAN_ACCEPTANCE_BEHAVIOR);
+  assert.deepEqual(JSON.parse(read.memory), {
+    project: { name: "Engineering project", projectRevision: 1 },
+    tasks: [],
+  });
+  assert.throws(() => readGeneratedAcceptanceRequest(envelope, run, now + 1));
+  for (const behavior of [
+    GENERATED_ACCEPTANCE_BEHAVIOR,
+    { ...BOOLEAN_ACCEPTANCE_BEHAVIOR, outputs: [false, true, true, true] },
+    { ...BOOLEAN_ACCEPTANCE_BEHAVIOR, settleGameTicks: 21 },
+  ])
+    assert.throws(() =>
+      createGeneratedAcceptanceRequest({
+        run: booleanRun,
+        stage: "geometry",
+        context,
+        worldId: "synthetic-world",
+        nonce: "d".repeat(64),
+        createdAt: now,
+        behavior,
+      }),
+    );
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../mod/src/main/resources/fixtures/generated-and.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ) as Blueprint;
+  const raw = {
+    name: fixture.name,
+    explanation: fixture.explanation,
+    blocks: fixture.blocks.map((b) => ({ pos: b.pos, state: b.state })),
+    inputs: fixture.ports
+      .filter((p) => p.kind === "input")
+      .map((p) => ({ name: p.name, pos: p.pos })),
+    output: fixture.ports.find((p) => p.kind === "output")!.pos,
+  };
+  const reply = createGeneratedAcceptanceResponse(envelope, raw, provenance);
+  assert.deepEqual(
+    readGeneratedAcceptanceResponse(reply, envelope, now + 1).result,
+    raw,
+  );
+  assert.throws(() =>
+    createGeneratedAcceptanceResponse(request("geometry"), raw, provenance),
+  );
+  assert.throws(() =>
+    createGeneratedAcceptanceResponse(envelope, geometry, provenance),
+  );
+  assert.throws(() =>
+    readGeneratedAcceptanceResponse(reply, request("geometry"), now + 1),
   );
 });
