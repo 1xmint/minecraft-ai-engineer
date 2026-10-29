@@ -207,7 +207,7 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
-    private static Blueprint[] structuralPair() {
+    static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}
         var after=before.deepCopy();after.addProperty("id","cccccccc-cccc-4ccc-8ccc-cccccccccccc");after.addProperty("revision",3);

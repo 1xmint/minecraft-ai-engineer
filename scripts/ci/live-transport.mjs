@@ -102,9 +102,12 @@ function envelope(run, attempt, sha) {
     sourceSha: sha,
     runId: String(run),
     runAttempt: Number(attempt),
-    scenario: generated
-      ? "generated-buffer-owner-confirmation-v1"
-      : "signal-lamp-client-handoff-v1",
+    scenario:
+      process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+        ? "structural-buffer-owner-confirmation-v1"
+        : generated
+          ? "generated-buffer-owner-confirmation-v1"
+          : "signal-lamp-client-handoff-v1",
   };
 }
 function own() {
@@ -254,6 +257,9 @@ async function main() {
         "generated-confirmation-recovery.done",
         "live-generated-model.done",
         "player-generated-section.done",
+        ...(process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+          ? ["live-structural-model.done", "live-structural-recovery.done"]
+          : []),
       ])
         check(
           readFileSync(

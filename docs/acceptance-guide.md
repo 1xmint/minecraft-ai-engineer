@@ -114,3 +114,34 @@ node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha REVIEWE
 This only republishes the validated saved answer while its original run/context
 remains live. It never invokes the model again. An expired run needs a new manual
 run. No automatic model fallback or retry is performed.
+
+## Existing-circuit structural modification (development)
+
+The separate `structural` scenario starts with an explicit hand-authored
+four-wide, two-repeater reference. It is not a new model design. The real player
+places its first support, AI builds the remainder, and the original12/16 behavior
+is tested before asking Codex to replace the two repeaters with three two-tick
+repeaters in an explicitly expanded five-wide workspace.
+
+Dispatch `live-acceptance.yml` with `scenario=structural` on the exact clean source
+branch. Respond to each stage only after its corresponding request artifact exists:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior --scenario structural
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry --scenario structural
+```
+
+Both calls remain local, explicit and separately receipted. The fixed scenario,
+request, completed-seed memory, five-wide bounds, run/SHA and stage are validated;
+arbitrary CI inputs and private world memory are not accepted. The existing
+four-wide generated scenario remains separate. Do not retry a consumed receipt.
+
+The new native path reviews the actual model diff before a separate owner apply,
+stops after a real write, places and removes a conflicting glass block through the
+actual player client, resumes, and tests real12/16 timing. It then restarts the
+companion, exercises Bob's authorized lesson/revocation and reloads the game.
+Inspect both stage receipts, `live-structural-before`, `live-structural-after`,
+`live-structural-model.done`, `live-structural-recovery.done`, and screenshot
+`engineer-live-structural-restarted-build`. This source compiles but the actual
+signed-in run has not yet been performed; do not label the scenario proven from
+unit tests or the older generated acceptance run.

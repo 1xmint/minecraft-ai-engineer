@@ -367,3 +367,16 @@ legacy generation bounds; scenario is part of run/digest/receipt identity. The
 local responder requires an explicit matching structural scenario flag. TypeScript
 compile and responder syntax checks passed; no local tests. Native seed/modification
 flow and workflow routing are not enabled yet; actual signed-in proof is pending.
+
+L1 contract implementation6defcc9 passed the Companion gate of CI40800147604;
+its duplicate native run was cancelled while incorporating the known upstream
+fourth-epoch verifier fix, not reported as all-green. Phase12 now includes the
+manual structural workflow/transport flag and exact local responder scenario;
+its native path uses a hand-authored seed, actual player support placement and
+AI completion, real original timing, two signed-in modification calls, separate
+apply, actual client glass-edit conflict/resolution, resume, new timing, actual
+service/game restarts and screenshot/receipts. TypeScript and Java main/client
+compile plus script syntax checks passed. Added broker lifecycle coverage for both
+fixed scenarios. Actual new manual inference and full integration are still pending.
+PR20 CI40800347568 has now passed all five gates; inspect its saved evidence and
+record/ship the recovery feature before claiming that slice landed.

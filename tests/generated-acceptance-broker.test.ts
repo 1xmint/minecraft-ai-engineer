@@ -67,11 +67,11 @@ const raw = {
     { pos: { x: 3, y: 1, z: 0 }, state: "minecraft:redstone_lamp[lit=false]" },
   ],
 };
-function fixture(stage: "behavior" | "geometry") {
+function fixture(stage: "behavior" | "geometry", scenarioRun = run) {
   const now = Date.now();
   return readGeneratedAcceptanceRequest(
     createGeneratedAcceptanceRequest({
-      run,
+      run: scenarioRun,
       stage,
       context,
       worldId: "world",
@@ -79,7 +79,7 @@ function fixture(stage: "behavior" | "geometry") {
       createdAt: now,
       behavior: stage === "behavior" ? null : GENERATED_ACCEPTANCE_BEHAVIOR,
     }),
-    run,
+    scenarioRun,
     now,
   );
 }
@@ -88,6 +88,7 @@ async function setup(
     provider: GeneratedSyntheticAcceptanceProvider,
     directory: string,
   ) => Promise<void>,
+  scenarioRun = run,
 ) {
   const keys = [
       "CI",
@@ -100,7 +101,7 @@ async function setup(
   const directory = mkdtempSync(join(tmpdir(), "mce-generated-broker-"));
   try {
     await action(
-      new GeneratedSyntheticAcceptanceProvider({ directory, run }),
+      new GeneratedSyntheticAcceptanceProvider({ directory, run: scenarioRun }),
       directory,
     );
   } finally {
@@ -111,59 +112,66 @@ async function setup(
     });
   }
 }
-test("manual generated broker keeps two separately receipted stages on the same native basis", async () =>
-  setup(async (provider, directory) => {
-    const behavior = fixture("behavior");
-    const first = provider.proposeBehavior(
-      behavior.input,
-      new AbortController().signal,
-      behavior.memory,
-      context,
-    );
-    const request = JSON.parse(
-      readFileSync(join(directory, "behavior", "request.json"), "utf8"),
-    );
-    writeFileSync(
-      join(directory, "behavior", "response.json"),
-      JSON.stringify(
-        createGeneratedAcceptanceResponse(request, proposal, provenance),
-      ),
-    );
-    assert.deepEqual(await first, proposal);
-    const geometry = fixture("geometry"),
-      authority = Object.freeze({ ...context, requestId: "second-request" });
-    const second = provider.generateGeometry(
-      { ...geometry.input, behavior: GENERATED_ACCEPTANCE_BEHAVIOR },
-      new AbortController().signal,
-      geometry.memory,
-      authority,
-    );
-    const next = JSON.parse(
-      readFileSync(join(directory, "geometry", "request.json"), "utf8"),
-    );
-    assert.notEqual(next.digest, request.digest);
-    writeFileSync(
-      join(directory, "geometry", "response.json"),
-      JSON.stringify(createGeneratedAcceptanceResponse(next, raw, provenance)),
-    );
-    assert.deepEqual(await second, raw);
-    for (const stage of ["behavior", "geometry"])
-      assert.equal(
-        JSON.parse(
-          readFileSync(join(directory, stage, "accepted.json"), "utf8"),
-        ).stage,
-        stage,
+for (const scenarioRun of [
+  run,
+  { ...run, scenario: "structural-buffer-owner-confirmation-v1" },
+])
+  test(`manual broker keeps two separately receipted stages on the same native basis: ${scenarioRun.scenario}`, async () =>
+    setup(async (provider, directory) => {
+      const behavior = fixture("behavior", scenarioRun);
+      const first = provider.proposeBehavior(
+        behavior.input,
+        new AbortController().signal,
+        behavior.memory,
+        context,
       );
-    await assert.rejects(
-      provider.generateGeometry(
+      const request = JSON.parse(
+        readFileSync(join(directory, "behavior", "request.json"), "utf8"),
+      );
+      writeFileSync(
+        join(directory, "behavior", "response.json"),
+        JSON.stringify(
+          createGeneratedAcceptanceResponse(request, proposal, provenance),
+        ),
+      );
+      assert.deepEqual(await first, proposal);
+      const geometry = fixture("geometry", scenarioRun),
+        authority = Object.freeze({ ...context, requestId: "second-request" });
+      const second = provider.generateGeometry(
         { ...geometry.input, behavior: GENERATED_ACCEPTANCE_BEHAVIOR },
         new AbortController().signal,
         geometry.memory,
         authority,
-      ),
-    );
-    assert.ok(existsSync(join(directory, "unexpected-inference")));
-  }));
+      );
+      const next = JSON.parse(
+        readFileSync(join(directory, "geometry", "request.json"), "utf8"),
+      );
+      assert.notEqual(next.digest, request.digest);
+      writeFileSync(
+        join(directory, "geometry", "response.json"),
+        JSON.stringify(
+          createGeneratedAcceptanceResponse(next, raw, provenance),
+        ),
+      );
+      assert.deepEqual(await second, raw);
+      for (const stage of ["behavior", "geometry"])
+        assert.equal(
+          JSON.parse(
+            readFileSync(join(directory, stage, "accepted.json"), "utf8"),
+          ).stage,
+          stage,
+        );
+      await assert.rejects(
+        provider.generateGeometry(
+          { ...geometry.input, behavior: GENERATED_ACCEPTANCE_BEHAVIOR },
+          new AbortController().signal,
+          geometry.memory,
+          authority,
+        ),
+      );
+      assert.ok(existsSync(join(directory, "unexpected-inference")));
+    }, scenarioRun));
+
 test("manual broker rejects geometry before a behavior response and untrusted input before publishing a request", async () =>
   setup(async (provider, directory) => {
     const geometry = fixture("geometry");

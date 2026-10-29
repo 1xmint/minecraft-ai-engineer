@@ -42,6 +42,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
     private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
     private static final boolean LIVE_GENERATED=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_GENERATED_ACCEPTANCE"));
+    private static final boolean LIVE_STRUCTURAL=LIVE_GENERATED && "true".equals(System.getenv("MCE_STRUCTURAL_ACCEPTANCE"));
+    private static final String LIVE_STRUCTURAL_REQUEST="Replace the two repeaters (delays 4 and 2) in the existing four-block-wide buffer with three serial two-tick repeaters. Keep the input lever at relative 0,1,0 and its existing floor supports at x=0..3, y=0, z=0. Extend the support to x=4 and move the output lamp to relative 4,1,0. Keep rising latency 12 game ticks and falling latency 16 game ticks.";
     private static final long WAIT_MILLIS = LIVE_ACCEPTANCE?1_800_000:240_000;
     private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
 
@@ -297,7 +299,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationFlow(context,server,connection);
+            if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
+            else if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationFlow(context,server,connection);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -344,6 +347,44 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
     }
 
+    private static void liveStructuralFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
+        send(context,"engineer project new");send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(203,101,0)));
+        // Explicit hand-authored reference, never presented as fresh model generation.
+        server.runOnServer(s->{var project=session(s,"Alice");var seed=MechanismGameTests.structuralPair()[0].source().deepCopy();seed.addProperty("id",UUID.randomUUID().toString());seed.addProperty("worldId",project.worldId);seed.addProperty("dimension",project.dimension);seed.addProperty("name","Synthetic serial buffer before revision");seed.add("anchor",Blueprint.jsonPos(new BlockPos(200,100,0)));project.accept(Blueprint.parse(seed,project.worldId,project.dimension));write("generated-project",project.projectId.toString());write("live-structural-before",project.blueprint.source().toString());});
+        server.runCommand("tp Alice 201 103 6 180 20");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        generatedPlayerSection(context,server,connection);
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        workspaceExpansionFlow(context,server);
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());int oldJournal=server.computeOnServer(s->session(s,"Alice").journal.size());
+        MESSAGES.clear();send(context,"engineer design "+LIVE_STRUCTURAL_REQUEST);expectChat(context,"/engineer confirm ",900_000);String behaviorNonce=confirmationNonce();
+        check(MESSAGES.stream().anyMatch(message->message.contains("turning on after 12 game ticks and off after 16 game ticks")),"The live structural owner confirms the original observable timing contract");
+        MESSAGES.clear();send(context,"engineer confirm "+behaviorNonce);expectChat(context,"Structural proposal ready",900_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.revision()==revision && project.blueprint.blocks().size()==8 && project.journal.size()==oldJournal && project.delegation==null,"Live geometry inference leaves accepted intent, player construction and world authority unchanged");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"The real original buffer still matches before explicit application");});
+        var pattern=java.util.regex.Pattern.compile("/engineer apply ([0-9a-f-]{36})");String application=null;for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find()){application=match.group(1);break;}}check(application!=null,"Live structural proposal needs a separate private world confirmation");
+        send(context,"engineer apply "+application);server.waitFor(s->session(s,"Alice").state.equals("EXECUTING") && session(s,"Alice").structuralCursor>0);
+        send(context,"engineer stop");server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        var target=server.computeOnServer(s->{var project=session(s,"Alice");check(project.structuralCursor>0 && project.structuralCursor<project.operationScopes.transition(project.activeOperation).steps().size(),"The live proof stops an actual unfinished structural operation");return project.journal.getLast().pos();});
+        server.runCommand("tp Alice 202 102 2 180 20");connection.waitForClientboundPackets();
+        var previous=server.computeOnServer(s->player(s,"Alice").getMainHandItem().copy());
+        try {
+            equipConstructionItem(context,server,net.minecraft.world.item.Items.GLASS);
+            context.runOnClient(client->client.gameMode.useItemOn(client.player,net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(target.below()).add(0,0.5,0),net.minecraft.core.Direction.UP,target.below(),false)));
+            server.waitFor(s->session(s,"Alice").level().getBlockState(target).is(Blocks.GLASS));
+            MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Player/world edit conflicts");
+            server.runOnServer(s->check(session(s,"Alice").level().getBlockState(target).is(Blocks.GLASS) && session(s,"Alice").state.equals("PAUSED"),"Actual player edit is preserved and blocks the live structural executor"));
+            context.runOnClient(client->{client.gameMode.startDestroyBlock(target,net.minecraft.core.Direction.UP);client.gameMode.stopDestroyBlock();});server.waitFor(s->session(s,"Alice").level().getBlockState(target).isAir());
+        } finally {server.runOnServer(s->{var actor=player(s,"Alice");actor.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,previous.copy());actor.inventoryMenu.broadcastChanges();check(net.minecraft.world.item.ItemStack.listMatches(java.util.List.of(previous),java.util.List.of(actor.getMainHandItem())),"Live edit fixture restores the prior held stack/components");});}
+        send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");var repeaters=project.blueprint.blocks().stream().filter(b->b.state().is(Blocks.REPEATER)).toList();check(project.revision()==revision+1 && repeaters.size()==3 && repeaters.stream().allMatch(b->b.state().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DELAY)==2),"The actual model reply constructs the requested three-repeater replacement");check(project.journal.stream().noneMatch(change->change.pos().equals(new BlockPos(200,100,0))),"The player's original support remains outside assistant history");check(project.operationScopes.transition(project.activeOperation).before().source().equals(JsonParser.parseString(read("live-structural-before")).getAsJsonObject()),"The executed live modification retains the exact real before intention");write("live-structural-after",project.blueprint.source().toString());});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Live structural evidence is read after an actual companion process restart");
+        var report=server.computeOnServer(s->{var project=session(s,"Alice");project.checkpoint();return project.lastCheckpoint;});check(report.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"New companion acknowledges the real structural result");
+        send(context,"engineer project share Bob viewer");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));write("generated-shared","ready");awaitFile(context,"generated-bob.done");
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.EDIT));write("workspace-bob-editable","ready");awaitFile(context,"workspace-bob-denied.done");
+        send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
+        write("live-structural-model.done","passed");write("live-generated-model.done","passed");write("generated-confirmation.done","passed");
+    }
     private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
         send(context,"engineer project new");
         send(context,"engineer select1 200 100 0");send(context,"engineer select2 203 101 0");
@@ -537,8 +578,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(LIVE_GENERATED) {
             send(context,"engineer project use "+read("generated-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("generated-project")));
             server.runCommand("tp Alice 201 103 6 180 20");connection.waitForClientboundPackets();context.waitTicks(20);
-            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-live-generated-restarted-build");
+            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot(LIVE_STRUCTURAL?"engineer-live-structural-restarted-build":"engineer-live-generated-restarted-build");
         }
+        if(LIVE_STRUCTURAL)server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.source().equals(JsonParser.parseString(read("live-structural-after")).getAsJsonObject()) && project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Actual game restart retains the exact live-model revision and real constructed blocks");write("live-structural-recovery.done","passed");});
         write("generated-confirmation-recovery.done","passed");
     }
 
