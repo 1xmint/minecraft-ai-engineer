@@ -142,6 +142,11 @@ actual player client, resumes, and tests real12/16 timing. It then restarts the
 companion, exercises Bob's authorized lesson/revocation and reloads the game.
 Inspect both stage receipts, `live-structural-before`, `live-structural-after`,
 `live-structural-model.done`, `live-structural-recovery.done`, and screenshot
-`engineer-live-structural-restarted-build`. This source compiles but the actual
-signed-in run has not yet been performed; do not label the scenario proven from
-unit tests or the older generated acceptance run.
+`engineer-live-structural-restarted-build`. The first actual signed-in run40805062670
+accepted both SDK replies and completed real stop/edit-conflict/resume, but the
+model pointed all repeaters east and the actual lamp stayed off at tick12. That
+run failed before restart acceptance. Its exact raw reply is retained in
+`tests/fixtures/live-structural-reversed.json`; it has not been silently corrected.
+Direction guidance and positive/negative Minecraft regressions address that cause
+before one new bounded two-call run. Do not label the working scenario proven
+from receipt acceptance, valid geometry, unit tests or the older generated run.

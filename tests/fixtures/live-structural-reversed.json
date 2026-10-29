@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "recordedFrom": {
+    "sourceSha": "1e20635dee7fd2a1034c20ab0ec1c74a88549784",
+    "requestRun": "40805062670",
+    "behaviorResponseRun": "40805687857",
+    "geometryResponseRun": "40805786982",
+    "behaviorRequestDigest": "c4f133d85a9b6c25e031a6fb3284a06fa0c1bc40b94db2bea988cb08fa83cf98",
+    "geometryRequestDigest": "c96dd9391301510a79e3d2517bfa8abdd50c6c14478e746efe6e1792e5d22ab0",
+    "geometryResultDigest": "405f46e6de2ddec1ed939cb62e7916fd0399c7937b92db0a5d9774f401338fd0"
+  },
+  "geometry": {
+    "name": "buffer",
+    "explanation": "One lever drives three east-facing delay-2 repeaters in series into one lamp. Repeater latency is 12 game ticks; lamp turn-off adds 4 ticks.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=east,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=east,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=east,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "input": {
+      "x": 0,
+      "y": 1,
+      "z": 0
+    },
+    "output": {
+      "x": 4,
+      "y": 1,
+      "z": 0
+    }
+  },
+  "provenance": {
+    "model": "gpt-6-luna",
+    "sdkVersion": "0.164.0",
+    "inputTokens": 11367,
+    "cachedInputTokens": 0,
+    "outputTokens": 910
+  },
+  "observed": {
+    "verdict": "failed",
+    "expectedRisingGameTick": 12,
+    "observedOutputAtExpectedEdge": false,
+    "reason": "Native FunctionalTrial: output expected true, observed false at elapsed game tick 12."
+  }
+}

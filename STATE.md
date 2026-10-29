@@ -39,62 +39,58 @@ setup (L1/L3), regressions, actual two responses and inspect all native artifact
 
 ### Latest evidence and next action
 
-Original sourcecff4b4c passed all five regression gates **CI40801236260**. Earlier
-contract proofe77862f / CI40799731347 failed before the structural scenario was
-implemented. Contract implementation6defcc9 passed the Companion gate of
-CI40800147604; that duplicate native run was cancelled for the upstream epoch fix,
-not reported as a full successful run. Local TypeScript, main/client Java and
-script syntax checks passed; no local tests.
+Source **1e20635dee7fd2a1034c20ab0ec1c74a88549784** passed all five regression
+gates **CI40804731435**. Actual manual run **40805062670** used that frozen source:
+behavior response **40805687857**, geometry response **40805786982**, both official
+SDK0.164.0/gpt-6-luna and both accepted by GitHub/native receipts. Behavior is the
+requested12/16. Geometry has ten blocks and three two-tick repeaters, but all face
+east. The actual client preserved/resolved a glass edit, resumed and matched the
+raw geometry; FunctionalTrial then failed at game tick12: expected true, observed
+false. The overall manual run failed. No service/game restart or final screenshot
+was reached. Never silently flip that model output or claim a working live design.
 
-Manual structural run **40801664492** used frozen sourcecff4b4c and is now
-**cancelled/completed**. It emitted no request artifact and no local SDK call was
-made. Inspected artifacts at task `work/live-structural-proof-40801664492` contain
-`live-exchange/unexpected-inference`; native log01:43:26 reports the broker's
-fixed-scenario refusal. The setup contract mistakenly expected projectId:root,
-while non-composite checkpoints use blueprint.id as task ID. This is not a
-subscription failure or successful inference.
+Retained artifacts: task `work/live-structural-proof-40805062670`. Exact failed raw
+reply/provenance is now `tests/fixtures/live-structural-reversed.json`. Behavior
+request digest c4f133d85a9b6c25e031a6fb3284a06fa0c1bc40b94db2bea988cb08fa83cf98;
+geometry request c96dd9391301510a79e3d2517bfa8abdd50c6c14478e746efe6e1792e5d22ab0.
+Private exclusive started/response receipts remain under the user's AppData
+minecraft-ai-engineer/acceptance directory. Both requests are consumed; no retry.
+Usage: behavior10558in/67out; geometry11367in/910out. Result digests remain in the
+accepted artifact receipts. No API key or separately billed service was used.
 
-Fix: give the synthetic seed blueprint ID equal to its projectId before any
-construction, and reconstruct that exact task ID (without :root). Preserve true
-history. The broker still requires the exact completed seed name/status/detail;
-no arbitrary memory is exported. Transport also fails promptly when the broker's
-unexpected-inference marker appears. The corrected source passed TypeScript,
-client Java compile and script syntax; publish it and freeze its exact clean SHA
-for the new live run. Do not reuse the old run or any consumed receipt.
+Source-grounded correction: actual passing west-facing references and pinned26.3
+DiodeBlock.getInputSignal bytecode both show input is read at pos.relative(FACING).
+Teach the geometry model that repeater facing names the INPUT direction, opposite
+signal travel, with all four compass mappings and coordinate axes. Keep other
+block conventions separate and raw model results unchanged. Add actual Minecraft
+positive three-west/two-tick edge tests and negative three-east traces, plus a
+regression test that the recorded failed reply stays untested despite valid shape.
+Run these on GitHub. After those pass, allow **one** new explicit two-call proof
+from a new frozen source; do not blindly loop further if it fails. The live
+acceptance still requires actual functional success, not just correct block count.
 
-Manual run40803355719 was started at corrected source7e18742 but is being stopped
-before any local SDK call: source inspection found the response workflow lacked
-the structural scenario input/env flag. The request path is fixed, but a real
-response would have been rejected by the publisher. Forward the explicit scenario
-from local responder JSON to the response workflow and enforce stage/scenario
-agreement there. Do not spend model quota before this handoff is present. Inspect
-terminal status/artifacts, publish the complete routing fix, then start a new run.
+Earlier setup runs40801664492 and40803355719 were cancelled before any SDK call;
+40803884854 published a request then failed before a call at the missing structural
+provenance allowlist. Fixes are present: seed blueprint ID equals projectId before
+construction, reconstructed task ID equals that ID (not projectId:root), explicit
+scenario travels through response workflow, and request/response owner/SHA guards
+allow only catalog/generated/structural names. Unknown scenarios still reject.
+Transport fails promptly on unexpected-inference. No old receipts were reused.
 
-Manual run40803884854 / source75df455 reached and published its behavior request,
-then failed immediately in wait-response. Retained artifacts:
-`work/live-structural-proof-40803884854`; no SDK call was made. The GitHub
-provenance validator still allowed only catalog/generated scenarios. Add only the
-fixed structural name, with request/response owner/SHA tests and unknown-scenario
-rejection. Keep all other workflow/run/actor/artifact checks. New source75df455
-regression CI40803612487 passed all five gates before this missing integration
-edge was found; those checks did not prove the manual path.
+The native path is MultiplayerGameTests.liveStructuralFlow: hand-authored seed,
+actual player support and AI completion, initial timing, explicit expansion,
+behavior/geometry confirmation, separate apply, actual client glass edit/conflict/
+removal, exact held-stack restoration, resume, new timing, companion restart,
+Bob lesson/revocation, third game boot and screenshot. Setup contract seed name,
+completed status/detail and blueprint task ID must match the real checkpoint.
 
 Use `gh workflow run live-acceptance.yml --ref phase/12-live-structural-proof
--f scenario=structural`. Once each corresponding artifact exists, run the local
-responder with explicit `--run ID --attempt N --sha SHA --model gpt-6-luna
---stage behavior --scenario structural`, then geometry with the same run/SHA.
-See docs/acceptance-guide.md. Do not edit/rebase the checkout during those calls.
-Only claim proof after both accepted receipts, native completion/restart markers,
-actual before/after sources, measured timing and screenshot inspection pass.
-
-The native path is implemented in MultiplayerGameTests.liveStructuralFlow:
-hand-authored seed, actual player support and AI completion, real initial timing,
-explicit expansion, behavior/geometry confirmation, separate apply, real client
-placement/removal of a conflicting glass block, exact held-stack restoration,
-resume, actual new timing, companion process restart, Bob lesson/revocation and
-third game boot. Its screenshot is engineer-live-structural-restarted-build.
-The native and TS fixed request/seed name must match the strict reconstructed
-contract; the seed task ID is its blueprint ID, not a component-style task ID.
+-f scenario=structural` only after the direction checks pass. Once each matching
+artifact appears, run the local responder with explicit `--run ID --attempt N
+--sha SHA --model gpt-6-luna --stage behavior --scenario structural`, then geometry
+with the same source/run. See docs/acceptance-guide.md. Do not edit/rebase the
+checkout during calls. Inspect both receipts, native completion/restart markers,
+actual before/after sources, timing and screenshot before any completion claim.
 
 ## Shipped bounded foundations
 
