@@ -193,6 +193,20 @@ public final class MechanismGameTests {
         reject(helper,()->UndoProjection.project(java.util.List.of(new EngineeringSession.Change(pos,air,lever,"projection")),p->lever.setValue(BlockStateProperties.POWERED,true),change->false,(change,view)->{}),"Exact lever power conflicts remain protected during projection");
         helper.succeed();
     }
+    @GameTest public void restoredTransitionKeepsPhysicalAndAcceptedSourcesDistinct(GameTestHelper helper) {
+        var pair=structuralPair();var nextSource=pair[1].source().deepCopy();nextSource.addProperty("id","dddddddd-dddd-4ddd-8ddd-dddddddddddd");nextSource.addProperty("revision",4);
+        var next=Blueprint.parse(nextSource,"test","minecraft:overworld");
+        var transition=StructuralTransition.between(pair[0],next,pair[1]);
+        helper.assertTrue(transition.before().id().equals(pair[0].id()) && transition.before().revision()==2 && transition.accepted().id().equals(pair[1].id()) && transition.accepted().revision()==3 && transition.after().revision()==4,"A restored physical source remains revision2 while current accepted context is revision3 and the proposal is revision4");
+        helper.assertTrue(transition.json().get("schemaVersion").getAsInt()==2,"Only a distinct accepted context requires the new transition envelope");
+        var loaded=StructuralTransition.read(transition.json(),"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId()));
+        helper.assertTrue(loaded.before().source().equals(pair[0].source()) && loaded.accepted().source().equals(pair[1].source()),"Persisted history preserves both real original source contents");
+        helper.assertTrue(loaded.writes().equals(StructuralTransition.between(pair[0],pair[1]).writes()),"Physical changes derive from restored geometry, not the unbuilt accepted intention");
+        var forged=transition.json();forged.getAsJsonObject("accepted").addProperty("name","Forged accepted context");reject(helper,()->StructuralTransition.read(forged,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"Accepted context participates in the immutable digest");
+        reject(helper,()->StructuralTransition.between(pair[0],next,pair[0]),"An unrelated proposal cannot skip the actual accepted revision");
+        helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
+        helper.succeed();
+    }
     private static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}

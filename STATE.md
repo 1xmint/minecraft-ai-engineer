@@ -3,7 +3,7 @@
 2026-10-28: Active goal: **complete all milestones**, all remaining phase1 and
 all six phase2 features. Do not redefine done around a catalog, buffer or green CI.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/10-structural-revisions**, based on merged PR18 **bebf6ca**.
+Branch **phase/11-restored-layouts**, based on PR19 final noteb17ba07 (auto-merge pending; inspect GitHub before opening the next PR).
 
 Josh: **skip heavy reviews; build and ship**. No more formal review cycles.
 Keep required checks and concrete runtime proof. Tests run on GitHub, never on
@@ -253,3 +253,26 @@ actual signed-in structural proposal through the native path. Then expand actual
 functions and electrical interfaces, complete E1 conversation/durable rationale,
 E3 diagnosis/repair visuals, and E4 full end-to-end acceptance. All six Phase2
 features remain unstarted. Keep the full active goal and earlier constraints.
+
+## Active slice: revisions after undo (G2/G3)
+
+- R1: after a structural undo and actual reboot, a new proposal uses the true
+  restored physical source while checking the separate current accepted revision.
+  Proof: original source IDs/revisions survive unchanged; stale/corrupt accepted
+  context is rejected. No invented intermediate blueprint or version relabel.
+- R2: the owner can apply that proposal, time-test it and undo it again while
+  keeping player supports and the original older construction. Proof: actual
+  fourth boot, native design/confirm/apply, real executor and inverse undo.
+- R3: a changed or incomplete restored basis is refused before model quota is
+  spent. Proof: real world edit is preserved, planning is refused, and only an
+  explicit new request after resolution starts inference.
+
+Decision: retain the undone transition as an immutable restored-layout reference.
+Keep canonical intended state separate; do not automatically abandon it on undo.
+A new transition records physical before, proposed after and (only when different)
+current accepted context in a versioned envelope. Existing adjacent schema1 data
+stays byte/hash-compatible. All three sources count toward storage limits. Tasks:
+add boundary proofs (R1), persist/validate restored reference and accepted context
+(R1), adapt native planning/apply without new authority (R1/R3), actual repeated
+revision/reboot/timing/undo proof (R2/R3), required GitHub checks then ship. No heavy
+reviews; tests only in CI. Signed-in structural acceptance remains separate work.
