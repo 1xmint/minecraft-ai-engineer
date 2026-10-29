@@ -1431,6 +1431,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer remember decision Use a visible lamp for the output.");expectChat(context,"knowledge revision 2");
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Owner-authored requirements");expectChat(context,"Use a visible lamp for the output.");
         MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"AI explanation | design revision");expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
+        MESSAGES.clear();send(context,"engineer discuss CI cancelled entrance discussion.");awaitFile(context,"discussion-dispatched");
+        send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
+        check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");

@@ -30,6 +30,7 @@ try {
       "knowledge-bob.done",
       "knowledge-bob-denied.done",
       "knowledge-recovery.done",
+      "discussion-cancelled.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -95,8 +96,8 @@ try {
       .get(server.serverId, knowledgeProject);
     assert.equal(
       starts.count,
-      2,
-      "Only the two explicit owner discussions can dispatch the deterministic fixture",
+      3,
+      "Only explicit owner questions dispatch: two answers and one cancelled request",
     );
   }
   const row = db

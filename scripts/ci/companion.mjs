@@ -2,7 +2,8 @@
 // is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { writeFileSync, readFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
 import { createCompanionServer } from "../../dist/companion/src/server.js";
@@ -53,6 +54,27 @@ const server = createCompanionServer({
       const source = JSON.parse(context);
       if (source.worldEvidence !== "not-inspected")
         throw new Error("Discussion fixture has invented world evidence");
+      if (input.message === "CI cancelled entrance discussion.") {
+        const coordination = join(config.directory, "..", "coordination");
+        if (source.knowledgeRevision !== 2 || !existsSync(coordination))
+          throw new Error("Unexpected cancellation fixture scope");
+        writeFileSync(join(coordination, "discussion-dispatched"), "ready");
+        const deadline = Date.now() + 10_000;
+        while (!_signal.aborted && Date.now() < deadline) await delay(20);
+        if (!_signal.aborted)
+          throw new Error("Native stop failed to cancel discussion transport");
+        writeFileSync(
+          join(coordination, "discussion-cancelled.done"),
+          "passed",
+        );
+        // Deliberately ignore abort and return late; gateway must still reject it.
+        return {
+          schemaVersion: 1,
+          kind: "explanation",
+          text: "CI obsolete discussion reply must never display.",
+          basis: ["project"],
+        };
+      }
       const expected =
         input.message === "CI explain entrance decision."
           ? {

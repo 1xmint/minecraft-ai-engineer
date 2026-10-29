@@ -352,3 +352,12 @@ entire mechanism; composite projects use their canonical component tree IDs.
 Keep the failing test and strengthen it to require all root blocks and reject
 internal recipe groups. Companion job failed on that source; other live jobs are
 not assumed stopped or passed. Scoped TypeScript check is next, then new CI.
+
+Added native discussion stop proof: a deterministic CI provider waits until the
+actual HTTP cancellation signal, records it, then deliberately returns a late
+answer. The native flow must never display it; the gateway must retain exactly
+two accepted discussion audits across restart despite three explicit dispatches.
+This is written failure coverage awaiting CI, not fresh inference. Production
+budgets remain unchanged. Existing later generated-companion restart occurs after
+knowledge notes are stored and before third-boot note recovery, so that full
+native ordering also tests notes across an actual service process replacement.
