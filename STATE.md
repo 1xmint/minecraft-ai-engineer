@@ -359,3 +359,11 @@ Tasks: contract rejection proofs and implementation (L1/L3), native seed and rea
 modification flow plus workflow/CLI routing (L2/L3), GitHub regression checks,
 then the two actual local SDK responses and inspect the entire native result.
 No heavy review cycle. PR20 failure fixes remain higher priority if its rerun fails.
+
+L1 boundary proofe77862f / CI40799731347 fails because the previous envelope
+rejects the new fixed structural scenario. The implementation now reconstructs
+its exact five-wide request and completed seed context while retaining four-wide
+legacy generation bounds; scenario is part of run/digest/receipt identity. The
+local responder requires an explicit matching structural scenario flag. TypeScript
+compile and responder syntax checks passed; no local tests. Native seed/modification
+flow and workflow routing are not enabled yet; actual signed-in proof is pending.

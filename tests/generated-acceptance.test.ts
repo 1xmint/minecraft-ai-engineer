@@ -257,6 +257,6 @@ test("structural acceptance reconstructs only the fixed existing-circuit revisio
   assert.throws(
     () =>
       createGeneratedAcceptanceResponse(request("geometry"), wider, provenance),
-    /fit|bound|space|size/i,
+    /fit|bound|space|size|dimension/i,
   );
 });
