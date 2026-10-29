@@ -109,7 +109,7 @@ final class ProjectManager {
     RegionReservations.Fence acquire(EngineeringSession project, UUID actor, ProjectAccess.Permission action, boolean test) {
         project.access.require(actor, action);
         if (project.blueprint == null) throw new IllegalStateException("No blueprint to delegate");
-        Set<BlockPos> writes=project.reservationWrites(action),reads=project.reservationReads(action,test);
+        Set<BlockPos> writes=project.reservationWrites(action,test),reads=project.reservationReads(action,test);
         for (EngineeringSession other : projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || ((test || GeneratedBlueprint.isGenerated(project.reservationBlueprint(action))) && reads.stream().anyMatch(other::contains));
@@ -142,7 +142,7 @@ final class ProjectManager {
     void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
-        project.clearDiagnoses();
+        project.clearDiagnoses();project.clearStructuralPreview();
         EngineerMod.cancelPlan(project);
         reservations.revoke(scope(project)); project.delegation = null;
         if (project.state.equals("EXECUTING") || project.testTick >= 0 || project.state.equals("PLANNING")) project.pause("Project permissions or intended state changed; explicit reconciliation required");

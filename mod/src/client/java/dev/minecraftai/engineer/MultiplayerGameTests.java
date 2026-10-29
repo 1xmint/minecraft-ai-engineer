@@ -325,6 +325,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationRecovery(context,server,connection);
+            if(!LIVE_ACCEPTANCE)structuralRevisionRecovery(context,server);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
             MESSAGES.clear();send(context,"engineer materials");expectChat(context,"No fresh inventory snapshot");
@@ -365,9 +366,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
         var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Generated memory is read after an actual companion process restart");
         server.runOnServer(s->session(s,"Alice").checkpoint());assertPersisted(server);
+        workspaceExpansionFlow(context,server);
         send(context,"engineer project share Bob viewer");
         server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
         write("generated-shared","ready");awaitFile(context,"generated-bob.done");
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.EDIT));write("workspace-bob-editable","ready");awaitFile(context,"workspace-bob-denied.done");
+        server.runOnServer(s->check(session(s,"Alice").corner2.equals(new BlockPos(204,101,0)),"A non-owner with edit permission cannot expand the delegated region"));
         send(context,"engineer project revoke Bob");write("generated-revoked","ready");awaitFile(context,"generated-bob-revoked.done");
         if(LIVE_GENERATED){write("live-generated-model.done","passed");write("generated-confirmation.done","passed");return;}
         var correct=server.computeOnServer(s->session(s,"Alice").blueprint.source().deepCopy());
@@ -378,7 +382,78 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");var cases=saved(project).getAsJsonArray("functionalEvidence");var trace=cases.get(1).getAsJsonObject().getAsJsonObject("trace");check(trace.get("expectedGameTicks").getAsInt()==10 && trace.get("transitionTick").getAsInt()==12 && trace.get("verdict").getAsString().equals("failed"),"Matching physical geometry fails when actual timing differs from independently accepted intent");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Failure is behavioral even though all declared blocks match");check(!project.hasPendingTest() && project.delegation==null,"Failed generated test restores its input before releasing authority");});
         write("generated-wrong-timing.done","passed");
         generatedConfirmationSaveFailure(context,server,request);
+        workspaceBusyExpansionFlow(context,server);
+        structuralRevisionFlow(context,server);
         write("generated-confirmation.done","passed");
+    }
+    private static void structuralRevisionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var source=server.computeOnServer(s->EngineerMod.managerFor(s).projects.get(UUID.fromString(read("generated-project"))).blueprint.source().deepCopy());
+        send(context,"engineer project new");send(context,"engineer select1 260 100 0");send(context,"engineer select2 264 101 0");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(264,101,0)));
+        server.runCommand("tp Alice 262 103 6 180 20");
+        server.runOnServer(s->{var project=session(s,"Alice");source.addProperty("id",UUID.randomUUID().toString());source.add("anchor",Blueprint.jsonPos(new BlockPos(260,100,0)));project.accept(Blueprint.parse(source,project.worldId,project.dimension));write("structural-project",project.projectId.toString());write("structural-before",project.blueprint.source().toString());});
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        // Fixture-owned supports are deliberately absent from the assistant's journal.
+        server.runCommand("setblock 260 100 0 minecraft:stone");
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runCommand("setblock 264 100 0 minecraft:stone");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(260,100,0))),"Existing player support is adopted, not journalled");write("structural-original-journal",String.valueOf(project.journal.size()));});
+        int priorRevision=server.computeOnServer(s->session(s,"Alice").revision());
+        // Earlier confirmation/rejection cases deliberately use the real four-start
+        // budget. Wait out its real wall-clock window; never bypass quota or retry a consumed nonce.
+        long planningWindow=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        await(context,()->System.nanoTime()>=planningWindow,"planning rate window reset");
+        MESSAGES.clear();send(context,"engineer design CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.");expectChat(context,"/engineer confirm ");String confirmation=confirmationNonce();
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Structural proposal ready");
+        var applicationPattern=java.util.regex.Pattern.compile("/engineer apply ([0-9a-f-]{36})");String application=null;
+        for(String message:MESSAGES){var match=applicationPattern.matcher(message);if(match.find()){application=match.group(1);break;}}
+        check(application!=null,"Owner receives a separate private world-application confirmation");write("structural-nonce",application);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.revision()==priorRevision && project.journal.size()==Integer.parseInt(read("structural-original-journal")) && project.blueprint.blocks().size()==8 && project.delegation==null,"Confirmed inference previews a diff without changing accepted intention, history or world authority");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"The old real circuit remains intact while its revision is only a proposal");});
+        MESSAGES.clear();send(context,"engineer apply 00000000-0000-4000-8000-000000000000");expectChat(context,"No current structural preview matches");
+        send(context,"engineer apply "+read("structural-nonce"));
+        server.waitFor(s->session(s,"Alice").structuralCursor>0 && session(s,"Alice").state.equals("EXECUTING"));
+        send(context,"engineer stop");server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralCursor>0 && project.structuralCursor<project.operationScopes.transition(project.activeOperation).steps().size(),"Stop interrupts actual ordered structural writes");check(project.operationScopes.sources(project.activeOperation).size()==2 && project.delegation==null,"Interrupted revision retains both real intentions without authority");});
+        var conflict=server.computeOnServer(s->session(s,"Alice").journal.getLast());
+        server.runCommand("setblock "+conflict.pos().getX()+" "+conflict.pos().getY()+" "+conflict.pos().getZ()+" minecraft:glass");
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Player/world edit conflicts");
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(conflict.pos()).is(Blocks.GLASS) && !session(s,"Alice").state.equals("EXECUTING"),"Resume preserves an intervening edit and refuses to continue"));
+        server.runCommand("setblock "+conflict.pos().getX()+" "+conflict.pos().getY()+" "+conflict.pos().getZ()+" "+Blueprint.describe(conflict.after()));
+        server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").structuralCursor>0,"Leave the genuinely interrupted revision paused for the actual server restart"));
+        write("structural-revision.done","passed");
+    }
+    private static void structuralRevisionRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project use "+read("structural-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("structural-project")));
+        server.runCommand("tp Alice 262 103 6 180 20");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.operationKind.equals("STRUCTURAL") && project.blueprint.blocks().size()==10,"Actual restart loads the accepted larger intention without a lease");var sources=project.operationScopes.sources(project.activeOperation);check(sources.size()==2 && sources.get(0).source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Actual restart retains the original unmodified before intention");});
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralCursor>0 && project.structuralCursor<project.operationScopes.transition(project.activeOperation).steps().size(),"Actual reboot retains the unfinished structural step cursor");});
+        send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Real executor produces the larger three-repeater layout");check(project.journal.stream().noneMatch(c->c.pos().equals(new BlockPos(264,100,0))),"Matching player addition is adopted and stays out of undo");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        server.runOnServer(s->check(session(s,"Alice").operationScopes.sources(session(s,"Alice").activeOperation).size()==2,"Functional testing retains the paired structural history"));
+        send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==Integer.parseInt(read("structural-original-journal")));
+        server.runOnServer(s->{var project=session(s,"Alice");var before=Blueprint.parse(JsonParser.parseString(read("structural-before")).getAsJsonObject(),project.worldId,project.dimension);check(before.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Production repeated-position undo restores the real previous layout after restart");check(project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE) && project.level().getBlockState(new BlockPos(260,100,0)).is(Blocks.STONE),"Undo preserves both existing and newly adopted player supports");check(project.level().getBlockState(new BlockPos(264,101,0)).isAir(),"Undo removes the assistant's added output");});
+        write("structural-recovery.done","passed");
+    }
+    private static void workspaceExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String originalId=server.computeOnServer(s->session(s,"Alice").blueprint.id());int revision=server.computeOnServer(s->session(s,"Alice").revision());int journal=server.computeOnServer(s->session(s,"Alice").journal.size());
+        MESSAGES.clear();send(context,"engineer expand 200 100 0 204 101 0");expectChat(context,"Workspace expanded");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.corner1.equals(new BlockPos(200,100,0)) && project.corner2.equals(new BlockPos(204,101,0)),"Owner explicitly expands the existing workspace without clearing its first corner");check(project.blueprint.id().equals(originalId) && project.revision()==revision && project.journal.size()==journal && project.delegation==null,"Workspace expansion retains original intent/history and grants no execution");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Expansion alone changes no circuit blocks");});
+        MESSAGES.clear();send(context,"engineer expand 201 100 0 204 101 0");expectChat(context,"retain the entire previous workspace");
+        server.runOnServer(s->check(session(s,"Alice").corner1.equals(new BlockPos(200,100,0)) && session(s,"Alice").corner2.equals(new BlockPos(204,101,0)) && session(s,"Alice").journal.size()==journal,"Rejected shrinking preserves delegated history and corners"));
+        write("workspace-expanded.done","passed");
+    }
+    private static void workspaceBusyExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project new");send(context,"engineer select1 240 100 0");send(context,"engineer select2 242 101 0");send(context,"engineer reference");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").corner2.equals(new BlockPos(242,101,0)));
+        server.runCommand("tp Alice 241 103 6 180 20");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(false).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");project.commandActor=player(s,"Alice").getUUID();try {
+            project.build();check(project.state.equals("EXECUTING"),"The rejection proof starts a genuine delegated build, not a fabricated status");
+            boolean rejected=false;try{project.expandWorkspace(new BlockPos(240,100,0),new BlockPos(243,101,0));}catch(IllegalStateException expected){rejected=true;}
+            check(rejected && project.corner2.equals(new BlockPos(242,101,0)) && project.state.equals("EXECUTING") && project.journal.isEmpty(),"Expansion cannot alter an active assignment or write its first block");project.pause("Workspace rejection proof stopped its genuine build");
+        } finally {project.commandActor=null;}});
+        write("workspace-busy-expansion.done","passed");
     }
     private static void generatedPlayerSection(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
         BlockPos target=server.computeOnServer(s->session(s,"Alice").blueprint.blocks().stream().filter(b->b.state().is(Blocks.STONE)).min(java.util.Comparator.comparingInt(b->b.pos().getY())).orElseThrow().pos());
@@ -419,7 +494,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         throw new AssertionError("Owner did not receive its private confirmation nonce");
     }
     private static void generatedConfirmationRecovery(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
-        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale"),"Restart retains accepted behavior and invalidates earlier functional authority");});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(UUID.fromString(read("generated-project")));check(project!=null && GeneratedBlueprint.isGenerated(project.blueprint),"Restart retains generated provenance through strict native parsing");check(GeneratedBlueprint.behavior(project.blueprint).equals(new BehaviorSpec(12,16)) && project.delegation==null && project.verified.startsWith("stale") && project.corner2.equals(new BlockPos(204,101,0)),"Restart retains the expanded workspace and accepted behavior and invalidates earlier functional authority");});
         var checkpoint=server.computeOnServer(s->{var project=EngineerMod.managerFor(s).projects.get(UUID.fromString(read("generated-project")));project.checkpoint();return project.lastCheckpoint;});
         check(checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Restart reports generated intent against the new service/server epoch");
         if(LIVE_GENERATED) {
@@ -507,7 +582,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             await(context,()->view(context)!=null && view(context).projectId().equals(read("generated-project")),"Bob receives the generated preview only after a server grant");
             send(context,"engineer ask explain the timing");expectChat(context,"turning on after 12 game ticks and off after 16 game ticks");
             send(context,"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"permission");
-            write("generated-bob.done","passed");awaitFile(context,"generated-revoked");
+            write("generated-bob.done","passed");awaitFile(context,"workspace-bob-editable");MESSAGES.clear();send(context,"engineer expand 200 100 0 205 101 0");expectChat(context,"Only the project owner");write("workspace-bob-denied.done","passed");awaitFile(context,"generated-revoked");
             await(context,()->view(context)==null,"Generated preview is cleared when view access is revoked");write("generated-bob-revoked.done","passed");
         }
         awaitFile(context, "finish");

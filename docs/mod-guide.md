@@ -111,6 +111,35 @@ broader mechanism functions are still pending. Signed-in generated wiring has pa
 construction, measured timing and restart; see the evidence and fixture limitation
 in the [acceptance guide](acceptance-guide.md).
 
+## Expanding a built workspace (structural-edit branch)
+
+The project owner can extend an idle project's delegated region without undoing
+its existing construction:
+
+```text
+/engineer expand 200 100 0 204 101 0
+```
+
+Both corners must retain the entire previous workspace and fit the existing size
+limit. Other overlapping projects still require their owners' edit grants.
+Expansion preserves the blueprint, player blocks and assistant history, and
+invalidates pending model consent and old execution leases. Active construction,
+planning, testing or interrupted restoration must be stopped/reconciled first.
+Structural preview/apply remains in development on this branch. Its pending
+proposal can be inspected with `/engineer changes`; the owner applies it with
+`/engineer apply <confirmation>` using the private one-use confirmation shown
+with the proposal. It expires after five minutes and is bound to the owner's
+current connection, permissions, workspace and accepted revision. Previewing
+changes leaves accepted intent and world blocks unchanged. Applying an accepted
+proposal starts bounded construction; stopping, editing conflicts and restart
+require explicit reconciliation/resume. Existing player blocks are preserved.
+For a completed generated mechanism, `/engineer design <revision request>` runs
+the existing behavior-confirmation flow and then proposes the structural changes.
+Confirming behavior requests geometry; only the separate apply confirmation
+accepts the new intention and delegates world changes. Native CI uses an explicit
+hand-authored three-repeater response fixture, rather than claiming live model
+inference.
+
 ## Component collaboration (source build)
 
 The development branch adds a bounded project tree. Set a workspace before

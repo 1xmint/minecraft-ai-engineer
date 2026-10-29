@@ -1,193 +1,255 @@
 # Now
 
-2026-10-28: Active goal: **complete all milestones**, including the remaining
-phase1 brief and all six phase2 features. Do not redefine completion around the
-catalog, a buffer fixture, or passing CI.
+2026-10-28: Active goal: **complete all milestones**, all remaining phase1 and
+all six phase2 features. Do not redefine done around a catalog, buffer or green CI.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch: **phase/9-generated-circuits**, draft PR18. Main is PR17 merge88d4043.
+Branch **phase/10-structural-revisions**, based on merged PR18 **bebf6ca**.
 
-Josh's latest direction: **skip heavy reviews; build and ship**. Do not schedule
-more formal review cycles. Keep required checks and actual runtime proof. Tests
-run on GitHub, never on his slow PC; local checks are scoped compilation/format.
-No user question or permission is pending. Public repo, implementation, push and
-merging green changes are already authorized.
+Josh: **skip heavy reviews; build and ship**. No more formal review cycles.
+Keep required checks and concrete runtime proof. Tests run on GitHub, never on
+his slow PC; local work only scoped compile/format checks. Public implementation,
+push and merging green changes are authorized. No question/permission is pending.
 
-## Current slice: generated timed circuits (G1/G3)
+## Structural revision slice (G2/G3)
 
-- D1: natural request -> independently proposed observable behavior -> explicit
-  owner confirmation -> raw bounded generated geometry, derived preview/materials.
-- D2: real construction and complete game-tick traces for stable off/on/off,
-  including sample0 immediately after activation. Wrong timing or disconnected
-  wiring must fail even when geometry matches.
-- D3: strict both-runtime validation, private/shared previews and lessons, current
-  permissions/conflicts, service/game restart, and an actual signed-in generated
-  response through the normal command/HTTP path before merging this slice.
+- S1: owner sees an explicit old/new geometry diff and can review it without world
+  editing. Workspace expansion is explicit, owner-only, and retains all tracked
+  old work/history. Unsupported, stale or unauthorized proposals leave canonical
+  intent and world unchanged; reject before quota where the problem is knowable.
+- S2: explicit apply changes actual structure under fresh server authority and
+  bounded loaded reservations. Preserve player-built/intervening edits. Attachment
+  order and before states are checked for every removal/addition. Denial, conflict,
+  disconnect or revocation pauses safely without silently overwriting anything.
+- S3: genuine interruption/restart and undo keep both original intentions and exact
+  transition history. No fabricated union blueprint or relabelled semantic source.
+  New geometry must pass its independently accepted functional contract. Corrupt
+  scopes/foreign identities fail before world editing; restoration grants no lease.
 
-Implemented the bounded D1-D3 behavior: actual signed-in geometry passed native
-construction, timing, sharing and restart on00e5da5. That manual whole run later
-failed an unrelated creative-inventory fixture check. Final regression CI replays
-the recorded model reply and verifies fixture cleanup before merge. Broader
-functions, structural revision and the whole product remain unfinished.
+Tasks: trace Blueprint/EngineeringSession/OperationScopes/trial/gateway interfaces
+before code (S1/S3). Write immutable old/new-diff boundary and native no-edit/
+conflict/recovery proofs first, observe GitHub failure (S1-S3). Implement explicit
+pending transition, captured sources, write/read closure, bounded step ordering
+and genuine before/after WAL; keep legacy journals compatible (S2/S3). Wire owner
+workspace expansion, generated revision preview and explicit apply without losing
+original request/current-source context (S1/S2). Prove real model modification after
+executor safety works, plus actual timed behavior and service/game restart; all
+required gates then merge (S1-S3). No extra heavy review.
 
-## Current evidence and immediate next step
+First physical prototype: existing generated two repeaters4+2 -> three repeaters
+2+2+2, preserving accepted12-on/16-off behavior while growing from four to five
+blocks wide. Keep the player's support, explicitly replace the old lamp position
+and extend wiring/supports. This is a structural transition, not another catalog
+or a delay-only parameter change. Broader functions/interfaces follow it.
 
-Sourceec38d8f passed all five gates **CI40759856316**, including all28 Fabric tests,
-actual generated12/16 construction/test, matching-geometry/wrong10 timing failure,
-checkpoint-write failure recovery, Bob's shared timing lesson and denied inference,
-revocation clearing, and restart. Artifacts inspected under task
-`work/generated-proof-40759856316`; second companion restart4671->4805. The
-verifier checks exact generated source, baseline samples and both complete traces
-in SQLite. An earlier same-corners fixture race was fixed by awaiting a blank new
-project before direct fixture acceptance.
+## Shipped generation evidence
 
-Source2df393f passed all five gates **CI40761542288**. It corrects a live prompt bug:
-explicit desired behavior must not require layout feasibility to be proved first.
-Ask clarification for ambiguous relation/units/timing or unsupported functions;
-geometry and game tests decide feasibility and verification afterward.
+PR18 merge **bebf6cacdd8d60bddbbf9db5f42fb1ca601493ae**. Final source076e4dc passed
+all five gates **CI40768389557**: all28 Fabric tests, actual recorded-model geometry,
+player client support placement, AI remaining construction,12/16 edge traces,
+matching-geometry/wrong10 timing rejection, confirmation-save failure recovery,
+shared Bob lesson/denial/revocation, service and game restart, inventory recovery
+and durable source/evidence checks. Inspected artifacts at task
+`work/generated-proof-40768389557`; native markers and SQLite verifier passed.
+Local Java main/client and TypeScript compile passed; no local tests ran.
 
-Manual runs (no credentials uploaded; no automatic SDK retry):
+Actual signed-in source00e5da5/request40766098371, behavior response40766960852,
+geometry response40767111851: official SDK0.164.0/gpt-6-luna returned desired12/16
+then raw eight-block wiring, two serial repeaters4+2. Native construction, both
+measured edges, shared lesson/revocation, companion restart4525->5262 and third
+boot passed. Inspected PNG visibly shows constructed blocks after restart, now
+`docs/images/generated-restarted.png`. Both private accepted receipts/digests match.
+Retained full artifacts: task `work/live-proof-40766098371`.
 
-- Request40760225622 / response40761209695 on ec38d8f: behavior returned null and
-  asked about feasibility despite explicit12/16 intent. One SDK0.164.0/gpt-6-luna
-  call,10327input/65output. Run cancelled; no geometry call. Prompt corrected.
-- Request40761579328 on2df393f: actual behavior12/16 returned,10433input/80output;
-  response40762542882 passed. Private receipt digest
-  b2af6ef5e82547c71148f93886351cd07e6f7dceab2fe3616d16db362693d6c3.
-  Geometry request digestc6b76c65a33d58e2f2f18938659300b186559ffd74a3617d7614c6e6eb635a7e
-  has a consumed started receipt but no valid saved/published response. The generic
-  responder hid the controlled error and ephemeral SDK output is gone. Cancelled
-  run; **cause unknown**, do not guess or retry that receipt.
+That manual run's **overall result failed** after those feature checks because a
+creative-item fixture left64 stone instead of restoring prior7. Only test cleanup
+changed afterward: restore exact prior held stack/components. Final CI replays the
+actual recorded raw reply from `tests/fixtures/live-generated-buffer.json` through
+the same player/AI path, including complete inventory/restart recovery. This uses
+no new inference and is not a fresh live call or an overall successful old run.
+Production behavior was unchanged for the cleanup. See docs/acceptance-guide.md.
 
-Next: run required CI for the fixture cleanup and recorded raw-response replay,
-then merge PR18 without another review cycle. Do not spend more SDK quota merely
-to repeat unchanged production behavior. Keep the original manual run's overall
-failure explicit while reporting its passing generated scope and current complete
-regression evidence. Continue immediately with explicit structural revision.
+Earlier real failures improved the pipeline: explicit behavior no longer requires
+layout feasibility proof first; generated schema now constrains delegated volume,
+quarter-turn coordinate frame and38 canonical supported states. Geometry uses
+medium reasoning, behavior/catalog low. Opt-in bounded private untrusted-result
+and controlled failure capture prevents blind retries. Never retry a consumed
+started receipt; never publish invalid raw output or credentials. Historical failed
+receipts stay private under `%APPDATA%/minecraft-ai-engineer/acceptance`.
 
 ## Runtime decisions and constraints
 
-Dedicated Fabric server first, including solo local play; same logical-server core
-retains integrated compatibility. Java25/Minecraft26.3/FabricLoader0.20.1/
-API0.165.0+26.3/Loom1.17.21/Gradle9.6. Node24.14/TypeScript/SQLite, pinned official
-Codex SDK/CLI0.164.0. One private companion beside the operator's PC/server. No
-hosting purchase, public AI endpoint, credential sharing, paid API or API key.
-Only the configured account-owning operator starts inference; general multi-user
-subscription eligibility remains unresolved. Solo SDK proof is not eligibility.
-Published v0.1.0-alpha.1 remains the older single-player reference release.
+Dedicated Fabric server first, even for solo local play; integrated-compatible
+logical-server core. Java25/Minecraft26.3/FabricLoader0.20.1/API0.165.0+26.3/
+Loom1.17.21/Gradle9.6; Node24.14/TypeScript/SQLite; official SDK/CLI0.164.0.
+One private operator-owned companion beside the server/PC. No hosting purchase,
+public AI endpoint, credential sharing, paid API or API keys. Only configured
+account-owning operator starts inference. General shared-subscription eligibility
+remains unresolved; solo SDK proof is not eligibility. Published alpha remains
+older single-player reference; main is the multiplayer source build.
 
-The server derives actor and connection identities and fences writes/tests with
-epoch, project/auth revisions, assignment basis/generation and reservations.
-Disconnect, revocation, player conflict and restart stop execution. Persistence
-restores descriptions, never a lease. Per-player tutorials are separate; clients
-receive only authorized metadata and cannot call Codex. Current executor is
-creative direct placement, replaceable later; supplied items/direct edits are not
-survival gathering. Offline CI players are not Mojang-auth or human mouse proof;
-optional-overlay opt-out is not a vanilla binary.
+Server-derived actor/actual connection, epoch, project/auth revision, assignment
+basis/generation and reservations fence every mutation/test transition. Restart,
+disconnect, revocation and conflict stop execution. Persisted data restores no
+lease. Private tutorials are per player; authorized metadata is not model access.
+Current physical executor is creative direct placement, replaceable later, never
+survival gathering. Offline CI actors do not prove Mojang authentication or human
+mouse use; optional-overlay opt-out is not a vanilla binary.
 
-`/engineer plan` remains one curated call. `/engineer design` and `/engineer confirm
-<nonce>` use separate isolated behavior/geometry calls. Pending proposals are
-native-only, outside canonical revision, bind original request/actual actor
-connection/epoch/revisions/corners/origin/rotation/nonce/dual TTL, and disappear on
-restart. Confirmation authorizes one geometry inference, never construction.
-Existing build/test/undo commands still require fresh explicit authority. Generated
-structural replacement of built work is rejected in this slice.
+`plan` retains one curated call. `design` -> `confirm <nonce>` separately proposes
+behavior then raw geometry. Pending consent is native-only/outside canonical
+revision, binds original request/actor connection/epoch/revisions/corners/origin/
+rotation/nonce/dual TTL, and disappears on restart. Confirm authorizes inference,
+never construction. Completed generated root builds can propose structural revisions; geometry stays outside canonical intent until separate owner apply confirmation.
+Both runtimes derive/validate stages/materials/bounds/ports/tests/provenance;
+behavior digest is SHA256 UTF-8 `buffer-v1|RISING|FALLING`. Buffer latency0..128 game
+ticks includes real immediate0-on/4-off and serial12/16 physical proofs. Generated
+construction reserves a loaded clear2block margin and exact lever state without
+changing explicit BUILD delegation. Traces sample actual game ticks including0,
+replay claims against accepted intent/scope, and cannot pass gaps. Input WAL
+restores without overwriting player edits. Watch repeated source-validation cost
+before scaling far beyond the small circuit; don't cache mutable source blindly.
 
-Both runtimes derive/validate generated stages, materials, bounds, ports and tests.
-Generated provenance includes behavior SHA256 of `buffer-v1|RISING|FALLING`.
-Observable buffer latencies0..128 game ticks include real immediate0-on behavior;
-physical proofs also cover0-on/4-off and two serial repeaters12-on/16-off. Generated
-construction preflights/reserves a loaded clear two-block margin and exact lever
-state while retaining explicit BUILD task semantics. Production traces use actual
-world time and replay saved samples against the accepted digest/scope; missing
-samples cannot pass. Existing input WAL handles restoration without overwriting
-player edits. Large generated-source validation cost still needs attention before
-scaling beyond the small vertical circuit; do not cache mutable source blindly.
+Manual synthetic transport uses fixed owner/repo/workflow/run+attempt/SHA,
+bounded single-file stage artifacts and exclusive private receipts. Credentials
+never enter CI. Ordinary CI replays deterministic data, never real inference.
+Private inventory snapshots are ephemeral, own-connection bound and excluded from
+SQLite/audit/shared model context. No NBT, custom names, world text or unopened
+container contents enter model context.
 
-Manual generated transport reuses fixed owner/repo/workflow/run+attempt/SHA checks,
-bounded single-file artifacts and exclusive private started/response receipts.
-Behavior and geometry have distinct stages and digests. The native owner confirms
-only the originally requested12/16 intent. Live flow previews actual model wiring,
-places one support via vanilla client packets, delegates remaining blocks, measures
-both edges, restarts companion, shares/revokes Bob's preview, then reloads the game
-with passing evidence marked stale. Ordinary CI never invokes the real SDK.
+## Foundation relevant to structural edits
 
-## Proven foundation on main
+PR17/CI40715295100 operationScopes schema1/journalv4 preserves immutable original
+intended or explicit legacy-position sources through later revisions and genuine
+undo crash recovery. Limits4097 mappings,64 snapshots,65536 stored blocks,8MiB.
+Old flat/v2/v3 buffers validate original rules before migration; no invented intent.
+Undo reserves historical positions/read closure under current grants. Baseline/
+dependencies stay tied to their captured source. Structural transitions need
+explicit old/new semantics, not an invented union source. Structural operations now keep both real sources and exact modified positions; legacy operations retain their original single-source format.
 
-PR17/CI40715295100: operationScopes schema1/journalv4 retains immutable original
-intended or explicit legacy-position sources across later revisions and genuine
-undo crash recovery. Limits4097 mappings/64 snapshots/65536 stored blocks/8MiB.
-Old flat/v2/v3 saves pass their original rules before migration; no invented
-semantic history. Undo reserves original positions/read closure under current
-grants. Active baseline/dependencies stay tied to captured source. Structural
-transitions still need explicit old/new diffs, ordering, conflict and inverse rules.
+PR16 exact world-write targets, PR15 private read-only lesson followups, PR14
+private inventory/targeted perception and earlier dedicated project permissions,
+components, reservations, repair/revise/test remain covered by all required gates.
+Signed-in catalog lamp request40624276545/response40624742436 proved only that fixed
+path. Its old final screenshot was ghost-only; don't claim rendered construction
+from it. The newer generated restart PNG does visibly render real blocks.
 
-PR16 exact world-write guards; PR15 bounded private read-only lesson followups;
-PR14 private inventory/targeted perceptions; earlier dedicated permissions,
-reservations, component tasks, repair/revise/test and real service/game restart
-proofs remain covered by all five gates. Private inventories are ephemeral,
-connection-bound, excluded from SQLite/audit/shared model context; never expose
-custom names, NBT or unopened containers.
+## Remaining full roadmap
 
-Actual signed-in catalog lamp acceptance passed sourcea64f352, request40624276545 /
-response40624742436, one local SDK call and real client handoff/test/restart. See
-`docs/acceptance-guide.md`. It proves only that fixed catalog path. The initial
-constructed screenshot showed blocks; final old restart image showed ghost bounds,
-so it is not proof of final rendered construction.
-
-## Remaining roadmap (preserve full scope)
-
-1. Finish current D1-D3 live generated flow and merge PR18 with required checks.
-2. G2/G3: explicit old/new structural changes, player-edit preservation, safe order,
-   inverse undo and restart. Then different functions, electrical interfaces and
-   broader redstone/mechanical semantics; no catalog-only substitute for generation.
-3. E1: free-form teaching/followups and uncertainty clarification; durable goals,
-   rationale, preferences/decisions and later identification/explanation. Current
-   exact ask phrases are only a first slice.
-4. E3: broader missing/orientation/connection/timing/interference/inconclusive
+1. Current S1-S3 structural revision, then different functions, electrical interfaces
+   and broader redstone/mechanical engineering. No catalog-only substitute.
+2. E1 free-form teaching/followups and clarification; durable goals, rationale,
+   preferences/decisions and later identification/explanation. Exact ask phrases
+   and repeat/skip/pause are only a first slice.
+3. E3 broader missing/orientation/connection/timing/interference/inconclusive
    diagnosis, explicit repair previews and textured directional ghosts. Settled
-   endpoints are not latency evidence; current generic boxes are not rich overlays.
-5. E4: full signed-in generated preview -> player section -> AI rest -> interrupt /
-   modify / resume -> actual test -> service/game restart -> later explanation,
-   with richer real-client visuals. Fixed lamp/buffer proofs are bounded evidence.
-6. Phase2, all unstarted: voice conversation; visible physical NPC companion;
-   genuine survival gathering/placement; schematic import/export; measured size,
-   resource, latency/reliability optimization; multiple independent builders.
+   endpoints are not latency evidence; current generic boxes aren't rich overlays.
+4. E4 full signed-in generated preview -> player section -> AI rest -> interrupt /
+   modify / resume -> test -> service/game restart -> later explanation and richer
+   visuals. Fixed catalog/buffer proofs remain bounded evidence.
+5. Phase2 all unstarted: voice; visible physical NPC; genuine survival gathering/
+   placement; schematic import/export; measured size/resources/latency/reliability
+   optimization; multiple independent builders.
 
-AGENTS.md and STATE.md are the only project memory. CLAUDE.md contains @AGENTS.md.
+AGENTS.md/STATE.md are the only project memory. CLAUDE.md contains @AGENTS.md.
 
-Sourcebe88db6 passed all five gates **CI40763893283**. Manual40763954487
-behavior succeeded (response40764897528). Geometry diagnosis is now concrete:
-private request25edf0ef40ce6acfadcc7a8d0601283ebaa7a1b1fc075e4e88ccbe5681926402
-completed SDK inference (10492input/1708output), but returned79 blocks acrossx0..64
-for a4x2x1 workspace, all with shorthand unnamespaced states. Strict validation
-rejected it before publish/world editing. Cancelled run, receipt consumed.
-Proof0da5e3d / CI40765617098 fails at missing generatedGeometrySchema. Implement
-code-derived per-request schema coordinate bounds, rotation and block-count cap;
-enumerate the38 supported canonical namespaced states. This preserves topology
-generation, not a new catalog template. Keep independent support/state/fit and
-actual timing checks. For extents>65 use a translated signed frame within-64..64
-to preserve all128 representable positions. Geometry reasoning uses medium while
-behavior/catalog stay low; explicit general repeater/lamp timing semantics are
-calibrated by the physical0/4 and12/16 tests. TypeScript compile passes.
+S1/S3 boundary proof937d795 / **CI40770908941** failed at missing
+StructuralTransition before implementation. GPT-6-Luna supplied only immutable
+data class54c0bc1, integrated9736e69. Root removed redundant parsed-source storage
+and checks serialized budget before cloning read data. Java main/client compile
+passed; no local tests. The new class keeps two real sources, exact added/removed/
+changed positions and ordered detach/support/device steps; its saved data grants
+no authority and currently drives no world edits. PR19 stays draft for wholeS1-S3.
 
-Source00e5da5 passed all five gates **CI40765916470**. Real generated request
-40766098371 accepted behavior (response40766960852) and raw geometry (response
-40767111851): actual two serial repeaters4+2, eight blocks, namespaced states.
-Native log records actual12-on/16-off pass. All generated player-support, shared
-Bob lesson/denial/revocation, second companion restart4525->5262 and third game
-boot markers passed. Inspected screenshot: real constructed blocks visibly render
-after restart, unlike the old catalog ghost-only image. Retained artifacts at
-task work/live-proof-40766098371. Behavior request2fce23c64d4bf8023190b66b80352933
-a985729edd139c4c41a67dc9b8c168cb; geometry request7fac846660b19afe4bb367ea4e73
-ee5c6f44ec00158cae2936fb45257cd6097d. Both receipts/accepted digests inspected.
-The whole manual run nevertheless failed afterward: creative fixture item supply
-left64 stone instead of restoring the prior7, breaking the older inventory check.
-Fix only test cleanup, not production behavior. Replay the actual recorded model
-response deterministically in ordinary CI, including the same client support
-placement and full post-restart inventory proof. This avoids unnecessary repeat
-SDK quota while preserving real signed-in feature proof plus current regression
-proof. Do not call that old manual run a successful overall run or replay a fresh
-live call. Required combined CI must pass before merge. Josh says skip heavy
-reviews and ship; no new formal review. D1-D3 feature behavior is now demonstrated;
-next action is final fixture regression CI then merge PR18 and start structural
-revision. Full broader phase1/phase2 objective remains active.
+Concrete next integration constraint from source: existing preflightUndo compares
+every journal row with the current world, assuming one touch per position. A
+replacement has old->AIR and AIR->new at the same position, so that preflight
+would reject a legitimate inverse. Add projected inverse-state validation before
+using structural steps, retain actual before-state checks at every mutation, and
+cover genuine interruption. OperationScopes currently stores one source and its
+positions per operation; transition scopes need both real sources/write union and
+read closure, never an invented union blueprint. Do not simply plug new steps into
+the old journal and claim undo/restart works. These production pieces, explicit
+workspace/preview/apply and real modification acceptance remain pending.
+
+StructuralTransition source d0b3bf3 passed Fabric **CI40771775541**, all30 required
+tests; Companion/Windows/integrated client also passed before the next proof push.
+Paired-scope prooff084fca / CI40772570707 failed at missing captureTransition/
+sources/positions. GPT-6-Luna implemented only OperationScopes9a0ae2b, integrated
+1eb1fe5. Schema2 explicitly stores paired sources and exact writes; schema1 old
+wire/hash behavior stays unchanged, and pruning the pair returns the original
+schema1 graph. Root caches paired component-footprint validation across operation
+references and adds corruption/version-relabel rejection. Java compile passed.
+
+Critical caller contract: operationScopes.blueprint(transition) is the real AFTER
+blueprint, not an execution/undo footprint. Future reservation writes must use
+positions(operation), and dependency reads must cover sources(operation), both
+real before/after sources. Current world executor/load/undo callers have NOT yet
+been adapted, and nothing creates a production transition operation yet. Next
+implement projected inverse preflight, explicit transition WAL/step execution and
+preview/apply/workspace expansion with actual native conflict/restart proofs.
+Check the strict adjacent revision assumption when redo/new planning follows an
+undo while canonical intent remains later; never relabel the true historical
+source just to satisfy an identity check. PR19 stays draft; S1-S3 incomplete.
+
+Paired-scope source1badb10 passed all five gates **CI40773555504**, Fabric all31
+required tests. S1 workspace proof5c98be9 / CI40775421540 fails at the missing
+expandWorkspace method before implementation. Add explicit owner-only monotonic
+expansion retaining the whole previous region; preserve blueprint ID/revision,
+journal, baseline and all world blocks. Reject active build/planning/test/pending
+restoration, shrinking, invalid volume and missing cross-project EDIT before any
+change. Invalidate pending model consent/leases only after successful validation.
+On save failure restore old corners in memory without resurrecting authority.
+Native proof drives owner expansion, Bob EDIT-but-not-owner denial, shrinking,
+real active-build refusal and retained expanded corners after third boot. Owner
+travels to the busy-proof workspace and waits for loaded dependencies; no fake
+state flags or forced chunks. Structural preview/apply and inverse WAL still
+pending; this command alone is not a structural executor.
+
+S1 expansion implementation passes scoped Java main/client compile. Pushed for
+native owner/EDITOR rejection, no world edits, preserved journal, true active-build
+refusal and expanded-box restart proof. No local tests or extra review. No
+production structural transition is enabled yet; next work remains inverse
+projection and the explicit pending preview/apply + WAL executor.
+
+Workspace source c606bb1 passed all five gates CI40776834318. Inverse projection proof 6d37653 failed at the absent UndoProjection class in CI40778110622. The implementation now simulates repeated-position inverse rows without changing the world, checks projected attachment supports, and limits neighbor exemptions to the operation being undone. Scoped Java main/client compilation passed; GitHub runs the tests. Actual structural execution and interruption/restart remain pending. Josh explicitly requested skipping heavy reviews; continue implementation and required CI.
+
+Undo reservations now use the captured operation's exact write positions and bounded dependency closure from both actual sources. Added-only and removed-only dependency edges are covered by the paired-scope game test; legacy source behavior remains covered. Scoped main/client compilation passed. Structural apply is still disabled until its WAL executor and actual interruption proofs land.
+
+Structural execution is now connected to production apply/resume/tick and the local checkpoint, with a durable step cursor and paired operation scope. It checks owner authority, loaded before states and AI ownership before replacing old cells; matching player additions are adopted without journal rows. Every actual write uses the existing WAL and live lease check. Test input leases retain the full after-layout write footprint, while structural execution and undo reserve the exact diff. No user command or generated-model route enables structural apply yet.
+
+Added dedicated native acceptance: build a real two-repeater fixture with an existing player support, revise to three repeaters, stop after actual writes, preserve and reject an intervening glass edit, resume after resolution, measure 12/16 game-tick behavior, actually restart the server, and undo the repeated-position operation while preserving both player supports and the old operation. The new native proofs have not run yet. Scoped Java main/client compilation passed; no local tests. CI2b8d0b3 currently has four green gates and dedicated multiplayer still running. Next fix acceptance failures, then add explicit preview/apply consent and model revision routing before merging PR19.
+
+Added ephemeral structural difference preview, authorized changes inspection and a private one-use /engineer apply confirmation. Consent is bound to the owner connection, authorization revision, accepted revision, workspace, selection and five-minute expiry. Stop/disconnect/context changes discard it. Native proof now drives the actual apply command after rejecting a wrong nonce, verifies preview leaves world/history/intent unchanged, then leaves the real interrupted transition paused across the actual third server boot before resume, timing test and undo. No synthetic cursor/state checkpoint is substituted. Model routing is still pending; PR19 is not ready to merge. Scoped main/client compile passed before the last cancellation-hook/doc edit.
+
+Generated planning now permits completed generated root builds to request a structural revision through the existing behavior -> confirm -> geometry flow. The resulting geometry remains an ephemeral diff, not canonical intent, until the separate private apply confirmation. Native CI now drives that full HTTP/Minecraft path with an explicitly hand-authored three-repeater response; it is not a live or recorded model inference claim. It verifies a wrong apply nonce is rejected, real stop/conflict preservation, an actual reboot while the cursor is unfinished, explicit resume, real 12/16 timing, and undo preserving the older journal/player supports. Scoped Java main/client compile and fixture JavaScript syntax checks passed. Four gates passed on executor source50c5204 while its dedicated run remained live; newer full-path proof is pending. Do not merge or claim S1-S3 proven until all five checks pass and native evidence is inspected. Remaining gap: later planning after undo still needs true historical/current intention semantics; never rewrite a historical before source to invent adjacent revisions.
+
+Full-path source04e6033 / CI40780210614 failed before structural inference because the prior generated confirmation cases exhausted the real four-start/minute budget (native log22:34:42-56). Production quota remains unchanged. The structural acceptance now waits one real61-second window before its two confirmed fixture requests; no retry of consumed consent and no test quota bypass. Retained failure artifacts at work/structural-proof-40780210614. Structural executor/restart/undo acceptance is still unproven; run the new source in GitHub CI.
+
+## Current verified result and shipping decision
+
+Source **8c3aa3959375dee787382abc6516dbc8d430991b** passed all five gates in
+**CI40796411413**. Inspected retained artifacts at task
+`work/structural-proof-40796411413`: both structural markers passed. Native log
+00:55:09 records the two-added/two-changed preview, invalid apply denial, real
+execution, stop and conflicting-edit refusal. The actual third server boot loads
+an unfinished cursor and both original sources without a lease; explicit resume
+finishes the ten-block layout, actual 12/16 timing passes at00:55:20, and production
+undo restores the original layout while preserving both player supports and the
+older operation. The Java assertions and final SQLite verifier passed. This is a
+hand-authored structural response through the real HTTP/native path, not fresh
+signed-in structural inference. No local tests ran.
+
+Decision: ship this bounded generated-root structural feature after the final
+note commit passes CI, without another formal review. Its safe explicit apply,
+conflict/restart and undo behavior is proven. Earlier chronological notes saying
+apply/model routing are absent or structural acceptance is unproven are superseded
+by this result. PR19 does not complete the overall engineering partner or Phase2.
+The separate live-model modification exercise and subsequent revision after undo
+remain next work; do not claim those are covered by this fixture.
+
+Next Outcomes: (G2/G3) preserve actual historical/current intended sources when a
+new revision follows undo, with real repeat-revision/undo/restart proof; prove an
+actual signed-in structural proposal through the native path. Then expand actual
+functions and electrical interfaces, complete E1 conversation/durable rationale,
+E3 diagnosis/repair visuals, and E4 full end-to-end acceptance. All six Phase2
+features remain unstarted. Keep the full active goal and earlier constraints.

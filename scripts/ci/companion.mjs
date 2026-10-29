@@ -26,20 +26,49 @@ const server = createCompanionServer({
   provider: {
     async proposeBehavior(input) {
       if (
-        input.request !==
-        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+        ![
+          "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
+          "CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.",
+        ].includes(input.request)
       )
         throw new Error("Unexpected generated fixture request");
       return structuredClone(generatedFixture.proposal);
     },
     async generateGeometry(input) {
       if (
-        input.request !==
-          "CI generated buffer: on after 12 game ticks, off after 16 game ticks." ||
+        ![
+          "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
+          "CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.",
+        ].includes(input.request) ||
         input.behavior.risingGameTicks !== 12 ||
         input.behavior.fallingGameTicks !== 16
       )
         throw new Error("Original request or confirmed intent changed");
+      if (input.request.startsWith("CI structural buffer:")) {
+        // Hand-authored structural fixture, not a recorded or live model reply.
+        const geometry = structuredClone(generatedFixture.geometry);
+        geometry.name = "Three-repeater structural buffer fixture";
+        geometry.explanation =
+          "Three serial two-tick repeaters; actual game tests establish behavior.";
+        geometry.blocks = [];
+        for (let x = 0; x < 5; x++) {
+          geometry.blocks.push({
+            pos: { x, y: 0, z: 0 },
+            state: "minecraft:stone",
+          });
+          geometry.blocks.push({
+            pos: { x, y: 1, z: 0 },
+            state:
+              x === 0
+                ? "minecraft:lever[face=floor,facing=north,powered=false]"
+                : x === 4
+                  ? "minecraft:redstone_lamp[lit=false]"
+                  : "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]",
+          });
+        }
+        geometry.output = { x: 4, y: 1, z: 0 };
+        return geometry;
+      }
       return structuredClone(generatedFixture.geometry);
     },
     async plan() {

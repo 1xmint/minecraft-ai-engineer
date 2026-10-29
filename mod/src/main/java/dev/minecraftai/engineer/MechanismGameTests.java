@@ -130,6 +130,79 @@ public final class MechanismGameTests {
         var gap=cases.deepCopy();gap.get(0).getAsJsonObject().getAsJsonArray("baselineSamples").remove(3);reject(helper,()->FunctionalTrial.validateGeneratedEvidence(gap,behavior,true),"Missing baseline ticks cannot claim stable off behavior");
         helper.succeed();
     }
+    @GameTest public void structuralDiffKeepsBothRealIntentionsAndOrdersDetachBeforePlacement(GameTestHelper helper) {
+        var pair=structuralPair();var before=pair[0];var after=pair[1];var transition=StructuralTransition.between(before,after);
+        helper.assertTrue(transition.added()==2 && transition.removed()==0 && transition.changed()==2 && transition.writes().size()==4,"Diff counts actual additions and replacements, rather than relabelling a delay-only change");
+        helper.assertTrue(!transition.writes().contains(before.anchor()),"The unchanged player support is not a write target");
+        var steps=transition.steps();helper.assertTrue(steps.size()==6 && steps.get(0).after().isAir() && steps.get(1).after().isAir(),"Changed old devices are detached before any replacement");
+        helper.assertTrue(steps.get(2).after().is(Blocks.STONE),"New support is installed before replacement devices");
+        helper.assertTrue(transition.before().blocks().size()==8 && transition.after().blocks().size()==10 && !transition.before().id().equals(transition.after().id()),"Both original source identities survive; no union blueprint invents an intention");
+        var saved=transition.json();var restored=StructuralTransition.read(saved,"test","minecraft:overworld",java.util.UUID.fromString(before.projectId()));
+        helper.assertTrue(restored.json().equals(saved) && restored.writes().equals(transition.writes()),"Persisted sources recompute the same bounded structural change");
+        reject(helper,()->transition.writes().clear(),"Captured write footprint cannot be mutated by a caller");
+        reject(helper,()->transition.steps().clear(),"Captured ordering cannot be mutated by a caller");
+        before.source().addProperty("name","Caller changed source");transition.after().source().addProperty("name","Caller changed returned copy");saved.getAsJsonObject("before").addProperty("name","Caller changed wire copy");
+        helper.assertTrue(!transition.before().name().equals("Caller changed source") && !transition.after().name().equals("Caller changed returned copy"),"Mutable caller/source aliases cannot rewrite captured transition history");
+        helper.succeed();
+    }
+    @GameTest public void structuralDiffRejectsForeignStaleOrForgedHistoryWithoutAuthority(GameTestHelper helper) {
+        var pair=structuralPair();var transition=StructuralTransition.between(pair[0],pair[1]);var saved=transition.json();
+        var stale=pair[1].source().deepCopy();stale.addProperty("revision",4);reject(helper,()->StructuralTransition.between(pair[0],Blueprint.parse(stale,"test","minecraft:overworld")),"A transition cannot skip the captured current revision");
+        var mismatched=structuralPair()[1];mismatched.source().addProperty("name","Mutated after parsing");reject(helper,()->StructuralTransition.between(pair[0],mismatched),"Mutable source changes cannot disagree with the caller's parsed intended record");
+        var foreign=pair[1].source().deepCopy();foreign.addProperty("projectId","dddddddd-dddd-4ddd-8ddd-dddddddddddd");reject(helper,()->StructuralTransition.between(pair[0],Blueprint.parse(foreign,"test","minecraft:overworld")),"Another project's intended geometry cannot enter this transition");
+        var forged=saved.deepCopy();forged.getAsJsonObject("after").addProperty("name","Rewritten history");reject(helper,()->StructuralTransition.read(forged,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"Source identity/content hashes reject rewritten transition history");
+        var authority=saved.deepCopy();authority.addProperty("actorId","11111111-1111-4111-8111-111111111111");reject(helper,()->StructuralTransition.read(authority,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"Saved transition descriptions contain no actor, connection or execution authority");
+        reject(helper,()->StructuralTransition.read(saved,"other-world","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"A valid digest cannot authorize another world");
+        helper.succeed();
+    }
+    @GameTest public void transitionScopesKeepRemovedPositionsWithoutInventingUnionIntent(GameTestHelper helper) {
+        var pair=structuralPair();var shifted=pair[1].source().deepCopy();shifted.getAsJsonObject("anchor").addProperty("x",3);
+        var after=Blueprint.parse(shifted,"test","minecraft:overworld");var transition=StructuralTransition.between(pair[0],after);
+        var history=new OperationScopes();String original="11111111-1111-4111-8111-111111111111",revision="22222222-2222-4222-8222-222222222222";
+        history.capture(original,"root",pair[0],false);var old=history.json();history.captureTransition(revision,"root",transition);
+        helper.assertTrue(history.json().get("schemaVersion").getAsInt()==2 && history.sources(revision).size()==2,"A transition explicitly stores both real sources in the extended scope format");
+        helper.assertTrue(history.positions(revision).equals(transition.writes()),"Historical scope retains the exact transition write footprint");
+        helper.assertTrue(history.blueprint(revision).blocks().stream().noneMatch(b->b.pos().equals(pair[0].anchor())) && history.positions(revision).contains(pair[0].anchor()),"The real after blueprint stays distinct from removed-only historical targets");
+        history.validate(revision,"root",pair[0].anchor());reject(helper,()->history.validate(revision,"root",pair[0].anchor().offset(40,0,0)),"A persisted diff never authorizes an escaped position");
+        var reads=EngineeringSession.historicalReads(history,revision,"root",true);
+        var oldOnlyRead=pair[0].anchor().offset(-2,0,0);var newOnlyRead=after.anchor().offset(6,0,0);
+        helper.assertTrue(reads.contains(oldOnlyRead) && reads.contains(newOnlyRead),"Undo reserves dependency margins of both real layouts, including removed-only and added-only edges");
+        helper.assertTrue(!reads.contains(pair[0].anchor().offset(40,0,0)),"Paired dependency reservations remain bounded");
+        helper.assertTrue(EngineeringSession.historicalReads(history,original,"root",true).contains(oldOnlyRead),"Legacy operation reservations keep their captured layout dependencies");
+        helper.assertTrue(history.basis(revision).equals(ComponentAssignments.basis(after,"root")),"Resume basis belongs to the accepted after intention while the before source remains historical");
+        var mislabeled=history.json();mislabeled.addProperty("schemaVersion",1);reject(helper,()->OperationScopes.read(mislabeled,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"A paired intention cannot masquerade as legacy schema1");
+        var corrupt=history.json();for(var element:corrupt.getAsJsonArray("snapshots")){var snapshot=element.getAsJsonObject();if(snapshot.get("kind").getAsString().equals("transition"))snapshot.getAsJsonObject("transition").getAsJsonObject("before").addProperty("name","Rewritten old intention");}
+        reject(helper,()->OperationScopes.read(corrupt,"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId())),"Rewritten paired snapshot contents cannot retain the recorded identity");
+        var loaded=OperationScopes.read(history.json(),"test","minecraft:overworld",java.util.UUID.fromString(pair[0].projectId()));
+        helper.assertTrue(loaded.sources(revision).get(0).id().equals(pair[0].id()) && loaded.sources(revision).get(1).id().equals(after.id()),"Restart does not relabel either original source");
+        loaded.sources(revision).get(0).source().addProperty("name","Caller changed history");helper.assertTrue(!loaded.sources(revision).get(0).name().equals("Caller changed history"),"History returns copies rather than mutable source authority");
+        loaded.retain(java.util.Set.of(original));helper.assertTrue(loaded.json().equals(old),"Pruning a completed transition preserves the original schema1 snapshot and hash exactly");
+        helper.succeed();
+    }
+    @GameTest public void inverseProjectionHandlesRepeatedPositionsWithoutTouchingWorld(GameTestHelper helper) {
+        var pos=new BlockPos(2,3,2);var air=Blocks.AIR.defaultBlockState();var lamp=Blocks.REDSTONE_LAMP.defaultBlockState();var repeater=Blueprint.state("minecraft:repeater[delay=2,facing=west,locked=false,powered=false]");
+        var inverse=java.util.List.of(new EngineeringSession.Change(pos,air,repeater,"projection"),new EngineeringSession.Change(pos,lamp,air,"projection"));
+        var observed=java.util.Map.of(pos,repeater);
+        var restored=UndoProjection.project(inverse,p->observed.getOrDefault(p,air),change->false,(change,view)->{});
+        helper.assertTrue(restored.get(pos).equals(lamp) && observed.get(pos).equals(repeater),"Inverse preflight follows new->AIR->old without mutating the observed world");
+        reject(helper,()->UndoProjection.project(inverse,p->Blocks.GLASS.defaultBlockState(),change->false,(change,view)->{}),"An intervening player block cannot satisfy a projected inverse");
+        var lever=Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]");var support=pos.below();
+        var supported=java.util.List.of(new EngineeringSession.Change(support,Blocks.STONE.defaultBlockState(),air,"projection"),new EngineeringSession.Change(pos,lever,air,"projection"));
+        var supportedResult=UndoProjection.project(supported,p->air,change->false,(change,view)->{if(change.before().is(Blocks.LEVER))helper.assertTrue(view.projected(support) && view.get(support).is(Blocks.STONE),"A restored support is visible to the later inverse device preflight");});
+        helper.assertTrue(supportedResult.get(pos).equals(lever) && UndoProjection.support(lever,pos).equals(support),"Projected support uses the actual attachment direction");
+        reject(helper,()->UndoProjection.project(java.util.List.of(new EngineeringSession.Change(pos,air,lever,"projection")),p->lever.setValue(BlockStateProperties.POWERED,true),change->false,(change,view)->{}),"Exact lever power conflicts remain protected during projection");
+        helper.succeed();
+    }
+    private static Blueprint[] structuralPair() {
+        var before=generatedSource(12,16);
+        for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}
+        var after=before.deepCopy();after.addProperty("id","cccccccc-cccc-4ccc-8ccc-cccccccccccc");after.addProperty("revision",3);
+        var blocks=new com.google.gson.JsonArray();
+        for(int x=0;x<5;x++){var block=before.getAsJsonArray("blocks").get(0).getAsJsonObject().deepCopy();block.getAsJsonObject("pos").addProperty("x",x);blocks.add(block);}
+        for(int x=0;x<5;x++){var block=before.getAsJsonArray("blocks").get(x==0?4:7).getAsJsonObject().deepCopy();block.getAsJsonObject("pos").addProperty("x",x);if(x>0 && x<4)block.addProperty("state","minecraft:repeater[delay=2,facing=west,locked=false,powered=false]");blocks.add(block);}
+        after.add("blocks",blocks);after.getAsJsonObject("bounds").getAsJsonObject("max").addProperty("x",4);after.getAsJsonObject("resources").addProperty("minecraft:stone",5);after.getAsJsonObject("resources").addProperty("minecraft:repeater",3);after.getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos").addProperty("x",4);
+        return new Blueprint[]{Blueprint.parse(before,"test","minecraft:overworld"),Blueprint.parse(after,"test","minecraft:overworld")};
+    }
     private static com.google.gson.JsonObject generatedSource(int rising,int falling) {
         var source=com.google.gson.JsonParser.parseString("""
             {"schemaVersion":1,"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","projectId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":2,"worldId":"test","dimension":"minecraft:overworld","name":"Generated serial buffer","explanation":"Raw serial wiring; actual timing requires a game test.","anchor":{"x":2,"y":2,"z":2},"rotation":0,
