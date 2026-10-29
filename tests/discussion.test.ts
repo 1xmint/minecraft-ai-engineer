@@ -74,6 +74,24 @@ test("discussion supplies intended component sources and labels missing observat
   assert.equal(
     context.sources.find(
       (source: { id: string }) => source.id === "component:root",
+    ).data.blocks.length,
+    blueprint.blocks.length,
+    "A standalone logical root contains every physical block group",
+  );
+  assert.throws(
+    () =>
+      discussionGrounding(
+        "Entrance",
+        1,
+        blueprint,
+        knowledge,
+        blueprint.blocks[0]!.component,
+      ),
+    "Internal recipe groups are not selectable logical components",
+  );
+  assert.equal(
+    context.sources.find(
+      (source: { id: string }) => source.id === "component:root",
     ).kind,
     "intended-component",
   );

@@ -343,3 +343,12 @@ constraint revision3 at21:22:53. The CI SQLite verifier required exactly three
 literal owner-authored notes. This proves the native note/revocation/game-restart
 slice on that source, not fresh inference or conversation behavior. Conversation
 source6ccd7d6 now needs its own complete CI; keep PR23 draft until remaining proofs.
+
+Conversation CI40957543485 exposed a real TS/native component identity mismatch:
+standalone native lessons select logical root, whereas recipe block component
+labels describe internal parts. Discussion grounding incorrectly treated those
+parts as logical components and rejected root. Fix: standalone root grounds the
+entire mechanism; composite projects use their canonical component tree IDs.
+Keep the failing test and strengthen it to require all root blocks and reject
+internal recipe groups. Companion job failed on that source; other live jobs are
+not assumed stopped or passed. Scoped TypeScript check is next, then new CI.

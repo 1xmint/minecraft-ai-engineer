@@ -69,12 +69,11 @@ export function discussionGrounding(
   knowledge: ProjectKnowledge,
   componentId?: string,
 ) {
-  const ids = [
-    ...new Set([
-      ...(blueprint?.blocks.map((block) => block.component) ?? []),
-      ...(blueprint?.components?.nodes.map((node) => node.id) ?? []),
-    ]),
-  ];
+  // Fabric exposes one logical root for standalone mechanisms; block-group labels
+  // inside a catalog recipe are not separately selectable project components.
+  const ids = blueprint
+    ? (blueprint.components?.nodes.map((node) => node.id) ?? ["root"])
+    : [];
   if (componentId !== undefined && !ids.includes(componentId))
     throw new RequestError(
       "Selected discussion component is unavailable.",
@@ -108,7 +107,7 @@ export function discussionGrounding(
     });
   if (blueprint && componentId !== undefined) {
     const blocks = blueprint.blocks.filter(
-      (block) => block.component === componentId,
+      (block) => !blueprint.components || block.component === componentId,
     );
     sources.push({
       id: `component:${componentId}`,
