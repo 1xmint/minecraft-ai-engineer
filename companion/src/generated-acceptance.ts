@@ -281,7 +281,7 @@ export function readGeneratedAcceptanceRequest(
         body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
           ? [
               {
-                id: body.context.projectId + ":root",
+                id: body.context.projectId,
                 status: "COMPLETED",
                 detail:
                   "Actual Minecraft buffer test passed: stable off/on/off, rising 12 and falling 16 game ticks",

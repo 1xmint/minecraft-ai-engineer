@@ -118,6 +118,10 @@ function own() {
   );
 }
 function childAlive() {
+  if (existsSync(resolve("mod/build/live-exchange/unexpected-inference")))
+    throw new Error(
+      "Synthetic provider refused the fixed scenario before the exchange completed",
+    );
   if (existsSync(statusFile))
     throw new Error("Native acceptance stopped before the exchange completed");
 }

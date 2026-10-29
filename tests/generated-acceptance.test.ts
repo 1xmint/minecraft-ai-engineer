@@ -214,7 +214,7 @@ test("structural acceptance reconstructs only the fixed existing-circuit revisio
     },
     tasks: [
       {
-        id: context.projectId + ":root",
+        id: context.projectId,
         status: "COMPLETED",
         detail:
           "Actual Minecraft buffer test passed: stable off/on/off, rising 12 and falling 16 game ticks",
