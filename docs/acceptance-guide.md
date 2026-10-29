@@ -260,3 +260,28 @@ ports. Actual tests must establish behavior again; replay is not fresh inference
 The bounded result does not prove general engineering, human mouse placement or
 Mojang authentication. All six Boolean calls across the three attempts are consumed.
 Do not make further calls or reuse their exclusive started receipts for this slice.
+
+## Grounded conversation proof (development branch)
+
+The manual workflow also has a `discussion` scenario and stage. It creates a
+synthetic unbuilt lamp project and the two fixed owner requirements about a
+six-block entrance and visible output, then asks one explicit engineering
+question. The bridge accepts only that exact intended design and those notes;
+it never exports inventories, arbitrary project text or credentials.
+
+After the reviewed source passes ordinary CI, dispatch the existing manual
+workflow on that source with `scenario=discussion`. The existing local responder
+uses `--scenario discussion --stage discussion` with explicit run, attempt, SHA
+and `--model gpt-6-luna`. It makes one subscription-authenticated model call and
+requires a bounded explanation citing both owner notes. Run/source/digest and
+expiry checks bind the reply to the actual native question. A durable started
+receipt forbids another inference attempt; publication can retry only an already
+saved valid response. No automatic retry or paid API fallback exists.
+
+The real native client must display that reply without building or inventing a
+functional pass. Authorized sharing, denied editor authorship, revocation, an
+actual companion process replacement and later game boot must preserve the
+literal notes and unchanged blueprint/world evidence. Restart recovery reads
+notes and appends a third constraint without another model call. The SQLite
+verifier requires exactly one discussion dispatch and accepted answer. Ordinary
+CI still uses explicit deterministic fixtures; those are not fresh inference.

@@ -24,13 +24,19 @@ if (restoredBoot) {
 
 const db = new DatabaseSync(database, { readOnly: true });
 try {
-  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+  if (
+    process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
+    process.env.MCE_DISCUSSION_ACCEPTANCE === "true"
+  ) {
+    const liveDiscussion = process.env.MCE_DISCUSSION_ACCEPTANCE === "true";
     for (const marker of [
       "knowledge-no-world-changes.done",
       "knowledge-bob.done",
       "knowledge-bob-denied.done",
       "knowledge-recovery.done",
-      "discussion-cancelled.done",
+      ...(liveDiscussion
+        ? ["live-discussion-model.done", "live-discussion-recovery.done"]
+        : ["discussion-cancelled.done"]),
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -79,7 +85,7 @@ try {
       .map((row) => JSON.parse(row.document));
     assert.deepEqual(
       discussions.map((reply) => reply.knowledgeRevision),
-      [2, 3],
+      liveDiscussion ? [2] : [2, 3],
     );
     assert.equal(
       discussions.every(
@@ -96,8 +102,10 @@ try {
       .get(server.serverId, knowledgeProject);
     assert.equal(
       starts.count,
-      3,
-      "Only explicit owner questions dispatch: two answers and one cancelled request",
+      liveDiscussion ? 1 : 3,
+      liveDiscussion
+        ? "The manual proof dispatches exactly one owner question"
+        : "Only explicit owner questions dispatch: two answers and one cancelled request",
     );
   }
   const row = db

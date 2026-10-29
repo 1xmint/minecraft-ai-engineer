@@ -246,8 +246,8 @@ is untrusted data, never executable code. Current execution is creative, not sur
 
 ## Remaining full roadmap
 
-1. Finish Phase13 multi-input generation/acceptance, then broader electrical and
-   mechanical engineering: comparator/observer/piston behavior, connections and
+1. Broader electrical and mechanical engineering beyond shipped Phase13 Boolean
+   generation/acceptance: comparator/observer/piston behavior, connections and
    larger multicomponent systems. No buffer/catalog-only substitute.
 2. E1: free-form followups/clarification, durable goals/rationale/preferences/
    decisions and later project identification/explanation. Exact ask phrases
@@ -361,3 +361,22 @@ This is written failure coverage awaiting CI, not fresh inference. Production
 budgets remain unchanged. Existing later generated-companion restart occurs after
 knowledge notes are stored and before third-boot note recovery, so that full
 native ordering also tests notes across an actual service process replacement.
+
+Phase14 fresh-discussion proof bridge implemented on working tree: one fixed
+synthetic owner question at the unbuilt lamp project, exact canonical intended
+sources and two literal notes only, digest/run/stage/source binding, 15-minute
+expiry, strict source-cited explanation and existing provenance/archive/receipt
+transport. Native manual scenario uses one local signed-in Luna response, then
+shared note denial/revocation, real companion process replacement and game boot;
+recovery appends a third constraint without further inference. CI-only wait is
+15minutes for this manually mediated exchange; normal discussion remains bounded
+at100seconds. No SDK call has been made. Ordinary CI sourcec9b011d is running
+CI40958107235; four jobs passed and dedicated multiplayer remained live at last
+inspection. The new bridge needs codec/broker/failure checks and its own complete
+CI before manual dispatch. Current task serves C1/C2/C3, not a new product scope.
+
+Narrow GPT-6-Luna/high transport check caught the artifact-name allowlist missing
+-discussion; fixed it and added run/artifact provenance regression coverage.
+Added no-SDK manual broker lifecycle/replay/cancellation tests. TypeScript and
+scoped Java server/client compilation passed; tests await GitHub. No inference
+has been attempted for this new discussion scenario.

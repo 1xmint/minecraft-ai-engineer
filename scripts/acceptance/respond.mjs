@@ -71,7 +71,7 @@ async function boundedJson(path, maximum) {
 // checking both central and local headers before inflating bounded bytes in memory.
 function requestBytes(zip) {
   check(
-    zip.length >= 22 && zip.length <= 16384,
+    zip.length >= 22 && zip.length <= 32768,
     "Invalid request archive size.",
   );
   const end = zip.length - 22;
@@ -115,7 +115,7 @@ function requestBytes(zip) {
       (flags & ~0x0808) === 0 &&
       [0, 8].includes(method) &&
       size > 0 &&
-      size <= 4096 &&
+      size <= 16384 &&
       offset === 0 &&
       offset + 30 <= central &&
       zip.readUInt32LE(offset) === 0x04034b50,
@@ -220,26 +220,33 @@ async function main() {
   );
   const stage = options["--stage"] ?? "catalog";
   check(
-    ["catalog", "behavior", "geometry"].includes(stage),
-    "Stage must be catalog, behavior or geometry.",
+    ["catalog", "behavior", "geometry", "discussion"].includes(stage),
+    "Stage must be catalog, behavior, geometry or discussion.",
   );
   const scenario =
     options["--scenario"] ?? (stage === "catalog" ? "catalog" : "generated");
   check(
-    ["catalog", "generated", "structural", "boolean"].includes(scenario) &&
-      (stage === "catalog") === (scenario === "catalog"),
-    "Scenario must match catalog or a generated/structural/boolean stage.",
+    ["catalog", "generated", "structural", "boolean", "discussion"].includes(
+      scenario,
+    ) && (stage === "catalog") === (scenario === "catalog"),
+    "Scenario must match its catalog, generated, structural, boolean or discussion stage.",
   );
-  const generated = stage !== "catalog",
-    suffix = generated ? `-${stage}` : "";
+  check(
+    (stage === "discussion") === (scenario === "discussion"),
+    "Discussion stage requires the discussion scenario.",
+  );
+  const discussion = stage === "discussion",
+    generated = stage === "behavior" || stage === "geometry",
+    suffix = stage !== "catalog" ? `-${stage}` : "";
   const expected = {
     repository,
     workflow: ".github/workflows/live-acceptance.yml",
     sourceSha: options["--sha"],
     runId: options["--run"],
     runAttempt: Number(options["--attempt"]),
-    scenario:
-      scenario === "boolean"
+    scenario: discussion
+      ? "project-discussion-owner-notes-v1"
+      : scenario === "boolean"
         ? "generated-boolean-owner-confirmation-v1"
         : scenario === "structural"
           ? "structural-buffer-owner-confirmation-v1"
@@ -296,15 +303,23 @@ async function main() {
     await import("../../dist/companion/src/acceptance-exchange.js");
   const generatedExchange =
     await import("../../dist/companion/src/generated-acceptance.js");
-  const readAcceptanceRequest = generated
-    ? generatedExchange.readGeneratedAcceptanceRequest
-    : catalogExchange.readAcceptanceRequest;
-  const createAcceptanceResponse = generated
-    ? generatedExchange.createGeneratedAcceptanceResponse
-    : catalogExchange.createAcceptanceResponse;
-  const readAcceptanceResponse = generated
-    ? generatedExchange.readGeneratedAcceptanceResponse
-    : catalogExchange.readAcceptanceResponse;
+  const discussionExchange =
+    await import("../../dist/companion/src/discussion-acceptance.js");
+  const readAcceptanceRequest = discussion
+    ? discussionExchange.readDiscussionAcceptanceRequest
+    : generated
+      ? generatedExchange.readGeneratedAcceptanceRequest
+      : catalogExchange.readAcceptanceRequest;
+  const createAcceptanceResponse = discussion
+    ? discussionExchange.createDiscussionAcceptanceResponse
+    : generated
+      ? generatedExchange.createGeneratedAcceptanceResponse
+      : catalogExchange.createAcceptanceResponse;
+  const readAcceptanceResponse = discussion
+    ? discussionExchange.readDiscussionAcceptanceResponse
+    : generated
+      ? generatedExchange.readGeneratedAcceptanceResponse
+      : catalogExchange.readAcceptanceResponse;
   const { requireAcceptanceRun, requireAcceptanceArtifact } =
     await import("../../dist/companion/src/acceptance-github.js");
   async function liveRun() {
@@ -369,7 +384,7 @@ async function main() {
   const archive = await command(
     "gh",
     apiArgs(`actions/artifacts/${artifactId}/zip`),
-    { encoding: "buffer", maxBuffer: 16384 },
+    { encoding: "buffer", maxBuffer: 32768 },
   );
   const temporary = await mkdtemp(join(tmpdir(), "mce-acceptance-"));
   let request;
@@ -383,7 +398,7 @@ async function main() {
       await handle.close();
     }
     request = readAcceptanceRequest(
-      await boundedJson(file, 4096),
+      await boundedJson(file, discussion ? 16384 : 4096),
       expected,
       Date.now(),
     );
@@ -451,8 +466,9 @@ async function main() {
       !generated || request.stage === stage,
       "Request artifact belongs to another generated stage.",
     );
-    const method =
-      stage === "behavior"
+    const method = discussion
+      ? "discuss"
+      : stage === "behavior"
         ? "proposeBehavior"
         : stage === "geometry"
           ? "generateGeometry"

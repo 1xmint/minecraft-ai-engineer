@@ -1,3 +1,7 @@
+import {
+  readDiscussionAcceptanceRequest,
+  readDiscussionAcceptanceResponse,
+} from "../../dist/companion/src/discussion-acceptance.js";
 // GitHub transports bounded synthetic data; credentials never enter an artifact.
 import { execFileSync } from "node:child_process";
 import {
@@ -22,21 +26,27 @@ import {
   readGeneratedAcceptanceResponse,
 } from "../../dist/companion/src/generated-acceptance.js";
 const stage = process.argv[3] ?? process.env.MCE_ACCEPTANCE_STAGE ?? "catalog";
-if (!["catalog", "behavior", "geometry"].includes(stage))
+if (!["catalog", "behavior", "geometry", "discussion"].includes(stage))
   throw new Error("Unknown acceptance stage");
-const generated = stage !== "catalog",
-  suffix = generated ? `-${stage}` : "";
-const readAcceptanceRequest = generated
-  ? readGeneratedAcceptanceRequest
-  : readCatalogRequest;
-const readAcceptanceResponse = generated
-  ? readGeneratedAcceptanceResponse
-  : readCatalogResponse;
+const discussion = stage === "discussion",
+  generated = stage === "behavior" || stage === "geometry",
+  suffix = stage !== "catalog" ? `-${stage}` : "";
+const readAcceptanceRequest = discussion
+  ? readDiscussionAcceptanceRequest
+  : generated
+    ? readGeneratedAcceptanceRequest
+    : readCatalogRequest;
+const readAcceptanceResponse = discussion
+  ? readDiscussionAcceptanceResponse
+  : generated
+    ? readGeneratedAcceptanceResponse
+    : readCatalogResponse;
 const repo = "1xmint/minecraft-ai-engineer",
   base = `repos/${repo}/`,
-  directory = generated
-    ? resolve("mod/build/live-exchange", stage)
-    : resolve("mod/build/live-exchange"),
+  directory =
+    stage !== "catalog"
+      ? resolve("mod/build/live-exchange", stage)
+      : resolve("mod/build/live-exchange"),
   statusFile = resolve("mod/build/live-status");
 function check(ok) {
   if (!ok)
@@ -102,8 +112,9 @@ function envelope(run, attempt, sha) {
     sourceSha: sha,
     runId: String(run),
     runAttempt: Number(attempt),
-    scenario:
-      process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+    scenario: discussion
+      ? "project-discussion-owner-notes-v1"
+      : process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
         ? "generated-boolean-owner-confirmation-v1"
         : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
           ? "structural-buffer-owner-confirmation-v1"
@@ -130,7 +141,7 @@ function childAlive() {
 function readRequest() {
   const raw = JSON.parse(readFileSync(join(directory, "request.json"), "utf8"));
   readAcceptanceRequest(raw, own(), Date.now());
-  check(!generated || raw.stage === stage);
+  check(stage === "catalog" || raw.stage === stage);
   return raw;
 }
 async function main() {
@@ -194,13 +205,15 @@ async function main() {
       inputs = event.inputs;
     check(
       inputs.scenario ===
-        (generated
-          ? process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
-            ? "boolean"
-            : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-              ? "structural"
-              : "generated"
-          : "catalog"),
+        (discussion
+          ? "discussion"
+          : generated
+            ? process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+              ? "boolean"
+              : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+                ? "structural"
+                : "generated"
+            : "catalog"),
     );
     const expected = envelope(
       inputs.request_run,
@@ -224,7 +237,7 @@ async function main() {
       expected.sourceSha,
       name,
       "request.json",
-      4096,
+      discussion ? 16384 : 4096,
     );
     readAcceptanceRequest(request, expected, Date.now());
     const result = JSON.parse(inputs.result);
@@ -240,6 +253,39 @@ async function main() {
       await setTimeout(2000);
     }
     check(readFileSync(statusFile, "utf8").trim() === "0");
+    if (discussion) {
+      const request = JSON.parse(
+          readFileSync(join(directory, "request.json"), "utf8"),
+        ),
+        result = JSON.parse(
+          readFileSync(join(directory, "response.json"), "utf8"),
+        ),
+        accepted = JSON.parse(
+          readFileSync(join(directory, "accepted.json"), "utf8"),
+        );
+      readDiscussionAcceptanceRequest(request, own(), accepted.acceptedAt);
+      readDiscussionAcceptanceResponse(result, request, accepted.acceptedAt);
+      check(
+        accepted.requestDigest === request.digest &&
+          accepted.resultDigest === result.digest &&
+          accepted.stage === "discussion",
+      );
+      for (const marker of [
+        "knowledge-no-world-changes.done",
+        "knowledge-bob.done",
+        "knowledge-bob-denied.done",
+        "knowledge-recovery.done",
+        "live-discussion-model.done",
+        "live-discussion-recovery.done",
+      ])
+        check(
+          readFileSync(
+            `mod/build/multiplayer-evidence/coordination/${marker}`,
+            "utf8",
+          ).trim() === "passed",
+        );
+      return;
+    }
     if (generated) {
       const envelopes = [];
       for (const phase of ["behavior", "geometry"]) {
