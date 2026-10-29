@@ -296,3 +296,11 @@ edit. It separately records the fourth boot context; existing third-boot proofs
 retain their actual epoch instead of being relabelled. New native proof remains
 pending. Fresh signed-in structural inference, broader functions, conversation,
 debugging/visuals, full acceptance and all six Phase2 items remain outstanding.
+
+Source1a9740f / CI40798707422 passed four gates and the first structural recovery,
+then failed at fourth-boot selection before the new command packet was handled.
+The wait predicate called selected-session resolution while selection was still
+empty, correctly triggering the production ambiguous-project refusal. Fix only
+the native wait to observe the explicit selection map until the command arrives;
+never infer a project or change production selection behavior. Retained artifacts:
+`work/restored-proof-40798707422`. Repeated revision acceptance remains pending.
