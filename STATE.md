@@ -7,8 +7,9 @@ green CI substitutes for the full objective.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
 Branch: **phase/13-generated-logic**, draft **PR22**. Main includes PR21,
 mergee3f26d88f40270854005a339cba67e17d157eb9a. Latest fully verified Phase13 source:
-**18ff3d122b1f8c88ed97edf60bc61d33c9a863f1**, all five required checks passed
-**CI40903991573**. Later live-route wiring requires new CI.
+**ee2745f573ccda24181d44e6159f66e38f089b88**, all five required checks passed
+**CI40905604442**. The first fresh Boolean geometry reply was rejected locally;
+its guidance fix requires new CI and one new bounded live attempt.
 Read actual git status, PR and workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -82,7 +83,7 @@ buffers. If no Boolean settling bound is requested, propose20 and explicitly exp
 that the owner must confirm this proposed test bound; never promise exact latency.
 Named geometry schema binds accepted names/count and rotated workspace bounds.
 Geometry adapter validates against the accepted behavior. All existing isolated
-subscription/tool restrictions remain. No new actual SDK calls have been made.
+subscription/tool restrictions remain. Both Boolean calls from the first live attempt are consumed (see below).
 
 Gateway proof covers separate Boolean proposal/geometry calls, immutable intent,
 nonce replay denial, untested preview and unchanged canonical revision. Native CI
@@ -223,7 +224,7 @@ tests, restarts the companion, revokes during another trial, and performs actual
 third-boot resume/retest/source/world/screenshot checks. Boolean transport requires
 its own four completion markers. SQLite replays the exact accepted blueprint and
 requires two planning starts and two distinct successful trials. This is newly
-wired, NOT a live success claim. No fresh SDK calls have been made. Scoped client
+wired, NOT a live success claim. The first Boolean receipt pair is consumed; see the retained failed attempt below. Scoped client
 Java/TypeScript compilation and script syntax passed; required CI and manual setup
 proof must precede the two new exclusive SDK receipts. Local tests remain forbidden.
 
@@ -236,3 +237,39 @@ retest succeeded. SQLite replay required exactly two planning starts. Replies we
 explicit hand-authored fixtures, not fresh model calls. The prior7f1e6e7 budget
 failure remains recorded; the CI-only12/minute setting fixed that synthetic burst.
 New Boolean live-route changes now need their own regression run before dispatch.
+
+## First fresh signed-in Boolean attempt: rejected geometry, preserved
+
+Sourceee2745f passed all5 CI40905604442, including all40 native tests and new
+scenario provenance/fit checks. Actual manual40906470078 reached its exact fixed
+Boolean request with empty synthetic memory. ChatGPT sign-in was confirmed;
+o API key, paid fallback or credential upload. Two explicit SDK0.164.0/gpt-6-luna
+calls were made, and both exclusive started receipts are now consumed.
+
+Behavior request6e110abd53481202a38e698f1ab705e0aa97662f26d8b0730e66f5e181fadd60
+returned the exact AND0001 table/a,b/settle20; response workflow40907741010 passed
+and the native accepted marker matches result digest
+971236c2e0fc8b6d88a589e5a7646368504ac770fced8398e1f5308dbe4b057f.
+Usage10787in/105out. Native owner separately confirmed before geometry request.
+
+Geometry request33ae3c92f3ea8491b96f9130a6a592987b50f640be358cb912a92199993af0bd
+returned13 raw blocks (usage11417in/434out). Local validation rejected it for
+missing stone support: wall levers at0,1,0 and0,1,1 faced east but had no west
+backing at the same Y. It also falsely described serial repeaters as AND and left
+b without a causal signal path. Raw reply was not altered or published as valid,
+no Boolean blueprint/construction/timing/restart proof occurred. The manual run
+was explicitly cancelled after this terminal local rejection (not a timeout).
+Artifacts: work/live-boolean-proof-40906470078; raw/provenance negative fixture:
+tests/fixtures/live-boolean-missing-support.json. Private started/failure/untrusted
+receipts remain under AppData/minecraft-ai-engineer/acceptance. Do not retry either
+consumed receipt, silently repair the result or call the whole run successful.
+
+Root fix: geometry guidance now specifies exact backing coordinates for floor,
+ceiling and wall attachments, and explains Boolean physical composition grounded
+in passing native tests: serial repeaters relay a signal; common strong-powered
+stone combines OR; input torches plus common OR plus output inversion implement
+NOT(NOT a OR NOT b). No reference coordinates, template enforcement or easier
+behavior replaces raw generation. Added rejection proof for the unchanged failed
+reply. TypeScript scoped check passed; tests run only in CI. Next required checks,
+then one causally justified new two-stage live attempt on new exclusive receipts.
+No automatic retry loop or separately billed service. Full roadmap stays active.

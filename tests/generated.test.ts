@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   validateBehavior,
   generatedTruthGeometrySchema,
+  validateGeneratedGeometry,
   BEHAVIOR_PROPOSAL_SCHEMA,
   behaviorDigest,
   makeGeneratedBlueprint,
@@ -497,4 +498,43 @@ test("model behavior stage permits independent Boolean intent without reducing i
   assert.match(instructions, /first input most significant/);
   assert.match(instructions, /requires owner confirmation/);
   assert.doesNotMatch(instructions, /Only a one-lever one-lamp buffer/);
+});
+
+test("unaltered first live Boolean reply rejects before preview because wall lever backing is absent", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-boolean-missing-support.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  const before = JSON.stringify(recorded.geometry);
+  assert.equal(recorded.kind, "rejected-live-model-geometry");
+  assert.throws(
+    () => validateGeneratedGeometry(recorded.geometry, behavior),
+    /missing required stone support/i,
+  );
+  assert.equal(
+    JSON.stringify(recorded.geometry),
+    before,
+    "Failed raw reply remains unchanged, including its wrong lever placements",
+  );
+  assert.deepEqual(
+    recorded.geometry.inputs.map(
+      (p: { pos: { x: number; y: number; z: number } }) => p.pos,
+    ),
+    [
+      { x: 0, y: 1, z: 0 },
+      { x: 0, y: 1, z: 1 },
+    ],
+  );
 });

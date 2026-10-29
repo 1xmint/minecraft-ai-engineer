@@ -215,3 +215,20 @@ AND physics/recovery evidence is not model inference. Synthetic support/lever
 seeding is not human mouse placement, Mojang authentication or the full Phase1
 player-built functional-component experience. Credentials remain local; no paid
 API fallback or automatic model retry is used.
+
+### First Boolean live attempt: failure retained
+
+Source `ee2745f` passed all five required checks in
+[CI40905604442](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40905604442).
+The actual [Boolean attempt40906470078](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40906470078)
+accepted the exact requested AND behavior from response40907741010, then the local
+geometry validator rejected missing wall-lever backing. The raw explanation also
+incorrectly treated serial repeaters as AND. No Boolean construction or functional
+pass followed. The workflow was cancelled after this local rejection; it is not a
+successful live acceptance. Both model-call receipts are consumed.
+
+The unchanged failed reply and usage are retained in
+`tests/fixtures/live-boolean-missing-support.json`. Geometry guidance now states
+precise attachment rules and native-proven Boolean composition. Regression checks
+and a new bounded receipt pair must establish whether that guidance produces a
+working model design. A passing hand-authored AND remains separate evidence.
