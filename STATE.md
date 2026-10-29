@@ -334,3 +334,12 @@ state; SQLite must contain exactly two owner discussion audits/dispatches. These
 fixtures do not prove fresh model behavior. The prior note-only CI40956149245 was
 still running its dedicated multiplayer step at last inspection; do not restart
 or label it terminal based on duration alone.
+
+Verified note-only source9198c2a: all five checks passed in CI40956149245. Downloaded
+and inspected work/knowledge-proof-40956149245: all four knowledge markers passed;
+Alice recorded goal/decision at21:21:09 UTC, Bob read revision2 and was denied
+owner authorship at21:21:10, and actual later boot read revision2 then appended
+constraint revision3 at21:22:53. The CI SQLite verifier required exactly three
+literal owner-authored notes. This proves the native note/revocation/game-restart
+slice on that source, not fresh inference or conversation behavior. Conversation
+source6ccd7d6 now needs its own complete CI; keep PR23 draft until remaining proofs.
