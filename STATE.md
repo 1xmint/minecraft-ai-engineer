@@ -315,3 +315,23 @@ final verifier; this grants no execution and fabricates no new functional eviden
 Retained native artifacts: `work/restored-proof-40799470025`. The complete gate is
 still pending; no broad completion claim. Phase12 acceptance-contract work is on
 separate branch/PR21 and does not alter this higher-priority recovery fix.
+
+## Verified restored-layout result
+
+Source **aa73e65092ad623ae8af8b5a2e208e6ced83996b** passed all five gates in
+**CI40800347568**. Inspected retained artifacts at
+`work/restored-proof-40800347568`: `structural-replan-recovery.done` passed, actual
+fourth-boot epoch differs from the third, original physical source survived,
+corrupt/stale restored metadata was refused, a real edit was preserved before
+inference, another explicit proposal/apply completed, real12/16 timing passed
+at01:31:47, and the second undo retained both player supports and older work.
+The final SQLite verifier passed with exactly four starts for the two explicit
+behavior/geometry pairs and correctly separated current-epoch mirrors from older
+immutable recovery evidence. No local tests ran and no fresh structural inference
+is claimed from these hand-authored fixture responses.
+
+Ship R1-R3 after the final note commit's required checks. PR21 separately adds the
+actual signed-in structural scenario: its contract service tests passed, native
+path compiles, but manual SDK calls and full new live proof remain outstanding.
+Continue all remaining roadmap Outcomes and all six Phase2 features afterward;
+the overall goal is active and unfinished.
