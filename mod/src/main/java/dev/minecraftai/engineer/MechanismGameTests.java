@@ -207,6 +207,21 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
+    @GameTest public void truthTableBehaviorIsCompleteIndependentAndImmutable(GameTestHelper helper) {
+        var names=new java.util.ArrayList<>(java.util.List.of("a","b"));var outputs=new java.util.ArrayList<>(java.util.List.of(false,false,false,true));
+        var truth=new TruthTableSpec(names,outputs,20);names.set(0,"changed");outputs.set(3,false);
+        helper.assertTrue(truth.inputs().equals(java.util.List.of("a","b")) && truth.outputs().get(3),"Accepted names/table do not alias caller buffers");
+        helper.assertTrue(truth.digest().equals("665ee0ba2c6277abe2c658261c5d83eb06a8d218d3113baa75014549387667d9"),"Truth-table wire identity matches the shared cross-runtime golden digest");
+        helper.assertTrue(truth.inputValue(2,0) && !truth.inputValue(2,1),"The first declared input is the most significant row bit");
+        helper.assertTrue(EngineeringBehavior.read(truth.json()).equals(truth),"A typed schema2 behavior survives exact JSON parsing");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("a","a"),java.util.List.of(false,false,false,true),20),"Duplicate input IDs are not separate physical ports");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("output"),java.util.List.of(false,true),20),"The output name is reserved");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,true),20),"A partial table cannot stand in for all combinations");
+        var forged=truth.json();forged.addProperty("authority",true);reject(helper,()->TruthTableSpec.read(forged),"Truth tables contain no authority fields");
+        var wrongType=truth.json();wrongType.getAsJsonArray("outputs").set(0,new com.google.gson.JsonPrimitive(0));reject(helper,()->TruthTableSpec.read(wrongType),"Numeric outputs are not Booleans");
+        helper.assertTrue(EngineeringBehavior.read(new BehaviorSpec(12,16).json()).equals(new BehaviorSpec(12,16)),"Legacy buffer parsing stays distinct and unchanged");
+        helper.succeed();
+    }
     static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}

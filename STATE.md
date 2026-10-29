@@ -5,8 +5,7 @@ engineering partner and all six phase2 features. Do not redefine completion arou
 a catalog, buffer, screenshot, release or green CI.
 
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/12-live-structural-proof**, draft **PR21**, based on merged PR20
-**55a48582003b2b91ffb50d26dd74b8846679ff9e**. PR19 merged as1e97bc3.
+Branch **phase/13-generated-logic**, based on merged PR21 **e3f26d88f40270854005a339cba67e17d157eb9a**. Final replay sourcea504014 passed all five gates **CI40808845287**. PR20 merged55a4858; PR19 merged1e97bc3.
 Read actual GitHub/worktree state before continuing. AGENTS.md and this file are
 our only project memory; product requirements remain in docs/product-brief.md.
 
@@ -188,3 +187,38 @@ placement do not prove human mouse use or Mojang authentication.
 
 2026-10-28 memory cleanup: replace superseded chronological notes with this current
 map and exact proof handles; keep the full objective and honest limitations.
+
+## Active slice: generated combinational logic (G2/interfaces)
+
+- T1: independently accept named one-to-four Boolean inputs and a complete output
+  table, without treating geometry as its own specification. Proof: exact schema2,
+  exhaustive row count, unique bounded names, strict Booleans, stable cross-runtime
+  digest and rejection of incomplete/extra/ambiguous data. Schema1 buffer bytes,
+  digests, geometry and exact-edge tests remain unchanged.
+- T2: generate/preview/build a real two-input AND circuit from raw geometry, with
+  all input ports bound to actual distinct levers and the output to a lamp. Proof:
+  no-edit preview, separate owner authorization, all four Boolean cases in actual
+  Minecraft and player/AI handoff. The circuit is not restricted to a catalog shape.
+- T3: test all declared vectors forward and backward, sampling every game tick
+  after the accepted settling bound through eight stable ticks. Proof: wrong logic,
+  incomplete/gapped/forged evidence and changed inputs fail honestly; actual
+  interruption/revocation/restart restores original inputs under fresh authority.
+  A settled truth table does not claim exact latency or universal formal proof.
+
+Decision: add a typed truth-table behavior beside the existing buffer type, not
+fake extra buffer timing fields or a shape-only catalog restriction. Schema2 has
+function=truth-table, inputs (1..4 unique [a-z][a-z0-9_]{0,31}, excluding output),
+outputs (2^n Booleans, row index bits in declared-input order, first input MSB),
+settleGameTicks (0..128). Stable window is server-fixed8. Digest UTF8 SHA256 of
+truth-v2|comma-joined-inputs|0/1-output-string|settle. Preserve buffer-v1 digest.
+New generated logic metadata uses generatorRevision2; buffer remains1. Add a
+shared behavior interface, reuse named port/test/restore infrastructure and bound
+world authority independently. Existing block library can build an AND reference;
+comparators/observers/pistons, memory and broader mechanics remain later work.
+
+Tasks: boundary proofs first (T1), pure data validators/digest (T1), runtime typed
+behavior and multi-input geometry/model schemas (T1/T2), actual sampled truth-table
+runner/evidence validation (T3), actual AND/native handoff/failure/restart proof
+(T2/T3), GitHub required checks then ship. No heavy review. Tests only in CI;
+local scoped compile/format checks. No new SDK calls until deterministic proofs
+are established; the earlier structural slice's receipts remain consumed.

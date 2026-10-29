@@ -10,7 +10,7 @@ import java.util.HexFormat;
 import java.util.Set;
 
 /** Independently accepted, observable behavior for a generated redstone buffer. */
-record BehaviorSpec(int risingGameTicks, int fallingGameTicks) {
+record BehaviorSpec(int risingGameTicks, int fallingGameTicks) implements EngineeringBehavior {
     BehaviorSpec {
         if (risingGameTicks < 0 || risingGameTicks > 128
                 || fallingGameTicks < 0 || fallingGameTicks > 128) {
@@ -29,7 +29,7 @@ record BehaviorSpec(int risingGameTicks, int fallingGameTicks) {
         return new BehaviorSpec(integer(json.get("risingGameTicks")), integer(json.get("fallingGameTicks")));
     }
 
-    JsonObject json() {
+    public JsonObject json() {
         JsonObject out = new JsonObject();
         out.addProperty("schemaVersion", 1);
         out.addProperty("function", "buffer");
@@ -38,7 +38,7 @@ record BehaviorSpec(int risingGameTicks, int fallingGameTicks) {
         return out;
     }
 
-    String digest() {
+    public String digest() {
         try {
             byte[] bytes = MessageDigest.getInstance("SHA-256").digest(
                     ("buffer-v1|" + risingGameTicks + "|" + fallingGameTicks).getBytes(StandardCharsets.UTF_8));
@@ -48,7 +48,7 @@ record BehaviorSpec(int risingGameTicks, int fallingGameTicks) {
         }
     }
 
-    String summary() {
+    public String summary() {
         return "Intended behavior: the lamp follows the lever, turning on after " + risingGameTicks
                 + " game ticks and off after " + fallingGameTicks + " game ticks. Functional testing is still required.";
     }

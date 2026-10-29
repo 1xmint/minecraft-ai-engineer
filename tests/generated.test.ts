@@ -304,3 +304,84 @@ test("recorded working structural reply is replayed as untested raw geometry", (
     repeaters: [4, 2],
   });
 });
+
+test("generated truth-table ports come from the independent complete behavior", () => {
+  const truth = {
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  };
+  const logic = {
+    name: "Raw AND wiring",
+    explanation: "Untested Boolean wiring.",
+    inputs: [
+      { name: "a", pos: { x: 3, y: 2, z: 0 } },
+      { name: "b", pos: { x: 0, y: 2, z: 3 } },
+    ],
+    output: { x: 5, y: 1, z: 3 },
+    blocks: [
+      ...[
+        [3, 1, 0],
+        [0, 1, 3],
+        [3, 0, 2],
+        [2, 0, 3],
+        [3, 1, 3],
+      ].map(([x, y, z]) => ({ pos: { x, y, z }, state: "minecraft:stone" })),
+      ...[
+        [3, 2, 0],
+        [0, 2, 3],
+      ].map(([x, y, z]) => ({
+        pos: { x, y, z },
+        state: "minecraft:lever[face=floor,facing=east,powered=false]",
+      })),
+      {
+        pos: { x: 3, y: 1, z: 1 },
+        state: "minecraft:redstone_wall_torch[facing=south,lit=true]",
+      },
+      {
+        pos: { x: 1, y: 1, z: 3 },
+        state: "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      },
+      {
+        pos: { x: 3, y: 1, z: 2 },
+        state:
+          "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 2, y: 1, z: 3 },
+        state:
+          "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 4, y: 1, z: 3 },
+        state: "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      },
+      {
+        pos: { x: 5, y: 1, z: 3 },
+        state: "minecraft:redstone_lamp[lit=false]",
+      },
+    ],
+  };
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+    logic,
+    truth,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.deepEqual(
+    blueprint.ports.map((p) => p.name),
+    ["a", "b", "output"],
+  );
+  assert.equal(blueprint.provenance.generatorRevision, 2);
+  assert.deepEqual(validateGeneratedBlueprint(blueprint).behavior, truth);
+  const missing = { ...logic, inputs: [logic.inputs[0]] };
+  assert.throws(() =>
+    makeGeneratedBlueprint(
+      { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+      missing,
+      truth,
+    ),
+  );
+});
