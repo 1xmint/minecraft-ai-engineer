@@ -430,7 +430,8 @@ is unconfirmed, read notes before retrying. Recent notes are shown; earlier
 records remain stored. Recent notes inform later planning as owner-authored requirements. A knowledge
 change invalidates pending reasoning. Free-form discussion remains unfinished.
 
-These commands are under development and still require native acceptance proof.
+Native owner/member/revocation and service/game restart acceptance passed.
+These source features are not a completed-product release.
 
 ## Project-grounded discussion (development branch)
 
@@ -452,5 +453,10 @@ Codex subscription connection. Only the configured owner/operator can dispatch i
 The shared queue and planning budget apply, with no automatic retry. Changing the
 project, lesson reference, permissions, connection or knowledge discards stale
 answers. `/engineer stop` cancels pending discussion. Routine `/engineer ask`
-lesson questions remain offline. Native fixture acceptance and a fresh signed-in
-conversation proof are still pending; this is not a completed release.
+lesson questions remain offline. Native deterministic acceptance and a fresh signed-in conversation passed in
+[the manual game proof](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40960496759).
+The actual answer distinguished saved requirements from missing rationale and
+made no claim that the circuit was built or tested. This remains a source feature,
+not a completed-product release.
+
+![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)

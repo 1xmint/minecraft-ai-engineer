@@ -275,3 +275,41 @@ test("manual broker cancellation never accepts a late response or authorizes ano
       rmSync(directory, { recursive: true, force: true });
     }
   }));
+
+test("the exact fresh signed-in reply retains both literal requirements and explicit uncertainty", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("../../tests/fixtures/live-discussion.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const request = readDiscussionAcceptanceRequest(
+    fixture.request,
+    fixture.request.run,
+    fixture.acceptedAt,
+  );
+  const response = readDiscussionAcceptanceResponse(
+    fixture.response,
+    fixture.request,
+    fixture.acceptedAt,
+  );
+  assert.equal(
+    request.run.sourceSha,
+    "b858364b5880a4ade5476b89c8f162643a45442a",
+  );
+  assert.equal(request.run.runId, "40960496759");
+  assert.equal(response.provenance.model, "gpt-6-luna");
+  assert.equal(response.result.kind, "explanation");
+  assert.match(
+    response.result.text,
+    /do not explain why visibility was preferred/,
+  );
+  assert.match(
+    response.result.text,
+    /no evidence that the circuit was built or tested/,
+  );
+  assert.equal(
+    response.result.basis.filter((id) => id.startsWith("note:")).length,
+    2,
+  );
+});
