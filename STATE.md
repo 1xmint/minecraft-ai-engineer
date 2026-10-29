@@ -304,3 +304,14 @@ empty, correctly triggering the production ambiguous-project refusal. Fix only
 the native wait to observe the explicit selection map until the command arrives;
 never infer a project or change production selection behavior. Retained artifacts:
 `work/restored-proof-40798707422`. Repeated revision acceptance remains pending.
+
+Sourcee5ea367 / CI40799470025 passed four gates and all native fourth-boot/replan/
+pre-quota rejection/timing/second-undo assertions (`structural-replan-recovery.done`
+passed). It then failed in the SQLite verifier: fresh epoch4 metadata was compared
+against the retained epoch3 recovery descriptor. Keep actual epoch3 audit checks,
+but compare current mirrors against the separately recorded real epoch4. Explicitly
+await read-only mirror acknowledgements for the three earlier projects before the
+final verifier; this grants no execution and fabricates no new functional evidence.
+Retained native artifacts: `work/restored-proof-40799470025`. The complete gate is
+still pending; no broad completion claim. Phase12 acceptance-contract work is on
+separate branch/PR21 and does not alter this higher-priority recovery fix.

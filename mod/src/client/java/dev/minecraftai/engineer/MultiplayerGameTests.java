@@ -466,7 +466,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
         send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==Integer.parseInt(read("structural-original-journal")));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralBefore().source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo retains the true original source again");check(project.structuralBefore().blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))) && project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE),"Second inverse restores original world geometry and preserves adopted player support");var restored=saved(project).getAsJsonObject("restoredLayout");check(restored.get("schemaVersion").getAsInt()==2 && restored.getAsJsonObject("before").equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo saves all distinct physical/accepted/proposed identities");});
-        assertPersisted(server);write("structural-replan-recovery.done","passed");
+        assertPersisted(server);
+        // Fresh mirrors describe saved intentions and stale state, not new functional passes.
+        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
+        for(var mirror:mirrors)check(mirror.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Latest boot acknowledges fresh metadata mirrors before persistence verification");
+        write("structural-replan-recovery.done","passed");
     }
     private static void workspaceExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String originalId=server.computeOnServer(s->session(s,"Alice").blueprint.id());int revision=server.computeOnServer(s->session(s,"Alice").revision());int journal=server.computeOnServer(s->session(s,"Alice").journal.size());
