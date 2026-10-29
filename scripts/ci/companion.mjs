@@ -1,6 +1,7 @@
 // Real HTTP gateway and SQLite persistence for the multiplayer proof. Inference
 // is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { writeFileSync, readFileSync } from "node:fs";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
@@ -28,13 +29,29 @@ const structuralFixture = JSON.parse(
     "utf8",
   ),
 );
+// Fixed request; recorded data below is replayed without signed-in inference.
+const truthRequest =
+  "CI generated AND: named inputs a and b; settle within 20 game ticks.";
+// Exact successful signed-in Boolean reply; deterministic replay never invokes inference.
+const truthFixture = JSON.parse(
+  readFileSync(
+    new URL("../../tests/fixtures/live-boolean-and.json", import.meta.url),
+    "utf8",
+  ),
+);
+
 const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
   token: config.token,
   store,
+  // Fixed synthetic stages can burst across several projects in this suite.
+  // This provider cannot invoke the SDK; production retains its default4/minute.
+  actorPlansPerMinute: 12,
   provider: {
     async proposeBehavior(input) {
+      if (input.request === truthRequest)
+        return structuredClone(truthFixture.proposal);
       if (
         ![
           "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
@@ -45,6 +62,12 @@ const server = createCompanionServer({
       return structuredClone(generatedFixture.proposal);
     },
     async generateGeometry(input) {
+      if (input.request === truthRequest) {
+        if (!isDeepStrictEqual(input.behavior, truthFixture.proposal.behavior))
+          throw new Error("Confirmed Boolean intent changed");
+        return structuredClone(truthFixture.geometry);
+      }
+
       if (
         ![
           "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",

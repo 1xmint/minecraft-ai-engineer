@@ -3,11 +3,14 @@ import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import {
   validateBehavior,
+  generatedTruthGeometrySchema,
+  validateGeneratedGeometry,
+  BEHAVIOR_PROPOSAL_SCHEMA,
   behaviorDigest,
   makeGeneratedBlueprint,
   validateGeneratedBlueprint,
 } from "../companion/src/generated.js";
-import { plannerConfig } from "../companion/src/provider.js";
+import { plannerConfig, plannerModel } from "../companion/src/provider.js";
 import type { DesignRequest } from "../companion/src/types.js";
 
 const input: DesignRequest = {
@@ -91,7 +94,8 @@ test("timing intent rejects unknown fields, wrong units, unbounded values and mo
   ])
     assert.throws(() => validateBehavior(bad));
   assert.equal(
-    validateBehavior({ ...behavior, risingGameTicks: 0 }).risingGameTicks,
+    (validateBehavior({ ...behavior, risingGameTicks: 0 }) as typeof behavior)
+      .risingGameTicks,
     0,
   );
   assert.notEqual(
@@ -303,4 +307,315 @@ test("recorded working structural reply is replayed as untested raw geometry", (
     kind: "hand-authored-reference",
     repeaters: [4, 2],
   });
+});
+
+test("generated truth-table ports come from the independent complete behavior", () => {
+  const truth = {
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  };
+  const logic = {
+    name: "Raw AND wiring",
+    explanation: "Untested Boolean wiring.",
+    inputs: [
+      { name: "a", pos: { x: 3, y: 2, z: 0 } },
+      { name: "b", pos: { x: 0, y: 2, z: 3 } },
+    ],
+    output: { x: 5, y: 1, z: 3 },
+    blocks: [
+      ...[
+        [3, 1, 0],
+        [0, 1, 3],
+        [3, 0, 2],
+        [2, 0, 3],
+        [3, 1, 3],
+      ].map(([x, y, z]) => ({ pos: { x, y, z }, state: "minecraft:stone" })),
+      ...[
+        [3, 2, 0],
+        [0, 2, 3],
+      ].map(([x, y, z]) => ({
+        pos: { x, y, z },
+        state: "minecraft:lever[face=floor,facing=east,powered=false]",
+      })),
+      {
+        pos: { x: 3, y: 1, z: 1 },
+        state: "minecraft:redstone_wall_torch[facing=south,lit=true]",
+      },
+      {
+        pos: { x: 1, y: 1, z: 3 },
+        state: "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      },
+      {
+        pos: { x: 3, y: 1, z: 2 },
+        state:
+          "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 2, y: 1, z: 3 },
+        state:
+          "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      },
+      {
+        pos: { x: 4, y: 1, z: 3 },
+        state: "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      },
+      {
+        pos: { x: 5, y: 1, z: 3 },
+        state: "minecraft:redstone_lamp[lit=false]",
+      },
+    ],
+  };
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+    logic,
+    truth,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.deepEqual(
+    blueprint.ports.map((p) => p.name),
+    ["a", "b", "output"],
+  );
+  assert.equal(blueprint.provenance.kind, "generated");
+  assert.ok(blueprint.provenance.kind === "generated");
+  assert.equal(blueprint.provenance.generatorRevision, 2);
+  assert.deepEqual(validateGeneratedBlueprint(blueprint).behavior, truth);
+  // Geometry cannot rename, alias, omit or invent independently accepted inputs.
+  for (const inputs of [
+    [...logic.inputs].reverse(),
+    [logic.inputs[0], { ...logic.inputs[1], pos: logic.inputs[0]!.pos }],
+    [logic.inputs[0], { ...logic.inputs[1], name: "other" }],
+    [...logic.inputs, { name: "hidden", pos: { x: 1, y: 2, z: 3 } }],
+  ])
+    assert.throws(() =>
+      makeGeneratedBlueprint(
+        { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+        { ...logic, inputs },
+        truth,
+      ),
+    );
+  for (const mutate of [
+    (b: typeof blueprint) => {
+      b.ports.reverse();
+    },
+    (b: typeof blueprint) => {
+      b.ports[0]!.name = "other";
+    },
+    (b: typeof blueprint) => {
+      if (b.provenance.kind === "generated") b.provenance.generatorRevision = 1;
+    },
+    (b: typeof blueprint) => {
+      b.behavior = {
+        ...truth,
+        outputs: [true, true, true, true],
+      } as NonNullable<typeof b.behavior>;
+    },
+  ]) {
+    const forged = structuredClone(blueprint);
+    mutate(forged);
+    assert.throws(() => validateGeneratedBlueprint(forged));
+  }
+  const missing = { ...logic, inputs: [logic.inputs[0]] };
+  assert.throws(() =>
+    makeGeneratedBlueprint(
+      { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+      missing,
+      truth,
+    ),
+  );
+});
+
+test("shared generated AND bytes validate identically in companion and Fabric", () => {
+  const blueprint = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../mod/src/main/resources/fixtures/generated-and.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(validateGeneratedBlueprint(blueprint), blueprint);
+  assert.equal(blueprint.behavior.function, "truth-table");
+  assert.equal(blueprint.ports.length, 3);
+});
+
+test("named geometry output schema binds accepted names and rotated workspace bounds", () => {
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["left", "right"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  assert.ok(behavior.function === "truth-table");
+  const schema = generatedTruthGeometrySchema(
+    { ...input, rotation: 90, maxSize: { x: 6, y: 3, z: 4 } },
+    behavior,
+  );
+  assert.deepEqual(schema.required, [
+    "name",
+    "explanation",
+    "blocks",
+    "inputs",
+    "output",
+  ]);
+  assert.equal("input" in schema.properties, false);
+  assert.equal(schema.properties.inputs.minItems, 2);
+  assert.equal(schema.properties.inputs.maxItems, 2);
+  assert.deepEqual(schema.properties.inputs.items.properties.name.enum, [
+    "left",
+    "right",
+  ]);
+  assert.deepEqual(schema.properties.inputs.items.properties.pos.properties.x, {
+    type: "integer",
+    minimum: 0,
+    maximum: 3,
+  });
+  assert.deepEqual(schema.properties.output.properties.z, {
+    type: "integer",
+    minimum: 0,
+    maximum: 5,
+  });
+  assert.equal(schema.properties.blocks.maxItems, 72);
+  assert.equal(schema.additionalProperties, false);
+});
+
+test("model behavior stage permits independent Boolean intent without reducing it to buffer timing", () => {
+  const variants = BEHAVIOR_PROPOSAL_SCHEMA.properties.behavior.anyOf;
+  assert.equal(variants.length, 3);
+  assert.ok(
+    variants.some(
+      (v) =>
+        "properties" in v &&
+        v.properties.function.enum.some((name) => name === "truth-table"),
+    ),
+  );
+  const instructions = String(plannerConfig("behavior").developer_instructions);
+  assert.match(instructions, /one to four unique named lever inputs/);
+  assert.match(instructions, /first input most significant/);
+  assert.match(instructions, /requires owner confirmation/);
+  assert.doesNotMatch(instructions, /Only a one-lever one-lamp buffer/);
+});
+
+test("unaltered first live Boolean reply rejects before preview because wall lever backing is absent", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-boolean-missing-support.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  const before = JSON.stringify(recorded.geometry);
+  assert.equal(recorded.kind, "rejected-live-model-geometry");
+  assert.throws(
+    () => validateGeneratedGeometry(recorded.geometry, behavior),
+    /missing required stone support/i,
+  );
+  assert.equal(
+    JSON.stringify(recorded.geometry),
+    before,
+    "Failed raw reply remains unchanged, including its wrong lever placements",
+  );
+  assert.deepEqual(
+    recorded.geometry.inputs.map(
+      (p: { pos: { x: number; y: number; z: number } }) => p.pos,
+    ),
+    [
+      { x: 0, y: 1, z: 0 },
+      { x: 0, y: 1, z: 1 },
+    ],
+  );
+});
+
+test("model policy reserves stronger spatial reasoning for Boolean geometry and honors explicit choices", () => {
+  assert.equal(plannerModel("catalog"), "gpt-6-luna");
+  assert.equal(plannerModel("behavior"), "gpt-6-luna");
+  assert.equal(plannerModel("geometry", {}, "buffer"), "gpt-6-luna");
+  assert.equal(plannerModel("geometry", {}, "truth-table"), "gpt-6.1-sol");
+  assert.equal(
+    plannerModel("geometry", { model: "chosen-model" }, "truth-table"),
+    "chosen-model",
+  );
+  assert.equal(
+    plannerModel(
+      "geometry",
+      { model: "chosen-model", geometryModel: "spatial-model" },
+      "truth-table",
+    ),
+    "spatial-model",
+  );
+  assert.equal(
+    plannerModel("behavior", {
+      model: "chosen-model",
+      geometryModel: "spatial-model",
+    }),
+    "chosen-model",
+  );
+});
+test("recorded Sol AND reply stays untested on replay and retains actual independent behavior", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL("../../tests/fixtures/live-boolean-and.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 6, y: 3, z: 4 } },
+    recorded.geometry,
+    recorded.proposal.behavior,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(recorded.provenance.model, "gpt-6.1-sol");
+  assert.deepEqual(
+    validateGeneratedBlueprint(blueprint).behavior,
+    recorded.proposal.behavior,
+  );
+  assert.deepEqual(
+    blueprint.ports.map((p) => p.name),
+    ["a", "b", "output"],
+  );
+});
+test("second unchanged Luna reply rejects overlapping torch and lamp positions", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-boolean-overlap.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const behavior = validateBehavior({
+    schemaVersion: 2,
+    function: "truth-table",
+    inputs: ["a", "b"],
+    outputs: [false, false, false, true],
+    settleGameTicks: 20,
+  });
+  assert.throws(
+    () => validateGeneratedGeometry(recorded.geometry, behavior),
+    /duplicate generated block position/i,
+  );
+  const colliding = recorded.geometry.blocks.filter(
+    (b: { pos: { x: number; y: number; z: number } }) =>
+      b.pos.x === 5 && b.pos.y === 1 && b.pos.z === 1,
+  );
+  assert.equal(colliding.length, 2);
+  assert.equal(
+    colliding[0].state,
+    "minecraft:redstone_wall_torch[facing=west,lit=false]",
+  );
+  assert.equal(colliding[1].state, "minecraft:redstone_lamp[lit=false]");
 });

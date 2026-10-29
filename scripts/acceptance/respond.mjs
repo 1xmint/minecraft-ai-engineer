@@ -226,9 +226,9 @@ async function main() {
   const scenario =
     options["--scenario"] ?? (stage === "catalog" ? "catalog" : "generated");
   check(
-    ["catalog", "generated", "structural"].includes(scenario) &&
+    ["catalog", "generated", "structural", "boolean"].includes(scenario) &&
       (stage === "catalog") === (scenario === "catalog"),
-    "Scenario must match catalog or a generated/structural stage.",
+    "Scenario must match catalog or a generated/structural/boolean stage.",
   );
   const generated = stage !== "catalog",
     suffix = generated ? `-${stage}` : "";
@@ -239,11 +239,13 @@ async function main() {
     runId: options["--run"],
     runAttempt: Number(options["--attempt"]),
     scenario:
-      scenario === "structural"
-        ? "structural-buffer-owner-confirmation-v1"
-        : generated
-          ? "generated-buffer-owner-confirmation-v1"
-          : "signal-lamp-client-handoff-v1",
+      scenario === "boolean"
+        ? "generated-boolean-owner-confirmation-v1"
+        : scenario === "structural"
+          ? "structural-buffer-owner-confirmation-v1"
+          : generated
+            ? "generated-buffer-owner-confirmation-v1"
+            : "signal-lamp-client-handoff-v1",
   };
   check(
     (

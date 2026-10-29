@@ -176,3 +176,87 @@ initial reference is hand-authored; this proves its live model modification, not
 fresh initial generation, general engineering, human mouse use or Mojang sign-in.
 The earlier failed run is still a failure; source-grounded direction guidance and
 one new bounded run produced the successful result above.
+
+## Complete Boolean design (source build)
+
+The explicit `boolean` scenario requests a new AND design with named lever inputs
+`a` and `b`, one lamp output, and a20-game-tick settling bound. It uses a fresh
+6x3x4 workspace at400,100,0 and empty synthetic project memory. Existing buffer
+and structural scenarios and their consumed receipts remain separate.
+
+After required regression checks pass on the exact clean source branch, dispatch
+`live-acceptance.yml` with `scenario=boolean`. Validate the actual first request
+and its run/source/owner/stage binding before invoking the local responder. Each
+command is one explicit bounded model call, only after its request artifact exists:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior --scenario boolean
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6.1-sol --stage geometry --scenario boolean
+```
+
+The native owner checks the entire independently requested table before confirming
+geometry. A proposal is not building authority. The flow uses the actual returned
+layout, seeds its supports and two differently powered levers as an explicitly
+synthetic existing player section, then delegates the remaining devices. It tests
+all rows forward/reverse using every-tick stability, restarts the actual companion,
+interrupts a second trial by revoking a grant, and boots the saved server again.
+Fresh owner resume must restore both original inputs; a new trial must pass.
+
+Retain and inspect both accepted receipts, `truth-accepted-source`,
+`truth-interrupted.done`, `truth-recovery.done`, `live-boolean-model.done`,
+`live-boolean-recovery.done` and screenshot
+`engineer-live-boolean-restarted-build`. SQLite proof requires exactly two planning
+starts and distinct completed trials before/after restart. Missing ticks are
+inconclusive; a correct geometry or final reading alone cannot pass. Preserve
+failed raw replies unchanged and never retry consumed started receipts.
+
+The successful signed-in Boolean proof is recorded below. Existing hand-authored
+AND physics/recovery evidence remains separate from fresh model inference. Synthetic support/lever
+seeding is not human mouse placement, Mojang authentication or the full Phase1
+player-built functional-component experience. Credentials remain local; no paid
+API fallback or automatic model retry is used.
+
+### First Boolean live attempt: failure retained
+
+Source `ee2745f` passed all five required checks in
+[CI40905604442](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40905604442).
+The actual [Boolean attempt40906470078](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40906470078)
+accepted the exact requested AND behavior from response40907741010, then the local
+geometry validator rejected missing wall-lever backing. The raw explanation also
+incorrectly treated serial repeaters as AND. No Boolean construction or functional
+pass followed. The workflow was cancelled after this local rejection; it is not a
+successful live acceptance. Both model-call receipts are consumed.
+
+The unchanged failed reply and usage are retained in
+`tests/fixtures/live-boolean-missing-support.json`. Geometry guidance now states
+precise attachment rules and native-proven Boolean composition. Regression checks
+and a new bounded receipt pair must establish whether that guidance produces a
+working model design. A passing hand-authored AND remains separate evidence.
+
+### Second Luna reply rejected; Sol geometry passed
+
+Source `d3c8486` passed all five checks in
+[CI40908760538](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40908760538).
+The second Luna attempt40908843817 returned a torch and lamp at the same position;
+local validation rejected it before construction. Its unchanged raw reply is
+`tests/fixtures/live-boolean-overlap.json`; both receipts are consumed. The run was
+cancelled after that rejection. No failed reply was silently repaired.
+
+The full [signed-in Boolean run40910817937](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40910817937)
+then passed on the same source and constraints. Behavior response40911887391 used
+Luna; geometry response40912161087 used Sol. The actual13-block layout differs from
+the hand-authored reference. Native confirmation, preview without edits, explicit
+build, all8 forward/reverse cases, companion restart4778->5851, revoked interruption,
+actual saved-server restart, fresh owner restoration and a second trial all passed.
+Trials completed at16:30:43 and16:31:11. Both accepted request/result digests match
+the exclusive local receipts. The inspected screenshot shows real blocks:
+
+![Actual model-generated AND after restart](images/boolean-restarted.png)
+
+`tests/fixtures/live-boolean-and.json` retains the exact successful proposal/raw
+geometry and separate model provenance. Ordinary CI replays that data, starting
+untested and deriving the synthetic existing lever/backing section from its real
+ports. Actual tests must establish behavior again; replay is not fresh inference.
+The bounded result does not prove general engineering, human mouse placement or
+Mojang authentication. All six Boolean calls across the three attempts are consumed.
+Do not make further calls or reuse their exclusive started receipts for this slice.

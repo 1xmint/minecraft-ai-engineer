@@ -4,7 +4,7 @@ on:
     inputs:
       scenario:
         type: choice
-        options: [catalog, generated, structural]
+        options: [catalog, generated, structural, boolean]
         default: catalog
       stage:
         type: choice
@@ -45,6 +45,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MCE_ACCEPTANCE_STAGE: ${{ inputs.stage }}
           MCE_STRUCTURAL_ACCEPTANCE: ${{ inputs.scenario == 'structural' && 'true' || 'false' }}
+          MCE_BOOLEAN_ACCEPTANCE: ${{ inputs.scenario == 'boolean' && 'true' || 'false' }}
         run: node scripts/ci/live-transport.mjs publish-response
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

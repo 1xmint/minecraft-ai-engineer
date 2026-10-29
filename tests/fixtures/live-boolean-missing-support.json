@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "kind": "rejected-live-model-geometry",
+  "sourceSha": "ee2745f573ccda24181d44e6159f66e38f089b88",
+  "requestRun": "40906470078",
+  "behaviorResponseRun": "40907741010",
+  "geometryRequestDigest": "33ae3c92f3ea8491b96f9130a6a592987b50f640be358cb912a92199993af0bd",
+  "model": "gpt-6-luna",
+  "sdkVersion": "0.164.0",
+  "usage": {
+    "input_tokens": 11417,
+    "cached_input_tokens": 0,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 434,
+    "reasoning_output_tokens": 0
+  },
+  "localValidation": "Generated mechanism is missing required stone support.",
+  "geometry": {
+    "name": "Two-input AND circuit",
+    "explanation": "Two side-mounted levers feed a pair of repeaters in series. The second repeater is powered only when both levers are on, lighting the lamp.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=wall,facing=east,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:lever[face=wall,facing=east,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "output": {
+      "x": 5,
+      "y": 1,
+      "z": 0
+    },
+    "inputs": [
+      {
+        "name": "a",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        }
+      },
+      {
+        "name": "b",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 1
+        }
+      }
+    ]
+  }
+}

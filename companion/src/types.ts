@@ -84,7 +84,7 @@ export interface Blueprint {
     | {
         kind: "generated";
         minecraft: "26.3";
-        generatorRevision: 1;
+        generatorRevision: 1 | 2;
         behaviorDigest: string;
         template?: never;
         catalogRevision?: never;

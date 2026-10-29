@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "revision": 1,
+  "projectId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "worldId": "test",
+  "dimension": "minecraft:overworld",
+  "name": "Raw AND wiring",
+  "explanation": "Untested Boolean wiring.",
+  "anchor": {
+    "x": 2,
+    "y": 2,
+    "z": 2
+  },
+  "rotation": 0,
+  "blocks": [
+    {
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 3
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 0,
+        "z": 2
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 2,
+        "z": 3
+      },
+      "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 1
+      },
+      "state": "minecraft:redstone_wall_torch[facing=south,lit=true]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 2
+      },
+      "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 2,
+        "z": 0
+      },
+      "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:redstone_lamp[lit=false]",
+      "stage": "devices",
+      "component": "root",
+      "prerequisites": [
+        "support"
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "id": "support",
+      "title": "Build the support",
+      "explanation": "Place the stone supports for the generated mechanism.",
+      "prerequisites": []
+    },
+    {
+      "id": "devices",
+      "title": "Install the devices",
+      "explanation": "Place the lever, repeaters and output lamp.",
+      "prerequisites": [
+        "support"
+      ]
+    }
+  ],
+  "bounds": {
+    "min": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "max": {
+      "x": 5,
+      "y": 2,
+      "z": 3
+    }
+  },
+  "resources": {
+    "minecraft:stone": 5,
+    "minecraft:lever": 2,
+    "minecraft:redstone_torch": 3,
+    "minecraft:repeater": 2,
+    "minecraft:redstone_lamp": 1
+  },
+  "ports": [
+    {
+      "name": "a",
+      "pos": {
+        "x": 3,
+        "y": 2,
+        "z": 0
+      },
+      "kind": "input"
+    },
+    {
+      "name": "b",
+      "pos": {
+        "x": 0,
+        "y": 2,
+        "z": 3
+      },
+      "kind": "input"
+    },
+    {
+      "name": "output",
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 3
+      },
+      "kind": "output"
+    }
+  ],
+  "tests": [
+    {
+      "id": "truth-table",
+      "description": "Intended truth table (settle within 20 game ticks; then stable for 8 game ticks):\na=off, b=off -> output=off\na=off, b=on -> output=off\na=on, b=off -> output=off\na=on, b=on -> output=on"
+    }
+  ],
+  "provenance": {
+    "kind": "generated",
+    "minecraft": "26.3",
+    "generatorRevision": 2,
+    "behaviorDigest": "665ee0ba2c6277abe2c658261c5d83eb06a8d218d3113baa75014549387667d9"
+  },
+  "behavior": {
+    "schemaVersion": 2,
+    "function": "truth-table",
+    "inputs": [
+      "a",
+      "b"
+    ],
+    "outputs": [
+      false,
+      false,
+      false,
+      true
+    ],
+    "settleGameTicks": 20
+  },
+  "verification": "untested"
+}

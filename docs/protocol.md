@@ -216,7 +216,8 @@ POST `/v2/behavior/propose` uses the design context, explicit model authorizatio
 and operator fields, and a required bounded workspace `maxSize`. It requires the
 current owner with PLAN permission and a connected native `connectionId`. It
 returns `proposal:{behavior,explanation}` without changing canonical revision.
-Behavior is null for unsupported/unclear intent, or exact schema1 buffer intent
+Behavior is null for unsupported/unclear intent, exact schema2 Boolean intent as
+described below, or exact schema1 buffer intent
 with integer `risingGameTicks` and `fallingGameTicks`, each0..128. These describe
 observable output latency, independently of block geometry or repeater labels.
 
@@ -244,3 +245,57 @@ behavior digest. Case0 contains bounded baseline samples; cases1/2 contain
 replayable schema1 transition traces. Stored verdicts/first-transition claims are
 recomputed from samples and compared with independently accepted timings. Partial,
 failed or interrupted evidence restores no authority and cannot become a pass.
+
+### Complete Boolean behavior (development branch)
+
+The data validators and server runner additionally support exact schema2 behavior:
+
+```json
+{
+  "schemaVersion": 2,
+  "function": "truth-table",
+  "inputs": ["a", "b"],
+  "outputs": [false, false, false, true],
+  "settleGameTicks": 20
+}
+```
+
+There are one to four unique input names matching `[a-z][a-z0-9_]{0,31}`;
+`output` is reserved for the lamp. Outputs contain exactly `2^N` strict Booleans.
+Row indices encode input values in declared order, first input most significant:
+the example is AND, with rows `00`, `01`, `10`, `11`. The integer settling bound
+is0..128 game ticks. Fields, names, ordering and row completeness are validated
+independently of generated geometry. The digest is SHA-256 of UTF-8
+`truth-v2|COMMA_JOINED_NAMES|OUTPUT_BITS|SETTLE`; the example hashes
+`truth-v2|a,b|0001|20`. Immutable accepted data contains no execution authority.
+
+A generated Boolean blueprint keeps the outer schema1 envelope but uses
+`generatorRevision:2`. Raw geometry has `inputs:[{name,pos},...]` in accepted
+input order and one `output` position. Code requires distinct actual levers and
+exactly one lamp, with no undeclared levers or lamps, then derives canonical
+ports, resources, stages and tests. Both runtimes reconstruct and compare all
+derived metadata. Buffer revision1 geometry and digest remain unchanged.
+
+The server visits every row in ascending then descending order, including the
+repeated last row. Each case records every tick from activation tick0 through
+`settleGameTicks+8`, with the expected output required at the settling tick and
+through the eight subsequent ticks. Outputs before the settling bound are recorded
+but are not exact latency claims. A transient wrong output in the stable window
+fails; a sampling gap is inconclusive. A correct final value alone never passes.
+
+Each case binds case index, row, behavior digest, observed named inputs/output,
+game tick, elapsed ticks and a schema1 settled trace. Stored verdicts and summaries
+are replayed against accepted intent. A finished case must pass before another
+case begins, and adjacent case timestamps must agree. A complete pass requires
+all `2*2^N` cases. The existing per-input write-ahead journal preserves each
+original lever state; interruption, revocation or restart never renews authority.
+Fresh explicit authority is required for pending restoration, and player edits
+are preserved.
+
+The model adapter now accepts Boolean intent and named geometry through the same
+separate owner confirmation and build authorization stages. Missing settling bounds
+may be proposed as20 game ticks, explicitly explained for owner confirmation; they
+are not exact latency promises. Dedicated native authority/recovery acceptance
+passed on source52b1296. The shared AND fixture remains hand-authored raw wiring:
+those tests prove its behavior, not fresh model generation or the complete product
+experience.

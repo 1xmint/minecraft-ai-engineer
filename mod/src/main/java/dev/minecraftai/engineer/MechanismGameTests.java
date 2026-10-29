@@ -207,6 +207,99 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
+    @GameTest(maxTicks=280) public void generatedAndObservesEveryForwardReverseTruthRow(GameTestHelper helper) { generatedAnd(helper,false); }
+    @GameTest(maxTicks=280) public void generatedAndCannotPassAnIndependentlyRequestedOrTable(GameTestHelper helper) { generatedAnd(helper,true); }
+    private static void generatedAnd(GameTestHelper helper,boolean wrongIntent) {
+        com.google.gson.JsonObject source;
+        try(var stream=MechanismGameTests.class.getResourceAsStream("/fixtures/generated-and.json")) {
+            if(stream==null)throw new IllegalStateException("Missing shared generated AND fixture");
+            source=com.google.gson.JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch(java.io.IOException invalid){throw new IllegalStateException(invalid);}
+        var blueprint=Blueprint.parse(source,"test","minecraft:overworld");GeneratedBlueprint.validate(blueprint);
+        var behavior=(TruthTableSpec)GeneratedBlueprint.behavior(blueprint);var contract=GeneratedBlueprint.contract(blueprint);
+        helper.assertTrue(contract.ports().size()==3 && contract.cases().size()==8,"Server and companion agree on named ports and complete forward/reverse cases");
+        var forged=source.deepCopy();forged.getAsJsonArray("ports").get(0).getAsJsonObject().addProperty("name","other");
+        reject(helper,()->GeneratedBlueprint.validate(Blueprint.parse(forged,"test","minecraft:overworld")),"Names cannot diverge from accepted intent");
+        for(var block:blueprint.blocks())helper.setBlock(block.pos(),block.state());
+        var expected=wrongIntent?new TruthTableSpec(behavior.inputs(),java.util.List.of(false,true,true,true),behavior.settleGameTicks()):behavior;
+        var traces=new java.util.ArrayList<SettledTrace>();
+        for(int index=0;index<contract.cases().size();index++) {
+            int row=GeneratedBlueprint.truthRow(expected,index);var trace=new SettledTrace(expected,row);traces.add(trace);
+            int start=30+index*(trace.horizon()+1);var vector=contract.cases().get(index);
+            helper.runAtTickTime(start,()->{
+                for(var port:contract.ports())if(port.input()) {
+                    boolean actual=helper.getBlockState(port.pos()).getValue(BlockStateProperties.POWERED);
+                    if(actual!=vector.inputs().get(port.name()))helper.pullLever(port.pos());
+                }
+                var output=contract.ports().getLast();trace.sample(0,helper.getBlockState(output.pos()).getValue(BlockStateProperties.LIT));
+            });
+            for(int elapsed=1;elapsed<=trace.horizon();elapsed++) {
+                int at=elapsed;helper.runAtTickTime(start+elapsed,()->trace.sample(at,helper.getBlockState(contract.ports().getLast().pos()).getValue(BlockStateProperties.LIT)));
+            }
+        }
+        helper.runAtTickTime(264,()->{
+            if(wrongIntent)helper.assertTrue(traces.stream().anyMatch(t->!t.passed()),"The same blocks cannot pass a different independently requested function");
+            else for(var trace:traces)helper.assertTrue(trace.passed(),"Actual generated AND must satisfy every stable row: "+trace.failure());
+            helper.succeed();
+        });
+    }
+
+    @GameTest public void completeTruthEvidenceCannotSwapCasesInputsOrTime(GameTestHelper helper) {
+        var behavior=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,true),2);
+        var cases=new com.google.gson.JsonArray();long tick=100;
+        for(int index=0;index<8;index++) {
+            int number=GeneratedBlueprint.truthRow(behavior,index);var trace=new SettledTrace(behavior,number);
+            for(int elapsed=0;elapsed<=trace.horizon();elapsed++)trace.sample(elapsed,behavior.outputs().get(number));
+            var row=new com.google.gson.JsonObject();row.addProperty("case",index);row.addProperty("row",number);
+            row.addProperty("behaviorDigest",behavior.digest());tick+=trace.horizon();row.addProperty("tick",tick);row.addProperty("elapsedTicks",trace.horizon());
+            var inputs=new com.google.gson.JsonObject();inputs.addProperty("a",behavior.inputValue(number,0));inputs.addProperty("b",behavior.inputValue(number,1));row.add("inputs",inputs);
+            var outputs=new com.google.gson.JsonObject();outputs.addProperty("output",behavior.outputs().get(number));row.add("outputs",outputs);row.add("trace",trace.json());cases.add(row);
+        }
+        FunctionalTrial.validateTruthEvidence(cases,behavior,true);
+        var missing=cases.deepCopy();missing.remove(7);reject(helper,()->FunctionalTrial.validateTruthEvidence(missing,behavior,true),"Every reverse row is required");
+        var wrongCase=cases.deepCopy();wrongCase.get(1).getAsJsonObject().addProperty("row",2);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongCase,behavior,true),"Rows cannot be reordered");
+        var wrongInput=cases.deepCopy();wrongInput.get(1).getAsJsonObject().getAsJsonObject("inputs").addProperty("a",true);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongInput,behavior,true),"Inputs are checked against the independent vector");
+        var wrongTime=cases.deepCopy();wrongTime.get(1).getAsJsonObject().addProperty("tick",121);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongTime,behavior,true),"Phase game-time boundaries must agree");
+        var wrongSummary=cases.deepCopy();wrongSummary.get(3).getAsJsonObject().getAsJsonObject("outputs").addProperty("output",false);reject(helper,()->FunctionalTrial.validateTruthEvidence(wrongSummary,behavior,true),"Output summary must equal observed trace");
+        var unfinished=cases.deepCopy();var first=unfinished.get(0).getAsJsonObject();var trace=new SettledTrace(behavior,0);trace.sample(0,false);first.add("trace",trace.json());first.addProperty("elapsedTicks",0);first.addProperty("tick",100);
+        reject(helper,()->FunctionalTrial.validateTruthEvidence(unfinished,behavior,false),"An unfinished case cannot authorize progress to another case");
+        helper.succeed();
+    }
+
+    @GameTest public void settledTruthTraceRequiresEveryStableTickAndAcceptedIntent(GameTestHelper helper) {
+        var behavior = new TruthTableSpec(java.util.List.of("a","b"), java.util.List.of(false,false,false,true), 2);
+        var good = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=good.horizon();tick++)good.sample(tick,tick>=2);
+        helper.assertTrue(good.passed() && SettledTrace.read(good.json(),behavior).passed(),"Complete accepted trace replays");
+        var bad = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=bad.horizon();tick++)bad.sample(tick,tick!=5);
+        helper.assertTrue(!bad.passed() && bad.verdict().equals("failed"),"One transient wrong output fails despite correct endpoint");
+        var gap = new SettledTrace(behavior,3);
+        for(int tick=0;tick<=gap.horizon();tick++)if(tick!=5)gap.sample(tick,true);
+        helper.assertTrue(!gap.passed() && gap.verdict().equals("inconclusive"),"Missing ticks cannot prove stability");
+        var forged=gap.json();forged.addProperty("verdict","passed");
+        reject(helper,()->SettledTrace.read(forged,behavior),"Forged verdict rejects");
+        var different=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,false),2);
+        reject(helper,()->SettledTrace.read(good.json(),different),"Trace binds independent accepted intent");
+        reject(helper,()->good.sample(10,true),"Duplicate samples reject");
+        helper.succeed();
+    }
+
+    @GameTest public void truthTableBehaviorIsCompleteIndependentAndImmutable(GameTestHelper helper) {
+        var names=new java.util.ArrayList<>(java.util.List.of("a","b"));var outputs=new java.util.ArrayList<>(java.util.List.of(false,false,false,true));
+        var truth=new TruthTableSpec(names,outputs,20);names.set(0,"changed");outputs.set(3,false);
+        helper.assertTrue(truth.inputs().equals(java.util.List.of("a","b")) && truth.outputs().get(3),"Accepted names/table do not alias caller buffers");
+        helper.assertTrue(truth.digest().equals("665ee0ba2c6277abe2c658261c5d83eb06a8d218d3113baa75014549387667d9"),"Truth-table wire identity matches the shared cross-runtime golden digest");
+        helper.assertTrue(truth.inputValue(2,0) && !truth.inputValue(2,1),"The first declared input is the most significant row bit");
+        helper.assertTrue(EngineeringBehavior.read(truth.json()).equals(truth),"A typed schema2 behavior survives exact JSON parsing");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("a","a"),java.util.List.of(false,false,false,true),20),"Duplicate input IDs are not separate physical ports");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("output"),java.util.List.of(false,true),20),"The output name is reserved");
+        reject(helper,()->new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,true),20),"A partial table cannot stand in for all combinations");
+        var forged=truth.json();forged.addProperty("authority",true);reject(helper,()->TruthTableSpec.read(forged),"Truth tables contain no authority fields");
+        var wrongType=truth.json();wrongType.getAsJsonArray("outputs").set(0,new com.google.gson.JsonPrimitive(0));reject(helper,()->TruthTableSpec.read(wrongType),"Numeric outputs are not Booleans");
+        helper.assertTrue(EngineeringBehavior.read(new BehaviorSpec(12,16).json()).equals(new BehaviorSpec(12,16)),"Legacy buffer parsing stays distinct and unchanged");
+        helper.succeed();
+    }
     static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}

@@ -2,7 +2,7 @@ import { behaviorDigest } from "../companion/src/generated.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
@@ -1581,6 +1581,101 @@ test("a generated behavior result arriving after grant revision is discarded", a
     assert.equal((await pending).status, 503);
   } finally {
     release();
+    await f.close();
+  }
+});
+
+test("complete Boolean intent reaches named raw geometry through separately fenced confirmation", async () => {
+  const fixtureSource = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../mod/src/main/resources/fixtures/generated-and.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ) as Blueprint;
+  const behavior = fixtureSource.behavior!;
+  assert.ok(behavior.function === "truth-table");
+  const stages: string[] = [];
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior() {
+      stages.push("behavior");
+      return {
+        behavior,
+        explanation:
+          "AND, settling within20 game ticks; confirm before geometry.",
+      };
+    },
+    async generateGeometry(input) {
+      assert.deepEqual(input.behavior, behavior);
+      assert.ok(input.behavior.function === "truth-table");
+      assert.equal(Object.isFrozen(input.behavior.inputs), true);
+      stages.push("geometry");
+      return {
+        name: fixtureSource.name,
+        explanation: fixtureSource.explanation,
+        blocks: fixtureSource.blocks.map((b) => ({
+          pos: b.pos,
+          state: b.state,
+        })),
+        inputs: fixtureSource.ports
+          .filter((p) => p.kind === "input")
+          .map((p) => ({ name: p.name, pos: p.pos })),
+        output: fixtureSource.ports.find((p) => p.kind === "output")!.pos,
+      };
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const c = context({ connectionId: generatedConnection });
+    const input = {
+      ...generatedInput,
+      maxSize: { x: 6, y: 3, z: 4 },
+      request: "AND of a and b, settling within20 game ticks",
+    };
+    const proposed = await f.post("/v2/behavior/propose", {
+      ...input,
+      context: c,
+    });
+    assert.equal(proposed.status, 200);
+    const acceptance = {
+      ...acceptedBehavior(c),
+      behaviorDigest: behaviorDigest(behavior),
+      corner2: { x: 5, y: 102, z: 3 },
+    };
+    const result = await f.post("/v2/design/generated", {
+      ...input,
+      context: context({ connectionId: generatedConnection }),
+      behavior,
+      acceptance,
+    });
+    assert.equal(result.status, 200);
+    const answer = await json<{ blueprint: Blueprint }>(result);
+    assert.deepEqual(answer.blueprint.behavior, behavior);
+    assert.deepEqual(
+      answer.blueprint.ports.map((p) => p.name),
+      ["a", "b", "output"],
+    );
+    assert.equal(answer.blueprint.verification, "untested");
+    assert.deepEqual(stages, ["behavior", "geometry"]);
+    const replay = await f.post("/v2/design/generated", {
+      ...input,
+      context: context({ connectionId: generatedConnection }),
+      behavior,
+      acceptance,
+    });
+    assert.equal(replay.status, 409);
+    const canonical = await f.post("/v2/project/read", { context: context() });
+    assert.equal(
+      (await json<{ blueprint: Blueprint }>(canonical)).blueprint.provenance
+        .kind,
+      "curated",
+    );
+  } finally {
     await f.close();
   }
 });

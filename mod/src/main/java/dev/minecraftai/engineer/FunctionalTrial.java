@@ -18,6 +18,8 @@ final class FunctionalTrial {
     private MechanismCatalog.Contract contract;
     private int vector,nextTick;
     private BehaviorSpec generatedBehavior;
+    private TruthTableSpec truthBehavior;
+    private SettledTrace settled;
     private TransitionTrace transition;
     private JsonObject generatedRow;
     private long startedGameTick,phaseStart,lastBaseline=-1;
@@ -53,7 +55,9 @@ final class FunctionalTrial {
         contract=candidate;inputs.putAll(captured);evidence=new JsonArray();
         evidenceScope=makeScope(s.blueprint,s.activeComponent,ComponentAssignments.BASIS_VERSION);
         evidenceBlueprint=s.blueprint.source().deepCopy();vector=-1;nextTick=contract.settleTicks();
-        generatedBehavior=GeneratedBlueprint.isGenerated(s.executionBlueprint())?GeneratedBlueprint.behavior(s.executionBlueprint()):null;
+        var accepted=GeneratedBlueprint.isGenerated(s.executionBlueprint())?GeneratedBlueprint.behavior(s.executionBlueprint()):null;
+        generatedBehavior=accepted instanceof BehaviorSpec buffer?buffer:null;
+        truthBehavior=accepted instanceof TruthTableSpec truth?truth:null;settled=null;
         generatedRow=null;transition=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+" truth table running";
         s.save();s.checkpoint();
@@ -64,6 +68,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(truthBehavior!=null){tickTruth();return;}
             if(generatedBehavior!=null){tickGenerated();return;}
             if(s.testTick>=nextTick){
                 // Let pending construction updates settle before the first input
@@ -83,6 +88,81 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickTruth() {
+        var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0) {
+            if(now-startedGameTick<contract.settleTicks())return;
+            beginTruth(now,0);return;
+        }
+        sampleTruth(now);
+        if(!settled.complete())return;
+        s.save();
+        if(!settled.passed())throw new IllegalStateException(settled.failure());
+        if(vector+1<contract.cases().size()){beginTruth(now,vector+1);return;}
+        validateTruthEvidence(evidence,truthBehavior,true);
+        int elapsed=s.testTick;restore();
+        if(pending())throw new IllegalStateException("Inputs still need safe restoration; no functional pass was recorded");
+        s.verified="passed:generated-truth-table:"+evidence.size()+" vectors@"+elapsed;
+        var task=s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString());task.lastPassedScope=evidenceScope.deepCopy();
+        s.state="COMPLETED";s.detail="Actual Minecraft truth-table test passed: "+evidence.size()+" forward/reverse cases, each stable for 8 game ticks after settling";
+        s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
+    }
+    private void beginTruth(long now,int index) {
+        apply(contract.cases().get(index).inputs());vector=index;phaseStart=now;
+        int row=GeneratedBlueprint.truthRow(truthBehavior,index);settled=new SettledTrace(truthBehavior,row);
+        generatedRow=new JsonObject();generatedRow.addProperty("case",index);generatedRow.addProperty("row",row);
+        generatedRow.addProperty("behaviorDigest",truthBehavior.digest());evidence.add(generatedRow);
+        sampleTruth(now);session.save();
+    }
+    private void sampleTruth(long now) {
+        long elapsed=now-phaseStart;
+        if(elapsed<0 || elapsed>settled.horizon())throw new IllegalStateException("inconclusive: truth-table sampling window missed");
+        var observed=new JsonObject();
+        for(var port:contract.ports())if(port.input()) {
+            boolean actual=session.level().getBlockState(port.pos()).getValue(BlockStateProperties.POWERED);
+            if(actual!=contract.cases().get(vector).inputs().get(port.name()))throw new IllegalStateException("Truth-table input changed: "+port.name());
+            observed.addProperty(port.name(),actual);
+        }
+        var output=contract.ports().stream().filter(port->!port.input()).findFirst().orElseThrow();
+        boolean actual=session.level().getBlockState(output.pos()).getValue(BlockStateProperties.LIT);
+        settled.sample(elapsed,actual);
+        generatedRow.addProperty("tick",now);generatedRow.addProperty("elapsedTicks",elapsed);
+        generatedRow.add("inputs",observed);var outputs=new JsonObject();outputs.addProperty("output",actual);
+        generatedRow.add("outputs",outputs);generatedRow.add("trace",settled.json());
+    }
+    static void validateGeneratedEvidence(JsonArray cases,EngineeringBehavior behavior,boolean requirePass) {
+        if(behavior instanceof TruthTableSpec truth)validateTruthEvidence(cases,truth,requirePass);
+        else validateGeneratedEvidence(cases,(BehaviorSpec)behavior,requirePass);
+    }
+    static void validateTruthEvidence(JsonArray cases,TruthTableSpec behavior,boolean requirePass) {
+        int count=behavior.outputs().size()*2;
+        if(cases.size()>count || (requirePass && cases.size()!=count))throw new IllegalStateException("Truth-table evidence needs every forward/reverse case");
+        long previous=-1;
+        for(int index=0;index<cases.size();index++) {
+            var row=cases.get(index).getAsJsonObject();int expectedRow=GeneratedBlueprint.truthRow(behavior,index);
+            if(!row.keySet().equals(Set.of("case","row","tick","elapsedTicks","inputs","outputs","behaviorDigest","trace"))
+                    || traceInteger(row.get("case"))!=index || traceInteger(row.get("row"))!=expectedRow
+                    || !new JsonPrimitive(behavior.digest()).equals(row.get("behaviorDigest")))throw new IllegalStateException("Truth evidence differs from accepted case identity");
+            var trace=SettledTrace.read(row.getAsJsonObject("trace"),behavior);var source=trace.json();
+            if(source.get("row").getAsInt()!=expectedRow || (requirePass && !trace.passed()))throw new IllegalStateException("Truth trace differs from required case");
+            var samples=source.getAsJsonArray("samples");if(samples.isEmpty())throw new IllegalStateException("Truth trace has no samples");
+            var last=samples.get(samples.size()-1).getAsJsonObject();
+            long tick=traceInteger(row.get("tick")),elapsed=traceInteger(row.get("elapsedTicks"));
+            if(tick<0 || elapsed<0 || elapsed!=last.get("elapsedTicks").getAsInt() || (previous>=0 && tick-elapsed!=previous))
+                throw new IllegalStateException("Truth trace timestamps disagree");
+            if(index+1<cases.size() && !trace.passed())throw new IllegalStateException("An unfinished case cannot precede another case");
+            var inputs=row.getAsJsonObject("inputs");var outputs=row.getAsJsonObject("outputs");
+            if(!inputs.keySet().equals(new HashSet<>(behavior.inputs())) || !outputs.keySet().equals(Set.of("output"))
+                    || !outputs.get("output").equals(last.get("observed")))throw new IllegalStateException("Truth evidence port summary differs");
+            for(int i=0;i<behavior.inputs().size();i++)if(!new JsonPrimitive(behavior.inputValue(expectedRow,i)).equals(inputs.get(behavior.inputs().get(i))))
+                throw new IllegalStateException("Truth evidence input differs from accepted row");
+            previous=tick;
+        }
+    }
+    private static long traceInteger(JsonElement value) {
+        if(value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())throw new IllegalStateException("Expected truth evidence integer");
+        try{return value.getAsBigDecimal().longValueExact();}catch(ArithmeticException invalid){throw new IllegalStateException("Invalid truth evidence integer",invalid);}
     }
     private void tickGenerated() {
         var s=session;long now=s.level().getGameTime();

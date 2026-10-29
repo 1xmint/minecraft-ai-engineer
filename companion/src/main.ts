@@ -8,6 +8,7 @@ import {
   CodexPlanningProvider,
   plannerEnvironment,
   DEFAULT_PLANNER_MODEL,
+  plannerModel,
 } from "./provider.js";
 import { createCompanionServer } from "./server.js";
 
@@ -18,11 +19,15 @@ async function main(): Promise<void> {
     throw new Error("Usage: npm start, or npm run doctor [-- --probe]");
   const config = loadConfig();
   const model = process.env.MCE_MODEL;
+  const geometryModel = process.env.MCE_GEOMETRY_MODEL;
   if (model && !/^[a-zA-Z0-9_.-]{1,80}$/u.test(model))
     throw new Error("Invalid MCE_MODEL.");
+  if (geometryModel && !/^[a-zA-Z0-9_.-]{1,80}$/u.test(geometryModel))
+    throw new Error("Invalid MCE_GEOMETRY_MODEL.");
   const provider = new CodexPlanningProvider({
     configDir: config.directory,
     ...(model ? { model } : {}),
+    ...(geometryModel ? { geometryModel } : {}),
   });
   if (command === "doctor") {
     console.log(
@@ -50,6 +55,9 @@ async function main(): Promise<void> {
     );
     console.log(
       `Model: ${model ?? DEFAULT_PLANNER_MODEL}; actual account availability requires --probe.`,
+    );
+    console.log(
+      `Boolean geometry model: ${plannerModel("geometry", { ...(model ? { model } : {}), ...(geometryModel ? { geometryModel } : {}) }, "truth-table")}; the catalog probe does not check this model's availability.`,
     );
     if (process.argv.includes("--probe")) {
       const result = await provider.plan(

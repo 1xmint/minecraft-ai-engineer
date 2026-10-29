@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "recordedFrom": {
+    "sourceSha": "d3c84865d4045e8c182224ee4c8ea7a1d2c44add",
+    "requestRun": "40910817937",
+    "behaviorResponseRun": "40911887391",
+    "geometryResponseRun": "40912161087",
+    "behaviorRequestDigest": "4febf74810910fbe30d09649791fceb8cae65b0ed15fc7f5ff2d658f1f299075",
+    "behaviorResultDigest": "e9949d8b3350f5a4de5df234368392922dad6d8078e5fbab98ccc006c6cd8060",
+    "geometryRequestDigest": "9b8034e843cfc17d03a4922d6cf91d1d4c4a7b74b7ac75ac583d262479fd7c9d",
+    "geometryResultDigest": "2344abb47d868b3eb7c710f0fa75756e788dc1b785430fe4d2ccae67d51e9faa"
+  },
+  "proposal": {
+    "behavior": {
+      "schemaVersion": 2,
+      "function": "truth-table",
+      "inputs": ["a", "b"],
+      "outputs": [false, false, false, true],
+      "settleGameTicks": 20
+    },
+    "explanation": "This records the requested AND behavior: the lamp is on only when both levers are on. The 20-game-tick settling bound is proposed and requires your confirmation; it is not an exact latency promise or proof that a construction is feasible."
+  },
+  "behaviorProvenance": {
+    "model": "gpt-6-luna",
+    "sdkVersion": "0.164.0",
+    "inputTokens": 10795,
+    "cachedInputTokens": 0,
+    "outputTokens": 97
+  },
+  "geometry": {
+    "name": "AND",
+    "explanation": "Each lever switches off its backing stone\u00e2\u20ac\u2122s torch. The two repeaters feed a common stone; its output torch lights the lamp only when both input torches are off. Untested preview.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 1
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": 2
+        },
+        "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_wall_torch[facing=east,lit=true]"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:redstone_wall_torch[facing=east,lit=true]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 1
+        },
+        "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:redstone_wall_torch[facing=east,lit=false]"
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 1,
+          "z": 2
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "a",
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": 0
+        }
+      },
+      {
+        "name": "b",
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": 2
+        }
+      }
+    ],
+    "output": {
+      "x": 5,
+      "y": 1,
+      "z": 2
+    }
+  },
+  "provenance": {
+    "model": "gpt-6.1-sol",
+    "sdkVersion": "0.164.0",
+    "inputTokens": 12322,
+    "cachedInputTokens": 0,
+    "outputTokens": 1020
+  }
+}

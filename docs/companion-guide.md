@@ -27,8 +27,15 @@ Each explicit `/engineer plan ...` action makes at most one model request,
 with a 90-second timeout and no automatic retry. Ordinary inspection, stages,
 placement, progress and functional checks never invoke the model. Account
 limits still apply. `MCE_MODEL` can select a model available to the signed-in
-account; otherwise `gpt-6-luna` at low reasoning effort is used for focused
-template selection. A successful probe
+account and overrides the default for all stages. Without an override, focused
+template selection, behavior extraction and timed-buffer geometry use `gpt-6-luna`;
+Boolean geometry uses `gpt-6.1-sol` at medium reasoning effort. Two Luna Boolean
+replies were rejected for missing support/overlap; the bounded Sol layout passed
+actual Minecraft truth-table and restart acceptance. `MCE_GEOMETRY_MODEL` overrides
+only the geometry stage, taking precedence over `MCE_MODEL` there. Each explicit
+request still uses one selected model with no automatic retry or model fallback.
+The doctor catalog probe checks only its chosen catalog model, not Boolean-model
+availability. A successful probe
 establishes access at that moment, not unlimited or unattended entitlement.
 Public CI never receives sign-in credentials and never invokes a paid model.
 

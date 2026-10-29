@@ -103,11 +103,13 @@ function envelope(run, attempt, sha) {
     runId: String(run),
     runAttempt: Number(attempt),
     scenario:
-      process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-        ? "structural-buffer-owner-confirmation-v1"
-        : generated
-          ? "generated-buffer-owner-confirmation-v1"
-          : "signal-lamp-client-handoff-v1",
+      process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+        ? "generated-boolean-owner-confirmation-v1"
+        : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+          ? "structural-buffer-owner-confirmation-v1"
+          : generated
+            ? "generated-buffer-owner-confirmation-v1"
+            : "signal-lamp-client-handoff-v1",
   };
 }
 function own() {
@@ -193,9 +195,11 @@ async function main() {
     check(
       inputs.scenario ===
         (generated
-          ? process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-            ? "structural"
-            : "generated"
+          ? process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+            ? "boolean"
+            : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+              ? "structural"
+              : "generated"
           : "catalog"),
     );
     const expected = envelope(
@@ -264,15 +268,22 @@ async function main() {
           JSON.stringify(envelopes[1].request.behavior) &&
           envelopes[0].accepted.acceptedAt <= envelopes[1].request.createdAt,
       );
-      for (const marker of [
-        "generated-confirmation.done",
-        "generated-confirmation-recovery.done",
-        "live-generated-model.done",
-        "player-generated-section.done",
-        ...(process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-          ? ["live-structural-model.done", "live-structural-recovery.done"]
-          : []),
-      ])
+      for (const marker of process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+        ? [
+            "truth-interrupted.done",
+            "truth-recovery.done",
+            "live-boolean-model.done",
+            "live-boolean-recovery.done",
+          ]
+        : [
+            "generated-confirmation.done",
+            "generated-confirmation-recovery.done",
+            "live-generated-model.done",
+            "player-generated-section.done",
+            ...(process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+              ? ["live-structural-model.done", "live-structural-recovery.done"]
+              : []),
+          ])
         check(
           readFileSync(
             `mod/build/multiplayer-evidence/coordination/${marker}`,

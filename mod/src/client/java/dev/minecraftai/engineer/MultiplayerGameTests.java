@@ -43,6 +43,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
     private static final boolean LIVE_GENERATED=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_GENERATED_ACCEPTANCE"));
     private static final boolean LIVE_STRUCTURAL=LIVE_GENERATED && "true".equals(System.getenv("MCE_STRUCTURAL_ACCEPTANCE"));
+    private static final boolean LIVE_BOOLEAN=LIVE_GENERATED && "true".equals(System.getenv("MCE_BOOLEAN_ACCEPTANCE"));
+    private static final String LIVE_BOOLEAN_REQUEST="Make an AND circuit with named lever inputs a and b and one lamp output. Settle to the requested output within 20 game ticks. Teach me its construction.";
     private static final String LIVE_STRUCTURAL_REQUEST="Replace the two repeaters (delays 4 and 2) in the existing four-block-wide buffer with three serial two-tick repeaters. Keep the input lever at relative 0,1,0 and its existing floor supports at x=0..3, y=0, z=0. Extend the support to x=4 and move the output lamp to relative 4,1,0. Keep rising latency 12 game ticks and falling latency 16 game ticks.";
     private static final long WAIT_MILLIS = LIVE_ACCEPTANCE?1_800_000:240_000;
     private record RepairRecovery(Path file,JsonObject checkpoint,String project,int retained) {}
@@ -299,8 +301,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
-            else if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationFlow(context,server,connection);
+            else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -327,7 +330,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_GENERATED)generatedConfirmationRecovery(context,server,connection);
+            if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthRecovery(context,server);
+            if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationRecovery(context,server,connection);
             if(!LIVE_ACCEPTANCE)structuralRevisionRecovery(context,server);
             send(context,"engineer project use "+read("inventory-project"));
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("inventory-project")));
@@ -656,7 +660,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         write("lesson-denied.done","passed");
-        if(!LIVE_ACCEPTANCE || LIVE_GENERATED) {
+        if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN)) {
             awaitFile(context,"generated-shared");MESSAGES.clear();send(context,"engineer project use "+read("generated-project"));
             await(context,()->view(context)!=null && view(context).projectId().equals(read("generated-project")),"Bob receives the generated preview only after a server grant");
             send(context,"engineer ask explain the timing");expectChat(context,"turning on after 12 game ticks and off after 16 game ticks");
@@ -730,6 +734,83 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var receipt=checkpoint.get(30,java.util.concurrent.TimeUnit.SECONDS);
         check(receipt.get("protocol").getAsInt()==2,"The real companion gateway must acknowledge the functional result");
     }
+    /** Fixed fixtures or explicit live replies use the same independently tested production runner. */
+    private static void generatedTruthFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 402 103 6 180 20");server.runCommand("forceload add 384 -16 416 16");
+        send(context,"engineer project new");send(context,"engineer select1 400 100 0");send(context,"engineer select2 405 102 3");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(405,102,3)));
+        MESSAGES.clear();send(context,"engineer design "+(LIVE_BOOLEAN?LIVE_BOOLEAN_REQUEST:"CI generated AND: named inputs a and b; settle within 20 game ticks."));
+        expectChat(context,"/engineer confirm ",LIVE_BOOLEAN?900_000:20_000);
+        var requested=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,true),20);
+        check(MESSAGES.stream().anyMatch(message->message.contains(requested.summary())),"Owner confirms the independently requested complete AND table and settling bound");
+        String confirmation=confirmationNonce();
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Generated preview accepted",LIVE_BOOLEAN?900_000:20_000);
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"No current behavior proposal");
+        var existingSection=new java.util.HashSet<BlockPos>();
+        server.runOnServer(s->{
+            var project=session(s,"Alice");check(GeneratedBlueprint.behavior(project.blueprint) instanceof TruthTableSpec,"Separately confirmed behavior reaches native generated Boolean preview");
+            check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Raw AND preview grants no world execution or verification");
+            check(project.blueprint.blocks().stream().allMatch(b->project.level().getBlockState(b.pos()).isAir()),"Confirmed Boolean geometry does not edit the world before build");
+            // Derive the synthetic existing section from each actual accepted lever attachment.
+            for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input()) {
+                var planned=project.blueprint.blocks().stream().filter(b->b.pos().equals(port.pos())).findFirst().orElseThrow();
+                var state=planned.state();var face=state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE);
+                BlockPos backing=switch(face) {
+                    case FLOOR->port.pos().below();case CEILING->port.pos().above();
+                    case WALL->port.pos().relative(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING).getOpposite());
+                };
+                var support=project.blueprint.blocks().stream().filter(b->b.pos().equals(backing) && b.state().is(Blocks.STONE)).findFirst().orElseThrow();
+                project.level().setBlockAndUpdate(backing,support.state());existingSection.add(backing);
+                project.level().setBlockAndUpdate(port.pos(),planned.state().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,port.name().equals("a")));
+                existingSection.add(port.pos());
+            }
+            write("truth-project",project.projectId.toString());write("truth-accepted-source",project.blueprint.source().toString());
+        });
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");long expected=project.blueprint.blocks().size()-existingSection.size();
+            check(project.journal.size()==expected,"AI remainder excludes the existing synthetic player section, using the actual accepted layout");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-truth-table:"),30_000);assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");FunctionalTrial.validateGeneratedEvidence(project.trial.evidence(),GeneratedBlueprint.behavior(project.blueprint),true);assertTruthInputs(project);check(!project.hasPendingTest() && project.delegation==null,"Truth pass restores all originals and releases authority");});
+        if(LIVE_BOOLEAN) {
+            write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
+            var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();
+            check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Boolean acceptance restarts the real private companion");
+            server.runOnServer(s->session(s,"Alice").checkpoint());assertPersisted(server);write("live-boolean-model.done","passed");
+        }
+        send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        send(context,"engineer test");
+        server.waitFor(s->{var project=session(s,"Alice");
+            if(!project.state.equals("VERIFYING") || project.trial.evidence().size()<4)return false;
+            commandAs(s,"Alice","engineer project revoke Bob");return true;
+        },30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.hasPendingTest(),"Revocation pauses the live truth runner with original inputs retained");
+            check(saved(project).getAsJsonArray("testInputs").size()==2,"Both original named inputs survive interruption");
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(loaded.delegation==null && loaded.hasPendingTest(),"Deserialized truth evidence grants no authority");loaded.restoreTest();
+            check(loaded.hasPendingTest(),"Deserialization cannot restore live inputs without a fresh lease");
+        });
+        write("truth-interrupted.done","passed");
+    }
+    private static void assertTruthInputs(EngineeringSession project) {
+        for(var port:GeneratedBlueprint.contract(project.blueprint).ports())if(port.input())
+            check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a"),"Every named input returns to its own original state");
+    }
+    private static void generatedTruthRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("tp Alice 402 103 6 180 20");send(context,"engineer project use "+read("truth-project"));
+        server.waitFor(s->read("truth-project").equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.hasPendingTest(),"Actual third boot retains both truth input journals and no lease");FunctionalTrial.validateGeneratedEvidence(project.trial.evidence(),GeneratedBlueprint.behavior(project.blueprint),false);});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").hasPendingTest());
+        server.runOnServer(s->assertTruthInputs(session(s,"Alice")));
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-truth-table:"),30_000);assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");assertTruthInputs(project);check(project.delegation==null && !project.hasPendingTest(),"Fresh post-restart truth trial releases restored input authority");});
+        if(LIVE_BOOLEAN) {
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.source().equals(JsonParser.parseString(read("truth-accepted-source")).getAsJsonObject()) && project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Actual restart retains exact signed-in Boolean source and built blocks");});
+            context.waitTicks(20);context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-live-boolean-restarted-build");
+            write("live-boolean-recovery.done","passed");
+        }
+        write("truth-recovery.done","passed");
+    }
+
     private static void catalogFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         send(context,"engineer project new");send(context,"engineer select1 10 100 0");send(context,"engineer select2 12 101 2");
         send(context,"engineer reference or-gate 4");

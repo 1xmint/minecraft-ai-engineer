@@ -29,11 +29,13 @@ const provider = new Provider({
     runId: process.env.GITHUB_RUN_ID,
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
     scenario:
-      process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-        ? "structural-buffer-owner-confirmation-v1"
-        : generated
-          ? "generated-buffer-owner-confirmation-v1"
-          : "signal-lamp-client-handoff-v1",
+      process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+        ? "generated-boolean-owner-confirmation-v1"
+        : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+          ? "structural-buffer-owner-confirmation-v1"
+          : generated
+            ? "generated-buffer-owner-confirmation-v1"
+            : "signal-lamp-client-handoff-v1",
   },
 });
 const server = createCompanionServer({
