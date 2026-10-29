@@ -13,10 +13,10 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
-    @GameTest public void stickyShutterEast(GameTestHelper helper){shutter(helper,Rotation.NONE);}
-    @GameTest public void stickyShutterSouth(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_90);}
-    @GameTest public void stickyShutterWest(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_180);}
-    @GameTest public void stickyShutterNorth(GameTestHelper helper){shutter(helper,Rotation.COUNTERCLOCKWISE_90);}
+    @GameTest(maxTicks=50) public void stickyShutterEast(GameTestHelper helper){shutter(helper,Rotation.NONE);}
+    @GameTest(maxTicks=50) public void stickyShutterSouth(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_90);}
+    @GameTest(maxTicks=50) public void stickyShutterWest(GameTestHelper helper){shutter(helper,Rotation.CLOCKWISE_180);}
+    @GameTest(maxTicks=50) public void stickyShutterNorth(GameTestHelper helper){shutter(helper,Rotation.COUNTERCLOCKWISE_90);}
 
     private static BlockPos at(int x,int y,Rotation rotation){return new BlockPos(x,y,0).rotate(rotation).offset(3,2,3);}
     private static BlockState state(GameTestHelper helper,int x,int y,Rotation rotation){return helper.getLevel().getBlockState(helper.absolutePos(at(x,y,rotation)));}
@@ -51,15 +51,16 @@ public final class PistonGameTests {
             helper.assertTrue(state(helper,3,1,rotation).isAir(),"Power schedules movement; the payload does not move synchronously with the lever write");
         });
         helper.runAtTickTime(16,()->{
-            assertClosed(helper,rotation);var projection=resolve(helper,rotation,false);
-            helper.assertTrue(projection.resolve() && Set.copyOf(projection.getToPush()).equals(Set.of(helper.absolutePos(at(3,1,rotation)))) && projection.getPushDirection()==rotation.rotate(Direction.WEST),"Retraction projects the actual payload toward the base");
+            assertClosed(helper,rotation);
+            // Vanilla removes the head before constructing its retraction resolver.
+            // Resolve(false) against the untouched extended world is not that phase.
             helper.pullLever(at(0,2,rotation));
         });
         helper.runAtTickTime(24,()->{assertOpen(helper,rotation);helper.pullLever(at(0,2,rotation));});
         helper.runAtTickTime(32,()->{assertClosed(helper,rotation);helper.pullLever(at(0,2,rotation));});
         helper.runAtTickTime(40,()->{assertOpen(helper,rotation);helper.succeed();});
     }
-    @GameTest public void ordinaryPistonCannotPassTheStickyReturnRequirement(GameTestHelper helper){
+    @GameTest(maxTicks=35) public void ordinaryPistonCannotPassTheStickyReturnRequirement(GameTestHelper helper){
         setup(helper,false,Rotation.NONE);
         helper.runAtTickTime(8,()->helper.pullLever(at(0,2,Rotation.NONE)));
         helper.runAtTickTime(16,()->{assertClosed(helper,Rotation.NONE);helper.pullLever(at(0,2,Rotation.NONE));});

@@ -65,6 +65,19 @@ ordinary piston negative, obstruction, changed payload footprint and external
 replacement during real animation. Scoped Java server/client compilation passed;
 no local tests run. GitHub runtime proof is next. Public block allowlist unchanged.
 
+Pinned source inspection corrected the initial oracle: moveBlocks(false) removes
+the piston head before constructing the vanilla resolver. Calling resolve(false)
+against the untouched extended world is not a valid pre-transition projection.
+Removed that incorrect API assertion; all physical pull/reopen postconditions
+remain. Production retraction projection must explicitly account for the head
+prelude without editing the world merely to preview it. This changes M2's design;
+an unqualified resolver call is insufficient. Initial6ed2f7 CI40963224460 Fabric
+failed on that assertion in all four rotations. It also exposed the default20
+tick harness deadline for the planned24-tick ordinary-piston test. Give the40-tick
+cycle tests50 ticks and the24-tick negative35 ticks, retaining all physical
+settling assertions. Other jobs were still live; the new source needs full CI.
+No production piston support is claimed.
+
 ## Proven Phase14 Outcomes
 
 - C1: explicit free-form selected-project/component engineering question gets
