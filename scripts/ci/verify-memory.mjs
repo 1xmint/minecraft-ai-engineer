@@ -11,6 +11,16 @@ if (process.env.CI !== "true")
 const [, , database, coordination] = process.argv;
 const server = JSON.parse(readFileSync(`${coordination}/server.json`, "utf8"));
 const project = readFileSync(`${coordination}/project`, "utf8").trim();
+const restoredBoot =
+  process.env.MCE_LIVE_ACCEPTANCE !== "true"
+    ? JSON.parse(readFileSync(`${coordination}/restored-layout-server`, "utf8"))
+    : undefined;
+const currentEpoch = restoredBoot?.serverEpoch ?? server.serverEpoch;
+if (restoredBoot) {
+  assert.equal(restoredBoot.serverId, server.serverId);
+  assert.equal(restoredBoot.worldId, server.worldId);
+}
+
 const db = new DatabaseSync(database, { readOnly: true });
 try {
   const row = db
@@ -23,7 +33,7 @@ try {
     "Actual Minecraft project must exist in the companion database",
   );
   assert.equal(row.world_id, server.worldId);
-  assert.equal(row.synced_epoch, server.serverEpoch);
+  assert.equal(row.synced_epoch, currentEpoch);
   const members = JSON.parse(row.members);
   assert.equal(members.filter((member) => member.role === "owner").length, 1);
   assert.ok(members.some((member) => member.role === "editor"));
@@ -175,8 +185,8 @@ try {
     .get(server.serverId, componentProject);
   assert.equal(
     restoredComponents.synced_epoch,
-    server.serverEpoch,
-    "Actual composed project was selected and synchronized after the third server boot",
+    currentEpoch,
+    "Actual composed project metadata is freshly synchronized after the latest server boot",
   );
   for (const component of ["a", "b", "c"]) {
     const entry = db
@@ -409,6 +419,7 @@ try {
       "workspace-busy-expansion.done",
       "structural-revision.done",
       "structural-recovery.done",
+      "structural-replan-recovery.done",
       "generated-confirmation-recovery.done",
       "generated-wrong-timing.done",
       "generated-confirmation-save-failure.done",
@@ -419,6 +430,44 @@ try {
         readFileSync(`${coordination}/${name}`, "utf8").trim(),
         "passed",
       );
+
+    assert.notEqual(
+      restoredBoot.serverEpoch,
+      server.serverEpoch,
+      "Repeated planning uses a real subsequent server epoch",
+    );
+    const structuralId = readFileSync(
+      `${coordination}/structural-project`,
+      "utf8",
+    ).trim();
+    const starts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+      )
+      .get(server.serverId, structuralId);
+    assert.equal(
+      starts.count,
+      4,
+      "Only the two explicit behavior/geometry pairs spend quota; the changed restored basis is rejected before dispatch",
+    );
+    const structuralRow = db
+      .prepare(
+        "SELECT project_revision,synced_epoch FROM gateway_projects WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, structuralId);
+    assert.equal(
+      structuralRow.synced_epoch,
+      restoredBoot.serverEpoch,
+      "Repeated structural work synchronizes against its actual fourth boot",
+    );
+    const originalStructural = JSON.parse(
+      readFileSync(`${coordination}/structural-before`, "utf8"),
+    );
+    assert.equal(
+      structuralRow.project_revision,
+      originalStructural.revision + 2,
+      "Undo does not relabel historical revisions or invent a canonical revision",
+    );
     const generatedId = readFileSync(
       `${coordination}/generated-project`,
       "utf8",
@@ -490,14 +539,15 @@ try {
     }
     assert.equal(
       generated.synced_epoch,
-      server.serverEpoch,
-      "Generated restart synchronizes against the current server epoch",
+      currentEpoch,
+      "Generated metadata synchronizes against the latest server epoch",
     );
   }
   console.log(
     JSON.stringify({
       serverId: server.serverId,
-      serverEpoch: server.serverEpoch,
+      serverEpoch: currentEpoch,
+      recoveryServerEpoch: server.serverEpoch,
       projectId: project,
       revision: row.project_revision,
       recordedFunctionalPasses: passes.count,

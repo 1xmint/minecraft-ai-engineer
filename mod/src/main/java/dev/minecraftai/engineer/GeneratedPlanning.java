@@ -337,6 +337,7 @@ final class GeneratedPlanning {
             throw new IllegalStateException("Stop and reconcile active or interrupted world work before generated planning");
         if(session.hasBuiltStructure() && (session.blueprint==null || !GeneratedBlueprint.isGenerated(session.blueprint) || ComponentTree.composite(session.blueprint)))
             throw new IllegalStateException("Built structural revisions currently require a generated root mechanism");
+        if(session.hasBuiltStructure())session.requireStructuralPlanningBasis();
     }
 
     private JsonObject requestBody(Basis basis, boolean geometry, JsonObject behavior) {

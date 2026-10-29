@@ -336,6 +336,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
         }
+        if(!LIVE_ACCEPTANCE) {
+            try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
+                TestDedicatedServerConnection connection=server.connect()) {
+                structuralReplanRecovery(context,server);
+            }
+        }
     }
 
     private static void generatedConfirmationFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
@@ -434,6 +440,37 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==Integer.parseInt(read("structural-original-journal")));
         server.runOnServer(s->{var project=session(s,"Alice");var before=Blueprint.parse(JsonParser.parseString(read("structural-before")).getAsJsonObject(),project.worldId,project.dimension);check(before.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"Production repeated-position undo restores the real previous layout after restart");check(project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE) && project.level().getBlockState(new BlockPos(260,100,0)).is(Blocks.STONE),"Undo preserves both existing and newly adopted player supports");check(project.level().getBlockState(new BlockPos(264,101,0)).isAir(),"Undo removes the assistant's added output");});
         write("structural-recovery.done","passed");
+    }
+    private static void structuralReplanRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var previousEpoch=JsonParser.parseString(read("server.json")).getAsJsonObject().get("serverEpoch").getAsString();
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);check(!manager.epoch.toString().equals(previousEpoch),"Restored-layout proof starts an actual fourth server process/epoch");var boot=new JsonObject();boot.addProperty("serverId",manager.serverId);boot.addProperty("serverEpoch",manager.epoch.toString());boot.addProperty("worldId",manager.worldId);write("restored-layout-server",boot.toString());});
+        UUID selected=UUID.fromString(read("structural-project"));
+        send(context,"engineer project use "+selected);
+        server.waitFor(s->selected.equals(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID())));
+        server.runCommand("tp Alice 262 103 6 180 20");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");var before=JsonParser.parseString(read("structural-before")).getAsJsonObject();check(project.delegation==null && project.blueprint.blocks().size()==10 && project.structuralBefore().source().equals(before),"Actual fourth boot keeps true restored geometry separate from accepted intention and imports no lease");check(saved(project).has("restoredLayout"),"Undo persists the actual restored source before its operation scope is pruned");});
+        server.runOnServer(s->{var project=session(s,"Alice");var corrupted=saved(project);corrupted.getAsJsonObject("restoredLayout").getAsJsonObject("before").addProperty("name","Corrupted original history");boolean denied=false;try{new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,corrupted);}catch(IllegalStateException expected){denied=true;}check(denied && project.delegation==null,"Corrupt restored history cannot load or import world authority");
+            var next=project.blueprint.source().deepCopy();next.addProperty("id",UUID.randomUUID().toString());next.addProperty("revision",project.revision()+1);var stale=saved(project);stale.add("restoredLayout",StructuralTransition.between(project.structuralBefore(),Blueprint.parse(next,project.worldId,project.dimension),project.blueprint).json());denied=false;try{new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension,stale);}catch(IllegalStateException expected){denied=true;}check(denied,"A valid transition digest cannot bind a different accepted canonical intention");});
+        var expected=server.computeOnServer(s->session(s,"Alice").level().getBlockState(new BlockPos(261,101,0)));
+        server.runCommand("setblock 261 101 0 minecraft:glass");
+        MESSAGES.clear();send(context,"engineer design CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.");expectChat(context,"Existing structure changed before planning");
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(new BlockPos(261,101,0)).is(Blocks.GLASS) && !session(s,"Alice").state.equals("PLANNING"),"Changed restored basis is preserved and rejected before sending a model request"));
+        server.runCommand("setblock 261 101 0 "+Blueprint.describe(expected));
+        int acceptedRevision=server.computeOnServer(s->session(s,"Alice").revision());
+        MESSAGES.clear();send(context,"engineer design CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.");expectChat(context,"/engineer confirm ");String confirmation=confirmationNonce();
+        MESSAGES.clear();send(context,"engineer confirm "+confirmation);expectChat(context,"Structural proposal ready");
+        var pattern=java.util.regex.Pattern.compile("/engineer apply ([0-9a-f-]{36})");String nonce=null;for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find()){nonce=match.group(1);break;}}
+        check(nonce!=null,"Replanning restored work still requires a separate owner application confirmation");send(context,"engineer apply "+nonce);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");var transition=project.operationScopes.transition(project.activeOperation);check(transition.before().source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()) && transition.accepted().revision()==acceptedRevision && transition.after().revision()==acceptedRevision+1 && transition.json().get("schemaVersion").getAsInt()==2,"New revision advances current accepted context once without relabelling the older physical source");check(project.blueprint.blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))),"A real second structural operation rebuilds the larger layout from the restored geometry");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));assertPersisted(server);
+        send(context,"engineer undo");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==Integer.parseInt(read("structural-original-journal")));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralBefore().source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo retains the true original source again");check(project.structuralBefore().blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))) && project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE),"Second inverse restores original world geometry and preserves adopted player support");var restored=saved(project).getAsJsonObject("restoredLayout");check(restored.get("schemaVersion").getAsInt()==2 && restored.getAsJsonObject("before").equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo saves all distinct physical/accepted/proposed identities");});
+        assertPersisted(server);
+        // Fresh mirrors describe saved intentions and stale state, not new functional passes.
+        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
+        for(var mirror:mirrors)check(mirror.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Latest boot acknowledges fresh metadata mirrors before persistence verification");
+        write("structural-replan-recovery.done","passed");
     }
     private static void workspaceExpansionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String originalId=server.computeOnServer(s->session(s,"Alice").blueprint.id());int revision=server.computeOnServer(s->session(s,"Alice").revision());int journal=server.computeOnServer(s->session(s,"Alice").journal.size());

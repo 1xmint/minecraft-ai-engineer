@@ -140,6 +140,13 @@ accepts the new intention and delegates world changes. Native CI uses an explici
 hand-authored three-repeater response fixture, rather than claiming live model
 inference.
 
+The restored-layout development branch also retains the true old layout after
+undo, separately from the newer intended target. A later structural request can
+advance the intended revision while comparing against those restored blocks.
+Planning refuses a changed or incomplete physical basis before starting a model
+request; resolving the edit requires an explicit new request. Saved history grants
+no construction permission and restores no execution lease.
+
 ## Component collaboration (source build)
 
 The development branch adds a bounded project tree. Set a workspace before

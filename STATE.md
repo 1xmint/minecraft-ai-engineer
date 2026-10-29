@@ -3,7 +3,7 @@
 2026-10-28: Active goal: **complete all milestones**, all remaining phase1 and
 all six phase2 features. Do not redefine done around a catalog, buffer or green CI.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/10-structural-revisions**, based on merged PR18 **bebf6ca**.
+Branch **phase/11-restored-layouts**, PR20. PR19 merged as **1e97bc385c3296ea037eaaf4689b7eeec982243b**, final CI40797460992 all five green.
 
 Josh: **skip heavy reviews; build and ship**. No more formal review cycles.
 Keep required checks and concrete runtime proof. Tests run on GitHub, never on
@@ -253,3 +253,85 @@ actual signed-in structural proposal through the native path. Then expand actual
 functions and electrical interfaces, complete E1 conversation/durable rationale,
 E3 diagnosis/repair visuals, and E4 full end-to-end acceptance. All six Phase2
 features remain unstarted. Keep the full active goal and earlier constraints.
+
+## Active slice: revisions after undo (G2/G3)
+
+- R1: after a structural undo and actual reboot, a new proposal uses the true
+  restored physical source while checking the separate current accepted revision.
+  Proof: original source IDs/revisions survive unchanged; stale/corrupt accepted
+  context is rejected. No invented intermediate blueprint or version relabel.
+- R2: the owner can apply that proposal, time-test it and undo it again while
+  keeping player supports and the original older construction. Proof: actual
+  fourth boot, native design/confirm/apply, real executor and inverse undo.
+- R3: a changed or incomplete restored basis is refused before model quota is
+  spent. Proof: real world edit is preserved, planning is refused, and only an
+  explicit new request after resolution starts inference.
+
+Decision: retain the undone transition as an immutable restored-layout reference.
+Keep canonical intended state separate; do not automatically abandon it on undo.
+A new transition records physical before, proposed after and (only when different)
+current accepted context in a versioned envelope. Existing adjacent schema1 data
+stays byte/hash-compatible. All three sources count toward storage limits. Tasks:
+add boundary proofs (R1), persist/validate restored reference and accepted context
+(R1), adapt native planning/apply without new authority (R1/R3), actual repeated
+revision/reboot/timing/undo proof (R2/R3), required GitHub checks then ship. No heavy
+reviews; tests only in CI. Signed-in structural acceptance remains separate work.
+
+R1 proofdbe90f0 / CI40797799375 failed at the absent three-source transition API
+before implementation. The implementation now preserves exact schema1 encoding,
+adds schema2 accepted-context metadata only when distinct, hashes all sources and
+counts all stored blocks toward the existing bounds. Undo retains a bounded
+immutable restored-layout reference; it is validated on load, grants no authority,
+and is consumed only when a new accepted operation starts. Planning and apply
+select true restored before geometry while fencing the separate canonical context.
+Known changed/incomplete base blocks are refused before dispatch. Scoped Java
+main/client compilation and verifier syntax passed; no local tests.
+
+Native R1-R3 proof now boots a genuine fourth server after the first structural
+undo, checks the retained true source and no lease, refuses corrupt/stale restored
+metadata, preserves a real glass edit before any quota, and drives a second full
+HTTP/native design/confirm/apply -> timing -> undo. SQLite must show exactly four
+starts for the two explicit behavior/geometry pairs, with no start for the rejected
+edit. It separately records the fourth boot context; existing third-boot proofs
+retain their actual epoch instead of being relabelled. New native proof remains
+pending. Fresh signed-in structural inference, broader functions, conversation,
+debugging/visuals, full acceptance and all six Phase2 items remain outstanding.
+
+Source1a9740f / CI40798707422 passed four gates and the first structural recovery,
+then failed at fourth-boot selection before the new command packet was handled.
+The wait predicate called selected-session resolution while selection was still
+empty, correctly triggering the production ambiguous-project refusal. Fix only
+the native wait to observe the explicit selection map until the command arrives;
+never infer a project or change production selection behavior. Retained artifacts:
+`work/restored-proof-40798707422`. Repeated revision acceptance remains pending.
+
+Sourcee5ea367 / CI40799470025 passed four gates and all native fourth-boot/replan/
+pre-quota rejection/timing/second-undo assertions (`structural-replan-recovery.done`
+passed). It then failed in the SQLite verifier: fresh epoch4 metadata was compared
+against the retained epoch3 recovery descriptor. Keep actual epoch3 audit checks,
+but compare current mirrors against the separately recorded real epoch4. Explicitly
+await read-only mirror acknowledgements for the three earlier projects before the
+final verifier; this grants no execution and fabricates no new functional evidence.
+Retained native artifacts: `work/restored-proof-40799470025`. The complete gate is
+still pending; no broad completion claim. Phase12 acceptance-contract work is on
+separate branch/PR21 and does not alter this higher-priority recovery fix.
+
+## Verified restored-layout result
+
+Source **aa73e65092ad623ae8af8b5a2e208e6ced83996b** passed all five gates in
+**CI40800347568**. Inspected retained artifacts at
+`work/restored-proof-40800347568`: `structural-replan-recovery.done` passed, actual
+fourth-boot epoch differs from the third, original physical source survived,
+corrupt/stale restored metadata was refused, a real edit was preserved before
+inference, another explicit proposal/apply completed, real12/16 timing passed
+at01:31:47, and the second undo retained both player supports and older work.
+The final SQLite verifier passed with exactly four starts for the two explicit
+behavior/geometry pairs and correctly separated current-epoch mirrors from older
+immutable recovery evidence. No local tests ran and no fresh structural inference
+is claimed from these hand-authored fixture responses.
+
+Ship R1-R3 after the final note commit's required checks. PR21 separately adds the
+actual signed-in structural scenario: its contract service tests passed, native
+path compiles, but manual SDK calls and full new live proof remain outstanding.
+Continue all remaining roadmap Outcomes and all six Phase2 features afterward;
+the overall goal is active and unfinished.
