@@ -277,3 +277,13 @@ tests run; TypeScript no-emit passed. One GPT-6-Luna/high focused auth boundary
 check (required by AGENTS for auth-sensitive changes) reported no blocking findings;
 no broad review cycle. HTTP/native routes and free-form discussion are NOT built
 yet; do not claim an in-game note/conversation feature from this foundation.
+
+Phase14 working branch update: HTTP note read/append routes and native
+`notes`/`remember` commands are implemented, including connected-player callback
+fences, a bounded deadline, owner-only append, strict reply validation and
+cancellation of pending reasoning when knowledge changes. Java server/client
+compilation passed. Added HTTP denial/replay/in-flight cancellation tests and a
+native strict-note DTO test; these tests await GitHub CI. The existing foundation
+commit fc5b9e3 passed all five checks in CI40917639392. Native command/restart
+acceptance and model conversation/context integration remain unfinished. Do not
+claim this branch is a shipped in-game memory feature yet.

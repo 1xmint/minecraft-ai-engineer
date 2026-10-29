@@ -1679,3 +1679,152 @@ test("complete Boolean intent reaches named raw geometry through separately fenc
     await f.close();
   }
 });
+
+test("literal project notes use connected owner transport and remain separate from canonical design", async () => {
+  let calls = 0;
+  const f = await fixture({
+    async plan() {
+      calls++;
+      throw new Error("Notes cannot invoke a model");
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const body = {
+      expectedRevision: 0,
+      note: {
+        schemaVersion: 1,
+        kind: "goal",
+        text: "Keep the entrance within six blocks.",
+      },
+    };
+    const c = context({ connectionId: generatedConnection });
+    const write = await f.post("/v2/knowledge/note", { context: c, ...body });
+    assert.equal(write.status, 200);
+    const saved = await json<{
+      note: { authorId: string; revision: number; source: string };
+    }>(write);
+    assert.equal(saved.note.authorId, OWNER);
+    assert.equal(saved.note.revision, 1);
+    assert.equal(saved.note.source, "owner-authored");
+    const read = await f.post("/v2/knowledge/read", {
+      context: context({ actorId: EDITOR, connectionId: generatedConnection }),
+    });
+    assert.equal(read.status, 200);
+    const knowledge = await json<{
+      knowledge: { revision: number; notes: { text: string }[] };
+    }>(read);
+    assert.equal(knowledge.knowledge.revision, 1);
+    assert.equal(knowledge.knowledge.notes[0]!.text, body.note.text);
+    for (const actor of [EDITOR, EVE])
+      assert.equal(
+        (
+          await f.post("/v2/knowledge/note", {
+            context: context({
+              actorId: actor,
+              connectionId: generatedConnection,
+            }),
+            ...body,
+            expectedRevision: 1,
+          })
+        ).status,
+        403,
+      );
+    assert.equal(
+      (await f.post("/v2/knowledge/read", { context: context() })).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/read", {
+          context: context({ actorId: EVE, connectionId: generatedConnection }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          ...body,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: c,
+          ...body,
+          expectedRevision: 1,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          ...body,
+          expectedRevision: 1,
+          isOperator: true,
+        })
+      ).status,
+      400,
+    );
+    assert.equal(f.store.gateway.knowledge(context()).revision, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+    assert.equal(calls, 0);
+  } finally {
+    await f.close();
+  }
+});
+test("new project knowledge cancels in-flight reasoning without accepting its stale result", async () => {
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => (started = resolve));
+  let aborted = false;
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior(_input, signal) {
+      const wait = new Promise<never>((_resolve, reject) =>
+        signal.addEventListener(
+          "abort",
+          () => {
+            aborted = true;
+            reject(new Error("reasoning cancelled"));
+          },
+          { once: true },
+        ),
+      );
+      started();
+      return wait;
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const pending = f.post("/v2/behavior/propose", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await ready;
+    const note = await f.post("/v2/knowledge/note", {
+      context: context({ connectionId: generatedConnection }),
+      expectedRevision: 0,
+      note: {
+        schemaVersion: 1,
+        kind: "constraint",
+        text: "Use the newly measured wall dimensions before proposing a layout.",
+      },
+    });
+    assert.equal(note.status, 200);
+    assert.equal(aborted, true);
+    assert.notEqual((await pending).status, 200);
+    assert.equal(f.store.gateway.knowledge(context()).revision, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});

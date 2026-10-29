@@ -22,6 +22,7 @@ final class ProjectManager {
     private long sequence;
     final InventoryPerception inventories=new InventoryPerception(this);
     final GeneratedPlanning generated=new GeneratedPlanning(this);
+    final ProjectKnowledgeClient knowledge=new ProjectKnowledgeClient(this);
     private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
     private final Map<UUID,ConnectionStamp> connectionIds=new HashMap<>();
     String connectionId(ServerPlayer player) {
@@ -157,7 +158,7 @@ final class ProjectManager {
         }
     }
     void tick() {
-        inventories.tick();generated.tick();
+        inventories.tick();generated.tick();knowledge.tick();
         connectionIds.entrySet().removeIf(entry->{var current=server.getPlayerList().getPlayer(entry.getKey());return current==null || current.connection!=entry.getValue().connection();});
         for (EngineeringSession project : projects.values()) project.tick();
         if (server.getTickCount() % 5 != 0) return;
@@ -187,7 +188,7 @@ final class ProjectManager {
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
-        generated.close();inventories.close();connectionIds.clear();
+        generated.close();inventories.close();knowledge.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

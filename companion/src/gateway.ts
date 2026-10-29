@@ -130,6 +130,8 @@ export class ServerGateway {
         "/v2/inventory",
         "/v2/inventory/read",
         "/v2/project/read",
+        "/v2/knowledge/read",
+        "/v2/knowledge/note",
         "/v2/design",
         "/v2/behavior/propose",
         "/v2/design/generated",
@@ -139,6 +141,50 @@ export class ServerGateway {
     const v = object(value),
       context = gatewayContext(v.context);
     this.requireEpoch(context);
+    if (
+      pathname === "/v2/knowledge/read" ||
+      pathname === "/v2/knowledge/note"
+    ) {
+      const allowed =
+        pathname === "/v2/knowledge/read"
+          ? ["context"]
+          : ["context", "note", "expectedRevision"];
+      if (
+        Object.keys(v).length !== allowed.length ||
+        Object.keys(v).some((key) => !allowed.includes(key))
+      )
+        throw new RequestError("Invalid project knowledge request fields.");
+      if (!context.connectionId)
+        throw new RequestError(
+          "Project knowledge requests require a current connection.",
+          403,
+        );
+      if (pathname === "/v2/knowledge/read")
+        return {
+          protocol: 2,
+          status: "shared",
+          context,
+          knowledge: memory.knowledge(context),
+        };
+      const note = memory.rememberNote(
+        context,
+        v.note,
+        integer(
+          v.expectedRevision,
+          "expected knowledge revision",
+          0,
+          Number.MAX_SAFE_INTEGER - 1,
+        ),
+      );
+      // New explicit requirements invalidate reasoning even when geometry/auth revisions did not change.
+      for (const active of this.planning)
+        if (
+          active.context.serverId === context.serverId &&
+          active.context.projectId === context.projectId
+        )
+          active.controller.abort();
+      return { protocol: 2, status: "recorded", context, note };
+    }
     if (pathname === "/v2/inventory") {
       const { context: _context, reportSequence, ...body } = v;
       memory.inventory(

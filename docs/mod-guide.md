@@ -410,3 +410,23 @@ deeper neighboring-circuit analysis, world change event indexing, general
 circuit debugging, physical interface verification and full model-to-game
 acceptance still need implementation/proof. The exact source brief remains in
 product-brief.md.
+
+## Shared project notes (development branch)
+
+The project owner can explicitly record a goal, constraint, preference or decision:
+
+```text
+/engineer remember goal Keep the entrance within six blocks.
+/engineer remember decision Use a visible lamp for the output.
+/engineer notes
+```
+
+Notes are shared with authorized project members. Editors and viewers can read
+notes; only the owner can append them. Each literal note has immutable authorship
+and its own knowledge revision. Notes persist in the local companion database,
+separately from blueprints and measured world evidence. Recording a note cancels
+pending design reasoning, but does not build, inspect or test anything. If a write
+is unconfirmed, read notes before retrying. Recent notes are shown; earlier
+records remain stored. Notes do not yet inform model discussion or planning.
+
+These commands are under development and still require native acceptance proof.
