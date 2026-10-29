@@ -10,7 +10,7 @@ Keep required checks and concrete runtime proof. Tests run on GitHub, never on
 his slow PC; local work only scoped compile/format checks. Public implementation,
 push and merging green changes are authorized. No question/permission is pending.
 
-## Next slice: explicit structural revisions (G2/G3)
+## Structural revision slice (G2/G3)
 
 - S1: owner sees an explicit old/new geometry diff and can review it without world
   editing. Workspace expansion is explicit, owner-only, and retains all tracked
@@ -99,7 +99,7 @@ mouse use; optional-overlay opt-out is not a vanilla binary.
 behavior then raw geometry. Pending consent is native-only/outside canonical
 revision, binds original request/actor connection/epoch/revisions/corners/origin/
 rotation/nonce/dual TTL, and disappears on restart. Confirm authorizes inference,
-never construction. Generated replacement of built work is currently rejected.
+never construction. Completed generated root builds can propose structural revisions; geometry stays outside canonical intent until separate owner apply confirmation.
 Both runtimes derive/validate stages/materials/bounds/ports/tests/provenance;
 behavior digest is SHA256 UTF-8 `buffer-v1|RISING|FALLING`. Buffer latency0..128 game
 ticks includes real immediate0-on/4-off and serial12/16 physical proofs. Generated
@@ -124,8 +124,7 @@ undo crash recovery. Limits4097 mappings,64 snapshots,65536 stored blocks,8MiB.
 Old flat/v2/v3 buffers validate original rules before migration; no invented intent.
 Undo reserves historical positions/read closure under current grants. Baseline/
 dependencies stay tied to their captured source. Structural transitions need
-explicit old/new semantics, not an invented union source. Current journals store
-one captured source per operation; inspect this boundary before changing it.
+explicit old/new semantics, not an invented union source. Structural operations now keep both real sources and exact modified positions; legacy operations retain their original single-source format.
 
 PR16 exact world-write targets, PR15 private read-only lesson followups, PR14
 private inventory/targeted perception and earlier dedicated project permissions,
@@ -225,3 +224,32 @@ Added ephemeral structural difference preview, authorized changes inspection and
 Generated planning now permits completed generated root builds to request a structural revision through the existing behavior -> confirm -> geometry flow. The resulting geometry remains an ephemeral diff, not canonical intent, until the separate private apply confirmation. Native CI now drives that full HTTP/Minecraft path with an explicitly hand-authored three-repeater response; it is not a live or recorded model inference claim. It verifies a wrong apply nonce is rejected, real stop/conflict preservation, an actual reboot while the cursor is unfinished, explicit resume, real 12/16 timing, and undo preserving the older journal/player supports. Scoped Java main/client compile and fixture JavaScript syntax checks passed. Four gates passed on executor source50c5204 while its dedicated run remained live; newer full-path proof is pending. Do not merge or claim S1-S3 proven until all five checks pass and native evidence is inspected. Remaining gap: later planning after undo still needs true historical/current intention semantics; never rewrite a historical before source to invent adjacent revisions.
 
 Full-path source04e6033 / CI40780210614 failed before structural inference because the prior generated confirmation cases exhausted the real four-start/minute budget (native log22:34:42-56). Production quota remains unchanged. The structural acceptance now waits one real61-second window before its two confirmed fixture requests; no retry of consumed consent and no test quota bypass. Retained failure artifacts at work/structural-proof-40780210614. Structural executor/restart/undo acceptance is still unproven; run the new source in GitHub CI.
+
+## Current verified result and shipping decision
+
+Source **8c3aa3959375dee787382abc6516dbc8d430991b** passed all five gates in
+**CI40796411413**. Inspected retained artifacts at task
+`work/structural-proof-40796411413`: both structural markers passed. Native log
+00:55:09 records the two-added/two-changed preview, invalid apply denial, real
+execution, stop and conflicting-edit refusal. The actual third server boot loads
+an unfinished cursor and both original sources without a lease; explicit resume
+finishes the ten-block layout, actual 12/16 timing passes at00:55:20, and production
+undo restores the original layout while preserving both player supports and the
+older operation. The Java assertions and final SQLite verifier passed. This is a
+hand-authored structural response through the real HTTP/native path, not fresh
+signed-in structural inference. No local tests ran.
+
+Decision: ship this bounded generated-root structural feature after the final
+note commit passes CI, without another formal review. Its safe explicit apply,
+conflict/restart and undo behavior is proven. Earlier chronological notes saying
+apply/model routing are absent or structural acceptance is unproven are superseded
+by this result. PR19 does not complete the overall engineering partner or Phase2.
+The separate live-model modification exercise and subsequent revision after undo
+remain next work; do not claim those are covered by this fixture.
+
+Next Outcomes: (G2/G3) preserve actual historical/current intended sources when a
+new revision follows undo, with real repeat-revision/undo/restart proof; prove an
+actual signed-in structural proposal through the native path. Then expand actual
+functions and electrical interfaces, complete E1 conversation/durable rationale,
+E3 diagnosis/repair visuals, and E4 full end-to-end acceptance. All six Phase2
+features remain unstarted. Keep the full active goal and earlier constraints.
