@@ -222,3 +222,11 @@ runner/evidence validation (T3), actual AND/native handoff/failure/restart proof
 (T2/T3), GitHub required checks then ship. No heavy review. Tests only in CI;
 local scoped compile/format checks. No new SDK calls until deterministic proofs
 are established; the earlier structural slice's receipts remain consumed.
+
+2026-10-29 T1 implementation progress: added immutable Java TruthTableSpec and
+pure TypeScript truth-table validation, matching SHA256 identity/summary, complete
+1..4-input row counts and strict rejection of ambiguous/extra/non-Boolean data.
+Added cross-runtime golden digest and arity/rejection proofs. No local tests run.
+PR22 remains draft: multi-input geometry/runtime/evidence integration and actual
+Minecraft AND proof are unfinished; initial CI40810537325 failed on the deliberately
+incomplete boundary-first source. Do not merge or claim generated logic works yet.
