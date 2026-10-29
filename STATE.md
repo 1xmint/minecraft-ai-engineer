@@ -3,7 +3,7 @@
 2026-10-28: Active goal: **complete all milestones**, all remaining phase1 and
 all six phase2 features. Do not redefine done around a catalog, buffer or green CI.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/11-restored-layouts**, PR20. PR19 merged as **1e97bc385c3296ea037eaaf4689b7eeec982243b**, final CI40797460992 all five green.
+Branch **phase/12-live-structural-proof**, PR21, based on merged PR20 **55a48582003b2b91ffb50d26dd74b8846679ff9e**. PR19 merged as **1e97bc385c3296ea037eaaf4689b7eeec982243b**, final CI40797460992 all five green.
 
 Josh: **skip heavy reviews; build and ship**. No more formal review cycles.
 Keep required checks and concrete runtime proof. Tests run on GitHub, never on
@@ -335,3 +335,27 @@ actual signed-in structural scenario: its contract service tests passed, native
 path compiles, but manual SDK calls and full new live proof remain outstanding.
 Continue all remaining roadmap Outcomes and all six Phase2 features afterward;
 the overall goal is active and unfinished.
+
+## Active slice: live structural inference proof (G2/G3/E4)
+
+- L1: a separate fixed synthetic structural scenario reconstructs only its exact
+  request, five-wide bounds, completed seed context and run/stage identity. Proof:
+  cross-scenario/source/receipt mismatches reject; existing generated scenario
+  keeps four-wide bounds and exact old behavior.
+- L2: on a real dedicated server, the player places the first support of a known
+  two-repeater reference, AI finishes it, and real timing passes. Two signed-in
+  calls then propose/confirm behavior and raw three-repeater geometry; separate
+  world apply, stop/resume, timing, service/game restart and visible blocks prove
+  modification of actual prior construction. No fixture response claims inference.
+- L3: subscription credentials stay local, model calls are explicit and bounded,
+  each stage keeps its private exclusive receipt, and ordinary CI remains offline.
+  Proof: existing transport provenance/TTL/digest checks plus actual paired SDK
+  receipts and complete native artifacts. Do not retry a consumed started receipt.
+
+Decision: add one narrowly named structural scenario to the existing two-stage
+synthetic exchange instead of allowing arbitrary CI inputs or four SDK calls.
+The old seed is explicit hand-authored reference data, not a fresh model design.
+Tasks: contract rejection proofs and implementation (L1/L3), native seed and real
+modification flow plus workflow/CLI routing (L2/L3), GitHub regression checks,
+then the two actual local SDK responses and inspect the entire native result.
+No heavy review cycle. PR20 failure fixes remain higher priority if its rerun fails.
