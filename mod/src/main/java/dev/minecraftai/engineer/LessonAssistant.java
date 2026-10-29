@@ -81,8 +81,9 @@ final class LessonAssistant {
         canonical.source().getAsJsonObject("resources").entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry->counts.add(entry.getValue().getAsInt()+" "+entry.getKey().replace("minecraft:","").replace('_',' ')));
         s.tell("Intended materials for component "+target+": "+String.join(", ",counts)+". These are design needs, not an inventory count.");
     }
-    private static String currentComponent(EngineeringSession s,boolean required) {
-        var cursor=s.cursors.get(s.actor());String result=null;
+    private static String currentComponent(EngineeringSession s,boolean required) {return currentComponent(s,s.actor(),required);}
+    static String currentComponent(EngineeringSession s,UUID actor,boolean required) {
+        var cursor=s.cursors.get(actor);String result=null;
         if(s.blueprint!=null && cursor!=null && cursor.stage>=0 && cursor.stage<s.blueprint.stages().size()) {
             if(!ComponentTree.composite(s.blueprint))result="root";
             else {

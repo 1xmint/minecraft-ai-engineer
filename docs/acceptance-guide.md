@@ -260,3 +260,55 @@ ports. Actual tests must establish behavior again; replay is not fresh inference
 The bounded result does not prove general engineering, human mouse placement or
 Mojang authentication. All six Boolean calls across the three attempts are consumed.
 Do not make further calls or reuse their exclusive started receipts for this slice.
+
+## Grounded conversation proof (development branch)
+
+The manual workflow also has a `discussion` scenario and stage. It creates a
+synthetic unbuilt lamp project and the two fixed owner requirements about a
+six-block entrance and visible output, then asks one explicit engineering
+question. The bridge accepts only that exact intended design and those notes;
+it never exports inventories, arbitrary project text or credentials.
+
+After the reviewed source passes ordinary CI, dispatch the existing manual
+workflow on that source with `scenario=discussion`. The existing local responder
+uses `--scenario discussion --stage discussion` with explicit run, attempt, SHA
+and `--model gpt-6-luna`. It makes one subscription-authenticated model call and
+requires a bounded explanation citing both owner notes. Run/source/digest and
+expiry checks bind the reply to the actual native question. A durable started
+receipt forbids another inference attempt; publication can retry only an already
+saved valid response. No automatic retry or paid API fallback exists.
+
+The real native client must display that reply without building or inventing a
+functional pass. Authorized sharing, denied editor authorship, revocation, an
+actual companion process replacement and later game boot must preserve the
+literal notes and unchanged blueprint/world evidence. Restart recovery reads
+notes and appends a third constraint without another model call. The SQLite
+verifier requires exactly one discussion dispatch and accepted answer. Ordinary
+CI still uses explicit deterministic fixtures; those are not fresh inference.
+
+Fresh discussion acceptance passed on source `b858364` (all five ordinary checks
+in [CI40959246919](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40959246919)).
+The entire [manual run40960496759](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40960496759)
+succeeded; response workflow40961355992 published the one accepted Luna reply.
+Official SDK0.164.0 used10919 input/140 output tokens. The actual Minecraft client
+received the exact response at21:52:41 UTC, citing both owner notes, retaining the
+six-block constraint and saying the reason for visibility was not recorded. It
+explicitly stated that no evidence of construction or testing was supplied.
+
+The whole native flow then passed editor read/denial, revocation, actual companion
+process replacement4709->5253 and a later saved-server boot. Notes were read at
+revision2 and extended to revision3 without another model call. SQLite required
+exactly one discussion dispatch/answer and all three literal owner notes; world
+blocks, blueprint revision and functional evidence stayed unchanged.
+
+`tests/fixtures/live-discussion.json` retains the exact synthetic request/reply and
+usage/digests as archival codec evidence. Its historical acceptance time is used
+only by offline regression validation; it never authorizes another inference or
+replays the old reply into a new project. Request digest
+`2b1b24e69d36bfef9e32957cd6806b74b21e42b13d3e9c7efaafd792b4e80cb5`;
+result digest `5a666a4b4fdf67b866c095230571455c0d03255009dda02b3c96f82654d248e6`.
+The unchanged native screenshot is `docs/images/grounded-discussion.png`.
+This bounded proof does not establish full natural action interpretation, general
+engineering, Mojang authentication or shared multi-user subscription eligibility.
+The single discussion call is consumed; no further SDK calls are needed for this
+slice. Private started/untrusted/response receipts remain on the operator PC.

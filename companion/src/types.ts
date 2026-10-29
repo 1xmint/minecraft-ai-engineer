@@ -1,3 +1,4 @@
+import type { DiscussionRequest, DiscussionReply } from "./discussion.js";
 import type {
   Behavior,
   BehaviorProposal,
@@ -142,6 +143,12 @@ export interface Plan {
   rotation?: Rotation;
 }
 export interface PlanningProvider {
+  discuss?(
+    input: DiscussionRequest,
+    signal: AbortSignal,
+    context: string,
+    authority?: Readonly<GatewayContext>,
+  ): Promise<DiscussionReply>;
   proposeBehavior?(
     input: DesignRequest,
     signal: AbortSignal,

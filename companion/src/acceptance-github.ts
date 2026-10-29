@@ -40,6 +40,7 @@ export function requireAcceptanceRun(
       "generated-buffer-owner-confirmation-v1",
       "structural-buffer-owner-confirmation-v1",
       "generated-boolean-owner-confirmation-v1",
+      "project-discussion-owner-notes-v1",
     ]).has(expected.scenario) ||
     (kind !== "request" && kind !== "response")
   )
@@ -101,7 +102,7 @@ export function requireAcceptanceArtifact(
     parent = object(v.workflow_run);
   if (
     typeof name !== "string" ||
-    !/^mce-live-(request|response)-[1-9][0-9]{0,19}-[1-9][0-9]{0,3}(?:-(?:behavior|geometry))?$/u.test(
+    !/^mce-live-(request|response)-[1-9][0-9]{0,19}-[1-9][0-9]{0,3}(?:-(?:behavior|geometry|discussion))?$/u.test(
       name,
     ) ||
     v.name !== name ||

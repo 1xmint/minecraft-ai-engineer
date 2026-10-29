@@ -24,6 +24,90 @@ if (restoredBoot) {
 
 const db = new DatabaseSync(database, { readOnly: true });
 try {
+  if (
+    process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
+    process.env.MCE_DISCUSSION_ACCEPTANCE === "true"
+  ) {
+    const liveDiscussion = process.env.MCE_DISCUSSION_ACCEPTANCE === "true";
+    for (const marker of [
+      "knowledge-no-world-changes.done",
+      "knowledge-bob.done",
+      "knowledge-bob-denied.done",
+      "knowledge-recovery.done",
+      ...(liveDiscussion
+        ? ["live-discussion-model.done", "live-discussion-recovery.done"]
+        : ["discussion-cancelled.done"]),
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+        "passed",
+      );
+    const knowledgeProject = readFileSync(
+      `${coordination}/knowledge-project`,
+      "utf8",
+    ).trim();
+    const counter = db
+      .prepare(
+        "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
+      )
+      .get(server.serverId, knowledgeProject);
+    assert.equal(
+      counter?.revision,
+      3,
+      "Restart appends knowledge without losing or duplicating notes",
+    );
+    const notes = db
+      .prepare(
+        "SELECT document FROM gateway_project_notes WHERE server_id=? AND project_id=? ORDER BY note_revision",
+      )
+      .all(server.serverId, knowledgeProject)
+      .map((row) => JSON.parse(row.document));
+    assert.equal(notes.length, 3, "Denied editor append creates no note");
+    assert.deepEqual(
+      notes.map((note) => [note.revision, note.kind, note.text]),
+      [
+        [1, "goal", "Keep the entrance within six blocks."],
+        [2, "decision", "Use a visible lamp for the output."],
+        [3, "constraint", "Preserve the entrance clearance."],
+      ],
+    );
+    for (const note of notes) {
+      assert.equal(note.authorId, "10920508-d5d8-3eed-93d2-92f193afe7d7");
+      assert.equal(note.source, "owner-authored");
+      assert.equal(note.schemaVersion, 1);
+    }
+    assert.equal(new Set(notes.map((note) => note.id)).size, 3);
+    const discussions = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='discussion-reply' ORDER BY rowid",
+      )
+      .all(server.serverId, knowledgeProject)
+      .map((row) => JSON.parse(row.document));
+    assert.deepEqual(
+      discussions.map((reply) => reply.knowledgeRevision),
+      liveDiscussion ? [2] : [2, 3],
+    );
+    assert.equal(
+      discussions.every(
+        (reply) =>
+          reply.worldEvidence === "not-inspected" &&
+          reply.reply.kind === "explanation",
+      ),
+      true,
+    );
+    const starts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+      )
+      .get(server.serverId, knowledgeProject);
+    assert.equal(
+      starts.count,
+      liveDiscussion ? 1 : 3,
+      liveDiscussion
+        ? "The manual proof dispatches exactly one owner question"
+        : "Only explicit owner questions dispatch: two answers and one cancelled request",
+    );
+  }
   const row = db
     .prepare(
       "SELECT * FROM gateway_projects WHERE server_id=? AND project_id=?",

@@ -2,7 +2,8 @@
 // is unavailable: generated boundary fixtures are deterministic data, never SDK calls.
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { writeFileSync, readFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
 import { loadConfig } from "../../dist/companion/src/config.js";
 import { MemoryStore } from "../../dist/companion/src/memory.js";
 import { createCompanionServer } from "../../dist/companion/src/server.js";
@@ -49,6 +50,64 @@ const server = createCompanionServer({
   // This provider cannot invoke the SDK; production retains its default4/minute.
   actorPlansPerMinute: 12,
   provider: {
+    async discuss(input, _signal, context) {
+      const source = JSON.parse(context);
+      if (source.worldEvidence !== "not-inspected")
+        throw new Error("Discussion fixture has invented world evidence");
+      if (input.message === "CI cancelled entrance discussion.") {
+        const coordination = join(config.directory, "..", "coordination");
+        if (source.knowledgeRevision !== 2 || !existsSync(coordination))
+          throw new Error("Unexpected cancellation fixture scope");
+        writeFileSync(join(coordination, "discussion-dispatched"), "ready");
+        const deadline = Date.now() + 10_000;
+        while (!_signal.aborted && Date.now() < deadline) await delay(20);
+        if (!_signal.aborted)
+          throw new Error("Native stop failed to cancel discussion transport");
+        writeFileSync(
+          join(coordination, "discussion-cancelled.done"),
+          "passed",
+        );
+        // Deliberately ignore abort and return late; gateway must still reject it.
+        return {
+          schemaVersion: 1,
+          kind: "explanation",
+          text: "CI obsolete discussion reply must never display.",
+          basis: ["project"],
+        };
+      }
+      const expected =
+        input.message === "CI explain entrance decision."
+          ? {
+              revision: 2,
+              kind: "decision",
+              text: "Use a visible lamp for the output.",
+            }
+          : input.message === "CI explain entrance constraint."
+            ? {
+                revision: 3,
+                kind: "constraint",
+                text: "Preserve the entrance clearance.",
+              }
+            : null;
+      if (!expected || source.knowledgeRevision !== expected.revision)
+        throw new Error(
+          "Unexpected discussion fixture request or knowledge version",
+        );
+      const note = source.sources.find(
+        (item) =>
+          item.kind === "owner-authored-requirement" &&
+          item.data.kind === expected.kind &&
+          item.data.text === expected.text,
+      );
+      if (!note)
+        throw new Error("Discussion lacks the explicit owner requirement");
+      return {
+        schemaVersion: 1,
+        kind: "explanation",
+        text: `Owner-authored ${expected.kind}: ${expected.text} This is a requirement, not a measured world fact.`,
+        basis: ["project", note.id],
+      };
+    },
     async proposeBehavior(input) {
       if (input.request === truthRequest)
         return structuredClone(truthFixture.proposal);

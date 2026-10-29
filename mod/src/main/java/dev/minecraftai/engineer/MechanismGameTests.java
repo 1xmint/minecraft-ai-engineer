@@ -244,6 +244,21 @@ public final class MechanismGameTests {
         });
     }
 
+    @GameTest public void projectKnowledgeCannotInventOwnerOrMislabelWorldEvidence(GameTestHelper helper) {
+        var owner=java.util.UUID.fromString("11111111-1111-4111-8111-111111111111");
+        var value=com.google.gson.JsonParser.parseString("""
+            {"schemaVersion":1,"revision":1,"notes":[{"schemaVersion":1,"kind":"goal","text":"Fit within six blocks.","id":"22222222-2222-4222-8222-222222222222","revision":1,"authorId":"11111111-1111-4111-8111-111111111111","createdAt":100,"source":"owner-authored"}],"hasEarlier":false}
+            """).getAsJsonObject();
+        helper.assertTrue(ProjectKnowledgeClient.validateKnowledge(value,owner)==1,"Literal requirements retain a separate knowledge revision");
+        var forged=value.deepCopy();forged.getAsJsonArray("notes").get(0).getAsJsonObject().addProperty("authorId","33333333-3333-4333-8333-333333333333");
+        reject(helper,()->ProjectKnowledgeClient.validateKnowledge(forged,owner),"A reply cannot forge note ownership");
+        var verdict=value.deepCopy();verdict.getAsJsonArray("notes").get(0).getAsJsonObject().addProperty("verified","passed");
+        reject(helper,()->ProjectKnowledgeClient.validateKnowledge(verdict,owner),"Owner-authored text is not world verification");
+        var wrongRevision=value.deepCopy();wrongRevision.addProperty("revision",2);
+        reject(helper,()->ProjectKnowledgeClient.validateKnowledge(wrongRevision,owner),"Incomplete or relabelled history rejects");
+        helper.succeed();
+    }
+
     @GameTest public void completeTruthEvidenceCannotSwapCasesInputsOrTime(GameTestHelper helper) {
         var behavior=new TruthTableSpec(java.util.List.of("a","b"),java.util.List.of(false,false,false,true),2);
         var cases=new com.google.gson.JsonArray();long tick=100;
@@ -404,6 +419,19 @@ public final class MechanismGameTests {
         BlockPos pos=at(x,y,z,rotation);BlockState current=helper.getLevel().getBlockState(helper.absolutePos(pos));
         if(!current.is(Blocks.LEVER))block(helper,x,y,z,"minecraft:lever[face=floor,facing=east,powered="+on+"]",rotation);
         else if(current.getValue(BlockStateProperties.POWERED)!=on)helper.pullLever(pos);
+    }
+    @GameTest
+    public void discussionReplyCannotBecomeConstructionAuthority(GameTestHelper helper) {
+        var answer=new com.google.gson.JsonObject();answer.addProperty("schemaVersion",1);answer.addProperty("kind","clarification");answer.addProperty("text","Which component do you mean?");answer.add("basis",new com.google.gson.JsonArray());
+        ProjectKnowledgeClient.validateDiscussion(answer,null);
+        for(String field:java.util.List.of("verified","commands","authority")) {
+            var forged=answer.deepCopy();forged.addProperty(field,"granted");boolean rejected=false;
+            try {ProjectKnowledgeClient.validateDiscussion(forged,null);}catch(IllegalArgumentException expected){rejected=true;}
+            if(!rejected)throw new AssertionError("Discussion accepted extra authority: "+field);
+        }
+        var foreign=answer.deepCopy();foreign.getAsJsonArray("basis").add("component:other");boolean rejected=false;
+        try {ProjectKnowledgeClient.validateDiscussion(foreign,"root");}catch(IllegalArgumentException expected){rejected=true;}
+        if(!rejected)throw new AssertionError("Discussion accepted a foreign component reference");helper.succeed();
     }
     private static void inverter(GameTestHelper helper,Rotation rotation){
         block(helper,0,0,0,"minecraft:stone",rotation);

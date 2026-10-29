@@ -4,11 +4,11 @@ on:
     inputs:
       scenario:
         type: choice
-        options: [catalog, generated, structural, boolean]
+        options: [catalog, generated, structural, boolean, discussion]
         default: catalog
       stage:
         type: choice
-        options: [catalog, behavior, geometry]
+        options: [catalog, behavior, geometry, discussion]
         default: catalog
       request_run:
         required: true
@@ -44,6 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MCE_ACCEPTANCE_STAGE: ${{ inputs.stage }}
+          MCE_DISCUSSION_ACCEPTANCE: ${{ inputs.scenario == 'discussion' && 'true' || 'false' }}
           MCE_STRUCTURAL_ACCEPTANCE: ${{ inputs.scenario == 'structural' && 'true' || 'false' }}
           MCE_BOOLEAN_ACCEPTANCE: ${{ inputs.scenario == 'boolean' && 'true' || 'false' }}
         run: node scripts/ci/live-transport.mjs publish-response

@@ -1679,3 +1679,344 @@ test("complete Boolean intent reaches named raw geometry through separately fenc
     await f.close();
   }
 });
+
+test("literal project notes use connected owner transport and remain separate from canonical design", async () => {
+  let calls = 0;
+  const f = await fixture({
+    async plan() {
+      calls++;
+      throw new Error("Notes cannot invoke a model");
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const body = {
+      expectedRevision: 0,
+      note: {
+        schemaVersion: 1,
+        kind: "goal",
+        text: "Keep the entrance within six blocks.",
+      },
+    };
+    const c = context({ connectionId: generatedConnection });
+    const write = await f.post("/v2/knowledge/note", { context: c, ...body });
+    assert.equal(write.status, 200);
+    const saved = await json<{
+      note: { authorId: string; revision: number; source: string };
+    }>(write);
+    assert.equal(saved.note.authorId, OWNER);
+    assert.equal(saved.note.revision, 1);
+    assert.equal(saved.note.source, "owner-authored");
+    const read = await f.post("/v2/knowledge/read", {
+      context: context({ actorId: EDITOR, connectionId: generatedConnection }),
+    });
+    assert.equal(read.status, 200);
+    const knowledge = await json<{
+      knowledge: { revision: number; notes: { text: string }[] };
+    }>(read);
+    assert.equal(knowledge.knowledge.revision, 1);
+    assert.equal(knowledge.knowledge.notes[0]!.text, body.note.text);
+    for (const actor of [EDITOR, EVE])
+      assert.equal(
+        (
+          await f.post("/v2/knowledge/note", {
+            context: context({
+              actorId: actor,
+              connectionId: generatedConnection,
+            }),
+            ...body,
+            expectedRevision: 1,
+          })
+        ).status,
+        403,
+      );
+    assert.equal(
+      (await f.post("/v2/knowledge/read", { context: context() })).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/read", {
+          context: context({ actorId: EVE, connectionId: generatedConnection }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          ...body,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: c,
+          ...body,
+          expectedRevision: 1,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          ...body,
+          expectedRevision: 1,
+          isOperator: true,
+        })
+      ).status,
+      400,
+    );
+    assert.equal(f.store.gateway.knowledge(context()).revision, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+    assert.equal(calls, 0);
+  } finally {
+    await f.close();
+  }
+});
+test("new project knowledge cancels in-flight reasoning without accepting its stale result", async () => {
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => (started = resolve));
+  let aborted = false;
+  const provider: PlanningProvider = {
+    ...plan,
+    async proposeBehavior(_input, signal) {
+      const wait = new Promise<never>((_resolve, reject) =>
+        signal.addEventListener(
+          "abort",
+          () => {
+            aborted = true;
+            reject(new Error("reasoning cancelled"));
+          },
+          { once: true },
+        ),
+      );
+      started();
+      return wait;
+    },
+  };
+  const f = await fixture(provider);
+  try {
+    await f.open();
+    await f.sync();
+    const pending = f.post("/v2/behavior/propose", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await ready;
+    const note = await f.post("/v2/knowledge/note", {
+      context: context({ connectionId: generatedConnection }),
+      expectedRevision: 0,
+      note: {
+        schemaVersion: 1,
+        kind: "constraint",
+        text: "Use the newly measured wall dimensions before proposing a layout.",
+      },
+    });
+    assert.equal(note.status, 200);
+    assert.equal(aborted, true);
+    assert.notEqual((await pending).status, 200);
+    assert.equal(f.store.gateway.knowledge(context()).revision, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});
+
+test("explicit project requirements reach generated planning as labeled shared knowledge", async () => {
+  let captured = "";
+  const f = await fixture({
+    ...plan,
+    async proposeBehavior(_input, _signal, sharedContext) {
+      captured = sharedContext ?? "";
+      return {
+        behavior: null,
+        explanation: "Which output timing should the entrance use?",
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const note = await f.post("/v2/knowledge/note", {
+      context: context({ connectionId: generatedConnection }),
+      expectedRevision: 0,
+      note: {
+        schemaVersion: 1,
+        kind: "constraint",
+        text: "Keep the entrance within six blocks.",
+      },
+    });
+    assert.equal(note.status, 200);
+    const proposal = await f.post("/v2/behavior/propose", {
+      ...generatedInput,
+      context: context({ connectionId: generatedConnection }),
+    });
+    assert.equal(proposal.status, 200);
+    const shared = JSON.parse(captured);
+    assert.equal(shared.knowledge.revision, 1);
+    assert.equal(
+      shared.knowledge.notes[0].text,
+      "Keep the entrance within six blocks.",
+    );
+    assert.match(shared.knowledge.source, /not observed or verified/);
+    assert.equal(shared.knowledge.notes[0].authorId, OWNER);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});
+
+test("project discussion grounds advice without changing design and denies quota access before dispatch", async () => {
+  let calls = 0,
+    captured = "";
+  const f = await fixture({
+    ...plan,
+    async discuss(_input, _signal, shared) {
+      calls++;
+      captured = shared;
+      return {
+        schemaVersion: 1 as const,
+        kind: "explanation" as const,
+        text: "The intended project uses a lamp; no world inspection was performed.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Why does this project use a lamp?",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    for (const c of [
+      context(),
+      context({ actorId: EDITOR, connectionId: generatedConnection }),
+      context({ actorId: EVE, connectionId: generatedConnection }),
+    ])
+      assert.equal(
+        (await f.post("/v2/discuss", { ...input, context: c })).status,
+        403,
+      );
+    assert.equal(
+      (
+        await f.post("/v2/discuss", {
+          ...input,
+          isOperator: false,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/discuss", {
+          ...input,
+          componentId: "missing",
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      409,
+    );
+    assert.equal(calls, 0);
+    const c = context({ connectionId: generatedConnection });
+    const response = await f.post("/v2/discuss", { ...input, context: c });
+    assert.equal(response.status, 200);
+    const reply = await json<{
+      worldEvidence: string;
+      knowledgeRevision: number;
+      reply: { kind: string };
+    }>(response);
+    assert.equal(reply.worldEvidence, "not-inspected");
+    assert.equal(reply.knowledgeRevision, 0);
+    assert.equal(JSON.parse(captured).sources[0].kind, "intended-design");
+    assert.equal(
+      (await f.post("/v2/discuss", { ...input, context: c })).status,
+      409,
+    );
+    assert.equal(calls, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});
+
+test("discussion rejects invented sources and note changes invalidate late model answers", async () => {
+  let release!: () => void, started!: () => void;
+  const ready = new Promise<void>((resolve) => (started = resolve)),
+    gate = new Promise<void>((resolve) => (release = resolve));
+  let calls = 0;
+  const f = await fixture({
+    ...plan,
+    async discuss() {
+      calls++;
+      if (calls === 1)
+        return {
+          schemaVersion: 1 as const,
+          kind: "explanation" as const,
+          text: "An invented private fact.",
+          basis: ["inventory:other-player"],
+        };
+      started();
+      await gate;
+      return {
+        schemaVersion: 1 as const,
+        kind: "explanation" as const,
+        text: "Obsolete project advice.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Explain the project.",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    assert.equal(
+      (
+        await f.post("/v2/discuss", {
+          ...input,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      400,
+    );
+    const pending = f.post("/v2/discuss", {
+      ...input,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await ready;
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          expectedRevision: 0,
+          note: {
+            schemaVersion: 1,
+            kind: "decision",
+            text: "Preserve the entrance.",
+          },
+        })
+      ).status,
+      200,
+    );
+    release();
+    assert.notEqual((await pending).status, 200);
+    assert.equal(calls, 2);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    release();
+    await f.close();
+  }
+});

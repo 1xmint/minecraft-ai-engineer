@@ -112,6 +112,11 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("plan").then(Commands.argument("request",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->plan(s,StringArgumentType.getString(ctx,"request"))))))
                 .then(Commands.literal("rotate").then(Commands.argument("degrees",IntegerArgumentType.integer(0,270)).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(s.blueprint.anchor(),IntegerArgumentType.getInteger(ctx,"degrees")));}))))
                 .then(Commands.literal("anchor").then(Commands.argument("position",BlockPosArgument.blockPos()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->{if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner can move its workspace");if(s.blueprint==null)throw new IllegalStateException("No blueprint");s.accept(s.blueprint.transformed(BlockPosArgument.getBlockPos(ctx,"position"),s.blueprint.rotation()));}))))
+                .then(Commands.literal("discuss").then(Commands.argument("message",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.PLAN,s->s.manager.knowledge.discuss(s,StringArgumentType.getString(ctx,"message")),false))))
+                .then(Commands.literal("notes").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.manager.knowledge.read(s),false)))
+                .then(Commands.literal("remember").then(Commands.argument("kind",StringArgumentType.word())
+                    .suggests((ctx,builder)->net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("goal","constraint","preference","decision"),builder))
+                    .then(Commands.argument("text",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.EDIT,s->s.manager.knowledge.remember(s,StringArgumentType.getString(ctx,"kind"),StringArgumentType.getString(ctx,"text")),false)))))
                 .then(Commands.literal("ask").then(Commands.argument("question",StringArgumentType.greedyString()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->LessonAssistant.ask(s,StringArgumentType.getString(ctx,"question")),false))))
                 .then(Commands.literal("teach").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{s.cursor(s.actor()).teaching=true;s.save();s.explain();}))
                     .then(Commands.argument("component",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.teachComponent(StringArgumentType.getString(ctx,"component")),false))))
@@ -182,7 +187,12 @@ public final class EngineerMod implements ModInitializer {
             source.sendSuccess(()->Component.literal("Engineer: World identity forked; the previous identity was backed up. Old projects were not granted authority."),false);return 1;
         }catch(Exception error){source.sendFailure(Component.literal("Engineer: "+safe(error)));return 0;}
     }
-    static void cancelPlan(EngineeringSession session) {session.clearStructuralPreview();session.manager.generated.cancel(session);var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
+    static void knowledgeChanging(EngineeringSession session) {
+        session.manager.knowledge.cancelDiscussion(session);session.clearStructuralPreview();session.manager.generated.cancel(session);
+        var pending=PLANS.remove(session);
+        if(pending!=null){pending.future().cancel(true);if(session.state.equals("PLANNING")){session.state=pending.previousState();session.detail="Project knowledge changed; pending reasoning discarded";session.save();}}
+    }
+    static void cancelPlan(EngineeringSession session) {session.manager.knowledge.cancelDiscussion(session);session.clearStructuralPreview();session.manager.generated.cancel(session);var plan=PLANS.remove(session);if(plan!=null)plan.future().cancel(true);}
     private static String safe(Throwable error) {
         Throwable t=error;while(t.getCause()!=null)t=t.getCause();
         String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));

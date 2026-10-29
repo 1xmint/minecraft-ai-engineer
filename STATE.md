@@ -1,226 +1,193 @@
 # Now
 
 2026-10-29. Active goal: **complete all milestones**: the entire Phase1 engineering
-partner and all six Phase2 features. A catalog, buffer, screenshot, release or
-green CI never substitutes for the full objective.
+partner and all six Phase2 features. A catalog, screenshot, release or green CI
+never substitutes for that full objective. Original requirements and multiplayer
+amendment: docs/product-brief.md. Public repo:
+https://github.com/1xmint/minecraft-ai-engineer.
 
-Public repo: https://github.com/1xmint/minecraft-ai-engineer
-Branch **phase/13-generated-logic**, draft **PR22**; main includes PR21 mergee3f26d8.
-Latest fully checked source **d3c84865d4045e8c182224ee4c8ea7a1d2c44add** passed all5
-**CI40908760538** and the entire actual signed-in **Boolean run40910817937**.
-New recorded-reply replay/model-policy changes require final CI before shipping.
-Read actual git status, PR and live workflow state before continuing.
+Current branch **phase/14-project-conversation**, draft PR23, based on main PR22
+merge **bb4e81ff238293ffbce92e94c3a52fc275396572**. Phase14 first conversation/knowledge
+slice is implemented and proven on **b858364b5880a4ade5476b89c8f162643a45442a**:
+all five CI40959246919 checks and the entire fresh signed-in manual40960496759
+passed. Final evidence/docs/archive regression changes now need their own CI,
+then ready/merge PR23. Inspect actual git/PR/workflow state before continuing.
+This does not finish all E1 natural action interpretation or the complete product.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
-merging green PRs are authorized. No approval is pending. Tests run on GitHub,
-never on his slow PC. Locally scoped compile/format/syntax only, one Gradle worker.
-No separately billed service or API key. Only the configured account-owning
-operator invokes AI. Keep project memory only in AGENTS.md and this file.
+merging green PRs are authorized; no approval pending. Tests run on GitHub, never
+on his slow PC. Locally scoped compile/format/syntax only; one Gradle worker.
+No separately billed service/API key. Only the configured account-owning operator
+invokes AI. Keep project memory only in AGENTS.md and this file.
 
-## Current slice: generated Boolean logic (T1/T2/T3)
+## Current Phase14 Outcomes
 
-- T1: independently accepted complete Boolean intent, strict schema and stable
-  Java/TS identity. Preserve legacy buffer JSON/digests/exact-edge tests.
-- T2: raw geometry with actual distinct named levers/lamp, separate owner confirm,
-  no-edit preview and explicit build. Actual generated AND must work in Minecraft.
-- T3: every-tick settled evidence for every row forward/reverse; reject gaps,
-  transient errors and forged/reordered evidence. Preserve input originals across
-  revocation/restart without a lease; fresh owner resume and another trial prove
-  recovery. Geometry and a correct endpoint alone cannot pass.
+- C1: explicit free-form selected-project/component engineering question gets
+  grounded read-only explanation, clarification or unsupported reply. Native
+  command, bounded provider, sources and no invented world authority are proven
+  for the fixed explanation flow. Existing cached lesson asks stay offline.
+- C2: explicit owner goals/constraints/preferences/decisions persist and inform
+  later reasoning. Connected owner append, authorized member read, immutable
+  authorship/revision, optimistic append/replay, SQLite rollback/corruption and
+  actual service/game restart are covered. Knowledge is separate from geometry
+  and measured evidence, with no private inventories.
+- C3: current owner/operator/connection gates before model dispatch; queue/budget,
+  durable replay, pre/post knowledge fences and stale native callback checks.
+  Stop and knowledge changes cancel reasoning; late results cannot be accepted.
+  Current project/auth/epoch, actual connection, selected lesson component/stage,
+  configured operator and dimension are checked again at callback time.
 
-### Implemented contracts
+Implemented: `/engineer remember <goal|constraint|preference|decision> <literal>`;
+`/engineer notes`; `/engineer discuss <question>`. Notes are append-only, max512
+characters, current read32/latest display8; older history stays stored. Recent8
+notes inform design reasoning and discussion, explicitly labeled owner-authored
+requirements, never observed/verified facts. Knowledge revisions are independent
+of blueprint revisions. Queued dispatch and completed results require the same
+knowledge revision; note edits abort active inference. Empty-note design context
+remains byte-for-byte compatible with older signed-in receipts.
 
-EngineeringBehavior is buffer/TruthTableSpec. Schema1 buffers retain
-`buffer-v1|RISING|FALLING` digests and generatorRevision1. New exact schema2:
-function=truth-table, inputs, outputs, settleGameTicks. Inputs1..4 unique
-`[a-z][a-z0-9_]{0,31}`, excluding output; outputs exactly2^N strict Booleans,
-binary row order with first input most significant. Settling integer0..128;
-fixed8-tick stable window. Digest SHA256 UTF8
-`truth-v2|comma-joined-inputs|0/1-output-string|settle`.
+Discussion uses intended project/component sources and recent notes, no fresh
+world observations or private inventory. Reply schema: explanation/clarification/
+unsupported, bounded text and supplied-source IDs. Model text is literal advice,
+never commands, execution authority, a lesson change or a test result. Accepted
+conversation references are audit records. No automatic retry. Owner notes are
+explicit; no inferred/automatic memory summaries yet.
 
-Boolean blueprints keep outer schema1, generatorRevision2. Raw inputs:[{name,pos}]
-match accepted order/count and distinct actual levers; one lamp, no hidden ports.
-Both runtimes re-derive canonical metadata. GeneratedPlanning retains typed intent.
-FunctionalTrial samples tick0 through settle+8, all rows ascending then descending
-(including repeated last row). SettledTrace/companion replay bind row/digest/bound,
-samples, verdict and summaries; outer Java replay also binds input vector, case
-order and adjacent game-time boundaries. Existing per-input write-ahead restore,
-current authority and player-edit preservation remain. No persisted execution lease.
+Standalone mechanisms expose logical `root`; internal recipe block-group names
+are not selectable project components. CI caught and fixed that real mismatch.
+The manual proof artifact allowlist also needed its new -discussion suffix;
+focused GPT-6-Luna/high auth/transport checks caught it. No broad review cycle.
 
-Dedicated command-level deterministic proof18ff3d1 / all5 CI40903991573 passed:
-design -> separate confirm -> preview -> build -> tests -> revoked interruption ->
-actual third boot -> fresh resume/retest. Trials15:47:00 and15:48:38 UTC; both truth
-recovery markers passed and SQLite required two planning starts. Hand-authored raw
-AND reply, not inference. Artifacts work/truth-confirm-proof-40903991573.
-CI's guarded no-inference provider allows12 actor stages/minute for the expanded
-fixture burst; production4/minute and24/hour are unchanged. Earlier7f1e6e7 /
-CI40902469058 failed at that budget before the following buffer call; preserve failure.
+## Phase14 proof and current gates
 
-### Fresh signed-in result: whole run passed
+- Foundation fc5b9e3: all5 CI40917639392; strict literal codec/storage and failures.
+- Native notes9198c2a: all5 CI40956149245; owner record, editor read/denial,
+  revocation, actual later boot read revision2 and append revision3, unchanged
+  blueprint/world evidence. Artifacts work/knowledge-proof-40956149245.
+- Conversation/cancellation c9b011d: all5 CI40958107235; deterministic native
+  revision2/3 answers; provider waits for real HTTP cancellation then deliberately
+  returns late, which is discarded. Exactly2 accepted audits/3 explicit starts.
+  Actual companion4392->4529 and later server boot. Artifacts
+  work/discussion-proof-40958107235. These were fixtures, not fresh inference.
+- Exact live-proof sourceb858364: all5 CI40959246919, inspected native logs at
+  21:42:34/21:44:17 UTC and passed cancellation/recovery markers. Artifacts
+  work/discussion-proof-40959246919. SDK/CLI0.164.0; no local test suites run.
+- **Fresh whole manual40960496759 SUCCESS**, response40961355992 SUCCESS on that
+  same source. Exactly one official SDK/Luna discussion call,10919 input/140 output.
+  Minecraft received it21:52:41 UTC. It cited both literal owner notes, preserved
+  the six-block entrance constraint, stated that visibility rationale was not
+  recorded, and claimed no evidence of construction or testing.
+- Native editor read/denial, revocation, real companion4709->5253, saved-server
+  reboot and revision2 read -> revision3 append passed. SQLite required one
+  discussion dispatch/answer and all3 literal owner notes; no block writes,
+  blueprint relabeling or functional evidence invented. Both live-discussion
+  markers passed. Artifacts work/live-discussion-proof-40960496759.
+- Request digest2b1b24e69d36bfef9e32957cd6806b74b21e42b13d3e9c7efaafd792b4e80cb5;
+  result5a666a4b4fdf67b866c095230571455c0d03255009dda02b3c96f82654d248e6.
+  Private started/untrusted/response receipts remain under
+  AppData/Roaming/minecraft-ai-engineer/acceptance. **That call is consumed; no
+  further SDK calls are needed for this slice.** Never reuse a started receipt.
+- Exact synthetic request/reply is tests/fixtures/live-discussion.json; offline
+  archive validation at its historical time never authorizes another request or
+  replays it into a different project. Screenshot inspected and copied unchanged:
+  docs/images/grounded-discussion.png. It proves received advice, not construction.
 
-Source **d3c8486**, all5 CI40908760538 (all40 required native tests). Entire actual
-**run40910817937 SUCCESS**. Behavior response **40911887391**, geometry response
-**40912161087** both accepted. Official SDK0.164.0 with ChatGPT sign-in: Luna behavior
-10795in/97out; Sol geometry12322in/1020out. Exact AND0001/a,b/settle20 and13 raw
-blocks, layout distinct from the hand-authored reference. No result repaired.
+Manual bridge: only the fixed synthetic notes/canonical intended lamp context,
+question, connected owner, run/source/stage/digest and15-minute expiry. GitHub gets
+bounded data only. Local responder alone invokes signed-in Codex. Durable exclusive
+started receipt forbids another model call; publication may retry a saved valid
+response. Normal native discussion deadline100s; CI-only manual exchange900s.
 
-Actual native separate confirmation, no-edit preview, explicit build, all8 measured
-forward/reverse rows, actual companion restart4778->5851, permission revocation
-interrupting another trial, actual third saved-server boot, fresh owner resume,
-original a ON/b OFF restoration and another actual test passed. Trials16:30:43 and
-16:31:11 UTC. Both live-boolean markers and truth interruption/recovery markers
-passed; SQLite required exactly two planning starts and distinct completed trials.
-Synthetic existing section seeded its actual supports and levers, not human mouse
-placement. This does not prove Mojang authentication or full E4 player construction.
-
-Inspected artifacts: work/live-boolean-proof-40910817937. Inspected screenshot shows
-real stone/levers/repeaters/torches/lamp after restart; copied unchanged to
-`docs/images/boolean-restarted.png`. Both accepted digests match private receipts:
-behavior request4febf74810910fbe30d09649791fceb8cae65b0ed15fc7f5ff2d658f1f299075,
-result e9949d8b3350f5a4de5df234368392922dad6d8078e5fbab98ccc006c6cd8060;
-geometry request9b8034e843cfc17d03a4922d6cf91d1d4c4a7b74b7ac75ac583d262479fd7c9d,
-result2344abb47d868b3eb7c710f0fa75756e788dc1b785430fe4d2ccae67d51e9faa.
-
-`tests/fixtures/live-boolean-and.json` retains exact successful proposal/raw geometry
-and separate model provenance. Ordinary CI now replays this instead of a parallel
-hand-authored reply. Synthetic existing lever/backing positions are derived from
-the actual accepted attachment states in both paths; no reference coordinates.
-Replay starts untested and actual native tests must establish behavior again.
-It is not fresh inference. The low-level hand-authored native reference stays an
-independent physics oracle. Final replay changes have not passed CI yet.
-
-### Failed replies retained, not corrected
-
-First actual40906470078 on ee2745f (all5 CI40905604442) accepted behavior response
-40907741010, then locally rejected13-block Luna geometry for missing wall-lever
-backing; it also falsely called serial repeaters AND. No Boolean construction.
-The workflow was cancelled after terminal local rejection, not a timeout.
-Fixture `live-boolean-missing-support.json`; artifacts work/live-boolean-proof-40906470078.
-Behavior request6e110abd53481202a38e698f1ab705e0aa97662f26d8b0730e66f5e181fadd60,
-result971236c2e0fc8b6d88a589e5a7646368504ac770fced8398e1f5308dbe4b057f;
-geometry request33ae3c92f3ea8491b96f9130a6a592987b50f640be358cb912a92199993af0bd.
-Usage10787in/105out +11417in/434out. Precise attachment/Boolean physical guidance
-was added, grounded in the native AND oracle, without coordinates/template lock.
-
-Second actual40908843817 on d3c8486 accepted behavior40910202563, then locally
-rejected34-block Luna geometry: torch and lamp both at5,1,1. No construction;
-workflow cancelled after rejection. Fixture `live-boolean-overlap.json`; artifacts
-work/live-boolean-proof-40908843817. Behavior request1031bcf1cd41a3cb078586f0fd592fa85b8173761a3be4340e147591b872fff5,
-result b1a6328c1b70ff3d755214f594a1e038be823674625a759850ff9a4cc166a628;
-geometry request35bef5af8274593a01bcab53fa5af29a71fd1e4ad39ac5eafab305bb9af4bb89.
-Usage10792in/89out +11625in/884out. Root decision: stop repeating Luna geometry,
-use Sol for the next explicitly bounded geometry call; the successful run above
-used the same source/constraints, not a relaxed problem. Official model guidance
-and local account model metadata confirmed Sol availability before that call.
-
-All six Boolean calls across these three runs are consumed. Private started,
-failure and untrusted receipts stay under AppData/minecraft-ai-engineer/acceptance.
-Do not reuse started receipts, silently repair outputs or make more SDK calls for
-this slice. A cancelled failed attempt is never the successful whole run.
-
-### Current final changes and next action
-
-Model policy now keeps Luna for catalog/behavior/timed buffers and uses Sol medium
-for Boolean geometry. Explicit MCE_MODEL overrides all defaults; optional
-MCE_GEOMETRY_MODEL overrides geometry only. Doctor says catalog probe does not
-check Boolean-model availability. No silent retry/fallback. This matches the
-successful explicit stage-model choices; no new SDK calls needed to test policy.
-Added policy/replay tests and the second unchanged rejection fixture. Scoped
-TypeScript and client Java compilation passed; tests run only in GitHub.
-
-Next: push final model-policy/recorded-reply changes, inspect all required CI and
-native artifacts, then ship PR22 when green, without heavy review. Continue full
-roadmap; next user-facing slice should broaden free-form engineering followups
-and durable project goals/rationale (E1), alongside the remaining engineering scope.
-No complete-product claim. Shared-subscription eligibility remains unresolved.
-
-## Shipped foundations and retained evidence
+## Shipped foundations and earlier evidence
 
 Dedicated Fabric server first, integrated-compatible logical-server core;
-server-owned identity/permissions/project ownership, real connection/epoch fences,
+server-owned identity/project ownership/permissions, real connection/epoch fences,
 shared authorized blueprints, private per-player tutorial cursors, component
 assignments and bounded write/read reservations. Creative build/repair/undo,
-inspection and private inventory reads. Intended/observed/verified remain distinct.
-Disconnect, revocation, conflict and restart restore no lease. Optional overlays
-currently show colored bounds/labels, not textured directional ghosts. Published
-alpha is the older single-player reference; multiplayer features are in source.
+targeted inspection and private inventory reads. Intended/observed/verified remain
+separate. Disconnect/revocation/conflict/restart never restores an execution lease.
+Optional overlay currently shows colored bounds/labels, not textured ghosts.
+Published alpha remains the older single-player reference, not these source features.
 
-PR19 structural revisions merged1e97bc385c3296ea037eaaf4689b7eeec982243b.
-Final sourceb17ba07 passed all5 CI40797460992; source8c3aa39 native evidence
-CI40796411413 covers explicit old/new diff, owner expansion, no-edit preview,
-separate one-use apply, stop/conflict, unfinished cursor across third boot,
-12/16 timing and inverse repeated-position undo preserving player supports.
-Artifacts: work/structural-proof-40796411413.
+PR19 structural revisions merged1e97bc3; b17ba07 all5 CI40797460992. Native old/new
+diff, explicit owner expansion/apply, no-edit preview, conflict/stop, third boot,
+12/16 timing, inverse repeated-position undo preserving player supports.
+PR20 restored layouts merged55a4858; 8c4e21e all5 CI40801344596. Fourth boot retains
+true old IDs; stale/corrupt/changed-base requests reject before quota. Undo retains
+immutable restoredLayout; operation scopes bind all captured physical bases.
+PR21 signed-in structural proof merged e3f26d8: whole40806992766 SUCCESS on ccd89d2,
+all5 CI40806790413. Actual player first support, AI rest, modification apply,
+stop/client conflict/removal/resume, real12/16 timing, service/game restart,
+shared lesson/revocation. Replay a504014 all5 CI40808845287. Failed40805062670 is
+retained: reversed repeaters matched geometry but failed actual timing. Four SDK
+calls consumed; no more for that slice. Repeater facing names its INPUT side.
 
-PR20 restored layouts merged55a48582003b2b91ffb50d26dd74b8846679ff9e.
-Sourceaa73e65 CI40800347568; final8c4e21e all5 CI40801344596. Actual fourth boot,
-true old IDs, corrupt/stale reference rejection, changed base rejected before
-quota, new request/apply, actual timing and second undo. Artifacts:
-work/restored-proof-40800347568. StructuralTransition schema1 preserves adjacent
-sources; schema2 adds distinct accepted canonical context without relabelling true
-before/after. OperationScopes hashes/bounds all captured sources. Undo retains
-immutable restoredLayout; planning validates the physical basis before dispatch.
+PR18 buffers mergedbebf6ca; final076e4dc all5 CI40768389557. Actual40766098371
+accepted raw8-block12/16 buffer and timing/sharing/restarts, but whole run failed
+at creative inventory fixture cleanup; corrected replay passed. Never call that
+whole manual run successful. Retained screenshots show actual blocks.
 
-PR21 signed-in structural proof merged e3f26d8. Sourceccd89d2 passed all5
-CI40806790413; full actual manual40806992766 SUCCESS. Official SDK0.164.0 /
-gpt-6-luna behavior40807645397 and geometry40807742547 accepted12/16 and ten raw
-blocks with three west-facing delay2 repeaters. Actual player first support, AI
-rest, separate modification apply, stop/client glass conflict/removal/resume,
-actual new timing, companion restart4537->5429, shared Bob lesson/revocation and
-third game boot passed. Inspected real-block PNG docs/images/structural-restarted.png;
-artifacts work/live-structural-proof-40806992766. Final recorded-reply replay
-sourcea504014 passed all5 CI40808845287 before merge. Replay is not fresh inference.
+PR22 Boolean logic mergedbb4e81f: finala3a3fcf all5 CI40913824351. Whole actual
+manual40910817937 SUCCESS on d3c8486/all5 CI40908760538. Luna behavior10795in/97out,
+Sol geometry12322in/1020out;13 rawblocks, named AND a/b0001, settle20. Separate
+owner confirm, preview with no edits, build, all8 actual forward/reverse rows,
+service4778->5851, revocation interruption, third boot, fresh resume, original
+a ON/b OFF restoration and retest passed. Trials16:30:43/16:31:11 UTC. Synthetic
+lever/backing section was seeded, not human mouse placement/Mojang auth.
+Exact positive/rejections: tests/fixtures/live-boolean-_.json. Failed40906470078:
+missing wall-lever backing and false serial-AND claim. Failed40908843817: overlapping
+torch/lamp. Rejected locally, no construction; cancelled after terminal rejection.
+All6 Boolean calls consumed; no more for Phase13. Artifacts work/live-boolean-proof-_
+and docs/images/boolean-restarted.png retain evidence. Replay is not fresh inference.
 
-Positive private receipt digests: behavior request
-dd774b24ab571cc39987f4f1082861eb4388e29fc8a407666294027592e487be,
-result8189e9bf653079448dbcd12f93aba1fb33bf37ba2936c9222387930ba9f7f35b;
-geometry request6f3463878ab272adc7682a405501348c36c60a1a547d948d551be2236c33591e,
-resultfa3a2e89c7cab9d2a74e8dcac1e08fd98d1299708acb7f2c6dec51ea472cd71c.
-Earlier actual40805062670 FAILED: accepted east-facing repeaters matched geometry
-but failed true output at tick12; exact fixture live-structural-reversed.json,
-artifacts work/live-structural-proof-40805062670. Do not hide that failure or flip
-the raw reply. All four SDK calls across failed/successful attempts are consumed;
-never reuse their exclusive started receipts or make more calls for that old slice.
-MC26.3 repeater facing is its INPUT side, opposite signal travel; native positive/
-negative traces and pinned DiodeBlock bytecode ground the corrected guidance.
+Boolean behavior: schema2 truth-table,1..4 unique named inputs, complete2^N Boolean
+rows MSB-first, settle0..128 plus8 stable ticks. Digest truth-v2|names|bits|settle;
+legacy buffer-v1 edge identity unchanged. Generated outer schema1/revision2 binds
+named actual levers/lamp with no hidden ports. Actual every-tick traces reject
+transients, gaps, swapped rows/input vectors and forged verdicts. Restoration WAL
+survives interruption; fresh authority is required for resume. Geometry cannot pass
+function tests. Timed buffers preserve independently accepted rising/falling edges.
 
-PR18 generated buffers mergedbebf6ca; final076e4dc all5 CI40768389557. Signed-in
-source00e5da5/request40766098371 used behavior40766960852 and geometry40767111851,
-12/16 with eight raw blocks and repeaters4+2. Actual timing, sharing and restarts
-passed, but whole manual run failed at creative inventory fixture cleanup. Fixed
-cleanup and final recorded replay passed; never call that whole old run successful.
-Real-block PNG docs/images/generated-restarted.png. Artifacts work/live-proof-40766098371
-and work/generated-proof-40768389557. Older catalog40624276545 proved only a fixed
-lamp; its ghost-only screenshot did not prove built blocks.
-
-## Runtime and operating constraints
+## Runtime and operating decisions
 
 Java25 / Minecraft26.3 / FabricLoader0.20.1 / API0.165.0+26.3 / Loom1.17.21 /
 Gradle9.6; Node24.14 / TypeScript / SQLite / official SDK+CLI0.164.0. Toolchain:
 task work/fabric-tools/jdk-25.0.5+8. PowerShell login:false; max-workers1.
-No local test suites. One private companion beside the operator's own server/PC;
-no public AI endpoint, hosting purchase, credentials sharing or paid API fallback.
-General shared multi-user subscription eligibility remains unresolved: operator
-approval is not provider eligibility. Planner forces ChatGPT login/openai provider,
-disables tools/apps and uses isolated read-only SDK work. Credentials stay local.
-Private inventories never enter shared model context/SQLite/audit. World/model text
-is untrusted data, never executable code. Current execution is creative, not survival.
+Tests only on GitHub; locally scoped compile/format/syntax. Protected main has5
+required checks and zero required reviewers. Merge green focused PRs.
+
+One private localhost companion beside Josh's server/PC, no hosting purchase,
+public AI endpoint, credential sharing or separately billed fallback. General
+shared multi-user subscription eligibility remains unresolved; operator approval
+is not provider permission. Configured account-owning operator alone invokes AI.
+Planner forces ChatGPT login/openai provider, disables tools/apps and uses isolated
+read-only SDK work. No private inventories in shared model context/SQLite/audit.
+Model policy: Luna for catalog/behavior/buffers/discussion; Sol medium for Boolean
+geometry. Explicit MCE_MODEL overrides defaults, MCE_GEOMETRY_MODEL overrides only
+geometry. Doctor catalog probe does not prove Boolean-model availability. No retry.
+Official SDK/structured output docs rechecked before the discussion proof.
 
 ## Remaining full roadmap
 
-1. Finish Phase13 multi-input generation/acceptance, then broader electrical and
-   mechanical engineering: comparator/observer/piston behavior, connections and
-   larger multicomponent systems. No buffer/catalog-only substitute.
-2. E1: free-form followups/clarification, durable goals/rationale/preferences/
-   decisions and later project identification/explanation. Exact ask phrases
-   remain a limited slice.
+1. Broader electrical/mechanical engineering: comparator/observer/piston behavior,
+   signal strength/attenuation, connections, mechanics and larger systems. Preserve
+   functional game-tick proof, movement dependencies and player edits; no
+   buffer/catalog/Boolean-only substitute for the engineering partner.
+2. Remaining E1: natural action interpretation, broader follow-up/recent-reference
+   handling, durable rationale/summary retrieval and later project identification.
+   First discussion/explicit-note slice does not complete this requirement.
 3. E3: broader missing/orientation/connection/timing/interference/inconclusive
    diagnosis, explicit repair previews and textured directional ghosts.
 4. E4: full signed-in preview -> player functional section -> AI rest -> interrupt/
    modify/resume -> actual tests -> service/game restart -> later explanation and
-   richer visuals. Existing bounded proofs do not establish this complete flow.
+   richer visuals. Bounded proofs do not establish that complete experience.
 5. Phase2, all unstarted: voice; physical NPC; genuine survival gathering/placement;
    schematic import/export; measured size/resources/latency/reliability optimization;
    multiple coordinated independent builders.
-6. Package the completed multiplayer release and setup instructions; published
-   alpha remains the older single-player reference.
+6. Completed multiplayer release/package/setup instructions; published alpha is
+   still the older single-player reference. Production authentication and shared
+   subscription eligibility require evidence, not synthetic offline player proofs.
+
+Next after PR23 ships: establish mechanical behavior contracts and piston-motion
+failure boundaries before expanding the generated block allowlist. Write the next
+slice's Outcomes from actual source/mechanics research; retain all full milestones.

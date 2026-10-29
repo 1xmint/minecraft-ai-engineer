@@ -410,3 +410,53 @@ deeper neighboring-circuit analysis, world change event indexing, general
 circuit debugging, physical interface verification and full model-to-game
 acceptance still need implementation/proof. The exact source brief remains in
 product-brief.md.
+
+## Shared project notes (development branch)
+
+The project owner can explicitly record a goal, constraint, preference or decision:
+
+```text
+/engineer remember goal Keep the entrance within six blocks.
+/engineer remember decision Use a visible lamp for the output.
+/engineer notes
+```
+
+Notes are shared with authorized project members. Editors and viewers can read
+notes; only the owner can append them. Each literal note has immutable authorship
+and its own knowledge revision. Notes persist in the local companion database,
+separately from blueprints and measured world evidence. Recording a note cancels
+pending design reasoning, but does not build, inspect or test anything. If a write
+is unconfirmed, read notes before retrying. Recent notes are shown; earlier
+records remain stored. Recent notes inform later planning as owner-authored requirements. A knowledge
+change invalidates pending reasoning. Free-form discussion remains unfinished.
+
+Native owner/member/revocation and service/game restart acceptance passed.
+These source features are not a completed-product release.
+
+## Project-grounded discussion (development branch)
+
+The configured account-owning operator can explicitly ask a free-form question:
+
+```text
+/engineer discuss Why did we choose this output, and what constraint matters here?
+```
+
+The selected project, your current lesson component when uniquely identified,
+recent owner notes and intended design facts ground the answer. The reply names
+its project sources and knowledge/design revisions. It is AI advice with no fresh
+world inspection or functional verification. Asking does not change your lesson,
+construction assignment, blocks or test evidence. Ambiguous references should
+produce a clarification; unsupported requests should explain the limit.
+
+Each explicit question uses one bounded model request through the existing local
+Codex subscription connection. Only the configured owner/operator can dispatch it.
+The shared queue and planning budget apply, with no automatic retry. Changing the
+project, lesson reference, permissions, connection or knowledge discards stale
+answers. `/engineer stop` cancels pending discussion. Routine `/engineer ask`
+lesson questions remain offline. Native deterministic acceptance and a fresh signed-in conversation passed in
+[the manual game proof](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40960496759).
+The actual answer distinguished saved requirements from missing rationale and
+made no claim that the circuit was built or tested. This remains a source feature,
+not a completed-product release.
+
+![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
