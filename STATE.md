@@ -380,3 +380,14 @@ Narrow GPT-6-Luna/high transport check caught the artifact-name allowlist missin
 Added no-SDK manual broker lifecycle/replay/cancellation tests. TypeScript and
 scoped Java server/client compilation passed; tests await GitHub. No inference
 has been attempted for this new discussion scenario.
+
+Verified conversation/cancellation sourcec9b011d: all five CI40958107235 checks
+passed. Downloaded work/discussion-proof-40958107235 and inspected native Alice
+logs: revision2 decision advice at21:33:48 UTC, actual later-boot revision3
+constraint advice at21:35:31, with explicit no-inspection/no-verification labels
+and concrete note references. discussion-cancelled.done and knowledge-recovery.done
+passed. Actual intervening companion process replacement4392->4529 retained the
+notes. SQLite verifier required two accepted answers and three explicit starts
+(the third cancelled), exact literal notes and unchanged world evidence. This is
+native deterministic provider proof, not fresh inference. New manual bridge
+sourcea5356a4 requires its own complete CI before the one signed-in discussion.
