@@ -31,6 +31,12 @@ export const GENERATED_ACCEPTANCE_REQUEST =
   "Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.";
 export const GENERATED_ACCEPTANCE_SCENARIO =
   "generated-buffer-owner-confirmation-v1";
+export const STRUCTURAL_ACCEPTANCE_SCENARIO =
+  "structural-buffer-owner-confirmation-v1";
+export const STRUCTURAL_ACCEPTANCE_REQUEST =
+  "Replace the two repeaters (delays 4 and 2) in the existing four-block-wide buffer with three serial two-tick repeaters. Keep the input lever at relative 0,1,0 and its existing floor supports at x=0..3, y=0, z=0. Extend the support to x=4 and move the output lamp to relative 4,1,0. Keep rising latency 12 game ticks and falling latency 16 game ticks.";
+export const STRUCTURAL_ACCEPTANCE_SEED_NAME =
+  "Synthetic serial buffer before revision";
 export const GENERATED_ACCEPTANCE_BEHAVIOR: Behavior = Object.freeze({
   schemaVersion: 1,
   function: "buffer",
@@ -96,7 +102,8 @@ function runIdentity(value: unknown): AcceptanceRun {
   if (
     v.repository !== "1xmint/minecraft-ai-engineer" ||
     v.workflow !== ".github/workflows/live-acceptance.yml" ||
-    v.scenario !== GENERATED_ACCEPTANCE_SCENARIO
+    (v.scenario !== GENERATED_ACCEPTANCE_SCENARIO &&
+      v.scenario !== STRUCTURAL_ACCEPTANCE_SCENARIO)
   )
     throw new RequestError("Unrecognized generated acceptance scenario.");
   if (typeof v.runId !== "string" || !/^[1-9][0-9]{0,19}$/u.test(v.runId))
@@ -107,7 +114,7 @@ function runIdentity(value: unknown): AcceptanceRun {
     sourceSha: hex(v.sourceSha, 40),
     runId: v.runId,
     runAttempt: integer(v.runAttempt, "runAttempt", 1, 1000),
-    scenario: GENERATED_ACCEPTANCE_SCENARIO,
+    scenario: v.scenario,
   };
 }
 function frame(value: unknown): GatewayContext {
@@ -239,13 +246,20 @@ export function readGeneratedAcceptanceRequest(
       409,
     );
   const base: DesignRequest = {
-    request: GENERATED_ACCEPTANCE_REQUEST,
+    request:
+      body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
+        ? STRUCTURAL_ACCEPTANCE_REQUEST
+        : GENERATED_ACCEPTANCE_REQUEST,
     worldId: body.worldId,
     dimension: "minecraft:overworld",
     projectId: body.context.projectId,
     anchor: { x: 200, y: 100, z: 0 },
     rotation: 0,
-    maxSize: { x: 4, y: 2, z: 1 },
+    maxSize: {
+      x: body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO ? 5 : 4,
+      y: 2,
+      z: 1,
+    },
   };
   const input: GeneratedAcceptanceInput =
     body.stage === "geometry"
@@ -257,16 +271,30 @@ export function readGeneratedAcceptanceRequest(
     input,
     memory: JSON.stringify({
       project: {
-        name: "Engineering project",
+        name:
+          body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
+            ? STRUCTURAL_ACCEPTANCE_SEED_NAME
+            : "Engineering project",
         projectRevision: body.context.projectRevision,
       },
-      tasks: [],
+      tasks:
+        body.run.scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
+          ? [
+              {
+                id: body.context.projectId,
+                status: "COMPLETED",
+                detail:
+                  "Actual Minecraft buffer test passed: stable off/on/off, rising 12 and falling 16 game ticks",
+              },
+            ]
+          : [],
     }),
   };
 }
 function resultValue(
   value: unknown,
   requestStage: GeneratedAcceptanceStage,
+  scenario: string,
 ): BehaviorProposal | GeneratedGeometry {
   if (requestStage === "behavior") return validateBehaviorProposal(value);
   const geometry = validateGeneratedGeometry(value);
@@ -274,13 +302,20 @@ function resultValue(
   // replacing the raw geometry sent by the model in the acceptance receipt.
   makeGeneratedBlueprint(
     {
-      request: GENERATED_ACCEPTANCE_REQUEST,
+      request:
+        scenario === STRUCTURAL_ACCEPTANCE_SCENARIO
+          ? STRUCTURAL_ACCEPTANCE_REQUEST
+          : GENERATED_ACCEPTANCE_REQUEST,
       worldId: "acceptance-world",
       dimension: "minecraft:overworld",
       projectId: "acceptance-project",
       anchor: { x: 200, y: 100, z: 0 },
       rotation: 0,
-      maxSize: { x: 4, y: 2, z: 1 },
+      maxSize: {
+        x: scenario === STRUCTURAL_ACCEPTANCE_SCENARIO ? 5 : 4,
+        y: 2,
+        z: 1,
+      },
     },
     value,
     GENERATED_ACCEPTANCE_BEHAVIOR,
@@ -338,7 +373,7 @@ export function createGeneratedAcceptanceResponse(
     schemaVersion: 1 as const,
     requestDigest: body.digest,
     stage: body.stage,
-    result: resultValue(result, body.stage),
+    result: resultValue(result, body.stage, body.run.scenario),
     provenance: provenance(provider),
   };
   return { ...canonical, digest: digest(canonical) };
@@ -372,7 +407,7 @@ export function readGeneratedAcceptanceResponse(
     schemaVersion: 1 as const,
     requestDigest: current.digest,
     stage: current.stage,
-    result: resultValue(v.result, current.stage),
+    result: resultValue(v.result, current.stage, current.run.scenario),
     provenance: provenance(v.provenance),
   };
   if (hex(v.digest, 64) !== digest(canonical))

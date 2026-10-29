@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "recordedFrom": {
+    "sourceSha": "ccd89d2e6a03c6241463ec11da779ec1dfd67395",
+    "requestRun": "40806992766",
+    "behaviorResponseRun": "40807645397",
+    "geometryResponseRun": "40807742547",
+    "behaviorRequestDigest": "dd774b24ab571cc39987f4f1082861eb4388e29fc8a407666294027592e487be",
+    "geometryRequestDigest": "6f3463878ab272adc7682a405501348c36c60a1a547d948d551be2236c33591e",
+    "geometryResultDigest": "fa3a2e89c7cab9d2a74e8dcac1e08fd98d1299708acb7f2c6dec51ea472cd71c"
+  },
+  "seed": {
+    "kind": "hand-authored-reference",
+    "repeaters": [4, 2]
+  },
+  "proposal": {
+    "behavior": {
+      "schemaVersion": 1,
+      "function": "buffer",
+      "risingGameTicks": 12,
+      "fallingGameTicks": 16
+    },
+    "explanation": "Desired behavior recorded: one lever controls one lamp, with 12 game ticks to turn on and 16 game ticks to turn off. The requested behavior is within the supported bounds; geometry feasibility and verification are separate."
+  },
+  "geometry": {
+    "name": "Serial repeater buffer",
+    "explanation": "Relative circuit geometry with one lever input and one lamp output.",
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 0
+        },
+        "state": "minecraft:stone"
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:lever[face=floor,facing=east,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 0
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      }
+    ],
+    "input": {
+      "x": 0,
+      "y": 1,
+      "z": 0
+    },
+    "output": {
+      "x": 4,
+      "y": 1,
+      "z": 0
+    }
+  },
+  "provenance": {
+    "model": "gpt-6-luna",
+    "sdkVersion": "0.164.0",
+    "inputTokens": 11466,
+    "cachedInputTokens": 0,
+    "outputTokens": 816
+  }
+}

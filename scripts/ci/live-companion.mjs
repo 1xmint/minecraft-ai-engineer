@@ -28,9 +28,12 @@ const provider = new Provider({
     sourceSha: process.env.GITHUB_SHA,
     runId: process.env.GITHUB_RUN_ID,
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-    scenario: generated
-      ? "generated-buffer-owner-confirmation-v1"
-      : "signal-lamp-client-handoff-v1",
+    scenario:
+      process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+        ? "structural-buffer-owner-confirmation-v1"
+        : generated
+          ? "generated-buffer-owner-confirmation-v1"
+          : "signal-lamp-client-handoff-v1",
   },
 });
 const server = createCompanionServer({

@@ -188,3 +188,75 @@ test("generated exchange rejects changed stages, intent, frame, expiry and resul
     ),
   );
 });
+
+test("structural acceptance reconstructs only the fixed existing-circuit revision scenario", () => {
+  const structuralRun = {
+    ...run,
+    scenario: "structural-buffer-owner-confirmation-v1",
+  };
+  const envelope = createGeneratedAcceptanceRequest({
+    run: structuralRun,
+    stage: "geometry",
+    context: { ...context, projectRevision: 2 },
+    worldId: "synthetic-world",
+    nonce: "c".repeat(64),
+    createdAt: now,
+    behavior: GENERATED_ACCEPTANCE_BEHAVIOR,
+  });
+  const read = readGeneratedAcceptanceRequest(envelope, structuralRun, now + 1);
+  assert.equal(read.run.scenario, structuralRun.scenario);
+  assert.deepEqual(read.input.maxSize, { x: 5, y: 2, z: 1 });
+  assert.match(read.input.request, /three serial two-tick repeaters/);
+  assert.deepEqual(JSON.parse(read.memory), {
+    project: {
+      name: "Synthetic serial buffer before revision",
+      projectRevision: 2,
+    },
+    tasks: [
+      {
+        id: context.projectId,
+        status: "COMPLETED",
+        detail:
+          "Actual Minecraft buffer test passed: stable off/on/off, rising 12 and falling 16 game ticks",
+      },
+    ],
+  });
+  assert.throws(
+    () => readGeneratedAcceptanceRequest(envelope, run, now + 1),
+    /identity changed/,
+  );
+  const wider = {
+    ...geometry,
+    output: { x: 4, y: 1, z: 0 },
+    blocks: [
+      ...Array.from({ length: 5 }, (_, x) => ({
+        pos: { x, y: 0, z: 0 },
+        state: "minecraft:stone",
+      })),
+      geometry.blocks[4]!,
+      ...Array.from({ length: 3 }, (_, n) => ({
+        pos: { x: n + 1, y: 1, z: 0 },
+        state:
+          "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]",
+      })),
+      {
+        pos: { x: 4, y: 1, z: 0 },
+        state: "minecraft:redstone_lamp[lit=false]",
+      },
+    ],
+  };
+  const response = createGeneratedAcceptanceResponse(
+    envelope,
+    wider,
+    provenance,
+  );
+  assert.deepEqual(
+    readGeneratedAcceptanceResponse(response, envelope, now + 1).result,
+    wider,
+  );
+  assert.throws(
+    () =>
+      createGeneratedAcceptanceResponse(request("geometry"), wider, provenance),
+    /fit|bound|space|size|dimension/i,
+  );
+});

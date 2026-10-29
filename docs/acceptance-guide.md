@@ -114,3 +114,65 @@ node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha REVIEWE
 This only republishes the validated saved answer while its original run/context
 remains live. It never invokes the model again. An expired run needs a new manual
 run. No automatic model fallback or retry is performed.
+
+## Existing-circuit structural modification (development)
+
+The separate `structural` scenario starts with an explicit hand-authored
+four-wide, two-repeater reference. It is not a new model design. The real player
+places its first support, AI builds the remainder, and the original12/16 behavior
+is tested before asking Codex to replace the two repeaters with three two-tick
+repeaters in an explicitly expanded five-wide workspace.
+
+Dispatch `live-acceptance.yml` with `scenario=structural` on the exact clean source
+branch. Respond to each stage only after its corresponding request artifact exists:
+
+```text
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage behavior --scenario structural
+node scripts/acceptance/respond.mjs --run RUN_ID --attempt ATTEMPT --sha SOURCE_SHA --model gpt-6-luna --stage geometry --scenario structural
+```
+
+Both calls remain local, explicit and separately receipted. The fixed scenario,
+request, completed-seed memory, five-wide bounds, run/SHA and stage are validated;
+arbitrary CI inputs and private world memory are not accepted. The existing
+four-wide generated scenario remains separate. Do not retry a consumed receipt.
+
+The new native path reviews the actual model diff before a separate owner apply,
+stops after a real write, places and removes a conflicting glass block through the
+actual player client, resumes, and tests real12/16 timing. It then restarts the
+companion, exercises Bob's authorized lesson/revocation and reloads the game.
+Inspect both stage receipts, `live-structural-before`, `live-structural-after`,
+`live-structural-model.done`, `live-structural-recovery.done`, and screenshot
+`engineer-live-structural-restarted-build`. The first actual signed-in run40805062670
+accepted both SDK replies and completed real stop/edit-conflict/resume, but the
+model pointed all repeaters east and the actual lamp stayed off at tick12. That
+run failed before restart acceptance. Its exact raw reply is retained in
+`tests/fixtures/live-structural-reversed.json`; it has not been silently corrected.
+Direction guidance and positive/negative Minecraft regressions address that cause
+before one new bounded two-call run. Do not label the working scenario proven
+from receipt acceptance, valid geometry, unit tests or the older generated run.
+
+## Verified structural modification and deterministic replay
+
+Source `ccd89d2` passed all five regression gates in
+[CI40806790413](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40806790413).
+The entire actual signed-in
+[structural run40806992766](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40806992766)
+then passed. Separate behavior response40807645397 and geometry response40807742547
+preserved12/16 intent and returned three west-facing two-tick repeaters. The raw
+reply was applied unchanged after separate owner confirmation.
+
+The real player placed the reference's first support, AI completed it, and initial
+timing passed. Actual stop/client glass edit/conflict/resolution/resume, new12/16
+timing, companion process restart4537->5429, Bob's lesson/revocation and third game
+boot all passed. Both accepted receipts match local request/result digests. The
+inspected screenshot shows actual constructed blocks after restart:
+
+![Actual model-modified circuit after game restart](images/structural-restarted.png)
+
+`tests/fixtures/live-structural-buffer.json` retains the exact successful raw reply
+and provenance. Ordinary CI replays it through real construction/testing without
+new inference, while the earlier reversed reply remains a negative fixture. The
+initial reference is hand-authored; this proves its live model modification, not
+fresh initial generation, general engineering, human mouse use or Mojang sign-in.
+The earlier failed run is still a failure; source-grounded direction guidance and
+one new bounded run produced the successful result above.

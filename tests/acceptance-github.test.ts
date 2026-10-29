@@ -123,38 +123,71 @@ test("only one bounded unexpired artifact from the verified run and SHA is reada
     );
 });
 
-test("generated stage artifacts retain exact owner/run/source provenance", () => {
-  const generated = {
-    ...expected,
-    scenario: "generated-buffer-owner-confirmation-v1",
-  };
-  assert.equal(requireAcceptanceRun(run(), generated, "request").id, "123");
-  for (const stage of ["behavior", "geometry"]) {
-    const name = `mce-live-request-123-2-${stage}`,
-      artifact = {
-        id: 789,
-        name,
-        expired: false,
-        size_in_bytes: 4096,
-        workflow_run: { id: 123, head_sha: expected.sourceSha },
-      };
+for (const scenario of [
+  "generated-buffer-owner-confirmation-v1",
+  "structural-buffer-owner-confirmation-v1",
+]) {
+  test(`generated stage artifacts retain exact owner/run/source provenance: ${scenario}`, () => {
+    const generated = {
+      ...expected,
+      scenario,
+    };
+    assert.equal(requireAcceptanceRun(run(), generated, "request").id, "123");
+    const response = {
+      ...run(),
+      id: 456,
+      path: ".github/workflows/live-acceptance-response.yml",
+      status: "completed",
+      conclusion: "success",
+    };
     assert.equal(
-      requireAcceptanceArtifact(artifact, "123", expected.sourceSha, name),
-      "789",
+      requireAcceptanceRun(response, generated, "response").id,
+      "456",
     );
     assert.throws(() =>
-      requireAcceptanceArtifact(
-        { ...artifact, name: name + "-other" },
-        "123",
-        expected.sourceSha,
-        name + "-other",
+      requireAcceptanceRun(
+        { ...response, head_sha: "b".repeat(40) },
+        generated,
+        "response",
       ),
     );
-  }
+
+    for (const stage of ["behavior", "geometry"]) {
+      const name = `mce-live-request-123-2-${stage}`,
+        artifact = {
+          id: 789,
+          name,
+          expired: false,
+          size_in_bytes: 4096,
+          workflow_run: { id: 123, head_sha: expected.sourceSha },
+        };
+      assert.equal(
+        requireAcceptanceArtifact(artifact, "123", expected.sourceSha, name),
+        "789",
+      );
+      assert.throws(() =>
+        requireAcceptanceArtifact(
+          { ...artifact, name: name + "-other" },
+          "123",
+          expected.sourceSha,
+          name + "-other",
+        ),
+      );
+    }
+    assert.throws(() =>
+      requireAcceptanceRun(
+        { ...run(), triggering_actor: { login: "other" } },
+        generated,
+        "request",
+      ),
+    );
+  });
+}
+test("unknown synthetic scenarios cannot spend local quota", () => {
   assert.throws(() =>
     requireAcceptanceRun(
-      { ...run(), triggering_actor: { login: "other" } },
-      generated,
+      run(),
+      { ...expected, scenario: "arbitrary-world-request" },
       "request",
     ),
   );

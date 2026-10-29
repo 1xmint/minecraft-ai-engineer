@@ -202,6 +202,7 @@ async function main() {
         "--config",
         "--publish",
         "--stage",
+        "--scenario",
       ].includes(key) &&
         args[i + 1] &&
         !Object.hasOwn(options, key),
@@ -222,6 +223,13 @@ async function main() {
     ["catalog", "behavior", "geometry"].includes(stage),
     "Stage must be catalog, behavior or geometry.",
   );
+  const scenario =
+    options["--scenario"] ?? (stage === "catalog" ? "catalog" : "generated");
+  check(
+    ["catalog", "generated", "structural"].includes(scenario) &&
+      (stage === "catalog") === (scenario === "catalog"),
+    "Scenario must match catalog or a generated/structural stage.",
+  );
   const generated = stage !== "catalog",
     suffix = generated ? `-${stage}` : "";
   const expected = {
@@ -230,9 +238,12 @@ async function main() {
     sourceSha: options["--sha"],
     runId: options["--run"],
     runAttempt: Number(options["--attempt"]),
-    scenario: generated
-      ? "generated-buffer-owner-confirmation-v1"
-      : "signal-lamp-client-handoff-v1",
+    scenario:
+      scenario === "structural"
+        ? "structural-buffer-owner-confirmation-v1"
+        : generated
+          ? "generated-buffer-owner-confirmation-v1"
+          : "signal-lamp-client-handoff-v1",
   };
   check(
     (
@@ -511,6 +522,7 @@ async function main() {
       source_sha: expected.sourceSha,
       result: JSON.stringify(response),
       stage,
+      scenario,
     },
   });
   const input = join(

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import {
   validateBehavior,
   behaviorDigest,
@@ -246,4 +247,60 @@ test("model geometry schema constrains actual delegated volume, rotations and ca
     generatedGeometrySchema({ ...input, maxSize: { x: 0, y: 2, z: 1 } }),
   );
   assert.throws(() => generatedGeometrySchema({ ...input, rotation: 45 as 0 }));
+});
+
+test("recorded reversed live geometry remains untested despite valid bounds and states", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-structural-reversed.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 5, y: 2, z: 1 } },
+    recorded.geometry,
+    behavior,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(recorded.observed.verdict, "failed");
+  assert.equal(recorded.observed.observedOutputAtExpectedEdge, false);
+  assert.equal(
+    blueprint.blocks.filter((b) =>
+      b.state.startsWith("minecraft:repeater[delay=2,facing=east"),
+    ).length,
+    3,
+  );
+  assert.equal(validateGeneratedBlueprint(blueprint).verification, "untested");
+});
+
+test("recorded working structural reply is replayed as untested raw geometry", () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../tests/fixtures/live-structural-buffer.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const blueprint = makeGeneratedBlueprint(
+    { ...input, maxSize: { x: 5, y: 2, z: 1 } },
+    recorded.geometry,
+    recorded.proposal.behavior,
+  );
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(blueprint.blocks.length, 10);
+  assert.equal(
+    blueprint.blocks.filter((b) =>
+      b.state.startsWith("minecraft:repeater[delay=2,facing=west"),
+    ).length,
+    3,
+  );
+  assert.deepEqual(recorded.seed, {
+    kind: "hand-authored-reference",
+    repeaters: [4, 2],
+  });
 });

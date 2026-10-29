@@ -102,9 +102,12 @@ function envelope(run, attempt, sha) {
     sourceSha: sha,
     runId: String(run),
     runAttempt: Number(attempt),
-    scenario: generated
-      ? "generated-buffer-owner-confirmation-v1"
-      : "signal-lamp-client-handoff-v1",
+    scenario:
+      process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+        ? "structural-buffer-owner-confirmation-v1"
+        : generated
+          ? "generated-buffer-owner-confirmation-v1"
+          : "signal-lamp-client-handoff-v1",
   };
 }
 function own() {
@@ -115,6 +118,10 @@ function own() {
   );
 }
 function childAlive() {
+  if (existsSync(resolve("mod/build/live-exchange/unexpected-inference")))
+    throw new Error(
+      "Synthetic provider refused the fixed scenario before the exchange completed",
+    );
   if (existsSync(statusFile))
     throw new Error("Native acceptance stopped before the exchange completed");
 }
@@ -183,6 +190,14 @@ async function main() {
         readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"),
       ),
       inputs = event.inputs;
+    check(
+      inputs.scenario ===
+        (generated
+          ? process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+            ? "structural"
+            : "generated"
+          : "catalog"),
+    );
     const expected = envelope(
       inputs.request_run,
       inputs.request_attempt,
@@ -254,6 +269,9 @@ async function main() {
         "generated-confirmation-recovery.done",
         "live-generated-model.done",
         "player-generated-section.done",
+        ...(process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+          ? ["live-structural-model.done", "live-structural-recovery.done"]
+          : []),
       ])
         check(
           readFileSync(

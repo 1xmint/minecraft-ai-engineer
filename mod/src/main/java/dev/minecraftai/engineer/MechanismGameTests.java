@@ -207,7 +207,7 @@ public final class MechanismGameTests {
         helper.assertTrue(StructuralTransition.between(pair[0],pair[1],pair[0]).json().equals(StructuralTransition.between(pair[0],pair[1]).json()),"Ordinary adjacent transitions retain their exact schema1 wire identity");
         helper.succeed();
     }
-    private static Blueprint[] structuralPair() {
+    static Blueprint[] structuralPair() {
         var before=generatedSource(12,16);
         for(var element:before.getAsJsonArray("blocks")){var block=element.getAsJsonObject();if(block.get("state").getAsString().startsWith("minecraft:repeater"))block.addProperty("state","minecraft:repeater[delay="+(block.getAsJsonObject("pos").get("x").getAsInt()==1?4:2)+",facing=west,locked=false,powered=false]");}
         var after=before.deepCopy();after.addProperty("id","cccccccc-cccc-4ccc-8ccc-cccccccccccc");after.addProperty("revision",3);
@@ -273,14 +273,16 @@ public final class MechanismGameTests {
     @GameTest(maxTicks=35) public void disconnectedGeometryFailsTheSameIndependentTimingContract(GameTestHelper helper) {
         serialTrace(helper,true);
     }
-    private static void serialTrace(GameTestHelper helper,boolean disconnected) {
+    @GameTest(maxTicks=70) public void threeTwoTickRepeatersFacingTheirInputPassBothEdges(GameTestHelper helper) {serialTrace(helper,false,3);}
+    @GameTest(maxTicks=35) public void recordedReversedRepeatersFailDespiteMatchingGeometry(GameTestHelper helper) {serialTrace(helper,true,3);}
+    private static void serialTrace(GameTestHelper helper,boolean disconnected) {serialTrace(helper,disconnected,2);}
+    private static void serialTrace(GameTestHelper helper,boolean disconnected,int repeaters) {
         var rotation=Rotation.NONE;
-        for(int x=0;x<4;x++)block(helper,x,0,0,"minecraft:stone",rotation);
+        for(int x=0;x<repeaters+2;x++)block(helper,x,0,0,"minecraft:stone",rotation);
         input(helper,0,1,0,false,rotation);
-        block(helper,1,1,0,"minecraft:repeater[facing=west,delay=3,locked=false,powered=false]",rotation);
-        block(helper,2,1,0,"minecraft:repeater[facing="+(disconnected?"east":"west")+",delay=3,locked=false,powered=false]",rotation);
-        block(helper,3,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
-        var input=at(0,1,0,rotation);var output=at(3,1,0,rotation);
+        for(int x=1;x<=repeaters;x++)block(helper,x,1,0,"minecraft:repeater[facing="+((disconnected && (repeaters==3 || x==2))?"east":"west")+",delay="+(repeaters==3?2:3)+",locked=false,powered=false]",rotation);
+        block(helper,repeaters+1,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
+        var input=at(0,1,0,rotation);var output=at(repeaters+1,1,0,rotation);
         var rising=new TransitionTrace(false,true,12,8);long[] edgeTime=new long[2];
         helper.runAtTickTime(8,()->{helper.assertBlockProperty(output,BlockStateProperties.LIT,false);helper.pullLever(input);edgeTime[0]=helper.getLevel().getGameTime();rising.sample(0,lamp(helper,output));});
         for(int elapsed=1;elapsed<=20;elapsed++){
