@@ -52,7 +52,7 @@ final class ShutterJournal {
     /** Fresh observation only. Current scope must come from the server's accepted intention,
      * not be copied from this record. Reading a journal cannot resume or arm the gate. */
     PositionState positionState(ServerLevel level,Scope current){
-        if(!scope.equals(current) || !scope.dimension.equals(level.dimension().identifier().toString()) || !level.getServer().isSameThread())throw new IllegalStateException("Motion journal belongs to another current intention or level");
+        requireScope(level,current);
         for(var pos:before.keySet())if(!level.hasChunkAt(pos))return PositionState.UNLOADED;
         boolean old=true,end=true,moving=false,entity=false;
         for(var pos:before.keySet()){
@@ -61,6 +61,10 @@ final class ShutterJournal {
         if(moving)return PositionState.UNSETTLED; // Never trust a transient entity as an endpoint or a permit.
         if(entity)return PositionState.CONFLICT;
         return old?PositionState.BEFORE:end?PositionState.TERMINAL:PositionState.CONFLICT;
+    }
+    /** Identity-only check for startup denial registration; does not read or load any chunk. */
+    void requireScope(ServerLevel level,Scope current){
+        if(!scope.equals(current) || !scope.dimension.equals(level.dimension().identifier().toString()) || !level.getServer().isSameThread())throw new IllegalStateException("Motion journal belongs to another current intention or level");
     }
     JsonObject json(){
         var out=new JsonObject();out.addProperty("schemaVersion",1);var identity=new JsonObject();

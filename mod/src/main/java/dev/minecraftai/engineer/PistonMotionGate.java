@@ -12,9 +12,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Event-time transaction gate. Registration is server-internal; unregistered vanilla pistons are unchanged. */
 public final class PistonMotionGate {
-    private static final Map<ServerLevel,Map<BlockPos,Ticket>> LEVELS=Collections.synchronizedMap(new IdentityHashMap<>());
+    private sealed interface Entry permits Ticket,Blocked { }
+    private record Blocked(ShutterJournal.Scope scope,UUID motion) implements Entry { }
+    private static final Map<ServerLevel,Map<BlockPos,Entry>> LEVELS=Collections.synchronizedMap(new IdentityHashMap<>());
     enum Phase { ARMED,CHECKING,COMMITTED,SETTLED,REJECTED }
-    static final class Ticket {
+    static final class Ticket implements Entry {
         private final UUID id=UUID.randomUUID();
         private final ServerLevel level;
         private final ShutterMotion.Snapshot snapshot;
@@ -39,8 +41,30 @@ public final class PistonMotionGate {
         authority.run();snapshot.requireFresh(level,writes);
         var slots=LEVELS.computeIfAbsent(level,ignored->new HashMap<>());
         var prior=slots.get(snapshot.base());
-        if(prior!=null && (prior.phase==Phase.ARMED || prior.phase==Phase.CHECKING || prior.phase==Phase.COMMITTED))throw new IllegalStateException("A piston transaction is still pending; reconcile before rearming");
+        if(prior instanceof Blocked)throw new IllegalStateException("Restored motion is blocked; reconcile its journal with fresh authority");
+        if(prior instanceof Ticket active && (active.phase==Phase.ARMED || active.phase==Phase.CHECKING || active.phase==Phase.COMMITTED))throw new IllegalStateException("A piston transaction is still pending; reconcile before rearming");
         if(prior==null && slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");
+        var ticket=new Ticket(level,snapshot,snapshot.writes(),authority,writeAhead);slots.put(snapshot.base(),ticket);return ticket;
+    }
+    /** Restore only a denial marker. The supplied scope must come from the current accepted project. */
+    static void restoreBlocked(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope currentScope){
+        thread(level);journal.requireScope(level,currentScope);
+        var slots=LEVELS.computeIfAbsent(level,ignored->new HashMap<>());var prior=slots.get(journal.base());
+        var blocked=new Blocked(currentScope,journal.motion());
+        if(prior!=null){if(prior.equals(blocked))return;throw new IllegalStateException("A different transaction already guards this piston");}
+        if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");
+        slots.put(journal.base(),blocked);
+    }
+    /** Explicit reconciliation creates a new ticket; no actor, callback or permit is deserialized. */
+    static Ticket rearmBlocked(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope currentScope,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead){
+        thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);journal.requireScope(level,currentScope);
+        var slots=LEVELS.get(level);var expected=new Blocked(currentScope,journal.motion());
+        if(slots==null || !expected.equals(slots.get(journal.base())))throw new IllegalStateException("The restored motion binding changed");
+        authority.run();var observed=journal.positionState(level,currentScope);
+        if(observed!=ShutterJournal.PositionState.BEFORE && observed!=ShutterJournal.PositionState.TERMINAL)throw new IllegalStateException("Interrupted motion is unloaded, unsettled or conflicted; preserve and reconcile it first");
+        if(!snapshot.base().equals(currentScope.piston()) || snapshot.before().get(snapshot.base()).getValue(BlockStateProperties.FACING)!=currentScope.facing())throw new IllegalStateException("Fresh motion belongs to a different accepted frame");
+        snapshot.requireFresh(level,writes);authority.run();
+        if(LEVELS.get(level)!=slots || !expected.equals(slots.get(journal.base())))throw new IllegalStateException("Restored motion changed during reconciliation");
         var ticket=new Ticket(level,snapshot,snapshot.writes(),authority,writeAhead);slots.put(snapshot.base(),ticket);return ticket;
     }
     /** Invoked at triggerEvent HEAD, before vanilla removes a head or moves any payload. */
@@ -48,7 +72,8 @@ public final class PistonMotionGate {
         if(!(level instanceof ServerLevel server))return true;
         var slots=LEVELS.get(server);if(slots==null)return true;
         if(!server.getServer().isSameThread())return false;
-        var ticket=slots.get(pos);if(ticket==null)return true;
+        var entry=slots.get(pos);if(entry==null)return true;
+        if(!(entry instanceof Ticket ticket))return false;
         if(ticket.phase!=Phase.ARMED)return false; // No duplicate or compensating movement under an old token.
         try{
             if(ticket.cancelled || server.getGameTime()>ticket.expires)throw new IllegalStateException("Piston transaction cancelled or expired");

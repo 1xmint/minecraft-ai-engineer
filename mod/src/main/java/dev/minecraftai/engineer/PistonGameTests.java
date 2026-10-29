@@ -18,6 +18,52 @@ public final class PistonGameTests {
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static ShutterJournal.Scope journalScope(GameTestHelper helper){return new ShutterJournal.Scope("native-motion-proof",helper.getLevel().dimension().identifier().toString(),UUID.fromString("11111111-1111-4111-8111-111111111111"),UUID.fromString("22222222-2222-4222-8222-222222222222"),1,"root",UUID.fromString("33333333-3333-4333-8333-333333333333"),helper.absolutePos(at(1,1,Rotation.NONE)),Direction.EAST);}
     private static ShutterJournal reloadJournal(java.nio.file.Path file){try{return ShutterJournal.read(com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject());}catch(java.io.IOException failure){throw new IllegalStateException(failure);}}
+    @GameTest(maxTicks=45) public void restoredBindingBlocksEventsUntilFreshReconciliation(GameTestHelper helper) throws Exception {
+        setup(helper,true,Rotation.NONE);var scope=journalScope(helper);var file=java.nio.file.Files.createTempDirectory("engineer-motion-reconcile-").resolve("motion.json");
+        ShutterJournal[] restored={null},next={null};PistonMotionGate.Ticket[] ticket={null};boolean[] granted={false};int[] commits={0};
+        Runnable authority=()->{if(!granted[0])throw new IllegalStateException("A fresh current grant is required");};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));var pending=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());LocalFiles.write(file,pending.json());restored[0]=reloadJournal(file);
+            PistonMotionGate.restoreBlocked(helper.getLevel(),restored[0],scope);
+            rejects(helper,()->PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++),"Ordinary arming cannot bypass a restored denial binding");
+            helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{
+            assertOpen(helper,Rotation.NONE);var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));
+            rejects(helper,()->PistonMotionGate.rearmBlocked(helper.getLevel(),restored[0],scope,snapshot,footprint(helper),authority,id->commits[0]++),"Deserialized facts cannot supply a current actor grant");
+            helper.assertTrue(commits[0]==0,"Restored and denied requests never reach the commit hook");
+        });
+        helper.runAtTickTime(24,()->{
+            granted[0]=true;var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));
+            ticket[0]=PistonMotionGate.rearmBlocked(helper.getLevel(),restored[0],scope,snapshot,footprint(helper),authority,id->{var committed=next[0].commitRecorded(id);LocalFiles.write(file,committed.json());next[0]=committed;commits[0]++;});
+            helper.assertTrue(!ticket[0].id().equals(restored[0].motion()),"Reconciliation issues a new ticket, never revives the old one");
+            next[0]=ShutterJournal.prepare(scope,snapshot,ticket[0].id());LocalFiles.write(file,next[0].json());helper.pullLever(at(0,2,Rotation.NONE));helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(32,()->{
+            assertClosed(helper,Rotation.NONE);var stored=reloadJournal(file);
+            helper.assertTrue(commits[0]==1 && stored.motion().equals(ticket[0].id()) && stored.phase()==ShutterJournal.Phase.COMMIT_RECORDED,"Only fresh authorized motion executes and records its new identity");helper.succeed();
+        });
+    }
+    @GameTest public void restoredBindingCannotBeReplacedByAnotherScopeOrMotion(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);
+        helper.runAtTickTime(8,()->{
+            var scope=journalScope(helper);var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));var record=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());
+            var foreign=new ShutterJournal.Scope(scope.worldId(),scope.dimension(),UUID.randomUUID(),scope.blueprint(),scope.revision(),scope.component(),scope.operation(),scope.piston(),scope.facing());
+            rejects(helper,()->PistonMotionGate.restoreBlocked(helper.getLevel(),record,foreign),"A foreign project cannot restore this binding");
+            PistonMotionGate.restoreBlocked(helper.getLevel(),record,scope);PistonMotionGate.restoreBlocked(helper.getLevel(),record,scope);
+            var different=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());
+            rejects(helper,()->PistonMotionGate.restoreBlocked(helper.getLevel(),different,scope),"Another journal cannot replace the registered pending motion");
+            rejects(helper,()->PistonMotionGate.rearmBlocked(helper.getLevel(),different,scope,snapshot,footprint(helper),()->{},id->{}),"Reconciliation must acknowledge the exact registered journal");helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{assertOpen(helper,Rotation.NONE);helper.succeed();});
+    }
+    @GameTest public void startupDenialRegistrationDoesNotLoadThePistonChunk(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);var scope=journalScope(helper);var snapshot=ShutterMotion.capture(helper.getLevel(),scope.piston(),true,footprint(helper));var value=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID()).json();
+        var far=helper.absolutePos(new BlockPos(1_000_000,3,1_000_000));value.getAsJsonObject("scope").add("piston",Blueprint.jsonPos(far));var record=ShutterJournal.read(value);
+        var current=new ShutterJournal.Scope(scope.worldId(),scope.dimension(),scope.project(),scope.blueprint(),scope.revision(),scope.component(),scope.operation(),far,scope.facing());
+        helper.assertTrue(!helper.getLevel().hasChunkAt(far),"Registration starts before the target chunk is loaded");PistonMotionGate.restoreBlocked(helper.getLevel(),record,current);
+        helper.assertTrue(!helper.getLevel().hasChunkAt(far),"Installing startup denial must not load world state");helper.succeed();
+    }
     @GameTest public void journalReloadDescribesMotionWithoutRecreatingAPermit(GameTestHelper helper) throws Exception {
         setup(helper,true,Rotation.NONE);var file=java.nio.file.Files.createTempDirectory("engineer-motion-journal-").resolve("motion.json");
         var scope=journalScope(helper);ShutterJournal[] journal={null},prepared={null};PistonMotionGate.Ticket[] ticket={null};int[] commits={0};

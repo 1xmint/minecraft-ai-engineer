@@ -10,8 +10,8 @@ Current branch **phase/15-piston-motion**, based on PR23 main merge
 **d3167a8f0a13c69ed6e301555802481a4bef559d** (2026-10-29T22:05:12Z). Phase14 final
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
 merge. Its first conversation/knowledge slice was also proven on b858364 by all5
-CI40959246919 and whole signed-in manual40960496759. Phase15 is building durable
-motion records after proven physics, snapshots and the event gate, not a shipped
+CI40959246919 and whole signed-in manual40960496759. Phase15 is building restored
+denial and explicit reconciliation after physics, snapshots and the event gate, not a shipped
 piston feature. Gate sourcedc08309 passed all5 CI40965363414, including all60
 required native tests (job log22:23:20 UTC inspected). Snapshot sourced04e1fc
 previously passed all5 CI40964080695/all53 native tests.
@@ -140,6 +140,27 @@ Scoped Java server/client compile passed; these new runtime proofs await CI.
 This proves neither actual saved-server recovery nor production session wiring:
 startup denial before queued events, input restoration, read-dependency capture,
 fresh actor permissions and safe release still must land before public actuation.
+
+Journal source08f4431 Fabric job passed all62 required native tests in
+CI40966805528 (22:34:34 UTC, actual job log inspected). Four checks passed;
+dedicated multiplayer was still live at last inspection, not claimed terminal.
+
+Restored denial core now compiles. A sealed Blocked entry stores only expected
+scope/motion identity; registration checks current accepted identity without
+reading/loading chunks. Ordinary arm refuses it. Explicit rearmBlocked requires
+the exact registered journal, fresh authority, a fresh matching frame and observed
+before/terminal pose, checks the slot again after callbacks, then creates a new
+ticket. No actor, callback, lease or permit is deserialized. A focused
+GPT-6-Luna/high recovery-boundary check found no core blockers.
+
+Three native proofs added: disk reload -> actual queued-event denial -> denied
+resume -> fresh ticket/commit; foreign/changed journal binding rejection; no-load
+registration for an unloaded piston. Scoped Java server/client compile passed;
+these new runtime proofs await CI. This is not yet actual server-bootstrap or
+saved-world restart recovery. The loader must derive expected Scope from the
+accepted mechanical component, never copy identity from the saved journal to
+validate itself. Add that canonical mechanical contract before startup wiring;
+then bind current player permissions/input restoration and prove the full boot.
 
 ## Proven Phase14 Outcomes
 
