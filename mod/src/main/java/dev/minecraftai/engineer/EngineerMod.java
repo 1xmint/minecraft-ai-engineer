@@ -147,6 +147,7 @@ public final class EngineerMod implements ModInitializer {
             ProjectManager manager=MANAGERS.get(server);if(manager!=null)manager.tick();
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server->{
+            PistonMotionGate.close(server);
             ProjectManager manager=MANAGERS.remove(server);
             if(manager!=null){for(var s:manager.projects.values())cancelPlan(s);manager.close();}
             EngineerNetwork.close();

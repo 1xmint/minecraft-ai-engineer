@@ -5,6 +5,7 @@
   "name": "Minecraft AI Engineer",
   "description": "A local-first engineering companion for single-player creative worlds.",
   "environment": "*",
+  "mixins": ["engineer.mixins.json"],
   "entrypoints": {
     "main": ["dev.minecraftai.engineer.EngineerMod"],
     "client": ["dev.minecraftai.engineer.client.EngineerClient"],

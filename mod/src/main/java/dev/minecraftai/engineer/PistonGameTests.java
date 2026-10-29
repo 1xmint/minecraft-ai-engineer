@@ -15,6 +15,81 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 public final class PistonGameTests {
     private static Set<BlockPos> footprint(GameTestHelper helper){return Set.of(helper.absolutePos(at(1,1,Rotation.NONE)),helper.absolutePos(at(2,1,Rotation.NONE)),helper.absolutePos(at(3,1,Rotation.NONE)));}
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
+    @GameTest(maxTicks=45) public void eventGateCommitsOnceAndRequiresAnotherArmForPull(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] tickets=new PistonMotionGate.Ticket[2];
+        helper.runAtTickTime(8,()->{
+            var level=helper.getLevel();var snapshot=ShutterMotion.capture(level,helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));
+            tickets[0]=PistonMotionGate.arm(level,snapshot,footprint(helper),()->{},id->commits[0]++);
+            helper.pullLever(at(0,2,Rotation.NONE));helper.assertTrue(commits[0]==0,"A lever write does not synchronously commit queued piston movement");
+        });
+        helper.runAtTickTime(16,()->{
+            assertClosed(helper,Rotation.NONE);helper.assertTrue(PistonMotionGate.observeTerminal(tickets[0]) && commits[0]==1,"The actual event consumes one journal hook and reaches its terminal pose");
+            helper.getLevel().blockEvent(helper.absolutePos(at(1,1,Rotation.NONE)),Blocks.STICKY_PISTON,0,Direction.EAST.get3DDataValue());
+        });
+        helper.runAtTickTime(24,()->{
+            assertClosed(helper,Rotation.NONE);helper.assertTrue(commits[0]==1,"A real duplicate queued event cannot reuse the old commit");
+            var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),false,footprint(helper));
+            tickets[1]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++);
+            rejects(helper,()->PistonMotionGate.observeTerminal(tickets[0]),"The previous ticket cannot observe or control a replacement transaction");helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(32,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(PistonMotionGate.observeTerminal(tickets[1]) && commits[0]==2,"Fresh retraction commits once and actually reopens the shutter");helper.succeed();});
+    }
+    @GameTest public void eventGateRechecksRevocationAfterTheLeverWrite(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);boolean[] granted={true};int[] commits={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));
+            ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{if(!granted[0])throw new IllegalStateException("Current grant revoked");},id->commits[0]++);
+            helper.pullLever(at(0,2,Rotation.NONE));granted[0]=false;
+        });
+        helper.runAtTickTime(16,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(ticket[0].phase()==PistonMotionGate.Phase.REJECTED && commits[0]==0,"Revoked queued work neither records a commit nor moves a block");helper.succeed();});
+    }
+    @GameTest public void eventGatePreservesAnEditMadeAfterPowering(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));
+            ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++);
+            helper.pullLever(at(0,2,Rotation.NONE));place(helper,3,1,Blocks.GLASS.defaultBlockState(),Rotation.NONE);
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(ticket[0].phase()==PistonMotionGate.Phase.REJECTED && commits[0]==0,"A later edit invalidates the event before its journal/physics commit");
+            helper.assertTrue(state(helper,3,1,Rotation.NONE).is(Blocks.GLASS) && state(helper,2,1,Rotation.NONE).is(Blocks.STONE) && !state(helper,1,1,Rotation.NONE).getValue(BlockStateProperties.EXTENDED),"No payload moves through or overwrites the replacement");helper.succeed();
+        });
+    }
+    @GameTest public void eventGateCannotMoveWhenTheWriteAheadHookFails(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] attempts={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));
+            ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->{attempts[0]++;throw new IllegalStateException("Durable journal failed");});helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(ticket[0].phase()==PistonMotionGate.Phase.REJECTED && attempts[0]==1,"A failed journal hook blocks all physical movement");helper.succeed();});
+    }
+    @GameTest public void eventGateDoesNotCommitAStaleInputPulse(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));
+            ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++);
+            helper.pullLever(at(0,2,Rotation.NONE));helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(16,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(ticket[0].phase()==PistonMotionGate.Phase.REJECTED && commits[0]==0,"A cancelled pulse must not be recorded as a physical commit");helper.succeed();});
+    }
+    @GameTest(maxTicks=40) public void eventGateExpiresBeforeLateActuation(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(1,()->{var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++);});
+        helper.runAtTickTime(24,()->helper.pullLever(at(0,2,Rotation.NONE)));
+        helper.runAtTickTime(32,()->{assertOpen(helper,Rotation.NONE);helper.assertTrue(ticket[0].phase()==PistonMotionGate.Phase.REJECTED && commits[0]==0,"An old arm is not a standing execution lease");helper.succeed();});
+    }
+    @GameTest public void cancellationDuringCommittedAnimationGrantsNoNewMotion(GameTestHelper helper){
+        setup(helper,true,Rotation.NONE);int[] commits={0};PistonMotionGate.Ticket[] ticket={null};
+        helper.runAtTickTime(8,()->{var snapshot=ShutterMotion.capture(helper.getLevel(),helper.absolutePos(at(1,1,Rotation.NONE)),true,footprint(helper));ticket[0]=PistonMotionGate.arm(helper.getLevel(),snapshot,footprint(helper),()->{},id->commits[0]++);helper.pullLever(at(0,2,Rotation.NONE));});
+        for(int tick=9;tick<=13;tick++)helper.runAtTickTime(tick,()->{
+            if(!ticket[0].cancelled() && ticket[0].phase()==PistonMotionGate.Phase.COMMITTED && state(helper,3,1,Rotation.NONE).is(Blocks.MOVING_PISTON))PistonMotionGate.cancel(ticket[0],"Stopped during committed animation");
+        });
+        helper.runAtTickTime(16,()->{
+            assertClosed(helper,Rotation.NONE);helper.assertTrue(ticket[0].cancelled() && PistonMotionGate.observeTerminal(ticket[0]) && commits[0]==1,"Already committed vanilla animation settles without creating another permit");
+            helper.pullLever(at(0,2,Rotation.NONE));
+        });
+        helper.runAtTickTime(19,()->{assertClosed(helper,Rotation.NONE);helper.assertTrue(commits[0]==1,"Cancellation never authorizes compensating retraction");helper.succeed();});
+    }
     @GameTest(maxTicks=35) public void motionSnapshotsAreReadOnlyAndMatchBothActualTerminalPoses(GameTestHelper helper){
         setup(helper,true,Rotation.NONE);ShutterMotion.Snapshot[] snapshots=new ShutterMotion.Snapshot[2];
         helper.runAtTickTime(8,()->{

@@ -11,7 +11,9 @@ Current branch **phase/15-piston-motion**, based on PR23 main merge
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
 merge. Its first conversation/knowledge slice was also proven on b858364 by all5
 CI40959246919 and whole signed-in manual40960496759. Phase15 is building its
-motion snapshots after the native physics oracles, not a shipped piston feature.
+the deferred-event gate after proven native physics and snapshots, not a shipped
+piston feature. Snapshot sourced04e1fc passed all5 CI40964080695, including all53
+required native tests (job log22:14:07 UTC inspected).
 Draft PR24 holds Phase15. Full objective unfinished.
 Inspect actual git/PR/workflow state before continuing.
 
@@ -97,6 +99,26 @@ coordinate isolation, stale/replaced/undelegated cells and no chunk loading.
 Scoped Java server/client compilation passed; new runtime proofs await GitHub.
 Next: integrate deferred-motion commit/finalization fences and recovery before
 exposing piston construction, then complete M3's actual player flow.
+
+Event gate core now compiles: a required JAVA_25 mixin intercepts triggerEvent
+before vanilla head removal or payload mutation. Only server-internally armed
+positions are gated; unmanaged pistons keep normal behavior. A one-use ticket
+checks exact event/facing/pose,20-tick expiry, caller's current authority, live
+snapshot and vanilla power signal. A synchronous write-ahead hook precedes commit;
+authority/snapshot/power are rechecked after it. Reentrant/cancelled/duplicate
+events fail closed. Stop before commit rejects movement; cancellation after
+commit observes already-started animation without granting compensating motion.
+Server shutdown clears the ephemeral registry. Endpoint observation is not a pass.
+
+Seven native gate proofs written: actual close/pull commits with fresh rearm,
+revocation after lever write, intervening replacement, failed journal hook,
+cancelled input pulse, expired arm and cancellation during actual moving-block
+animation. Scoped server/client Java compile passed. GPT-6-Luna/high narrow
+mutation-boundary check found no concrete core blockers; no tests/SDK were run by
+the helper. These new proofs await CI. Production construction/generation still
+does not arm the gate. Durable WAL/session/permission integration, read-dependency
+closure, passive release and restart recovery are NOT implemented by this core;
+they remain required before M3 or public piston support can ship.
 
 ## Proven Phase14 Outcomes
 
