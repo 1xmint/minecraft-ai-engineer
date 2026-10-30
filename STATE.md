@@ -846,3 +846,36 @@ completed, and construction flow was not reached. Fix waits for all exact accept
 base/front/aperture endpoint states and no moving entities, rather than reading a
 property absent on transient blocks. Production motion/authority rules unchanged.
 The full handoff/construction/undo flow still requires a successful new run.
+
+M3 bounded planning integration: structured catalog selection can now choose
+sticky-shutter through a separate immutable planning-options list. The electrical
+recipe library and composed-component template type still exclude mechanics.
+Only the canonical shutter factory may produce its geometry/metadata; delay2+,
+unknown adaptations, a changed revision template/rotation and insufficient
+aperture dimensions reject. Model explanations cannot rewrite the recipe or
+claim a pass. The prompt explicitly distinguishes this one-cell shutter from
+larger doors and arbitrary piston mechanisms. Existing operator ownership,
+connection/cancellation, quota and proposal/acceptance fences remain in place.
+Official Codex SDK page fetched: https://developers.openai.com/codex/sdk ; pinned
+SDK declaration retains outputSchema for structured turns. No SDK/runtime update,
+API key or fresh model call. Existing account-owning operator restriction remains.
+New companion tests cover canonical output, fit-before-dispatch options, adaptation
+and revision refusals, and continued component-tree rejection. Scoped npm run
+check passes; runtime tests await GitHub. CI41084840244 on prior ae3e87c still has
+four successful jobs with dedicated multiplayer live at inspection. General
+mechanical composition and a fresh signed-in shutter selection proof are not done.
+
+M3 sharing proof added to ordinary native multiplayer flow while Bob is still
+connected: owner shares the actual accepted shutter as viewer, Bob receives its
+mechanical preview/info/lesson/timing and changes only his own tutorial cursor.
+Viewer test/release/undo requests must all deny permission before world authority;
+owner verifies idle ownership/no lease or pending input/motion. Actual revoke
+must clear Bob's overlay and refuse subsequent component facts. Three new markers
+are mandatory. No production authorization rules changed and no model call is
+involved. This is still pending runtime proof, not Mojang authentication evidence.
+The focused GPT-6-Luna/high planner-boundary check found no concrete authority,
+canonicality or composition bypass; no helper tests or edits.
+
+This planning/sharing batch passes scoped TypeScript and Java server/client
+compilation, changed-file Prettier, JavaScript syntax and diff whitespace checks.
+No local test suite or model inference ran. Runtime tests remain GitHub-only.

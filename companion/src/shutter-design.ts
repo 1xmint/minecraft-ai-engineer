@@ -27,6 +27,12 @@ export interface ShutterMetadata {
   stableGameTicks: 8;
 }
 export type ShutterDesign = Blueprint & { mechanical: ShutterMetadata };
+export const SHUTTER_OPTION = Object.freeze({
+  template: "sticky-shutter" as const,
+  name: raw.name,
+  explanation: raw.explanation,
+  maxDelay: 1,
+});
 if (
   raw.schemaVersion !== 1 ||
   raw.minecraft !== "26.3" ||

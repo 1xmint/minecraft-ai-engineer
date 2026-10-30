@@ -20,7 +20,11 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { preparePlannerLauncher } from "./launcher.js";
-import { MECHANISMS, adaptation, fittingMechanisms } from "./catalog.js";
+import {
+  PLANNING_MECHANISMS,
+  adaptation,
+  fittingMechanisms,
+} from "./catalog.js";
 import {
   type DesignRequest,
   type Plan,
@@ -88,7 +92,7 @@ export const PLAN_SCHEMA = {
   properties: {
     template: {
       type: "string",
-      enum: [...MECHANISMS.map((m) => m.id), "unsupported"],
+      enum: [...PLANNING_MECHANISMS.map((m) => m.template), "unsupported"],
     },
     explanation: { type: "string" },
     parameters: {
@@ -125,7 +129,7 @@ export function validatePlan(value: unknown): Plan {
   const v = object(value);
   if (
     v.template !== "unsupported" &&
-    !MECHANISMS.some((m) => m.id === v.template)
+    !PLANNING_MECHANISMS.some((m) => m.template === v.template)
   )
     throw new RequestError("Planner returned an unsupported template.", 502);
   const plan: Plan = {
@@ -200,7 +204,7 @@ export class CodexPlanningProvider implements PlanningProvider {
     externalSignal: AbortSignal,
     context = "No prior project.",
   ): Promise<Plan> {
-    const prompt = `Choose one catalog mechanism satisfying the user's entire request. Only listed template/rotation combinations fit the delegated region. Delay is repeater redstone ticks (2 game ticks each), from 1 through the listed maximum; the inverter only accepts 1. Do not invent blocks, wiring, commands or verification. These mechanisms implement a delayed lamp, boolean NOT, or two-input OR. They cannot implement doors, clocks, memory, arithmetic, piston mechanisms, arbitrary circuitry, or optimize unprovided designs: return unsupported for unmet requirements. No mechanism has been functionally verified in this world yet. Return only the structured decision.\nTRUSTED_CATALOG_JSON=${JSON.stringify(MECHANISMS.map((m) => ({ template: m.id, name: m.name, explanation: m.explanation, maxDelay: m.maxDelay })))}\nTRUSTED_FITTING_OPTIONS_JSON=${JSON.stringify(fittingMechanisms(input))}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
+    const prompt = `Choose one catalog mechanism satisfying the user's entire request. Only listed template/rotation combinations fit the delegated region. Delay is repeater redstone ticks (2 game ticks each), from 1 through the listed maximum; the inverter only accepts 1. Do not invent blocks, wiring, commands or verification. These mechanisms implement a delayed lamp, boolean NOT, two-input OR, or a fixed single-sticky-piston shutter. The shutter has one lever: off opens a one-cell aperture, on pushes one stone payload into it; it has no configurable repeater delay (delay must be 1), no survival gathering and no arbitrary geometry. Its aperture movement space must fit, and execution separately requires loaded clear isolation and explicit creative delegation. Do not substitute this shutter for a requested larger door. These choices cannot implement larger piston doors, clocks, memory, arithmetic, arbitrary piston mechanisms, arbitrary circuitry, or optimize unprovided designs: return unsupported for unmet requirements. No mechanism has been functionally verified in this world yet. Return only the structured decision.\nTRUSTED_CATALOG_JSON=${JSON.stringify(PLANNING_MECHANISMS)}\nTRUSTED_FITTING_OPTIONS_JSON=${JSON.stringify(fittingMechanisms(input))}\nUNTRUSTED_REQUIREMENTS_JSON=${JSON.stringify(input)}\nUNTRUSTED_PROJECT_CONTEXT_JSON=${JSON.stringify(context)}`;
     return validatePlan(
       await this.run(prompt, PLAN_SCHEMA, externalSignal, "catalog"),
     );

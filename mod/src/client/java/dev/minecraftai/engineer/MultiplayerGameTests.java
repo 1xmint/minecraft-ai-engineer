@@ -203,6 +203,16 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             ShutterEvidence.validate(project.trial.evidence(),design,Blueprint.state(project.trial.shutterOriginalSnapshot()),true);
         }});write("shutter-functional-recovery.done","passed");
     }
+    private static void shutterSharingFlow(ClientGameTestContext context,TestDedicatedServerContext server,String originalProject){
+        String id=read("shutter-recovery-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        send(context,"engineer pause");server.waitFor(s->!session(s,"Alice").cursor(player(s,"Alice").getUUID()).teaching);
+        int ownerStage=server.computeOnServer(s->session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage);
+        send(context,"engineer project share Bob viewer");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));
+        write("shutter-sharing-project",id);awaitFile(context,"shutter-bob-view.done");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.cursor(player(s,"Alice").getUUID()).stage==ownerStage && !project.cursor(player(s,"Alice").getUUID()).teaching,"Shared mechanical lesson retains the owner's independent paused cursor");check(project.delegation==null && project.shutterOwned && project.shutterMotion==null && !project.trial.pending(),"A viewer cannot start a shutter test, release control or undo construction");});
+        send(context,"engineer project revoke Bob");server.waitFor(s->!session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW));write("shutter-bob-revoked","ready");awaitFile(context,"shutter-bob-denied.done");
+        write("shutter-sharing.done","passed");send(context,"engineer project use "+originalProject);server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+    }
     private static void shutterManualHandoff(ClientGameTestContext context,TestDedicatedServerContext server,boolean restarted){
         String id=read("shutter-recovery-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
         server.runCommand("gamemode creative Alice");
@@ -538,6 +548,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
+            if(!LIVE_ACCEPTANCE)shutterSharingFlow(context,server,projectId);
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -923,6 +934,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             send(context,"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"permission");
             write("generated-bob.done","passed");awaitFile(context,"workspace-bob-editable");MESSAGES.clear();send(context,"engineer expand 200 100 0 205 101 0");expectChat(context,"Only the project owner");write("workspace-bob-denied.done","passed");awaitFile(context,"generated-revoked");
             await(context,()->view(context)==null,"Generated preview is cleared when view access is revoked");write("generated-bob-revoked.done","passed");
+        }
+        if(!LIVE_ACCEPTANCE){
+            awaitFile(context,"shutter-sharing-project");String shutter=read("shutter-sharing-project");MESSAGES.clear();send(context,"engineer project use "+shutter);
+            await(context,()->view(context)!=null && view(context).projectId().equals(shutter),"Authorized viewer receives the mechanical blueprint");
+            send(context,"engineer teach root");send(context,"engineer component info root");expectChat(context,"mechanical output");
+            send(context,"engineer ask explain the timing");expectChat(context,"8 stable tick intervals");send(context,"engineer next");send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
+            for(String action:List.of("test","release","undo")){MESSAGES.clear();send(context,"engineer "+action);expectChat(context,"permission");}
+            write("shutter-bob-view.done","passed");awaitFile(context,"shutter-bob-revoked");await(context,()->view(context)==null,"Revocation clears mechanical preview metadata");
+            MESSAGES.clear();send(context,"engineer project use "+shutter);expectChat(context,"unavailable or not shared");send(context,"engineer component info root");expectChat(context,"Engineer:");check(MESSAGES.stream().noneMatch(message->message.contains("mechanical output")),"Revoked viewer cannot retrieve shutter component facts");write("shutter-bob-denied.done","passed");
         }
         awaitFile(context, "finish");
         disconnect(context);

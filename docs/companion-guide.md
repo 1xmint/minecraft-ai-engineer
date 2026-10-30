@@ -62,3 +62,12 @@ changes clear current functional evidence; old reports remain in the audit log.
 See [protocol](protocol.md) for requests and response formats. There is no
 endpoint for running commands or modifying the world. Future providers can
 implement `PlanningProvider` without replacing the game adapter.
+
+The development catalog selector also offers the fixed `sticky-shutter` recipe.
+It opens one aperture with its lever off and closes it with the lever on. It has
+no configurable repeater delay, and the requested region must include its moving
+payload and aperture. Larger piston doors and arbitrary piston geometry remain
+unsupported. Selection returns an untested preview; explicit creative delegation
+and actual game-tick testing remain separate. Mechanical component composition
+is still unavailable. The configured account-owning operator remains the only
+player allowed to invoke the signed-in model.

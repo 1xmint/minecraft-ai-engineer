@@ -6,7 +6,14 @@ import {
   readShutterDesign,
   shutterFrame,
 } from "../companion/src/shutter-design.js";
-import { MECHANISMS } from "../companion/src/catalog.js";
+import {
+  MECHANISMS,
+  PLANNING_MECHANISMS,
+  fittingMechanisms,
+  makeMechanismBlueprint,
+} from "../companion/src/catalog.js";
+import { validatePlan, PLAN_SCHEMA } from "../companion/src/provider.js";
+import { validateComponentTree } from "../companion/src/components.js";
 import {
   serverBlueprint,
   type GatewayContext,
@@ -92,7 +99,67 @@ test("canonical shutter preserves an empty aperture and derives the accepted fra
   assert.equal(
     MECHANISMS.some((mechanism) => String(mechanism.id) === "sticky-shutter"),
     false,
-    "Public planning is not enabled by adding the data contract",
+    "Mechanical choices do not expand the electrical component recipe library",
+  );
+});
+test("shutter planning uses the exact canonical recipe and reserves aperture dimensions", () => {
+  const plan = validatePlan({
+    template: "sticky-shutter",
+    explanation: "Use one bounded shutter.",
+    parameters: { delay: 1 },
+    rotation: 0,
+  });
+  assert.ok(PLAN_SCHEMA.properties.template.enum.includes("sticky-shutter"));
+  assert.ok(PLANNING_MECHANISMS.some((m) => m.template === "sticky-shutter"));
+  const workspace = { ...input, maxSize: { x: 4, y: 2, z: 1 } };
+  const blueprint = makeMechanismBlueprint(workspace, plan);
+  assert.deepEqual(readShutterDesign(blueprint), blueprint);
+  assert.equal(blueprint.verification, "untested");
+  assert.equal(blueprint.projectId, input.projectId);
+  assert.deepEqual(
+    fittingMechanisms({
+      ...workspace,
+      revision: { template: "sticky-shutter", rotation: 0 },
+    }),
+    [{ template: "sticky-shutter", rotation: 0, maxDelay: 1 }],
+  );
+  assert.throws(
+    () =>
+      makeMechanismBlueprint(
+        { ...workspace, maxSize: { x: 3, y: 2, z: 1 } },
+        plan,
+      ),
+    /movement space/,
+  );
+  assert.throws(() => validatePlan({ ...plan, parameters: { delay: 2 } }));
+  assert.throws(() =>
+    validatePlan({ ...plan, parameters: { delay: 1, commands: "build" } }),
+  );
+  assert.throws(
+    () =>
+      makeMechanismBlueprint(
+        { ...workspace, revision: { template: "not-gate", rotation: 0 } },
+        plan,
+      ),
+    /revision must keep/,
+  );
+  assert.throws(() =>
+    validateComponentTree({
+      schemaVersion: 1,
+      nodes: [
+        { id: "root", kind: "group" },
+        {
+          id: "shutter",
+          parent: "root",
+          kind: "mechanism",
+          template: "sticky-shutter",
+          anchor: { x: 0, y: 0, z: 0 },
+          rotation: 0,
+          parameters: { delay: 1 },
+          dependsOn: [],
+        },
+      ],
+    }),
   );
 });
 test("shutter contract rejects rewritten behavior, geometry, resources and authority", () => {
