@@ -266,6 +266,14 @@ Canonical/reservation source654ab73 Fabric passed all74 required native tests in
 CI40995004043 (actual log03:02:19 UTC inspected). Four jobs passed; dedicated
 multiplayer remains live at inspection, so the whole run is not yet all-green.
 
+Update: canonical/reservation654ab73 is now all5 green in CI40995004043. Recovery
+hook/checkpoint sourcefe203f5 is the next batch awaiting its own runtime proof.
+The existing dedicated harness already reboots the same saved world between its
+first and second flows (MultiplayerGameTests.java around prepare-restart and the
+second TestDedicatedServerContext). Extend that boundary with a separately
+labeled mechanical recovery fixture and a post-boot queued-event denial check;
+do not add another server boot merely for this proof or call it fresh inference.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
