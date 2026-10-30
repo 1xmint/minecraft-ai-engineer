@@ -72,6 +72,16 @@ final class EngineeringSession implements BuildExecutor {
     long nextPlacement;
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
+    ShutterJournal shutterMotion;
+    private ShutterJournal.Scope acceptedMotionScope(){
+        if(blueprint==null || !ShutterDesign.describes(blueprint.source()) || !activeComponent.equals("root"))throw new IllegalStateException("Pending motion needs its accepted mechanical component");
+        var design=ShutterDesign.read(blueprint.source());
+        if(!design.writeCells().stream().allMatch(this::contains))throw new IllegalStateException("Pending motion escapes its delegated workspace");
+        UUID operation=UUID.fromString(activeOperation);
+        if(!operation.toString().equals(activeOperation))throw new IllegalStateException("Invalid pending mechanical operation identity");
+        return design.motionScope(operation);
+    }
+    void restoreMotionDenial(){if(shutterMotion!=null)PistonMotionGate.restoreBlocked(level(),shutterMotion,acceptedMotionScope());}
     String verified = "untested";
     String memoryStatus = "not synchronized";
     java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
@@ -206,7 +216,7 @@ final class EngineeringSession implements BuildExecutor {
     void select(int corner, BlockPos pos) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can change the delegated workspace");
-        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo assistant work before changing the delegated region");
+        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before changing the delegated region");
         manager.generated.cancel(this);
         if (corner == 1) {corner1 = pos.immutable();corner2=null;}
         else {if(corner1==null)throw new IllegalStateException("Set the first corner before completing the workspace");manager.workspace(this,actor(),corner1,pos);corner2 = pos.immutable();}
@@ -237,7 +247,7 @@ final class EngineeringSession implements BuildExecutor {
     void accept(Blueprint value) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         ComponentTree.validate(value);
-        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and undo the previous assignment before replacing its blueprint");
+        if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before replacing its blueprint");
         JsonObject intended=value.source().deepCopy();
         intended.addProperty("projectId",projectId.toString()); intended.addProperty("revision",Math.addExact(projectRevision,1));
         Blueprint candidate=Blueprint.parse(intended,worldId,dimension);
@@ -1195,6 +1205,7 @@ final class EngineeringSession implements BuildExecutor {
         for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
     }
     void save() {
+        if(shutterMotion!=null)shutterMotion.requireScope(level(),acceptedMotionScope());
         if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
         pruneOperationScopes();validateOperationScopes();
         if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
@@ -1206,6 +1217,7 @@ final class EngineeringSession implements BuildExecutor {
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
         json.addProperty("journalVersion",4);json.add("operationScopes",operationScopes.json());json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
         if(restoredLayout!=null)json.add("restoredLayout",restoredLayout.json());
+        if(shutterMotion!=null)json.add("shutterMotion",shutterMotion.json());
         if(operationKind.equals("STRUCTURAL"))json.addProperty("structuralCursor",structuralCursor);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
@@ -1333,6 +1345,10 @@ final class EngineeringSession implements BuildExecutor {
                 if((!baseline.isEmpty() || pendingPlacement || undoRequested) && !operationScopes.contains(activeOperation))operationScopes.capture(activeOperation,activeComponent,blueprint,true);
             }
             validateOperationScopes();
+            if(json.has("shutterMotion")){
+                shutterMotion=ShutterJournal.read(json.getAsJsonObject("shutterMotion"));
+                shutterMotion.requireScope(level(),acceptedMotionScope());
+            }
             state="PAUSED";detail="Checkpoint restored. Inspect the world; explicit resume reconciles before editing.";
         }catch(Exception e){throw new IllegalStateException("Cannot safely load checkpoint; keep it for recovery",e);}
     }

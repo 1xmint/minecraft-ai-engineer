@@ -154,6 +154,12 @@ public final class EngineerMod implements ModInitializer {
         });
     }
     static ProjectManager managerFor(MinecraftServer server) { return MANAGERS.computeIfAbsent(server,ProjectManager::new); }
+    /** Required mixin bridge: load accepted intentions and deny pending physics before spawn preparation. */
+    public static void initializeRecovery(MinecraftServer server){
+        if(!server.isSameThread())throw new IllegalStateException("Project recovery requires the server thread");
+        managerFor(server).restoreMotionDenials();
+    }
+    static boolean recoveryInitialized(MinecraftServer server){var manager=MANAGERS.get(server);return manager!=null && manager.recoveryInitialized;}
     static boolean current(ProjectManager manager) { return MANAGERS.get(manager.server)==manager; }
     static EngineeringSession sessionFor(ServerPlayer player) { return managerFor(player.level().getServer()).selected(player,false); }
     private static int help(CommandSourceStack source) { source.sendSuccess(()->Component.literal("Engineer: "+HELP),false);return Command.SINGLE_SUCCESS; }

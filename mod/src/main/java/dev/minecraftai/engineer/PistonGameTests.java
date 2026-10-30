@@ -13,6 +13,37 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=25) public void projectCheckpointRestoresDenialFromAcceptedMechanicalIdentity(GameTestHelper helper){
+        var level=helper.getLevel();var server=level.getServer();
+        helper.assertTrue(EngineerMod.recoveryInitialized(server),"Required server startup hook completed before native test ticks");
+        var manager=EngineerMod.managerFor(server);var project=UUID.randomUUID();var owner=UUID.randomUUID();var dimension=level.dimension().identifier().toString();
+        var design=ShutterDesign.create(UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(2,3,2)),0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        helper.runAtTickTime(8,()->{
+            var session=new EngineeringSession(manager,project,owner,dimension);session.blueprint=design.blueprint();
+            session.corner1=helper.absolutePos(new BlockPos(0,1,0));session.corner2=helper.absolutePos(new BlockPos(7,6,7));session.activeOperation=UUID.randomUUID().toString();
+            var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            session.shutterMotion=ShutterJournal.prepare(design.motionScope(UUID.fromString(session.activeOperation)),snapshot,UUID.randomUUID());session.save();
+            var restored=new EngineeringSession(manager,project,owner,dimension);
+            helper.assertTrue(restored.delegation==null && restored.state.equals("PAUSED") && restored.shutterMotion.motion().equals(session.shutterMotion.motion()),"Actual project reload retains motion facts without restoring a lease");
+            manager.projects.put(project,restored);
+            try{
+                manager.restoreMotionDenials();
+                var neighboring=new EngineeringSession(manager,UUID.randomUUID(),owner,dimension);
+                neighboring.blueprint=ShutterDesign.create(UUID.randomUUID(),1,neighboring.projectId,manager.worldId,dimension,helper.absolutePos(new BlockPos(2,3,2)),0).blueprint();
+                rejects(helper,()->manager.acquire(neighboring,owner,ProjectAccess.Permission.BUILD,true),"Even a permitted owner cannot reserve through a neighboring unresolved mechanical transaction");
+            }finally{manager.projects.remove(project);}
+            rejects(helper,()->PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{}),"Project startup denial cannot be bypassed by ordinary arming");
+            try{
+                var saved=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();var forged=saved.deepCopy();forged.getAsJsonObject("shutterMotion").getAsJsonObject("scope").addProperty("operationId",UUID.randomUUID().toString());LocalFiles.write(session.file,forged);
+                rejects(helper,()->new EngineeringSession(manager,project,owner,dimension),"Motion identity cannot validate itself instead of the accepted project operation");LocalFiles.write(session.file,saved);
+            }catch(java.io.IOException failure){throw new IllegalStateException(failure);}
+            helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE),"Actual queued event is denied after project checkpoint reload");helper.succeed();
+        });
+    }
     @GameTest(maxTicks=25) public void revokedShutterReservationDeniesQueuedPhysics(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-lease",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
         for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());

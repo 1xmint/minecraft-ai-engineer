@@ -243,6 +243,29 @@ spawn preparation executes queued physics; SERVER_STARTED alone is not assumed
 early enough. FunctionalTrial.load is data-only but still assumes electrical
 contracts for pending inputs, so mechanical recovery needs its own typed state.
 
+Startup recovery wiring now compiles. A required MinecraftServer.createLevels
+RETURN mixin initializes the project manager after dimensions exist, before
+loadLevel proceeds to spawn preparation. The pinned GameTestServer also calls
+loadLevel. Project checkpoints persist strict shutterMotion facts; load derives
+expected scope from the accepted canonical component and active operation, checks
+the workspace, then startup installs denial-only bindings. Save revalidates that
+scope. Pending motion blocks intention/workspace replacement and overlapping
+neighbor assignments, including an otherwise permitted owner. No lease/ticket
+is restored. Invalid data fails startup before normal project execution.
+
+New native proof asserts hook completion before test ticks, writes/reloads a real
+project checkpoint, checks absent delegation, invokes the production manager's
+denial restoration, rejects an altered journal operation and a neighboring lease,
+then checks actual queued motion stays denied. Scoped Java server/client compile
+passed. GPT-6-Luna/high focused scope/startup check found no concrete blockers;
+no helper tests or edits. This is not a full saved-world reboot proof yet. Input
+restoration, actual commit orchestration, explicit fresh-authority reconciliation,
+safe release and mechanical trials remain before lifting the execution guard.
+
+Canonical/reservation source654ab73 Fabric passed all74 required native tests in
+CI40995004043 (actual log03:02:19 UTC inspected). Four jobs passed; dedicated
+multiplayer remains live at inspection, so the whole run is not yet all-green.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

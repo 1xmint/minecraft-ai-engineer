@@ -20,6 +20,7 @@ final class ProjectManager {
     final Map<UUID, UUID> selections = new HashMap<>();
     final Set<UUID> creators = new HashSet<>();
     private long sequence;
+    boolean recoveryInitialized;
     final InventoryPerception inventories=new InventoryPerception(this);
     final GeneratedPlanning generated=new GeneratedPlanning(this);
     final ProjectKnowledgeClient knowledge=new ProjectKnowledgeClient(this);
@@ -54,6 +55,7 @@ final class ProjectManager {
     boolean operator(ServerPlayer player) {
         return server.getPlayerList().isOp(player.nameAndId()) || (server.isSingleplayer() && server.isSingleplayerOwner(player.nameAndId()));
     }
+    void restoreMotionDenials(){for(var project:projects.values())project.restoreMotionDenial();recoveryInitialized=true;}
     boolean modelOperator(ServerPlayer player) {
         if(player==null || !operator(player))return false;
         String configured=System.getenv("MCE_CODEX_OPERATOR_UUID");
@@ -115,6 +117,10 @@ final class ProjectManager {
             if(other==project || !other.dimension.equals(project.dimension))continue;
             boolean touches=writes.stream().anyMatch(other::contains) || ((test || GeneratedBlueprint.isGenerated(project.reservationBlueprint(action))) && reads.stream().anyMatch(other::contains));
             if(touches && !other.access.allows(actor,action))throw new IllegalStateException("The assignment intersects a workspace that has not granted the required permission");
+            if(other.shutterMotion!=null){
+                var pending=ShutterDesign.read(other.blueprint.source()).readCells();
+                if(writes.stream().anyMatch(pending::contains) || reads.stream().anyMatch(pending::contains))throw new IllegalStateException("A neighboring interrupted mechanical transaction must be reconciled first");
+            }
             if (!other.hasPendingTest() || other.blueprint == null) continue;
             for (Blueprint.PlannedBlock b : other.blueprint.blocks()) for (BlockPos p : BlockPos.betweenClosed(b.pos().offset(-2,-2,-2), b.pos().offset(2,2,2)))
                 if (reads.contains(p) || writes.contains(p)) throw new IllegalStateException("An interrupted neighboring test must be safely reconciled first");
