@@ -13,6 +13,31 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest public void physicalReconciliationTransitionsBetweenDenialsWithoutIssuingATicket(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-reconciliation",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());var scope=design.motionScope(UUID.randomUUID());var journal=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());PistonMotionGate.restoreBlocked(level,journal,scope);
+        boolean[] granted={false};int[] recorded={0};Runnable authority=()->{if(!granted[0])throw new IllegalStateException("Current authority required");};
+        rejects(helper,()->PistonMotionGate.reconcileBlocked(level,journal,scope,design,authority,pose->recorded[0]++),"No receipt is written without current authority");helper.assertTrue(recorded[0]==0,"Denied reconciliation writes no observation receipt");granted[0]=true;
+        rejects(helper,()->PistonMotionGate.reconcileBlocked(level,journal,scope,design,authority,pose->{throw new IllegalStateException("Receipt persistence failed");}),"Failed durable observation leaves pending denial intact");
+        rejects(helper,()->PistonMotionGate.reconcileBlocked(level,journal,scope,design,authority,pose->granted[0]=false),"Authority is rechecked after recording");granted[0]=true;
+        var observed=PistonMotionGate.reconcileBlocked(level,journal,scope,design,authority,pose->recorded[0]++);
+        helper.assertTrue(observed==ShutterJournal.PositionState.BEFORE && recorded[0]==1,"Fresh observed before pose is recorded independently from the uncommitted journal");
+        rejects(helper,()->PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{}),"Idle reconciliation never grants ordinary actuation");
+        PistonMotionGate.restoreBlocked(level,journal,scope);
+        rejects(helper,()->PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{}),"A failed checkpoint close can safely restore the exact pending denial");helper.succeed();
+    }
+    @GameTest public void idleGuardBindsAcceptedIdentityWithoutLoadingChunks(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-idle",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),90);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        PistonMotionGate.guard(level,design);PistonMotionGate.guard(level,design);
+        var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());var scope=design.motionScope(UUID.randomUUID());
+        var foreign=new ShutterJournal.Scope(scope.worldId(),scope.dimension(),UUID.randomUUID(),scope.blueprint(),scope.revision(),scope.component(),scope.operation(),scope.piston(),scope.facing());var journal=ShutterJournal.prepare(foreign,snapshot,UUID.randomUUID());
+        rejects(helper,()->PistonMotionGate.restoreBlocked(level,journal,foreign),"A foreign pending record cannot replace another project's idle guard");
+        rejects(helper,()->PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{}),"Rejected foreign replacement preserves idle denial");
+        var far=helper.absolutePos(new BlockPos(1_000_000,3,1_000_000));var unloaded=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-idle",level.dimension().identifier().toString(),far,0);
+        helper.assertTrue(!level.hasChunkAt(far),"Idle registration starts unloaded");PistonMotionGate.guard(level,unloaded);helper.assertTrue(!level.hasChunkAt(far),"Idle registration does not load a world chunk");helper.succeed();
+    }
     @GameTest(maxTicks=25) public void projectCheckpointRestoresDenialFromAcceptedMechanicalIdentity(GameTestHelper helper){
         var level=helper.getLevel();var server=level.getServer();
         helper.assertTrue(EngineerMod.recoveryInitialized(server),"Required server startup hook completed before native test ticks");

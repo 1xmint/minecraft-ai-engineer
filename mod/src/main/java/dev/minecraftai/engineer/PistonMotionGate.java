@@ -12,8 +12,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Event-time transaction gate. Registration is server-internal; unregistered vanilla pistons are unchanged. */
 public final class PistonMotionGate {
-    private sealed interface Entry permits Ticket,Blocked { }
+    private sealed interface Entry permits Ticket,Blocked,Idle { }
     private record Blocked(ShutterJournal.Scope scope,UUID motion) implements Entry { }
+    private record Idle(ShutterDesign.Binding binding) implements Entry { }
     private static final Map<ServerLevel,Map<BlockPos,Entry>> LEVELS=Collections.synchronizedMap(new IdentityHashMap<>());
     enum Phase { ARMED,CHECKING,COMMITTED,SETTLED,REJECTED }
     static final class Ticket implements Entry {
@@ -41,6 +42,7 @@ public final class PistonMotionGate {
         authority.run();snapshot.requireFresh(level,writes);
         var slots=LEVELS.computeIfAbsent(level,ignored->new HashMap<>());
         var prior=slots.get(snapshot.base());
+        if(prior instanceof Idle)throw new IllegalStateException("Accepted mechanical design is guarded; explicit managed actuation is required");
         if(prior instanceof Blocked)throw new IllegalStateException("Restored motion is blocked; reconcile its journal with fresh authority");
         if(prior instanceof Ticket active && (active.phase==Phase.ARMED || active.phase==Phase.CHECKING || active.phase==Phase.COMMITTED))throw new IllegalStateException("A piston transaction is still pending; reconcile before rearming");
         if(prior==null && slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");
@@ -51,10 +53,38 @@ public final class PistonMotionGate {
         thread(level);journal.requireScope(level,currentScope);
         var slots=LEVELS.computeIfAbsent(level,ignored->new HashMap<>());var prior=slots.get(journal.base());
         var blocked=new Blocked(currentScope,journal.motion());
-        if(prior!=null){if(prior.equals(blocked))return;throw new IllegalStateException("A different transaction already guards this piston");}
-        if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");
+        if(prior!=null){if(prior.equals(blocked))return;if(!(prior instanceof Idle idle && matches(idle.binding,currentScope)))throw new IllegalStateException("A different transaction already guards this piston");}
+        if(prior==null && slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");
         slots.put(journal.base(),blocked);
     }
+    /** Accepted designs remain denial-only even after an old interrupted journal is reconciled. */
+    static void guard(ServerLevel level,ShutterDesign.Design design){
+        thread(level);var binding=design.binding();
+        if(!binding.dimension().equals(level.dimension().identifier().toString()))throw new IllegalStateException("Guarded design belongs to another dimension");
+        var slots=LEVELS.computeIfAbsent(level,ignored->new HashMap<>());var expected=new Idle(binding);var prior=slots.get(binding.piston());
+        if(prior!=null){if(prior.equals(expected))return;throw new IllegalStateException("Another motion still guards this accepted design");}
+        if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");slots.put(binding.piston(),expected);
+    }
+    /** Archives observation before moving from pending denial to idle denial. Never issues a ticket. */
+    static ShutterJournal.PositionState reconcileBlocked(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope scope,ShutterDesign.Design design,Runnable authority,Consumer<ShutterJournal.PositionState> writeAhead){
+        thread(level);journal.requireScope(level,scope);
+        if(!design.motionScope(scope.operation()).equals(scope))throw new IllegalStateException("Reconciliation design differs from accepted motion");
+        var slots=LEVELS.get(level);var expected=new Blocked(scope,journal.motion());
+        if(slots==null || !expected.equals(slots.get(journal.base())))throw new IllegalStateException("Pending motion binding changed");
+        authority.run();var observed=reconciledPose(level,journal,scope,design);writeAhead.accept(observed);
+        authority.run();
+        if(LEVELS.get(level)!=slots || !expected.equals(slots.get(journal.base())) || reconciledPose(level,journal,scope,design)!=observed)throw new IllegalStateException("Motion changed while recording reconciliation");
+        slots.put(journal.base(),new Idle(design.binding()));return observed;
+    }
+    private static ShutterJournal.PositionState reconciledPose(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope scope,ShutterDesign.Design design){
+        var observed=journal.positionState(level,scope);
+        if(observed!=ShutterJournal.PositionState.BEFORE && observed!=ShutterJournal.PositionState.TERMINAL)throw new IllegalStateException("Motion is unloaded, unsettled or conflicted; preserve and reconcile it first");
+        if(!level.hasChunkAt(design.input()))throw new IllegalStateException("Reconciliation input is unloaded");
+        var input=level.getBlockState(design.input());
+        if(!input.is(net.minecraft.world.level.block.Blocks.LEVER) || input.getValue(BlockStateProperties.POWERED)!=level.getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED))throw new IllegalStateException("Restored input and observed piston pose disagree; no physical reconciliation was recorded");
+        return observed;
+    }
+    private static boolean matches(ShutterDesign.Binding binding,ShutterJournal.Scope scope){return binding.world().equals(scope.worldId()) && binding.dimension().equals(scope.dimension()) && binding.project().equals(scope.project()) && binding.blueprint().equals(scope.blueprint()) && binding.revision()==scope.revision() && binding.piston().equals(scope.piston()) && binding.facing()==scope.facing() && scope.component().equals("root");}
     /** Explicit reconciliation creates a new ticket; no actor, callback or permit is deserialized. */
     static Ticket rearmBlocked(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope currentScope,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead){
         thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);journal.requireScope(level,currentScope);

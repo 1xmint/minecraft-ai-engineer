@@ -28,6 +28,8 @@ try {
     for (const marker of [
       "shutter-recovery.done",
       "shutter-input-recovery.done",
+      "shutter-position-reconciled.done",
+      "shutter-position-recovery.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

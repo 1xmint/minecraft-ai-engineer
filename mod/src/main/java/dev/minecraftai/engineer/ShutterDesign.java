@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /** Canonical mechanical intention. No placement, permission, lease or functional verification. */
 final class ShutterDesign {
+    record Binding(String world,String dimension,UUID project,UUID blueprint,int revision,BlockPos piston,Direction facing){Binding{piston=piston.immutable();}}
     private static JsonObject recipe;
     private ShutterDesign() { }
     static boolean describes(JsonObject source){return source.has("mechanical") || (source.has("provenance") && source.get("provenance").isJsonObject() && source.getAsJsonObject("provenance").has("template") && source.getAsJsonObject("provenance").get("template").isJsonPrimitive() && source.getAsJsonObject("provenance").get("template").getAsString().equals("sticky-shutter"));}
@@ -41,6 +42,7 @@ final class ShutterDesign {
         ShutterJournal.Scope motionScope(UUID operation){return new ShutterJournal.Scope(world,dimension,project,id,revision,"root",operation,piston(),facing());}
         RegionReservations.Scope reservationScope(){return new RegionReservations.Scope(world,dimension,project);}
         int revision(){return revision;}
+        Binding binding(){return new Binding(world,dimension,project,id,revision,piston(),facing());}
         Blueprint blueprint(){
             var stages=new ArrayList<Blueprint.Stage>();for(var element:source.getAsJsonArray("stages")){var stage=element.getAsJsonObject();stages.add(new Blueprint.Stage(stage.get("id").getAsString(),stage.get("title").getAsString(),stage.get("explanation").getAsString()));}
             return new Blueprint(id.toString(),project.toString(),revision,world,dimension,source.get("name").getAsString(),anchor,rotation,worldBlocks(),List.copyOf(stages),source());

@@ -347,6 +347,29 @@ authorized input restoration or a functional shutter trial. Reconciliation sourc
 82bb63f is the next batch awaiting its own runtime proof; it adds the separate
 required shutter-input-recovery.done marker.
 
+Physical reconciliation now compiles. A second explicit resume after input WAL
+restoration obtains a fresh recovery-only lease, checks accepted scope, full
+environment, stable before/terminal pose and agreement between input and piston.
+The gate durably records an observation receipt, rechecks authority/pose/binding,
+then changes pending denial to identity-bound idle denial, never to a ticket.
+The original physical journal and observed pose/tick are archived separately;
+clearing the checkpoint does not invent a commit or functional pass. Checkpoint
+failure restores the old journal/pending denial. Both phases always release their
+fresh lease. Canonical mechanical designs with no pending motion are now guarded
+on startup too, so clearing a journal cannot silently restore vanilla actuation.
+
+Two new native core tests cover missing authority, failed receipt persistence,
+post-receipt revocation, no ticket, matching rollback, foreign replacement and
+no-load idle registration. The dedicated flow adds conflicting glass preservation,
+explicit owner reconciliation, receipt inspection, no pass/lease and retained
+idle denial on the already-existing third saved-server boot. The verifier requires
+shutter-position-reconciled.done and shutter-position-recovery.done. Scoped Java
+server/client compile, changed JavaScript format/syntax checks passed; runtime
+proofs await CI. GPT-6-Luna/high focused boundary check found no concrete scope,
+permission or rollback flaw, and ran no tests/edits. Accepted-design replacement,
+placement ownership, guarded actuation and functional mechanical trials remain
+unfinished; no public shutter planner/catalog or construction is enabled.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

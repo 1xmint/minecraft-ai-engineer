@@ -106,6 +106,36 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("shutter-input-recovery.done","passed");send(context,"engineer project use "+originalProject);
         server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
     }
+    private static void reconcileShutterPosition(ClientGameTestContext context,TestDedicatedServerContext server,String originalProject){
+        String id=read("shutter-recovery-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());project.level().setBlockAndUpdate(design.aperture(),Blocks.GLASS.defaultBlockState());});
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"unloaded, unsettled or conflicted");
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());check(project.shutterMotion!=null && project.delegation==null && project.level().getBlockState(design.aperture()).is(Blocks.GLASS),"Conflicted physical reconciliation preserves player replacement and pending facts");project.level().setBlockAndUpdate(design.aperture(),Blocks.AIR.defaultBlockState());});
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Mechanical position reconciled from current observation");
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());
+            check(project.shutterMotion==null && project.delegation==null && project.state.equals("PAUSED") && !project.verified.startsWith("passed:"),"Explicit observation clears pending motion without granting execution or a functional pass");
+            try{
+                var receipt=JsonParser.parseString(java.nio.file.Files.readString(project.file.resolveSibling(project.projectId+".motion-"+read("shutter-recovery-motion")+".reconciled.json"))).getAsJsonObject();
+                check(receipt.get("position").getAsString().equals("before") && !receipt.get("inputPowered").getAsBoolean() && receipt.getAsJsonObject("originalMotion").get("phase").getAsString().equals("prepared"),"Durable receipt preserves uncommitted facts separately from fresh observed before pose");
+            }catch(java.io.IOException failure){throw new AssertionError(failure);}
+            boolean denied=false;try{PistonMotionGate.arm(project.level(),ShutterMotion.capture(project.level(),design.piston(),true,design.writeCells()),design.writeCells(),()->{},motion->{});}catch(IllegalStateException expected){denied=true;}
+            check(denied,"Reconciled design stays guarded without an execution ticket");
+        });
+        write("shutter-position-reconciled.done","passed");send(context,"engineer project use "+originalProject);
+        server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+    }
+    private static void assertReconciledShutterOnLaterBoot(TestDedicatedServerContext server){
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(321,100,0)));
+        server.runOnServer(s->{
+            var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("shutter-recovery-project")));var design=ShutterDesign.read(project.blueprint.source());
+            check(project.shutterMotion==null && project.delegation==null && !project.trial.pending(),"Later saved boot retains completed input/position reconciliation without authority");
+            boolean denied=false;try{PistonMotionGate.arm(project.level(),ShutterMotion.capture(project.level(),design.piston(),true,design.writeCells()),design.writeCells(),()->{},motion->{});}catch(IllegalStateException expected){denied=true;}
+            check(denied,"Early startup reinstates the accepted design's idle denial after pending journal was cleared");
+        });
+        write("shutter-position-recovery.done","passed");
+    }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
     private static final BlockPos REPEATER = LEVER.east();
@@ -354,6 +384,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(!project.journal.isEmpty(), "The actual partial build journal survives restart");
             });
             if(!LIVE_ACCEPTANCE)reconcileShutterInput(context,server,projectId);
+            if(!LIVE_ACCEPTANCE)reconcileShutterPosition(context,server,projectId);
             publishServer(server, 2);
             write("restarted", "ready");
             awaitFile(context, "bob-reconnected");
@@ -397,6 +428,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
             TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
+            if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             send(context,"engineer project use "+recovery.project());
             server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
             server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.undoRequested,"Restart imports the undo target, never an execution lease");});

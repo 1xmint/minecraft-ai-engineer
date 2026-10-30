@@ -81,7 +81,10 @@ final class EngineeringSession implements BuildExecutor {
         if(!operation.toString().equals(activeOperation))throw new IllegalStateException("Invalid pending mechanical operation identity");
         return design.motionScope(operation);
     }
-    void restoreMotionDenial(){if(shutterMotion!=null)PistonMotionGate.restoreBlocked(level(),shutterMotion,acceptedMotionScope());}
+    void restoreMotionDenial(){
+        if(shutterMotion!=null)PistonMotionGate.restoreBlocked(level(),shutterMotion,acceptedMotionScope());
+        else if(blueprint!=null && ShutterDesign.describes(blueprint.source()))PistonMotionGate.guard(level(),ShutterDesign.read(blueprint.source()));
+    }
     String verified = "untested";
     String memoryStatus = "not synchronized";
     java.util.concurrent.CompletableFuture<JsonObject> lastCheckpoint;
@@ -120,8 +123,8 @@ final class EngineeringSession implements BuildExecutor {
     void claim(ProjectAccess.Permission action, boolean test) {
         claim(action,test,false);
     }
-    private void claim(ProjectAccess.Permission action,boolean test,boolean inputReconciliation){
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(inputReconciliation && test && action==ProjectAccess.Permission.BUILD && shutterMotion!=null && hasPendingTest() && state.equals("PAUSED")))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
+    private void claim(ProjectAccess.Permission action,boolean test,boolean recoveryOnly){
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(recoveryOnly && test && action==ProjectAccess.Permission.BUILD && shutterMotion!=null && state.equals("PAUSED")))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -602,11 +605,28 @@ final class EngineeringSession implements BuildExecutor {
             }finally{if(claimed)manager.release(this);}
             return;
         }
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && shutterMotion!=null){
+            reconcileShutterPosition();return;
+        }
         if (hasPendingTest()) { claim(ProjectAccess.Permission.BUILD,true);restoreTest();state="PAUSED";detail=!hasPendingTest()?"Interrupted test reconciled; inspect before requesting another test":"Test input still needs restoration; preserve/resolve conflicting edits before resume";manager.release(this);save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
         if(undoRequested)throw new IllegalStateException("Undo was interrupted; use undo to finish its selected operation");
         ComponentTree.validate(blueprint);validateOperationIntention();
         reconcile(); var refreshedDependencies=dependencies.isEmpty()?captureDependencies():dependencies;claim(ProjectAccess.Permission.BUILD,operationKind.equals("REPAIR"));dependencies.putAll(refreshedDependencies);state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
+    }
+    private void reconcileShutterPosition(){
+        restoreMotionDenial();boolean claimed=false;var pending=shutterMotion;var scope=acceptedMotionScope();var design=ShutterDesign.read(blueprint.source());
+        try{
+            claim(ProjectAccess.Permission.BUILD,true,true);claimed=true;
+            Runnable authority=()->{validateMutation();requireCreative();validateTestArea();if(hasPendingTest())throw new IllegalStateException("Restore pending inputs before physical reconciliation");};
+            PistonMotionGate.reconcileBlocked(level(),pending,scope,design,authority,observed->{
+                var receipt=new JsonObject();receipt.addProperty("schemaVersion",1);receipt.addProperty("kind","mechanical-position-reconciliation");receipt.addProperty("observedTick",level().getGameTime());receipt.addProperty("position",observed.name().toLowerCase(Locale.ROOT));receipt.addProperty("inputPowered",level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED));receipt.addProperty("actorId",actor().toString());receipt.add("originalMotion",pending.json());
+                LocalFiles.write(file.resolveSibling(projectId+".motion-"+pending.motion()+".reconciled.json"),receipt);
+            });
+            shutterMotion=null;
+            try{save();}catch(RuntimeException failed){shutterMotion=pending;PistonMotionGate.restoreBlocked(level(),pending,scope);throw failed;}
+            state="PAUSED";detail="Mechanical position reconciled from current observation; motion remains guarded and untested";save();checkpoint();tell(detail);
+        }finally{if(claimed)manager.release(this);}
     }
     @Override public void pause(String reason) {
         state="PAUSED"; detail=reason; teaching=false;
