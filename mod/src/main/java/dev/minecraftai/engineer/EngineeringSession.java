@@ -118,7 +118,10 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("World edits require the authenticated controller in the project dimension, in creative mode");
     }
     void claim(ProjectAccess.Permission action, boolean test) {
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
+        claim(action,test,false);
+    }
+    private void claim(ProjectAccess.Permission action,boolean test,boolean inputReconciliation){
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(inputReconciliation && test && action==ProjectAccess.Permission.BUILD && shutterMotion!=null && hasPendingTest() && state.equals("PAUSED")))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -226,7 +229,7 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can expand the delegated workspace");
         if(corner1==null || corner2==null)throw new IllegalStateException("Set both workspace corners before expanding");
-        if(state.equals("PLANNING") || state.equals("EXECUTING") || state.equals("VERIFYING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || state.equals("VERIFYING") || testTick>=0 || hasPendingTest() || shutterMotion!=null || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile active work before expanding the workspace");
         BlockPos nextFirst=Objects.requireNonNull(first).immutable(),nextSecond=Objects.requireNonNull(second).immutable();
         if(!boxContains(nextFirst,nextSecond,corner1) || !boxContains(nextFirst,nextSecond,corner2))
@@ -363,7 +366,7 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(blueprint==null)throw new IllegalStateException("No component project");
         var task=assignments.task(blueprint,id);
-        if(state.equals("PLANNING") || pendingPlacement || undoRequested || hasPendingTest())throw new IllegalStateException("Reconcile active planning, placement, undo or test before handoff");
+        if(state.equals("PLANNING") || pendingPlacement || undoRequested || hasPendingTest() || shutterMotion!=null)throw new IllegalStateException("Reconcile active planning, placement, undo or test before handoff");
         if(id.equals(activeComponent))pause("Component handed to the player; journal retained");
         task.assign(actor(),"player");clearDiagnoses();save();checkpoint();tell("Component "+id+" assigned to you");
     }
@@ -371,7 +374,7 @@ final class EngineeringSession implements BuildExecutor {
         requireCreative();access.require(actor(),ProjectAccess.Permission.BUILD);
         if(blueprint==null)throw new IllegalStateException("No component project");
         ComponentTree.validate(blueprint);var task=assignments.task(blueprint,id);
-        if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || pendingPlacement || undoRequested || hasPendingTest())
+        if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || pendingPlacement || undoRequested || hasPendingTest() || shutterMotion!=null)
             throw new IllegalStateException("Stop and reconcile active world work before delegating a component");
         Blueprint selected=ComponentTree.component(blueprint,id);
         var node=ComponentTree.nodes(blueprint).stream().filter(n->n.id().equals(id)).findFirst().orElseThrow();
@@ -397,6 +400,7 @@ final class EngineeringSession implements BuildExecutor {
         requireCreative();
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before building");
+        if(shutterMotion!=null)throw new IllegalStateException("Reconcile pending mechanical motion before building");
         if(hasPendingTest()) throw new IllegalStateException("Reconcile the interrupted functional test with resume before building");
         if (blueprint == null) throw new IllegalStateException("Preview a blueprint first");
         ComponentTree.validate(blueprint);
@@ -588,6 +592,16 @@ final class EngineeringSession implements BuildExecutor {
     @Override public void resume() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && shutterMotion!=null && hasPendingTest()){
+            restoreMotionDenial(); // A restored binding stays denied throughout input restoration.
+            boolean claimed=false;
+            try{
+                claim(ProjectAccess.Permission.BUILD,true,true);claimed=true;validateTestArea();trial.restore();
+                state="PAUSED";detail=hasPendingTest()?"Mechanical input still needs reconciliation; conflicting edits preserved":"Original mechanical input restored; piston motion remains blocked pending explicit position reconciliation";
+                save();checkpoint();tell(detail);
+            }finally{if(claimed)manager.release(this);}
+            return;
+        }
         if (hasPendingTest()) { claim(ProjectAccess.Permission.BUILD,true);restoreTest();state="PAUSED";detail=!hasPendingTest()?"Interrupted test reconciled; inspect before requesting another test":"Test input still needs restoration; preserve/resolve conflicting edits before resume";manager.release(this);save();tell(detail);return; }
         if (blueprint == null || baseline.isEmpty()) throw new IllegalStateException("No interrupted assignment to resume; use build");
         if(undoRequested)throw new IllegalStateException("Undo was interrupted; use undo to finish its selected operation");
@@ -890,6 +904,7 @@ final class EngineeringSession implements BuildExecutor {
     }
 
     private void ensureComponentContextIdle(String action) {
+        if(shutterMotion!=null)throw new IllegalStateException("Reconcile pending mechanical motion before attempting to "+action);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || state.equals("VERIFYING") || testTick>=0 || hasPendingTest()
                 || pendingPlacement || undoRequested || (state.equals("PAUSED") && (!baseline.isEmpty() || !dependencies.isEmpty())))
             throw new IllegalStateException("Stop and reconcile active or interrupted world work before you "+action);
@@ -1165,6 +1180,14 @@ final class EngineeringSession implements BuildExecutor {
     void tickTest() { trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source())){
+            if(shutterMotion==null)throw new IllegalStateException("Mechanical trial controller is not enabled");
+            var observed=shutterMotion.positionState(level(),acceptedMotionScope());
+            if(observed!=ShutterJournal.PositionState.BEFORE && observed!=ShutterJournal.PositionState.TERMINAL)throw new IllegalStateException("Mechanical position is unloaded, unsettled or conflicted; preserve it before restoring input");
+            var design=ShutterDesign.read(blueprint.source());
+            ShutterEnvironment.captureReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
+            return;
+        }
         if(blueprint!=null && ComponentTree.composite(blueprint)) {
             validateComponentTestArea(activeComponent);return;
         }

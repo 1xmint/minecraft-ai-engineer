@@ -207,7 +207,7 @@ public final class EngineerMod implements ModInitializer {
     private static void plan(EngineeringSession s,String request) {
         if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
         if(s.state.equals("PLANNING") || PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
-        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || s.pendingPlacement || s.undoRequested)throw new IllegalStateException("Stop and reconcile active work before planning");
+        if(s.state.equals("EXECUTING") || s.testTick>=0 || s.hasPendingTest() || s.shutterMotion!=null || s.pendingPlacement || s.undoRequested)throw new IllegalStateException("Stop and reconcile active work before planning");
         s.manager.generated.cancel(s);
         UUID actor=s.actor();int revision=s.revision();long authorization=s.access.revision();
         boolean built=s.hasBuiltStructure();BlockPos origin=s.planningAnchor();String previousState=s.state;

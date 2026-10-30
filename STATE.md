@@ -309,6 +309,34 @@ continued absence of a lease on boot. This proves neither an authorized input
 restoration nor mechanical functional testing yet. Scoped Java server/client
 compile passed; the updated runtime proof awaits CI.
 
+Explicit input reconciliation now compiles. A private claim exception is limited
+to PAUSED canonical shutters with pending motion AND input WAL, BUILD permission
+and test/isolation acquisition. Only the explicit resume branch can request it;
+ordinary mechanical claims remain rejected. Resume validates/restores the denial
+binding, obtains a fresh normal creative/connection/project-grant/reservation
+fence, checks a stable before/terminal pose and complete reserved environment,
+then uses existing input WAL restoration. It remains PAUSED, retains the motion
+record/denial, creates no commit/pass, and releases only a successfully acquired
+lease in finally. Changed/unloaded/unsettled data remains preserved.
+
+The native saved-server flow now forces the four chunks covering its complete
+isolation envelope, then drives survival-mode resume refusal and creative-mode
+owner resume through the native connection. It requires original off restoration,
+no lease, retained prepared motion and continued arm denial; component build after
+input restoration must refuse without replacing operation identity. The verifier
+requires shutter-input-recovery.done in ordinary CI. Planning/context changes are
+also blocked while motion remains pending, before model dispatch. Scoped Java
+server/client compile and JavaScript syntax/format checks passed; new runtime
+proofs await CI. GPT-6-Luna/high focused reconciliation check found no concrete
+fresh-authority, overwrite or release bypass; no helper tests/edits.
+
+Prior WAL/saved-server source4000159 Fabric passed all75 required native tests in
+CI40996526932 (actual03:18:12 UTC log inspected). Four jobs passed; dedicated
+multiplayer is still live at inspection, so the new reboot marker is not yet
+claimed proven. The earlier focused input-decoder/fixture check also found no
+concrete bypass or seed flaw. Remaining: explicit physical position reconciliation,
+guarded actuation, mechanical traces, construction and the full M3 player flow.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

@@ -332,7 +332,7 @@ final class GeneratedPlanning {
 
     private static void requireSafeDesignState(EngineeringSession session) {
         if (session.state.equals("EXECUTING") || session.state.equals("PLANNING") || session.pendingPlacement
-                || session.undoRequested || session.testTick >= 0 || session.hasPendingTest()
+                || session.undoRequested || session.testTick >= 0 || session.hasPendingTest() || session.shutterMotion!=null
                 || (!session.baseline.isEmpty() && !session.state.equals("COMPLETED")))
             throw new IllegalStateException("Stop and reconcile active or interrupted world work before generated planning");
         if(session.hasBuiltStructure() && (session.blueprint==null || !GeneratedBlueprint.isGenerated(session.blueprint) || ComponentTree.composite(session.blueprint)))

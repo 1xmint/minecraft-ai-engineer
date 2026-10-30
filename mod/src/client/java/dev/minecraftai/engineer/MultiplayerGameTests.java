@@ -37,8 +37,8 @@ import net.minecraft.world.level.block.Blocks;
 public final class MultiplayerGameTests implements FabricClientGameTest {
     /** Synthetic accepted intention/physical fixture; no model call or player construction is claimed. */
     private static void prepareShutterRecovery(TestDedicatedServerContext server){
-        server.runCommand("forceload add 320 0");
-        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(321,100,0)));
+        server.runCommand("forceload add 318 -2 325 2");
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(318,100,-2)) && s.overworld().hasChunkAt(new BlockPos(325,100,2)) && s.overworld().hasChunkAt(new BlockPos(318,100,2)) && s.overworld().hasChunkAt(new BlockPos(325,100,-2)));
         server.runOnServer(s->{
             var manager=EngineerMod.managerFor(s);var owner=player(s,"Alice").getUUID();var project=java.util.UUID.randomUUID();var level=s.overworld();var dimension=level.dimension().identifier().toString();
             var design=ShutterDesign.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,new BlockPos(320,100,0),0);
@@ -85,6 +85,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(session.shutterMotion.phase()==ShutterJournal.Phase.PREPARED && session.delegation==null,"Reboot and queued events invent no committed motion or lease");
         });
         write("shutter-recovery.done","passed");
+    }
+    private static void reconcileShutterInput(ClientGameTestContext context,TestDedicatedServerContext server,String originalProject){
+        String projectId=read("shutter-recovery-project");
+        send(context,"engineer project use "+projectId);
+        server.waitFor(s->projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runCommand("gamemode survival Alice");MESSAGES.clear();send(context,"engineer resume");expectChat(context,"creative mode");
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());check(project.delegation==null && project.trial.pending() && project.level().getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Refused reconciliation preserves pending on input and restores no lease");});
+        server.runCommand("gamemode creative Alice");MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Original mechanical input restored");
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());var level=project.level();
+            check(project.delegation==null && !project.trial.pending() && project.state.equals("PAUSED"),"Fresh native owner reconciliation restores only input and releases its lease");
+            check(!level.getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED) && level.getBlockState(design.aperture()).isAir(),"Authorized reconciliation restores original off input without moving payload");
+            check(project.shutterMotion.phase()==ShutterJournal.Phase.PREPARED,"Input restoration does not invent a physical commit or verified pass");
+            boolean denied=false;try{PistonMotionGate.arm(level,ShutterMotion.capture(level,design.piston(),true,design.writeCells()),design.writeCells(),()->{},id->{});}catch(IllegalStateException expected){denied=true;}
+            check(denied,"Motion remains blocked after authorized input restoration");
+        });
+        MESSAGES.clear();send(context,"engineer component build root");expectChat(context,"Stop and reconcile active world work");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.activeOperation.equals(project.shutterMotion.scope().operation().toString()) && project.state.equals("PAUSED"),"Refused component handoff preserves the pending mechanical operation identity after input restoration");});
+        write("shutter-input-recovery.done","passed");send(context,"engineer project use "+originalProject);
+        server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
     }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
@@ -333,6 +353,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(project.state.equals("PAUSED") && project.delegation == null, "Restart does not renew execution authority");
                 check(!project.journal.isEmpty(), "The actual partial build journal survives restart");
             });
+            if(!LIVE_ACCEPTANCE)reconcileShutterInput(context,server,projectId);
             publishServer(server, 2);
             write("restarted", "ready");
             awaitFile(context, "bob-reconnected");
