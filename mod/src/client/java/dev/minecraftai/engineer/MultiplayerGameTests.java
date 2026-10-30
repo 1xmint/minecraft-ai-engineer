@@ -47,6 +47,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(level.getBlockState(design.aperture()).isAir(),"Synthetic recovery fixture begins with an open aperture");
             var motion=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
             session.shutterMotion=ShutterJournal.prepare(design.motionScope(java.util.UUID.fromString(session.activeOperation)),motion,java.util.UUID.randomUUID());session.state="PAUSED";session.save();
+            // Model interruption after the lever write was journaled, before a motion commit.
+            try{
+                var checkpoint=JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();var input=new JsonObject();var off=level.getBlockState(design.input());var on=off.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,true);
+                input.addProperty("name","input");input.add("pos",Blueprint.jsonPos(design.input()));input.addProperty("original",Blueprint.describe(off));input.addProperty("last",Blueprint.describe(on));input.addProperty("before",Blueprint.describe(off));input.addProperty("pending",false);var inputs=new JsonArray();inputs.add(input);checkpoint.add("testInputs",inputs);
+                var scope=new JsonObject();scope.addProperty("projectId",project.toString());scope.addProperty("blueprintId",session.blueprint.id());scope.addProperty("blueprintRevision",1);scope.addProperty("component","root");scope.addProperty("basis",ComponentAssignments.basis(session.blueprint,"root"));scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);checkpoint.add("functionalScope",scope);
+                session.trial.load(checkpoint);session.save();
+            }catch(java.io.IOException failure){throw new AssertionError(failure);}
             manager.projects.put(project,session);session.restoreMotionDenial();
             level.setBlockAndUpdate(design.input(),level.getBlockState(design.input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,true));
             level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,design.facing().get3DDataValue());
@@ -62,6 +69,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(session!=null && session.shutterMotion!=null && session.delegation==null && session.state.equals("PAUSED"),"Saved server restores mechanical facts without execution authority");
             var design=ShutterDesign.read(session.blueprint.source());var level=session.level();
             check(session.shutterMotion.motion().toString().equals(read("shutter-recovery-motion")),"Saved boot retains the exact interrupted motion identity");
+            check(session.trial.pending() && session.trial.inputsSnapshot().size()==1,"Saved boot retains the original/last input WAL without granting restoration authority");
+            var input=session.trial.inputsSnapshot().get(0).getAsJsonObject();
+            check(!Blueprint.state(input.get("original").getAsString()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED) && Blueprint.state(input.get("last").getAsString()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Mechanical input recovery preserves original off and last on separately");
             check(level.getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Actual saved world retains the interrupted on input");
             var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());boolean denied=false;
             try{PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{});}catch(IllegalStateException expected){denied=true;}

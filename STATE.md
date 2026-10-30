@@ -297,6 +297,18 @@ Startup sourceeb676c0 Fabric passed all75 required native tests in CI40995721852
 actual03:09:50 UTC log inspected. Four jobs passed; dedicated multiplayer remains
 live at inspection, so whole-run success is not yet claimed.
 
+Update: startup sourceeb676c0 is now all5 green in CI40995721852, including the
+dedicated server. The new saved-server fixture09f06e9 still awaits its own CI.
+
+Mechanical pending inputs now decode through FunctionalTrial's existing WAL,
+using a canonical input-only recovery contract with no output cases or functional
+pass. Ordinary test startup remains unsupported/claim-gated for shutters. The
+saved-server fixture also stages the actual input WAL (original off, last on,
+before off) under the accepted component scope, then verifies its retention and
+continued absence of a lease on boot. This proves neither an authorized input
+restoration nor mechanical functional testing yet. Scoped Java server/client
+compile passed; the updated runtime proof awaits CI.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

@@ -334,7 +334,11 @@ final class FunctionalTrial {
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;
         if(entries!=null && entries.isEmpty()){if(json.has("testOriginal"))throw new IllegalStateException("Conflicting test recovery formats");return;}
-        contract=EngineeringContracts.contract(session.executionBlueprint());
+        if(ShutterDesign.describes(session.executionBlueprint().source())){
+            var design=ShutterDesign.read(session.executionBlueprint().source());
+            // Recovery needs only the independently accepted input identity. No lamp cases or functional pass.
+            contract=new MechanismCatalog.Contract("sticky-shutter-input-recovery",List.of(new MechanismCatalog.Port("input",design.input(),true)),List.of(),0);
+        }else contract=EngineeringContracts.contract(session.executionBlueprint());
         if(entries==null){
             var port=contract.ports().stream().filter(MechanismCatalog.Port::input).findFirst().orElseThrow();
             if(contract.ports().stream().filter(MechanismCatalog.Port::input).count()!=1)throw new IllegalStateException("Scalar test recovery cannot authorize a multi-input mechanism");
