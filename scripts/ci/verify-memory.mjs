@@ -47,6 +47,7 @@ try {
       "project-find-restarted.done",
       "project-find-denied.done",
       "project-find-text.done",
+      "shutter-diagnosis.done",
       "textured-bob-preview.done",
       "textured-revocation.done",
       "shutter-input-recovery.done",
