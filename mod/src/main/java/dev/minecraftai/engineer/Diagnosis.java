@@ -93,11 +93,20 @@ final class Diagnosis {
         if (s.blueprint == null) throw new IllegalStateException("Choose a canonical mechanism before diagnosis");
         ComponentTree.validate(s.blueprint);
         Blueprint selected=ComponentTree.component(s.blueprint,componentId);
-        MechanismCatalog.contract(selected);
+
         ServerPlayer player = s.server.getPlayerList().getPlayer(actor);
         if (player == null || !s.dimension.equals(player.level().dimension().identifier().toString()))
             throw new IllegalStateException("Diagnosis requires the connected player in the project dimension");
 
+        if(ShutterDesign.describes(selected.source())) {
+            var design=ShutterDesign.read(selected.source());
+            if(!componentId.equals("root") || !design.binding().project().equals(s.projectId))throw new IllegalStateException("Mechanical diagnosis requires the accepted standalone component");
+            for(var pos:design.writeCells())if(!s.contains(pos))throw new IllegalStateException("Mechanical component is outside the selected workspace at "+pos.toShortString());
+            var report=ShutterDiagnosis.inspect(s.level(),design);var assignment=s.assignments.task(s.blueprint,componentId);
+            return new Proposal(UUID.randomUUID(),actor,player.connection,s.manager.epoch,s.projectId,s.revision(),s.access.revision(),componentId,
+                assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,s.server.getTickCount()+MAX_TTL_TICKS,report.observed(),List.of(),report.messages(),false);
+        }
+        MechanismCatalog.contract(selected);
         var level = s.level();
         var footprint = new LinkedHashSet<BlockPos>();
         Set<String> closure=new LinkedHashSet<>();

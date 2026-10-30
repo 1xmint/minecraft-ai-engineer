@@ -500,3 +500,14 @@ search is case-insensitive and returns at most12 accessible projects with their
 location and status. Use project use <id> to select one. Finding does not select,
 build, inspect the current world or invoke AI. Notes are not searched yet.
 Current view permission is required for every result, including server operators.
+
+### Mechanical diagnosis (development source)
+
+For a sticky-shutter project, /engineer diagnose or /engineer component diagnose root
+compares the actual loaded mechanism with its intended open/closed poses. It reports
+missing parts, wrong orientation, aperture obstruction, moving/inconclusive state
+and occupied isolation cells with coordinates. A moving snapshot does not establish
+a timing fault; a matching pose does not prove function. Input state describes the
+lever request, not a measurement of actuator power. Diagnosis changes no blocks
+or motion guards and proposes no generic piston repair. Existing controlled tests
+and guarded recovery remain separate. Current project view permission is required.

@@ -426,3 +426,15 @@ Do not broaden generic piston repair allowlists. First observe/explain exact mot
 states; then add explicit repair previews through the existing guarded mechanical
 transactions. Full repair/connection/timing diagnosis remains part of the objective.
 No new provider call or billed service is needed. Tests run on GitHub only.
+Phase18 first source implements read-only shutter diagnosis through existing VIEW
+checks and standalone identity/workspace validation. It validates all240 loaded
+read cells before reading states, never inspects block-entity contents, distinguishes
+open/closed physical poses from construction layout, and reports input/orientation/
+aperture/support/moving/interference observations without inferring timing or passes.
+No mechanical repair target or lease is created. Five new native tests cover four
+rotations and no-load rejection; a required dedicated shutter-diagnosis marker
+checks the real command after an actual physical trial and preserves journal,
+ownership, test history and absent execution authority. Core compile passes; final
+client compile and GitHub runtime proof remain pending. No local test suite ran.
+Final scoped server/client compilation and verifier syntax pass. No runtime test
+has run locally. Phase18 is ready for its first GitHub native proof.

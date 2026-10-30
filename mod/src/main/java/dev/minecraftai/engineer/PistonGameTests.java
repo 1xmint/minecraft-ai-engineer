@@ -13,6 +13,40 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics, transaction and canonical shutter contract proofs. */
 public final class PistonGameTests {
+    @GameTest public void shutterDiagnosisEast(GameTestHelper helper){diagnosis(helper,0);}
+    @GameTest public void shutterDiagnosisSouth(GameTestHelper helper){diagnosis(helper,90);}
+    @GameTest public void shutterDiagnosisWest(GameTestHelper helper){diagnosis(helper,180);}
+    @GameTest public void shutterDiagnosisNorth(GameTestHelper helper){diagnosis(helper,270);}
+    private static void diagnosis(GameTestHelper helper,int rotation){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-shutter-diagnosis",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),rotation);
+        for(var block:design.worldBlocks())level.setBlock(block.pos(),block.state(),2);
+        var open=ShutterDiagnosis.inspect(level,design);
+        helper.assertTrue(open.messages().stream().anyMatch(message->message.contains("Observed open mechanical pose matches")),"Open construction pose is recognized without actuating the mechanism");
+        helper.assertTrue(open.observed().entrySet().stream().allMatch(entry->level.getBlockState(entry.getKey()).equals(entry.getValue())),"Diagnosis preserves all observed cells");
+        // Fixture a settled closed pose, not a claim that this test observed actual piston physics.
+        var positions=Map.of("base",design.piston(),"front",design.payload(),"aperture",design.aperture(),"input",design.input());
+        for(var entry:design.pose(true).entrySet())level.setBlock(positions.get(entry.getKey()),entry.getValue(),2);
+        var closed=ShutterDiagnosis.inspect(level,design);
+        helper.assertTrue(closed.messages().stream().anyMatch(message->message.contains("Observed closed mechanical pose matches")),"A legitimate closed pose must not be diagnosed against the open construction layout");
+        level.setBlock(design.aperture(),Blocks.GLASS.defaultBlockState(),2);
+        var blocked=ShutterDiagnosis.inspect(level,design);
+        helper.assertTrue(blocked.messages().stream().anyMatch(message->message.contains("Blocked aperture")),"A foreign aperture block is explained with its location");
+        helper.assertTrue(level.getBlockState(design.aperture()).is(Blocks.GLASS),"Diagnosis preserves intervening player blocks");
+        level.setBlock(design.piston(),level.getBlockState(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getOpposite()),2);
+        helper.assertTrue(ShutterDiagnosis.inspect(level,design).messages().stream().anyMatch(message->message.contains("Incorrect piston orientation")),"Rotated designs compare the actual actuator facing");
+        level.setBlock(design.input(),Blocks.AIR.defaultBlockState(),2);
+        helper.assertTrue(ShutterDiagnosis.inspect(level,design).messages().stream().anyMatch(message->message.contains("Input request is unknown")),"Missing input cannot be interpreted as a deliberate off request");
+        level.setBlock(design.payload(),Blocks.MOVING_PISTON.defaultBlockState().setValue(BlockStateProperties.FACING,design.facing()),2);
+        var moving=ShutterDiagnosis.inspect(level,design);
+        helper.assertTrue(moving.messages().stream().anyMatch(message->message.startsWith("Inconclusive:")),"One moving snapshot is inconclusive, not a fabricated timing failure");
+        helper.assertTrue(moving.messages().stream().noneMatch(message->message.contains("mechanical pose matches")),"Animated geometry never establishes a settled pose");helper.succeed();
+    }
+    @GameTest public void shutterDiagnosisNeverLoadsMissingChunks(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-unloaded-diagnosis",level.dimension().identifier().toString(),new BlockPos(2_000_000,100,2_000_000),0);
+        helper.assertTrue(!level.hasChunkAt(design.piston()),"Fixture starts outside loaded chunks");
+        rejects(helper,()->ShutterDiagnosis.inspect(level,design),"Diagnosis must reject unloaded read closures");
+        helper.assertTrue(!level.hasChunkAt(design.piston()),"Rejected diagnosis never generates or loads a chunk");helper.succeed();
+    }
     @GameTest public void shutterConstructionRejectsPoweredOrForeignPartialFrames(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-partial-build",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
         ShutterEnvironment.validateConstruction(level,design,design.readCells());
