@@ -403,6 +403,15 @@ in CI40998225016 (actual03:36:03 UTC log inspected). Four jobs passed; dedicated
 multiplayer is still live at inspection, so its later-boot markers are not yet
 claimed proven.
 
+Update: physical reconciliation42a5b4c is now all5 green in CI40998225016/all77
+native tests. Downloaded shutter-position-reconciled.done and
+shutter-position-recovery.done (both passed), and inspected Alice03:38:52 UTC
+conflict refusal followed by observed-position reconciliation. Artifacts:
+work/shutter-position-proof-40998225016. The existing later saved boot retained
+the accepted design's idle denial after pending journal clearance. This is no
+actuation permit or functional pass. Guarded actuation corec02de7d is the next
+batch awaiting CI; no new SDK calls/local test suites ran.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
