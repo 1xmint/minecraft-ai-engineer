@@ -403,8 +403,10 @@ curated reference rather than signed-in model calls in public CI. Codex
 authentication and the full combined Codex-to-game player experience need
 separate evidence. Do not label the full product shipped from these checks.
 
-The preview currently uses colored translucent block bounds with labels, not
-textured ghost block models. The source build adds bounded hierarchies, private
+The published alpha uses colored block bounds and labels. This development branch
+adds translucent native block models for nearby missing or incorrect blocks, with
+a 256-block draw budget and current-step priority. Native visual verification is
+pending; previews never place blocks. The source build adds bounded hierarchies, private
 inventory reads and scoped revisions described above. General design generation,
 deeper neighboring-circuit analysis, world change event indexing, general
 circuit debugging, physical interface verification and full model-to-game
