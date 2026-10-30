@@ -337,3 +337,8 @@ Existing no-overlay role remains. Clean native shutter screenshots now clear cha
 Runtime/alpha/alignment/visual proof is pending GitHub; do not claim textured ghosts
 work merely from compile or submission counters. Project/dimension transition
 coverage still needs strengthening after the first rendering proof.
+
+Phase16 source370e209 is pushed in draft PR25. Server/client compilation passed;
+CI41100991399 is queued, not failed. Added native dimension round-trip and empty
+project transition checks to close V2 coverage; scoped client compilation passes.
+No runtime or visual acceptance yet. All broader milestones remain active.

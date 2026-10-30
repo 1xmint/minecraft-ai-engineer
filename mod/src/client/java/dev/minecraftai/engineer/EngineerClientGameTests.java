@@ -224,6 +224,15 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             context.waitFor(client->{var view=dev.minecraftai.engineer.client.ClientPreview.current();return view!=null && view.blocks().stream().anyMatch(ghost->ghost.state().is(Blocks.REPEATER) && ghost.state().getValue(BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.NORTH) && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0;});
             context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-04-rotated-textured-preview");
             server.runOnServer(s->{var session=EngineerMod.sessionFor(player(s));check(session.blueprint.blocks().stream().allMatch(block->player(s).level().getBlockState(block.pos()).isAir()) && session.journal.isEmpty(),"Rotated textured previews remain intentions with no world mutation");});
+            // A live dimension transition must retire the old world's presentation.
+            server.runCommand("execute in minecraft:the_nether run tp @a 20 103 6");
+            world.getConnection().waitForClientboundPackets();
+            context.waitFor(client->client.level!=null && client.level.dimension().identifier().toString().equals("minecraft:the_nether") && dev.minecraftai.engineer.client.ClientPreview.current()==null && dev.minecraftai.engineer.client.ClientPreview.renderInput()==null && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==0);
+            server.runCommand("execute in minecraft:overworld run tp @a 20 103 6 140 25");
+            world.getConnection().waitForClientboundPackets();world.getConnection().waitForChunksRender();
+            context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.current()!=null && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0);
+            command(server,"engineer project new");
+            context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.current()==null && dev.minecraftai.engineer.client.ClientPreview.renderInput()==null && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==0);
         }
     }
 
