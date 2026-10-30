@@ -342,3 +342,9 @@ Phase16 source370e209 is pushed in draft PR25. Server/client compilation passed;
 CI41100991399 is queued, not failed. Added native dimension round-trip and empty
 project transition checks to close V2 coverage; scoped client compilation passes.
 No runtime or visual acceptance yet. All broader milestones remain active.
+
+Phase16 adds an explicit partial-build screenshot: four fixture-placed correct
+blocks remain physical and exactly two missing blocks submit ghost models; the
+assistant journal stays empty. Native dimension round-trip and project reset are
+now written too. Scoped compilation passes. CI41101114559 remained queued with
+no pending deployment approvals; no runtime verdict or visual proof yet.

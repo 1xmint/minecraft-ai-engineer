@@ -68,6 +68,10 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             server.waitFor(s->checkpoint(s).get("stage").getAsInt()==1);
             server.runOnServer(s->player(s).level().setBlockAndUpdate(LEVER,Blueprint.state("minecraft:lever[face=floor,facing=east,powered=false]")));
             server.waitFor(s->checkpoint(s).get("stage").getAsInt()==2);
+            context.waitFor(client->{var view=dev.minecraftai.engineer.client.ClientPreview.current();return view!=null && view.blocks().stream().filter(ProjectView.Ghost::matches).count()==4 && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==2;});
+            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));
+            context.takeScreenshot("engineer-01b-partial-textured-preview");
+            server.runOnServer(s->check(checkpoint(s).getAsJsonArray("journal").isEmpty(),"Partial preview does not claim fixture-placed player work"));
             command(server,"engineer inspect");
             server.runOnServer(s->check(snapshot(s).getAsJsonArray("blocks").size()==6,"Inspector exports exact selected coordinates"));
             command(server,"engineer build");
