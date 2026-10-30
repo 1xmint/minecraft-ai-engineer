@@ -4,7 +4,7 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Current branch **phase/18-mechanical-diagnosis**, based on merged main **e8b767701ded649314a8cd4c313a4c63ef997b6c**.
+Current branch **phase/19-mechanical-repair**, based on merged main **e824fdef283c846d56aa7cc512accb3401774678**.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -439,3 +439,35 @@ ownership, test history and absent execution authority. Core compile passes; fin
 client compile and GitHub runtime proof remain pending. No local test suite ran.
 Final scoped server/client compilation and verifier syntax pass. No runtime test
 has run locally. Phase18 is ready for its first GitHub native proof.
+
+Phase18 PR27 merged2026-10-30T18:42:50Z as e824fdef283c846d56aa7cc512accb3401774678.
+Finalec114a6/all5 CI41108059456/all98 required native tests passed. Dedicated native
+flow6m1s, shutter-diagnosis.done and memory proof inspected in
+work/shutter-diagnosis-proof-41108059456. Focused GPT-6-Luna/high review found no
+VIEW, mutation, repair-authority or false-pass blocker. Diagnosis is observational;
+full repair/connection/timing work and all other roadmap milestones remain active.
+
+## Phase19: explicit mechanical repair previews and execution (E3)
+
+Outcomes:
+
+- R1: review exact supported corrections, original/target blocks and coordinates
+  before delegating work. Preview preserves the world and rejects stale observation,
+  wrong project/actor, motion and unsupported foreign blocks. Native proof includes
+  missing parts and orientation cases plus altered-after-preview rejection.
+- R2: explicitly approved static corrections execute only with fresh BUILD/creative
+  authority, complete canonical read scope and durable idle piston control. Preserve
+  player edits, pause on conflicts/revocation and require real controlled testing
+  before recording function. Prove per-write fences and actual post-repair trials.
+- R3: interruption, restart and undo preserve original work and recover safely under
+  new authority. Prove stored operation scope, exact inverse journal, no restored
+  lease, and refusals for powered/closed/moving/inconclusive frames.
+
+Decision: mechanical repairs need their own bounded preflight/transaction path,
+using the existing motion gate, operation snapshots and placement journal. Do not
+widen the generic electrical repair/piston allowlist or pretend a position mismatch
+is a missing construction block. Closed/animated payload recovery stays with the
+existing journaled motion recovery. Static orientation/attachment corrections need
+explicit before/after review and inverse-undo checks; existing foreign blocks remain
+preserved. Plan and implement the complete preview/apply/recovery/undo flow, then
+prove it on GitHub before calling this slice complete. No new model call required.
