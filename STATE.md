@@ -4,7 +4,9 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Branch **phase/16-textured-previews**, based on merged main **17a4d89d519d486cc55d77d134ee934baadfe15f**.
+Current branch **phase/17-project-finding**, draft PR26 stacked on Phase16 PR25.
+Phase16 source28eaead/CI41101340628 and Phase17 source73f9818/CI41102554684
+are queued, not runtime-proven. Both depend on merged main17a4d89.
 Phase15 PR24 merged2026-10-30T17:21:52Z after final8240e30/all5 CI41096787672:
 all91 native tests and all17 mechanical markers, five actual boots, exact SQLite
 history/epoch checks and component build/test commands passed. Native screenshots
@@ -371,3 +373,9 @@ revoked viewer, denied outsider, post-restart viewer and overlay-disabled viewer
 Added25-tick command spacing; no permission/spam fences relaxed. Server/client
 compile and verifier syntax pass locally. Runtime tests remain GitHub-only and
 pending. Existing GPT-6-Luna/high helper is checking only the disclosure boundary.
+
+Focused GPT-6-Luna/high search review found no disclosure/authority blocker: current
+connection and VIEW filtering precede matching, inaccessible counts are excluded,
+and search neither selects nor delegates. Native commands now search actual remembered
+words (Signal lamp), not just known UUIDs, and assert the active preview stays the
+same. Five required markers remain. Runtime proof is still pending, not waived.

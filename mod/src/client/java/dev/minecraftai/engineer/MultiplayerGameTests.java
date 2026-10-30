@@ -963,10 +963,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void searchProject(ClientGameTestContext context,String id,boolean expected,String marker) throws Exception {
-        context.waitTicks(25);MESSAGES.clear();send(context,"engineer project find "+id);
+        context.waitTicks(25);var before=view(context);String selected=before==null?null:before.projectId();
+        MESSAGES.clear();send(context,"engineer project find Signal lamp");
         expectChat(context,expected?"accessible match(es)":"No accessible saved projects match");
         if(expected)check(MESSAGES.stream().anyMatch(message->message.contains(id+" | ")),"Accessible saved identity is returned");
         else check(MESSAGES.stream().noneMatch(message->message.contains(id+" | ")),"Denied search never reveals identity or design metadata");
+        var after=view(context);check(java.util.Objects.equals(selected,after==null?null:after.projectId()),"Finding saved intention must not select a project or replace the active preview");
         write(marker,"passed");context.waitTicks(25);
     }
     private static void denied(ClientGameTestContext context) throws Exception {
