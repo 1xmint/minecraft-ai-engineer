@@ -75,6 +75,7 @@ final class EngineeringSession implements BuildExecutor {
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
     final ShutterTrial shutterTrial = new ShutterTrial(this);
     ShutterJournal shutterMotion;
+    boolean shutterOwned;
     ShutterJournal.Scope acceptedMotionScope(){
         if(blueprint==null || !ShutterDesign.describes(blueprint.source()) || !activeComponent.equals("root"))throw new IllegalStateException("Pending motion needs its accepted mechanical component");
         var design=ShutterDesign.read(blueprint.source());
@@ -85,7 +86,15 @@ final class EngineeringSession implements BuildExecutor {
     }
     void restoreMotionDenial(){
         if(shutterMotion!=null)PistonMotionGate.restoreBlocked(level(),shutterMotion,acceptedMotionScope());
-        else if(blueprint!=null && ShutterDesign.describes(blueprint.source()))PistonMotionGate.guard(level(),ShutterDesign.read(blueprint.source()));
+        else if(shutterOwned && blueprint!=null && ShutterDesign.describes(blueprint.source()))PistonMotionGate.guard(level(),ShutterDesign.read(blueprint.source()));
+    }
+    /** Explicit fresh delegation acquires persistent denial ownership; preview alone never does. */
+    void takeShutterOwnership(){
+        validateMutation();requireCreative();var design=ShutterDesign.read(blueprint.source());
+        ShutterEnvironment.captureReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
+        if(shutterOwned){PistonMotionGate.guard(level(),design);return;}
+        shutterOwned=true;
+        try{save();PistonMotionGate.guard(level(),design);}catch(RuntimeException failed){shutterOwned=false;try{save();}catch(RuntimeException rollback){failed.addSuppressed(rollback);}throw failed;}
     }
     String verified = "untested";
     String memoryStatus = "not synchronized";
@@ -259,13 +268,14 @@ final class EngineeringSession implements BuildExecutor {
     void accept(Blueprint value) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         ComponentTree.validate(value);
+        if(shutterOwned)throw new IllegalStateException("Release mechanical control before replacing its accepted design");
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before replacing its blueprint");
         JsonObject intended=value.source().deepCopy();
         intended.addProperty("projectId",projectId.toString()); intended.addProperty("revision",Math.addExact(projectRevision,1));
         Blueprint candidate=Blueprint.parse(intended,worldId,dimension);
         trial.resetEvidence();
         clearDiagnoses();
-        blueprint=candidate; projectRevision=blueprint.revision();
+        blueprint=candidate; projectRevision=blueprint.revision();shutterOwned=false;
         activeComponent=ComponentTree.composite(blueprint)?ComponentTree.nodes(blueprint).stream().filter(node->node.kind().equals("mechanism")).findFirst().orElseThrow().id():"root";
         assignments.reconcile(blueprint);
         baseline.clear(); dependencies.clear();repairTargets.clear();originDiagnosis=null;activeOperation="legacy";operationKind="BUILD";cursors.clear(); stage = 0; teaching = true; verified = "untested"; state = "READY";
@@ -1263,7 +1273,8 @@ final class EngineeringSession implements BuildExecutor {
         for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
     }
     void save() {
-        if(shutterMotion!=null)shutterMotion.requireScope(level(),acceptedMotionScope());
+        if(shutterMotion!=null){shutterMotion.requireScope(level(),acceptedMotionScope());shutterOwned=true;}
+        if(shutterOwned && (blueprint==null || !ShutterDesign.describes(blueprint.source())))throw new IllegalStateException("Mechanical control requires its accepted mechanical design");
         if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
         pruneOperationScopes();validateOperationScopes();
         if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
@@ -1276,6 +1287,7 @@ final class EngineeringSession implements BuildExecutor {
         json.addProperty("journalVersion",4);json.add("operationScopes",operationScopes.json());json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
         if(restoredLayout!=null)json.add("restoredLayout",restoredLayout.json());
         if(shutterMotion!=null)json.add("shutterMotion",shutterMotion.json());
+        json.addProperty("shutterOwned",shutterOwned);
         if(operationKind.equals("STRUCTURAL"))json.addProperty("structuralCursor",structuralCursor);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
@@ -1310,6 +1322,9 @@ final class EngineeringSession implements BuildExecutor {
             projectRevision=json.get("projectRevision").getAsBigDecimal().intValueExact();if(projectRevision<1)throw new IllegalStateException("Invalid project revision");
             if(json.has("corner1")) corner1=Blueprint.pos(json.getAsJsonObject("corner1")); if(json.has("corner2")) corner2=Blueprint.pos(json.getAsJsonObject("corner2"));
             if(json.has("blueprint")) blueprint=Blueprint.parse(json.getAsJsonObject("blueprint"),worldId,dimension);
+            if(json.has("shutterOwned")){var ownership=json.get("shutterOwned");if(!ownership.isJsonPrimitive() || !ownership.getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid mechanical control metadata");shutterOwned=ownership.getAsBoolean();}
+            else shutterOwned=blueprint!=null && ShutterDesign.describes(blueprint.source()); // Pre-release checkpoints previously guarded every mechanical intention.
+            if(shutterOwned && (blueprint==null || !ShutterDesign.describes(blueprint.source())))throw new IllegalStateException("Mechanical control has no accepted mechanical design");
             if(blueprint!=null && (blueprint.revision()!=projectRevision || !blueprint.projectId().equals(projectId.toString())))throw new IllegalStateException("Intended blueprint identity mismatch");
             if(json.has("restoredLayout")) {
                 restoredLayout=StructuralTransition.read(json.getAsJsonObject("restoredLayout"),worldId,dimension,projectId);
@@ -1404,6 +1419,7 @@ final class EngineeringSession implements BuildExecutor {
             }
             validateOperationScopes();
             if(json.has("shutterMotion")){
+                if(!shutterOwned)throw new IllegalStateException("Pending mechanical motion cannot discard its denial ownership");
                 shutterMotion=ShutterJournal.read(json.getAsJsonObject("shutterMotion"));
                 shutterMotion.requireScope(level(),acceptedMotionScope());
             }

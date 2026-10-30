@@ -13,6 +13,16 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=25) public void previewCheckpointDoesNotAcquirePistonControl(GameTestHelper helper){
+        var level=helper.getLevel();var manager=EngineerMod.managerFor(level.getServer());var project=UUID.randomUUID();var owner=UUID.randomUUID();var dimension=level.dimension().identifier().toString();var design=ShutterDesign.create(UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(2,3,2)),0);
+        // The physical machine is a native fixture, never assistant placement or delegated control.
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        var preview=new EngineeringSession(manager,project,owner,dimension);preview.blueprint=design.blueprint();preview.corner1=helper.absolutePos(new BlockPos(0,1,0));preview.corner2=helper.absolutePos(new BlockPos(7,6,7));preview.save();
+        var restored=new EngineeringSession(manager,project,owner,dimension);helper.assertTrue(!restored.shutterOwned && restored.delegation==null,"Preview checkpoint grants neither ownership nor execution authority");
+        manager.projects.put(project,restored);try{manager.restoreMotionDenials();}finally{manager.projects.remove(project);}
+        helper.runAtTickTime(8,()->helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO))));
+        helper.runAtTickTime(16,()->{helper.assertTrue(level.getBlockState(design.aperture()).is(Blocks.STONE) && level.getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED),"Loading a preview must not suppress an unrelated vanilla player's piston motion");helper.succeed();});
+    }
     @GameTest(maxTicks=70) public void timedShutterTraceEast(GameTestHelper helper){timedTrace(helper,0);}
     @GameTest(maxTicks=70) public void timedShutterTraceSouth(GameTestHelper helper){timedTrace(helper,90);}
     @GameTest(maxTicks=70) public void timedShutterTraceWest(GameTestHelper helper){timedTrace(helper,180);}
@@ -26,7 +36,10 @@ public final class PistonGameTests {
             traces[phase].observe(level.getGameTime()-starts[phase],level);
             if(at==24 || at==41 || at==58)helper.assertTrue(traces[phase].passed(),"Actual consecutive mechanical phase must settle and stay correct: "+traces[phase].failure());
             if(at==58){
-                for(int i=0;i<3;i++)helper.assertTrue(ShutterTrace.read(traces[i].json(),design,i==1).passed(),"Actual raw physical samples replay against independently accepted pose");
+                for(int i=0;i<3;i++){
+                    var stored=com.google.gson.JsonParser.parseString(LocalFiles.GSON.toJson(traces[i].json())).getAsJsonObject();
+                    helper.assertTrue(ShutterTrace.read(stored,design,i==1).passed(),"Actual samples survive the real checkpoint/transport serializer and strict replay");
+                }
                 var forged=traces[1].json();forged.getAsJsonArray("samples").get(12).getAsJsonObject().getAsJsonObject("states").addProperty("aperture","minecraft:air");boolean rejected=false;try{ShutterTrace.read(forged,design,true);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"Forged pass cannot conceal a wrong physical aperture sample");
                 var gap=traces[1].json();gap.getAsJsonArray("samples").remove(9);rejected=false;try{ShutterTrace.read(gap,design,true);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"Missing mechanical game-tick evidence cannot retain a pass");helper.succeed();
             }
@@ -137,7 +150,9 @@ public final class PistonGameTests {
             rejects(helper,()->PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{}),"Project startup denial cannot be bypassed by ordinary arming");
             try{
                 var saved=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();var forged=saved.deepCopy();forged.getAsJsonObject("shutterMotion").getAsJsonObject("scope").addProperty("operationId",UUID.randomUUID().toString());LocalFiles.write(session.file,forged);
-                rejects(helper,()->new EngineeringSession(manager,project,owner,dimension),"Motion identity cannot validate itself instead of the accepted project operation");LocalFiles.write(session.file,saved);
+                rejects(helper,()->new EngineeringSession(manager,project,owner,dimension),"Motion identity cannot validate itself instead of the accepted project operation");
+                var unowned=saved.deepCopy();unowned.addProperty("shutterOwned",false);LocalFiles.write(session.file,unowned);
+                rejects(helper,()->new EngineeringSession(manager,project,owner,dimension),"Pending motion cannot discard its persisted denial ownership");LocalFiles.write(session.file,saved);
             }catch(java.io.IOException failure){throw new IllegalStateException(failure);}
             helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
         });

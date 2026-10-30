@@ -98,17 +98,17 @@ export function validateShutterTrace(
       exact(source, cells);
     const states = {} as Values<string>,
       entities = {} as Values<Entity>,
-      moved = {} as Values<string | null>;
+      moved = {} as Values<string>;
     for (const cell of cells) {
       states[cell] = state(rawStates[cell]);
       const entity = rawEntities[cell];
       if (entity !== "none" && entity !== "moving-piston" && entity !== "other")
         throw new RequestError("Unknown mechanical entity observation.");
       entities[cell] = entity;
-      moved[cell] = rawMoved[cell] === null ? null : state(rawMoved[cell]);
+      moved[cell] = rawMoved[cell] === "none" ? "none" : state(rawMoved[cell]);
       const ordinary =
         entity === "none" &&
-        moved[cell] === null &&
+        moved[cell] === "none" &&
         (same(states[cell], open[cell]) || same(states[cell], shut[cell]));
       const animation =
         cell !== "input" &&
@@ -118,9 +118,9 @@ export function validateShutterTrace(
             states[cell] ===
             `minecraft:moving_piston[facing=${facing},type=${type}]`,
         ) &&
-        moved[cell] !== null &&
-        !air(moved[cell]!) &&
-        (same(moved[cell]!, open[cell]) || same(moved[cell]!, shut[cell]));
+        moved[cell] !== "none" &&
+        !air(moved[cell]) &&
+        (same(moved[cell], open[cell]) || same(moved[cell], shut[cell]));
       if (
         mismatch === undefined &&
         ((!ordinary && !animation) ||
@@ -131,7 +131,7 @@ export function validateShutterTrace(
         mismatch === undefined &&
         elapsed >= 8 &&
         (entity !== "none" ||
-          moved[cell] !== null ||
+          moved[cell] !== "none" ||
           !same(states[cell], expected[cell]))
       )
         mismatch = `unsettled or incorrect ${cell} at elapsed game tick ${elapsed}`;
@@ -149,7 +149,7 @@ export function validateShutterTrace(
           ? "passed"
           : "running";
   const canonical = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     intentionDigest: shutterTraceDigest(design, closed),
     expected: closed ? "closed" : "open",
     settleGameTicks: 8,

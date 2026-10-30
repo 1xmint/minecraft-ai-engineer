@@ -24,6 +24,7 @@ test("shared synthetic mechanical trace binds exact accepted phase, frame and id
   assert.equal(shutterTraceDigest(design, true), trace.intentionDigest);
   assert.throws(() => validateShutterTrace(trace, design, false, true));
   for (const patch of [
+    { schemaVersion: 1 },
     { revision: 3 },
     { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
     { anchor: { x: 101, y: 100, z: 100 } },
@@ -96,6 +97,8 @@ test("matching endpoint, tick gaps, wrong aperture and entities cannot retain a 
     (v: any) => (v.samples[8].entities.front = "moving-piston"),
     (v: any) => (v.samples[0].entities.base = "other"),
     (v: any) => (v.samples[3].moved.base = "minecraft:stone"),
+    (v: any) => (v.samples[3].moved.base = null),
+    (v: any) => delete v.samples[3].moved.base,
     (v: any) => (v.samples[4].elapsedTicks = 3),
     (v: any) => (v.samples[4].elapsedTicks = 4.5),
     (v: any) =>

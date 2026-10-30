@@ -16,6 +16,10 @@ piston construction feature. Gate sourcedc08309 passed all5 CI40965363414, inclu
 required native tests (job log22:23:20 UTC inspected). Snapshot sourced04e1fc
 previously passed all5 CI40964080695/all53 native tests.
 Draft PR24 holds Phase15. Full objective unfinished.
+Latest full green:1441171/all5 CI41001189365/all87 native tests. Functional
+controller796f7bb CI41003259383 FAILED at saved-server evidence loading after
+both live off/on-origin trials passed. The current fix uses explicit schema2
+no-moved-state values through Gson; preview/control separation is also underway.
 Inspect actual git/PR/workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
@@ -502,6 +506,38 @@ markers: shutter-functional.done and shutter-functional-recovery.done. Runtime
 proof is pending. Public mechanical preview/build/teach, placement/replacement
 ownership and full M3 acceptance remain unfinished; no phase/overall completion
 is claimed.
+
+Functional controller796f7bb CI41003259383 had four successful checks but FAILED
+dedicated multiplayer on the next saved-server boot. Downloaded artifact:
+work/shutter-functional-failure-41003259383. shutter-functional.done is passed;
+Alice04:34:21/04:34:25 UTC logs confirm both original off/on live cycles reached
+their checks, but overall durability is NOT proven. Startup04:37:38 refused
+"Mechanical sample cells differ from accepted frame". LocalFiles.GSON's default
+null omission removed null-valued moved-state members from persisted/transported
+evidence. Strict replay correctly rejected the incomplete frame; do not weaken it.
+
+Fix now compiles: wire trace schema2 uses explicit "none" moved-state strings for
+every cell, retaining the physical pose-v1 digest contract. Java/TypeScript readers
+and shared fixture agree; null/missing cells remain rejected. The actual timed
+world tests now replay through LocalFiles.GSON serialization, not only an in-memory
+JsonObject, covering disk/HTTP encoding. Scoped TypeScript/Java compilation and
+changed-file formatting passed; the full saved-server/SQLite proof must rerun.
+This pre-release format change does not migrate or alter retained failed artifacts.
+
+Ownership steps serving M3: (1) preview save/load must leave a player's vanilla
+piston running; (2) explicit fresh test/build delegation must persist denial-control
+ownership before world work and never restore a lease; (3) safe manual handoff,
+placement/replacement lifecycle and public preview/build/teach/undo remain to land.
+The first two foundations are implemented: new preview checkpoints store
+shutterOwned=false; startup only guards owned idle designs. Explicit testing takes
+ownership after current BUILD/creative/reserved-environment/operation checks, saves
+before installing the guard, and rolls metadata back on registration failure.
+Pending motion saves owned=true and contradictory loaded false rejects. Legacy
+checkpoints without the field conservatively retain prior guarding. Owned designs
+cannot yet be replaced; explicit handoff is still required before exposing that.
+New native tests drive actual vanilla motion after preview reload and reject
+discarding control on pending motion. GPT-6-Luna/high focused ownership check found
+no concrete bypass, with no tests/edits. Runtime proof of this batch is pending.
 
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native

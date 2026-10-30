@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "intentionDigest": "f5f07e6d02e9ff049f2182130c2b3a626b4f70c3ecfa521e4294a7c78d18c9d9",
   "expected": "closed",
   "settleGameTicks": 8,
@@ -20,10 +20,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -41,10 +41,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -62,10 +62,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -83,10 +83,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -104,10 +104,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -125,10 +125,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -146,10 +146,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -167,10 +167,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -188,10 +188,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -209,10 +209,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -230,10 +230,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -251,10 +251,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -272,10 +272,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -293,10 +293,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -314,10 +314,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -335,10 +335,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     },
     {
@@ -356,10 +356,10 @@
         "aperture": "none"
       },
       "moved": {
-        "input": null,
-        "base": null,
-        "front": null,
-        "aperture": null
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
       }
     }
   ],

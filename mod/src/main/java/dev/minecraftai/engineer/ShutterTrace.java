@@ -46,7 +46,7 @@ final class ShutterTrace {
         for(String cell:List.of("input","base","front","aperture")){
             var state=Objects.requireNonNull(states.get(cell));String entity=entities.get(cell);var moving=moved.get(cell);
             if(!Set.of("none","moving-piston","other").contains(entity))throw new IllegalArgumentException("Unknown mechanical entity observation");
-            rawStates.addProperty(cell,Blueprint.describe(state));rawEntities.addProperty(cell,entity);rawMoved.add(cell,moving==null?JsonNull.INSTANCE:new JsonPrimitive(Blueprint.describe(moving)));
+            rawStates.addProperty(cell,Blueprint.describe(state));rawEntities.addProperty(cell,entity);rawMoved.addProperty(cell,moving==null?"none":Blueprint.describe(moving));
             boolean ordinary=entity.equals("none") && moving==null && (same(state,open.get(cell)) || same(state,shut.get(cell)));
             boolean animation=!cell.equals("input") && entity.equals("moving-piston") && state.is(Blocks.MOVING_PISTON) && state.getValue(BlockStateProperties.FACING)==design.facing() && moving!=null && !moving.isAir() && (same(moving,open.get(cell)) || same(moving,shut.get(cell)));
             if(mismatch==null && (!ordinary && !animation || cell.equals("input") && !state.equals(expected.get(cell))))mismatch="unexpected "+cell+" state or entity at elapsed game tick "+elapsed;
@@ -59,7 +59,7 @@ final class ShutterTrace {
     boolean passed(){return complete() && missing==null && mismatch==null;}
     String failure(){return missing!=null?"inconclusive: "+missing:mismatch==null?"":mismatch;}
     String verdict(){return missing!=null?"inconclusive":mismatch!=null?"failed":complete()?"passed":"running";}
-    JsonObject json(){var out=new JsonObject();out.addProperty("schemaVersion",1);out.addProperty("intentionDigest",digest());out.addProperty("expected",closed?"closed":"open");out.addProperty("settleGameTicks",8);out.addProperty("stableGameTicks",8);out.add("samples",samples.deepCopy());out.addProperty("verdict",verdict());out.addProperty("failure",failure());return out;}
+    JsonObject json(){var out=new JsonObject();out.addProperty("schemaVersion",2);out.addProperty("intentionDigest",digest());out.addProperty("expected",closed?"closed":"open");out.addProperty("settleGameTicks",8);out.addProperty("stableGameTicks",8);out.add("samples",samples.deepCopy());out.addProperty("verdict",verdict());out.addProperty("failure",failure());return out;}
     static ShutterTrace read(JsonObject source,ShutterDesign.Design design,boolean closed){
         if(source==null || source.toString().length()>131072 || !source.has("samples") || !source.get("samples").isJsonArray())throw new IllegalArgumentException("Invalid mechanical trace");
         var trace=new ShutterTrace(design,closed);var rows=source.getAsJsonArray("samples");if(rows.size()>17)throw new IllegalArgumentException("Mechanical trace exceeds its horizon");
@@ -68,7 +68,7 @@ final class ShutterTrace {
             var states=row.getAsJsonObject("states");var entities=row.getAsJsonObject("entities");var moved=row.getAsJsonObject("moved");
             if(!states.keySet().equals(CELLS) || !entities.keySet().equals(CELLS) || !moved.keySet().equals(CELLS))throw new IllegalArgumentException("Mechanical sample cells differ from accepted frame");
             var parsed=new HashMap<String,BlockState>();var kinds=new HashMap<String,String>();var moving=new HashMap<String,BlockState>();
-            for(String cell:CELLS){parsed.put(cell,Blueprint.state(text(states.get(cell))));kinds.put(cell,text(entities.get(cell)));moving.put(cell,moved.get(cell).isJsonNull()?null:Blueprint.state(text(moved.get(cell))));}
+            for(String cell:CELLS){parsed.put(cell,Blueprint.state(text(states.get(cell))));kinds.put(cell,text(entities.get(cell)));String movedState=text(moved.get(cell));moving.put(cell,movedState.equals("none")?null:Blueprint.state(movedState));}
             var at=row.get("elapsedTicks");if(!at.isJsonPrimitive() || !at.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException("Expected mechanical tick integer");
             try{trace.sample(at.getAsBigDecimal().longValueExact(),parsed,kinds,moving);}catch(ArithmeticException bad){throw new IllegalArgumentException("Invalid mechanical tick integer",bad);}
         }

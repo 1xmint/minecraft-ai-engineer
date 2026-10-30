@@ -30,9 +30,9 @@ final class ShutterTrial {
         if(running || s.shutterRecovery.running() || s.shutterMotion!=null || s.trial.pending() || s.testTick>=0 || s.state.equals("EXECUTING") || s.undoRequested || s.pendingPlacement)throw new IllegalStateException("Reconcile active work before testing the shutter");
         design=ShutterDesign.read(s.executionBlueprint().source());boolean claimed=false;
         try{
-            s.claimShutterTrial();claimed=true;s.validateTestArea();s.restoreMotionDenial();
+            s.claimShutterTrial();claimed=true;s.validateTestArea();
             if(s.activeOperation.equals("legacy")){if(!s.baseline.isEmpty() || !s.journal.isEmpty())throw new IllegalStateException("Mechanical trial needs an explicit retained operation identity");s.activeOperation=UUID.randomUUID().toString();}
-            scope=s.acceptedMotionScope();boolean on=s.level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED);boolean extended=s.level().getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED);
+            scope=s.acceptedMotionScope();s.takeShutterOwnership();boolean on=s.level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED);boolean extended=s.level().getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED);
             if(on!=extended){
                 s.shutterMotion=ShutterJournal.prepare(scope,ShutterMotion.capture(s.level(),design.piston(),on,design.writeCells()),UUID.randomUUID());s.state="PAUSED";s.verified="untested";s.save();s.restoreMotionDenial();throw new IllegalStateException("Input and pose disagree; resume to reconcile the mechanical position before testing");
             }
