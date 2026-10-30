@@ -370,6 +370,15 @@ permission or rollback flaw, and ran no tests/edits. Accepted-design replacement
 placement ownership, guarded actuation and functional mechanical trials remain
 unfinished; no public shutter planner/catalog or construction is enabled.
 
+Input reconciliation source0a526f6 is now all5 green in CI40997277706/all75 native
+tests. Dedicated job success03:33:32 UTC; downloaded both shutter recovery markers
+(passed) and inspected alice.log03:29:44 creative-mode refusal, original input
+restoration and refused component-build messages. Artifacts:
+work/shutter-input-proof-40997277706. This proves native command input restoration
+after the real saved boot, its failure path and retained physical denial; no new
+inference or production account authentication is claimed. Physical reconciliation
+source6baa750 is the next batch awaiting its own CI and later-boot markers.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
