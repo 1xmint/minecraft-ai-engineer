@@ -379,6 +379,30 @@ after the real saved boot, its failure path and retained physical denial; no new
 inference or production account authentication is claimed. Physical reconciliation
 source6baa750 is the next batch awaiting its own CI and later-boot markers.
 
+Guarded actuation core now compiles. armGuarded requires the exact idle accepted
+design AND operation scope, fresh caller authority, a matching fresh physical
+snapshot and unchanged guard before issuing a new one-use ticket. hold requires
+the current owned ticket, exact operation/motion/physical description, then denies
+new events without reversing already-started physics. Explicit rearm tickets also
+retain their validated operation scope. No caller authority is serialized.
+
+Five new native tests cover durable preparation/actual commit, physical close and
+pull, endpoint/hold/reconcile and fresh ticket identity in all four rotations;
+foreign guards, revoked authority, journal/motion/operation substitution and
+actual queued-event denial after hold. Scoped Java server/client compile passed;
+new runtime proofs await CI. The GPT-6-Luna/high focused check found an operation
+substitution denial dead end in the initial API; fixed by storing exact Scope on
+the ticket and checking it at hold, with a specific negative case. The helper
+verified that fix without running tests or editing. No production trial controller
+or public construction is enabled by this core. Next: orchestrate journal/input
+WAL and current session authority through it, then mechanical game-tick traces
+and the full build/teach/test flow.
+
+Physical reconciliation source42a5b4c Fabric passed all77 required native tests
+in CI40998225016 (actual03:36:03 UTC log inspected). Four jobs passed; dedicated
+multiplayer is still live at inspection, so its later-boot markers are not yet
+claimed proven.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

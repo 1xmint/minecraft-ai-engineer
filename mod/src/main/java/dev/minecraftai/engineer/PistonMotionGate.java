@@ -24,12 +24,17 @@ public final class PistonMotionGate {
         private final Set<BlockPos> writes;
         private final Runnable authority;
         private final Consumer<UUID> writeAhead;
+        private final ShutterDesign.Binding binding;
+        private final ShutterJournal.Scope scope;
         private final long expires;
         private Phase phase=Phase.ARMED;
         private boolean cancelled;
         private String reason="";
         private Ticket(ServerLevel level,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead){
-            this.level=level;this.snapshot=snapshot;this.writes=Set.copyOf(writes);this.authority=authority;this.writeAhead=writeAhead;expires=level.getGameTime()+20;
+            this(level,snapshot,writes,authority,writeAhead,null);
+        }
+        private Ticket(ServerLevel level,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead,ShutterJournal.Scope scope){
+            this.level=level;this.snapshot=snapshot;this.writes=Set.copyOf(writes);this.authority=authority;this.writeAhead=writeAhead;this.scope=scope;this.binding=scope==null?null:new ShutterDesign.Binding(scope.worldId(),scope.dimension(),scope.project(),scope.blueprint(),scope.revision(),scope.piston(),scope.facing());expires=level.getGameTime()+20;
         }
         UUID id(){return id;}
         Phase phase(){return phase;}
@@ -65,6 +70,25 @@ public final class PistonMotionGate {
         if(prior!=null){if(prior.equals(expected))return;throw new IllegalStateException("Another motion still guards this accepted design");}
         if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");slots.put(binding.piston(),expected);
     }
+    /** Fresh managed actuation is distinct from observing/reconciling an old journal. */
+    static Ticket armGuarded(ServerLevel level,ShutterDesign.Design design,ShutterJournal.Scope scope,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead){
+        thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);
+        if(!design.motionScope(scope.operation()).equals(scope))throw new IllegalStateException("Actuation operation differs from the accepted design scope");
+        var slots=LEVELS.get(level);var expected=new Idle(design.binding());
+        if(slots==null || !expected.equals(slots.get(design.piston())))throw new IllegalStateException("Accepted design is not idle; reconcile pending motion first");
+        authority.run();
+        if(!snapshot.base().equals(design.piston()) || snapshot.before().get(snapshot.base()).getValue(BlockStateProperties.FACING)!=design.facing())throw new IllegalStateException("Motion snapshot differs from accepted design frame");
+        snapshot.requireFresh(level,writes);authority.run();
+        if(LEVELS.get(level)!=slots || !expected.equals(slots.get(design.piston())))throw new IllegalStateException("Accepted guard changed while validating actuation");
+        var ticket=new Ticket(level,snapshot,snapshot.writes(),authority,writeAhead,scope);slots.put(design.piston(),ticket);return ticket;
+    }
+    /** Stop/settle returns ownership to denial, including after commit; it never reverses physics. */
+    static void hold(Ticket ticket,ShutterJournal journal,ShutterJournal.Scope scope,String reason){
+        current(ticket);journal.requireScope(ticket.level,scope);
+        if(ticket.binding==null || !scope.equals(ticket.scope) || !matches(ticket.binding,scope) || !journal.motion().equals(ticket.id) || !journal.matchesSnapshot(ticket.snapshot))throw new IllegalStateException("Pending denial differs from the current owned motion");
+        if(ticket.phase==Phase.CHECKING)throw new IllegalStateException("Cancel event checking before replacing its guard");
+        cancel(ticket,reason);LEVELS.get(ticket.level).put(ticket.snapshot.base(),new Blocked(scope,journal.motion()));
+    }
     /** Archives observation before moving from pending denial to idle denial. Never issues a ticket. */
     static ShutterJournal.PositionState reconcileBlocked(ServerLevel level,ShutterJournal journal,ShutterJournal.Scope scope,ShutterDesign.Design design,Runnable authority,Consumer<ShutterJournal.PositionState> writeAhead){
         thread(level);journal.requireScope(level,scope);
@@ -95,7 +119,7 @@ public final class PistonMotionGate {
         if(!snapshot.base().equals(currentScope.piston()) || snapshot.before().get(snapshot.base()).getValue(BlockStateProperties.FACING)!=currentScope.facing())throw new IllegalStateException("Fresh motion belongs to a different accepted frame");
         snapshot.requireFresh(level,writes);authority.run();
         if(LEVELS.get(level)!=slots || !expected.equals(slots.get(journal.base())))throw new IllegalStateException("Restored motion changed during reconciliation");
-        var ticket=new Ticket(level,snapshot,snapshot.writes(),authority,writeAhead);slots.put(snapshot.base(),ticket);return ticket;
+        var ticket=new Ticket(level,snapshot,snapshot.writes(),authority,writeAhead,currentScope);slots.put(snapshot.base(),ticket);return ticket;
     }
     /** Invoked at triggerEvent HEAD, before vanilla removes a head or moves any payload. */
     public static boolean allowEvent(BlockState state,Level level,BlockPos pos,int event,int directionData,BooleanSupplier powered){

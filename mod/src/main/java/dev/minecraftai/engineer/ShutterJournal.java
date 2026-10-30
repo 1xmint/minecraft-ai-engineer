@@ -39,6 +39,7 @@ final class ShutterJournal {
     boolean cancelled(){return cancelled;}
     BlockPos base(){return base;}
     Set<BlockPos> writes(){return before.keySet();}
+    boolean matchesSnapshot(ShutterMotion.Snapshot snapshot){return base.equals(snapshot.base()) && closing==snapshot.closing() && before.equals(snapshot.before());}
     ShutterJournal commitRecorded(UUID expected){
         if(phase!=Phase.PREPARED || cancelled || !motion.equals(expected))throw new IllegalStateException("Motion commit does not match its prepared journal");
         return copy(Phase.COMMIT_RECORDED,cancelled);

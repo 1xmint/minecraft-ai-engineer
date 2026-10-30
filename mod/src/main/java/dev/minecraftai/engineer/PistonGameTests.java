@@ -13,6 +13,54 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=35) public void ownedShutterCycleEast(GameTestHelper helper) throws Exception {ownedCycle(helper,0);}
+    @GameTest(maxTicks=35) public void ownedShutterCycleSouth(GameTestHelper helper) throws Exception {ownedCycle(helper,90);}
+    @GameTest(maxTicks=35) public void ownedShutterCycleWest(GameTestHelper helper) throws Exception {ownedCycle(helper,180);}
+    @GameTest(maxTicks=35) public void ownedShutterCycleNorth(GameTestHelper helper) throws Exception {ownedCycle(helper,270);}
+    private static void ownedCycle(GameTestHelper helper,int rotation) throws Exception {
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-owned-cycle",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),rotation);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());PistonMotionGate.guard(level,design);
+        var file=java.nio.file.Files.createTempDirectory("engineer-owned-cycle-").resolve("motion.json");
+        ShutterJournal[] journal={null};ShutterJournal.Scope[] scope={null};PistonMotionGate.Ticket[] ticket={null};UUID[] first={null};int[] commits={0};
+        java.util.function.Consumer<UUID> commit=id->{journal[0]=journal[0].commitRecorded(id);LocalFiles.write(file,journal[0].json());commits[0]++;};
+        helper.runAtTickTime(8,()->{
+            scope[0]=design.motionScope(UUID.randomUUID());var motion=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            ticket[0]=PistonMotionGate.armGuarded(level,design,scope[0],motion,design.writeCells(),()->{},commit);first[0]=ticket[0].id();journal[0]=ShutterJournal.prepare(scope[0],motion,ticket[0].id());LocalFiles.write(file,journal[0].json());
+            helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(commits[0]==1 && level.getBlockState(design.aperture()).is(Blocks.STONE) && level.getBlockState(design.payload()).is(Blocks.PISTON_HEAD),"Owned ticket actually closes the aperture through the durable commit hook");
+            helper.assertTrue(PistonMotionGate.observeTerminal(ticket[0]),"Owned close animation settled at its captured endpoint");journal[0]=journal[0].endpointObserved(level,scope[0]);LocalFiles.write(file,journal[0].json());
+            PistonMotionGate.hold(ticket[0],journal[0],scope[0],"Close endpoint recorded");
+            PistonMotionGate.reconcileBlocked(level,journal[0],scope[0],design,()->{},pose->LocalFiles.write(file.resolveSibling("close-observation.json"),journal[0].json()));
+            scope[0]=design.motionScope(UUID.randomUUID());var motion=ShutterMotion.capture(level,design.piston(),false,design.writeCells());
+            ticket[0]=PistonMotionGate.armGuarded(level,design,scope[0],motion,design.writeCells(),()->{},commit);journal[0]=ShutterJournal.prepare(scope[0],motion,ticket[0].id());LocalFiles.write(file,journal[0].json());
+            helper.assertTrue(!first[0].equals(ticket[0].id()),"Opening requires a distinct fresh ticket");helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+        });
+        helper.runAtTickTime(24,()->{
+            helper.assertTrue(commits[0]==2 && level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE),"Fresh owned pull actually reopens and retrieves the payload");
+            helper.assertTrue(reloadJournal(file).motion().equals(ticket[0].id()) && PistonMotionGate.observeTerminal(ticket[0]),"Persisted second commit matches the fresh settled motion");
+            journal[0]=journal[0].endpointObserved(level,scope[0]);LocalFiles.write(file,journal[0].json());PistonMotionGate.hold(ticket[0],journal[0],scope[0],"Open endpoint recorded");
+            PistonMotionGate.reconcileBlocked(level,journal[0],scope[0],design,()->{},pose->LocalFiles.write(file.resolveSibling("open-observation.json"),journal[0].json()));
+            rejects(helper,()->PistonMotionGate.arm(level,ShutterMotion.capture(level,design.piston(),true,design.writeCells()),design.writeCells(),()->{},id->{}),"Settled owned cycle leaves no ordinary actuation permit");helper.succeed();
+        });
+    }
+    @GameTest(maxTicks=25) public void ownedActuationRejectsForeignGuardsAndJournalSubstitution(GameTestHelper helper){
+        var level=helper.getLevel();var min=helper.absolutePos(new BlockPos(2,3,2));var dimension=level.dimension().identifier().toString();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-owned-denial",dimension,min,0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());PistonMotionGate.guard(level,design);int[] commits={0};
+        helper.runAtTickTime(8,()->{
+            var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());var foreign=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-owned-denial",dimension,min,0);var scope=design.motionScope(UUID.randomUUID());
+            rejects(helper,()->PistonMotionGate.armGuarded(level,foreign,foreign.motionScope(UUID.randomUUID()),snapshot,design.writeCells(),()->{},id->commits[0]++),"Another project cannot borrow the accepted guard");
+            rejects(helper,()->PistonMotionGate.armGuarded(level,design,scope,snapshot,design.writeCells(),()->{throw new IllegalStateException("Grant revoked");},id->commits[0]++),"Idle denial alone never supplies current authority");
+            var ticket=PistonMotionGate.armGuarded(level,design,scope,snapshot,design.writeCells(),()->{},id->commits[0]++);
+            var wrong=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());rejects(helper,()->PistonMotionGate.hold(ticket,wrong,scope,"Wrong record"),"A different journal cannot describe this owned ticket");
+            var otherOperation=design.motionScope(UUID.randomUUID());var substituted=ShutterJournal.prepare(otherOperation,snapshot,ticket.id());
+            rejects(helper,()->PistonMotionGate.hold(ticket,substituted,otherOperation,"Wrong operation"),"Same-design/same-motion journal cannot substitute another operation");
+            PistonMotionGate.hold(ticket,ShutterJournal.prepare(scope,snapshot,ticket.id()),scope,"Stopped before input change");
+            rejects(helper,()->PistonMotionGate.armGuarded(level,design,scope,snapshot,design.writeCells(),()->{},id->commits[0]++),"Pending denial cannot be bypassed through the idle API");helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+        });
+        helper.runAtTickTime(16,()->{helper.assertTrue(commits[0]==0 && level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE),"Stopped owned ticket denies actual queued movement");helper.succeed();});
+    }
     @GameTest public void physicalReconciliationTransitionsBetweenDenialsWithoutIssuingATicket(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-reconciliation",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
         for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
