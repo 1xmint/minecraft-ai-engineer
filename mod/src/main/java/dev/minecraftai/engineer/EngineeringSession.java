@@ -237,6 +237,7 @@ final class EngineeringSession implements BuildExecutor {
     void select(int corner, BlockPos pos) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can change the delegated workspace");
+        if(shutterOwned)throw new IllegalStateException("Release mechanical control before changing its delegated workspace");
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before changing the delegated region");
         manager.generated.cancel(this);
         if (corner == 1) {corner1 = pos.immutable();corner2=null;}
@@ -246,6 +247,7 @@ final class EngineeringSession implements BuildExecutor {
     void expandWorkspace(BlockPos first,BlockPos second) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can expand the delegated workspace");
+        if(shutterOwned)throw new IllegalStateException("Release mechanical control before changing its delegated workspace");
         if(corner1==null || corner2==null)throw new IllegalStateException("Set both workspace corners before expanding");
         if(state.equals("PLANNING") || state.equals("EXECUTING") || state.equals("VERIFYING") || testTick>=0 || hasPendingTest() || shutterMotion!=null || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile active work before expanding the workspace");
@@ -383,6 +385,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void componentClaim(String id) {
         access.require(actor(),ProjectAccess.Permission.BUILD);
+        if(shutterOwned)throw new IllegalStateException("Release mechanical control before handing its component to a player");
         if(blueprint==null)throw new IllegalStateException("No component project");
         var task=assignments.task(blueprint,id);
         if(state.equals("PLANNING") || pendingPlacement || undoRequested || hasPendingTest() || shutterMotion!=null)throw new IllegalStateException("Reconcile active planning, placement, undo or test before handoff");

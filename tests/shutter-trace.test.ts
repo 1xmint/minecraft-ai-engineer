@@ -24,7 +24,7 @@ test("shared synthetic mechanical trace binds exact accepted phase, frame and id
   assert.equal(shutterTraceDigest(design, true), trace.intentionDigest);
   assert.throws(() => validateShutterTrace(trace, design, false, true));
   for (const patch of [
-    { schemaVersion: 1 },
+    { schemaVersion: 2 },
     { revision: 3 },
     { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
     { anchor: { x: 101, y: 100, z: 100 } },
@@ -33,6 +33,7 @@ test("shared synthetic mechanical trace binds exact accepted phase, frame and id
       validateShutterTrace(trace, { ...design, ...patch }, true, true),
     );
   for (const patch of [
+    { schemaVersion: 1 },
     { stableGameTicks: 1 },
     { settleGameTicks: 1 },
     { authority: true },

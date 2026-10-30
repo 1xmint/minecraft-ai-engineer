@@ -539,6 +539,26 @@ New native tests drive actual vanilla motion after preview reload and reject
 discarding control on pending motion. GPT-6-Luna/high focused ownership check found
 no concrete bypass, with no tests/edits. Runtime proof of this batch is pending.
 
+Update:28002e0 CI41004663696 dedicated multiplayer PASSED, plus Fabric/all88 native
+tests, Windows and client. Downloaded shutter-functional.done and
+shutter-functional-recovery.done (passed), and inspected Alice04:48:45 permission
+interruption,04:48:48 off-origin pass and04:48:51 on-origin pass. Artifacts:
+work/shutter-functional-proof-41004663696. The saved-server and actual SQLite replay
+now pass with explicit moved-state values. Overall CI is still FAILED: companion
+found a misplaced negative test expecting valid design schema1 to reject. Corrected
+it to invalid design schema2, and separately checks old trace schema1 rejects;
+no reader rule was relaxed. Scoped TypeScript check/format passed; new tests await CI.
+
+Follow-up guards compile: controlled workspaces cannot be reselected/expanded or
+handed to a player before release, preventing old guard locations from being left
+behind a changed workspace. Replacement was already blocked. These are not a
+manual-release implementation. Pinned26.3 ServerLevel inspection confirms both
+private blockEvents and blockEventsToReschedule queues, plus shouldTickBlocksAt.
+Handoff must account for deferred events in loaded but non-ticking chunks; stable
+pose alone or a timer without queue/ticking evidence is insufficient. Do not clear
+player event queues to make release pass. Safe handoff/placement and public flow
+remain the next M3 work after this batch is green.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
