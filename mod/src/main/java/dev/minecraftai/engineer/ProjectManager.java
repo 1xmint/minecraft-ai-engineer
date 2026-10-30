@@ -81,7 +81,7 @@ final class ProjectManager {
         if (!operator(player) && !creators.contains(player.getUUID())) throw new IllegalStateException("An operator must grant project creation permission first");
         if (projects.size() >= 256) throw new IllegalStateException("Server project limit reached");
         var project = new EngineeringSession(this, UUID.randomUUID(), player.getUUID(), player.level().dimension().identifier().toString());
-        projects.put(project.projectId, project); selections.put(player.getUUID(), project.projectId); project.save();Companion.synchronize(project);
+        projects.put(project.projectId, project); selections.put(player.getUUID(), project.projectId);EngineerNetwork.send(player,null);project.save();Companion.synchronize(project);
         return project;
     }
     void use(ServerPlayer player, UUID id) {
@@ -89,6 +89,7 @@ final class ProjectManager {
         if (project == null || !project.access.allows(player.getUUID(), ProjectAccess.Permission.VIEW)) throw new IllegalStateException("Project unavailable or not shared with you");
         for(var other:projects.values())if(!other.projectId.equals(id))generated.cancelActor(other,player.getUUID());
         selections.put(player.getUUID(), id);
+        EngineerNetwork.send(player,null); // Retire the previous project before the next periodic snapshot.
         player.sendSystemMessage(Component.literal("Engineer: Selected project " + id));
     }
     void permit(ServerPlayer operator, UUID player) {

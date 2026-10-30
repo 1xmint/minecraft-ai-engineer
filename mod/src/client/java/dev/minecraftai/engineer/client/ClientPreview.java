@@ -13,6 +13,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 public final class ClientPreview {
     private static ClientPacketListener connection;
     private static ProjectView view;
+    private static volatile ProjectView renderInput;
     private static String epoch;
     private static String dimension;
     private static long transportSequence;
@@ -53,6 +54,7 @@ public final class ClientPreview {
         if (proposed == null) {
             transportSequence = payload.transportSequence();
             view = null;
+            renderInput = null;
             return true;
         }
         if (client.player == null || client.level == null || !proposed.recipient().equals(client.player.getUUID())
@@ -68,6 +70,7 @@ public final class ClientPreview {
         dimension = proposed.dimension();
         transportSequence = payload.transportSequence();
         view = proposed;
+        renderInput = proposed;
         return true;
     }
 
@@ -78,6 +81,7 @@ public final class ClientPreview {
         String actualDimension = client.level.dimension().identifier().toString();
         if (dimension != null && !dimension.equals(actualDimension)) {
             view = null;
+            renderInput = null;
             dimension = actualDimension;
         }
         return view != null && view.recipient().equals(client.player.getUUID())
@@ -85,6 +89,7 @@ public final class ClientPreview {
     }
 
     private static void reset(ClientPacketListener next) {
+        renderInput = null;
         connection = next;
         view = null;
         epoch = null;
@@ -94,4 +99,6 @@ public final class ClientPreview {
     }
 
     private ClientPreview() { }
+    /** One immutable publication for extraction; never reads mutable client/world fields. */
+    public static ProjectView renderInput(){return renderInput;}
 }

@@ -42,6 +42,8 @@ try {
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
     for (const marker of [
       "shutter-recovery.done",
+      "textured-bob-preview.done",
+      "textured-revocation.done",
       "shutter-input-recovery.done",
       "shutter-position-reconciled.done",
       "shutter-position-recovery.done",

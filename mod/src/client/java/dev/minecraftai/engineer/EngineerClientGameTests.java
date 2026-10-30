@@ -51,11 +51,16 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             project=server.computeOnServer(s->checkpoint(s).getAsJsonObject("blueprint").get("id").getAsString());
             context.waitTicks(3);
             context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.current()!=null);
+            context.waitFor(client->dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0);
             context.runOnClient(client->{
                 check(dev.minecraftai.engineer.client.ClientPreview.current()!=null,"Reference preview must reach the client");
                 check(dev.minecraftai.engineer.client.ClientPreview.current().blocks().size()==6,"All six reference blocks must be previewed");
                 check(dev.minecraftai.engineer.client.ClientPreview.current().blocks().stream().filter(ProjectView.Ghost::currentStage).count()==3,"Only the three support blocks belong to the first step");
+                check(dev.minecraftai.engineer.client.ClientPreview.renderInput()==dev.minecraftai.engineer.client.ClientPreview.current(),"Rendering consumes the same immutable approved snapshot");
+                check(dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()<=PreviewSelection.MAX_VISIBLE_BLOCKS,"Native model submission remains bounded");
+                client.gui.hud.getChat().clearMessages(false);
             });
+            server.runOnServer(s->{check(EngineerMod.sessionFor(player(s)).blueprint.blocks().stream().allMatch(block->player(s).level().getBlockState(block.pos()).isAir()),"Textured preview never creates fake server blocks");check(checkpoint(s).getAsJsonArray("journal").isEmpty(),"Model submission grants no execution or assistant ownership");});
             context.takeScreenshot("engineer-01-reference-preview");
 
             // Actual player section in the real world. The assistant must retain it.
@@ -77,6 +82,7 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             save=world.getWorldSave();
         }
 
+        context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.renderInput()==null && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==0);
         // Reopen the actual saved Minecraft world, not a reconstructed mock world.
         try (TestSingleplayerContext world=save.open()) {
             TestServerContext server=world.getServer();
@@ -143,6 +149,11 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
             world.getConnection().waitForChunksRender();
             context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-02-reloaded-tested-build");
+            server.runOnServer(s->player(s).level().setBlockAndUpdate(REPEATER,Blueprint.state("minecraft:repeater[facing=east,delay=1,locked=false,powered=false]")));
+            context.waitFor(client->{var view=dev.minecraftai.engineer.client.ClientPreview.current();return view!=null && view.blocks().stream().anyMatch(ghost->ghost.pos().equals(REPEATER) && ghost.wrong()) && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0;});
+            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));
+            context.takeScreenshot("engineer-03-wrong-orientation-preview");
+            server.runOnServer(s->{check(player(s).level().getBlockState(REPEATER).getValue(BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST,"Intended model must preserve the player's wrong-facing physical block");check(checkpoint(s).getAsJsonArray("journal").size()==2,"Visual correction never writes a repair journal");player(s).level().setBlockAndUpdate(REPEATER,Blueprint.state("minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"));});
 
             // A new attachment can depend on an assistant block even outside the blueprint.
             BlockPos attachment=LAMP.offset(1,0,0);
@@ -206,6 +217,13 @@ public final class EngineerClientGameTests implements FabricClientGameTest {
                 check(!player(s).level().hasChunkAt(new BlockPos(1000000,100,0)),"Executor does not load distant chunks to bypass its boundary");
                 check(checkpoint(s).getAsJsonArray("journal").isEmpty(),"Unloaded chunks are rejected rather than treated as air");
             });
+            context.waitFor(client->dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==0);
+            command(server,"engineer project new");command(server,"engineer select1 16 100 0");command(server,"engineer select2 18 101 2");command(server,"engineer reference");command(server,"engineer rotate 90");
+            server.runOnServer(s->{player(s).getAbilities().flying=true;player(s).onUpdateAbilities();check(EngineerMod.sessionFor(player(s)).blueprint.rotation()==90,"Native rotated preview uses the accepted world orientation");});
+            server.runCommand("tp @a 20 103 6 140 25");world.getConnection().waitForClientboundPackets();world.getConnection().waitForChunksRender();
+            context.waitFor(client->{var view=dev.minecraftai.engineer.client.ClientPreview.current();return view!=null && view.blocks().stream().anyMatch(ghost->ghost.state().is(Blocks.REPEATER) && ghost.state().getValue(BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.NORTH) && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0;});
+            context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-04-rotated-textured-preview");
+            server.runOnServer(s->{var session=EngineerMod.sessionFor(player(s));check(session.blueprint.blocks().stream().allMatch(block->player(s).level().getBlockState(block.pos()).isAir()) && session.journal.isEmpty(),"Rotated textured previews remain intentions with no world mutation");});
         }
     }
 
