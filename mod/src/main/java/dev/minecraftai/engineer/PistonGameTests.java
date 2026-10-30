@@ -102,6 +102,10 @@ public final class PistonGameTests {
             fixture=com.google.gson.JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
         }
         var design=ShutterDesign.read(fixture);var operation=UUID.randomUUID();var scope=design.motionScope(operation);
+        var blueprint=Blueprint.parse(fixture,"contract-proof","minecraft:overworld");ComponentTree.validate(blueprint);
+        helper.assertTrue(ComponentTree.component(blueprint,"root").equals(blueprint) && ComponentTree.nodes(blueprint).size()==1 && ComponentTree.nodes(blueprint).getFirst().template().equals("sticky-shutter"),"Canonical mechanical source participates in shared component identity");
+        var assignments=new ComponentAssignments();assignments.reconcile(blueprint);
+        helper.assertTrue(assignments.task(blueprint,"root").verified.equals("untested"),"Accepting a mechanical component invents no verified status");
         helper.assertTrue(design.piston().equals(new BlockPos(100,100,101)) && design.aperture().equals(new BlockPos(100,100,103)) && design.facing()==Direction.SOUTH,"Shared source derives the accepted physical frame");
         helper.assertTrue(scope.blueprint().toString().equals("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") && scope.project().toString().equals("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") && scope.revision()==2 && scope.operation().equals(operation),"Recovery identity comes from accepted design and current operation");
         var copy=design.source();copy.addProperty("verification","passed");

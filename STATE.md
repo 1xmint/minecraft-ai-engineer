@@ -214,6 +214,25 @@ CI40994181567 (actual job log02:53:49 UTC inspected). Four jobs passed; dedicate
 multiplayer is still live at inspection. Prior contract-only CI40993844465 was
 superseded/cancelled after its other four jobs passed; never claim it all-green.
 
+Canonical project integration now compiles: Java Blueprint.parse recognizes only
+the exact shutter recipe (without widening the generic circuit block allowlist),
+ComponentTree validates the full canonical record and exposes its root identity,
+and companion server synchronization preserves its metadata only after the
+existing project/world/dimension/revision fence. Session reservation getters use
+the accepted shutter's complete write/read footprints. Native contract coverage
+now includes actual component identity and untested assignments; companion checks
+cover synchronization, identity rejection, tampering and alias isolation.
+
+EngineeringSession.claim explicitly refuses mechanical execution until motion
+recovery/input restoration are wired. No public planner/catalog entry is added.
+This enables accepted intention storage/preview as a prerequisite for startup
+scope validation; it is not a claim of player-facing construction or restart
+recovery. Scoped TypeScript and Java server/client compile passed. GPT-6-Luna/high
+focused canonical/guard check found no concrete bypass; no tests or edits by the
+helper. New runtime coverage awaits CI. Next: derive startup denial bindings from
+these accepted component identities and wire input/commit recovery before lifting
+the execution guard and proving the full dedicated-server shutter flow.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

@@ -7,6 +7,10 @@ import {
   shutterFrame,
 } from "../companion/src/shutter-design.js";
 import { MECHANISMS } from "../companion/src/catalog.js";
+import {
+  serverBlueprint,
+  type GatewayContext,
+} from "../companion/src/gateway-types.js";
 const input = {
   request: "Close the aperture when the lever is on",
   projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -16,6 +20,47 @@ const input = {
   rotation: 0 as const,
 };
 const identity = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", revision: 2 };
+test("server sync preserves canonical mechanical intention and fences its project identity", () => {
+  const design = makeShutterDesign(input, identity);
+  const context: GatewayContext = {
+    serverId: "server",
+    serverEpoch: "epoch",
+    actorId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    projectId: input.projectId,
+    projectRevision: 2,
+    authorizationRevision: 1,
+    requestId: "request",
+  };
+  assert.deepEqual(
+    serverBlueprint(design, context, input.worldId, input.dimension),
+    design,
+  );
+  for (const change of [
+    { projectId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" },
+    { projectRevision: 3 },
+  ])
+    assert.throws(() =>
+      serverBlueprint(
+        design,
+        { ...context, ...change },
+        input.worldId,
+        input.dimension,
+      ),
+    );
+  const forged = structuredClone(design);
+  forged.mechanical.on = "open" as any;
+  assert.throws(() =>
+    serverBlueprint(forged, context, input.worldId, input.dimension),
+  );
+  const accepted = serverBlueprint(
+    design,
+    context,
+    input.worldId,
+    input.dimension,
+  );
+  design.blocks[0]!.pos.x = 99;
+  assert.equal(accepted.blocks[0]!.pos.x, 0);
+});
 test("canonical shutter preserves an empty aperture and derives the accepted frame in each rotation", () => {
   const expected = [
     [[101, 100, 100], [103, 100, 100], "east"],

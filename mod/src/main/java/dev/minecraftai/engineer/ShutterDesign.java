@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 final class ShutterDesign {
     private static JsonObject recipe;
     private ShutterDesign() { }
+    static boolean describes(JsonObject source){return source.has("mechanical") || (source.has("provenance") && source.get("provenance").isJsonObject() && source.getAsJsonObject("provenance").has("template") && source.getAsJsonObject("provenance").get("template").isJsonPrimitive() && source.getAsJsonObject("provenance").get("template").getAsString().equals("sticky-shutter"));}
+    static void validate(Blueprint blueprint){if(!read(blueprint.source()).blueprint().equals(blueprint))throw new IllegalArgumentException("Mechanical blueprint differs from accepted source");}
     static final class Design {
         private final JsonObject source;
         private final UUID id,project;
@@ -39,6 +41,10 @@ final class ShutterDesign {
         ShutterJournal.Scope motionScope(UUID operation){return new ShutterJournal.Scope(world,dimension,project,id,revision,"root",operation,piston(),facing());}
         RegionReservations.Scope reservationScope(){return new RegionReservations.Scope(world,dimension,project);}
         int revision(){return revision;}
+        Blueprint blueprint(){
+            var stages=new ArrayList<Blueprint.Stage>();for(var element:source.getAsJsonArray("stages")){var stage=element.getAsJsonObject();stages.add(new Blueprint.Stage(stage.get("id").getAsString(),stage.get("title").getAsString(),stage.get("explanation").getAsString()));}
+            return new Blueprint(id.toString(),project.toString(),revision,world,dimension,source.get("name").getAsString(),anchor,rotation,worldBlocks(),List.copyOf(stages),source());
+        }
         List<Blueprint.PlannedBlock> worldBlocks(){
             var blocks=new ArrayList<Blueprint.PlannedBlock>();
             for(var element:source.getAsJsonArray("blocks")){var block=element.getAsJsonObject();BlockState state=Blueprint.state(text(block.get("state"),512)).rotate(Blueprint.rotation(rotation));blocks.add(new Blueprint.PlannedBlock(absolute(block.getAsJsonObject("pos")),state,text(block.get("stage"),64),"root"));}

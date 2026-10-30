@@ -21,6 +21,7 @@ public record Blueprint(String id, String projectId, int revision, String worldI
     public static Blueprint parse(JsonObject json, String world, String dimension) {
         if (integer(json.get("schemaVersion")) != 1 || !world.equals(json.get("worldId").getAsString())
                 || !dimension.equals(json.get("dimension").getAsString())) throw new IllegalArgumentException("Blueprint world or protocol mismatch");
+        if(ShutterDesign.describes(json))return ShutterDesign.read(json).blueprint();
         int angle = integer(json.get("rotation"));
         Rotation rotation = rotation(angle);
         BlockPos anchor = pos(json.getAsJsonObject("anchor"));

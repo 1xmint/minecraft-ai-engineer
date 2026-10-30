@@ -108,6 +108,7 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("World edits require the authenticated controller in the project dimension, in creative mode");
     }
     void claim(ProjectAccess.Permission action, boolean test) {
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -132,6 +133,7 @@ final class EngineeringSession implements BuildExecutor {
         return dependencyPositions(blueprint,component,isolation);
     }
     private static Set<BlockPos> dependencyPositions(Blueprint source,String component,boolean isolation) {
+        if(ShutterDesign.describes(source.source())){ComponentTree.component(source,component);return ShutterDesign.read(source.source()).readCells();}
         Set<BlockPos> result=new LinkedHashSet<>();
         collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source))?2:1,new HashSet<>(),result);
         return result;
@@ -150,6 +152,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     Set<BlockPos> reservationWrites(ProjectAccess.Permission action,boolean test) {
         if(action==ProjectAccess.Permission.UNDO || (!test && operationKind.equals("STRUCTURAL")))return operationScopes.positions(activeOperation);
+        if(ShutterDesign.describes(reservationBlueprint(action).source()))return ShutterDesign.read(reservationBlueprint(action).source()).writeCells();
         Set<BlockPos> writes=new HashSet<>();
         ComponentTree.component(reservationBlueprint(action),activeComponent).blocks().forEach(block->writes.add(block.pos()));
         return writes;
