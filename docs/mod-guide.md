@@ -491,3 +491,12 @@ Explicit component delegation uses `/engineer component build root` and
 `/engineer component test root` for a standalone shutter. Release mechanical
 control before requesting a replacement plan or design; known blocked requests
 are rejected before model dispatch.
+
+### Find saved projects (development source)
+
+Use /engineer project find <words> to search saved blueprint names, lesson text,
+component names, dimensions or project IDs. Every word must occur literally;
+search is case-insensitive and returns at most12 accessible projects with their
+location and status. Use project use <id> to select one. Finding does not select,
+build, inspect the current world or invoke AI. Notes are not searched yet.
+Current view permission is required for every result, including server operators.

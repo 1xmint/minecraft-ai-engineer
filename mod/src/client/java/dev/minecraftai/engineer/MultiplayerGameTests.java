@@ -854,6 +854,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connect(context, 1);
         awaitFile(context, "shared");
         String project = read("project");
+        searchProject(context,project,true,"project-find-shared.done");
         send(context, "engineer project use " + project);
         send(context, "engineer teach");
         await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's shared preview");
@@ -868,6 +869,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> view(context) == null, "Revocation clears Bob's cached blueprint");
         context.waitFor(client->dev.minecraftai.engineer.client.ClientPreview.renderInput()==null && dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()==0);
         write("textured-revocation.done","passed");
+        searchProject(context,project,false,"project-find-revoked.done");
         send(context, "engineer resume");
         send(context, "engineer undo");
         context.waitTicks(8);
@@ -888,6 +890,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("bob-disconnected", "ready");
         awaitFile(context, "restarted");
         connect(context, 2);
+        searchProject(context,project,true,"project-find-restarted.done");
         send(context, "engineer project use " + project);
         send(context, "engineer status");
         await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's membership after server restart");
@@ -959,10 +962,18 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         disconnect(context);
     }
 
+    private static void searchProject(ClientGameTestContext context,String id,boolean expected,String marker) throws Exception {
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer project find "+id);
+        expectChat(context,expected?"accessible match(es)":"No accessible saved projects match");
+        if(expected)check(MESSAGES.stream().anyMatch(message->message.contains(id+" | ")),"Accessible saved identity is returned");
+        else check(MESSAGES.stream().noneMatch(message->message.contains(id+" | ")),"Denied search never reveals identity or design metadata");
+        write(marker,"passed");context.waitTicks(25);
+    }
     private static void denied(ClientGameTestContext context) throws Exception {
         connect(context, 1);
         awaitFile(context, "shared");
         String project = read("project");
+        searchProject(context,project,false,"project-find-denied.done");
         send(context, "engineer project use " + project);
         send(context, "engineer project permission Alice build true");
         send(context, "engineer build");
@@ -981,6 +992,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("eve-text-connected", "ready");
         awaitFile(context, "text-viewer");
         String project = read("project");
+        searchProject(context,project,true,"project-find-text.done");
         send(context, "engineer project use " + project);
         send(context, "engineer status");
         send(context, "engineer repeat");

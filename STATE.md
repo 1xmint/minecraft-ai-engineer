@@ -365,3 +365,9 @@ the current connection, filters each project by current VIEW before matching,
 returns at most12 descriptions and leaves selection/execution untouched. Literal
 matching tests are written for CI; native sharing/revocation/restart proof remains.
 This branch is not shipped. Phase16 CI41101340628 remains queued.
+
+Project-search native proof now requires five real-command markers: shared viewer,
+revoked viewer, denied outsider, post-restart viewer and overlay-disabled viewer.
+Added25-tick command spacing; no permission/spam fences relaxed. Server/client
+compile and verifier syntax pass locally. Runtime tests remain GitHub-only and
+pending. Existing GPT-6-Luna/high helper is checking only the disclosure boundary.
