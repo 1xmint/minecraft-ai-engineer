@@ -348,3 +348,20 @@ blocks remain physical and exactly two missing blocks submit ghost models; the
 assistant journal stays empty. Native dimension round-trip and project reset are
 now written too. Scoped compilation passes. CI41101114559 remained queued with
 no pending deployment approvals; no runtime verdict or visual proof yet.
+
+## Next slice: saved project finding (E1, branch phase/17-project-finding)
+
+Outcomes: F1 find saved intention by literal remembered words, with explicit ID,
+dimension/location and no implicit selection/execution; native query and negative
+proof. F2 only current VIEW grants reveal results, including after revocation and
+restart; dedicated owner/viewer/denied proof. Search stays local and invokes no model.
+Decision: reuse server-loaded saved blueprint names/lessons/components. UUID-only
+listing is insufficient; semantic inference adds quota and ambiguity. Notes search
+remains separate until its companion permission boundary is integrated. Phase16
+PR25 and CI41101340628 remain pending on source28eaead; this branch builds atop it.
+
+Project finding first source compiles. New /engineer project find <words> checks
+the current connection, filters each project by current VIEW before matching,
+returns at most12 descriptions and leaves selection/execution untouched. Literal
+matching tests are written for CI; native sharing/revocation/restart proof remains.
+This branch is not shipped. Phase16 CI41101340628 remains queued.

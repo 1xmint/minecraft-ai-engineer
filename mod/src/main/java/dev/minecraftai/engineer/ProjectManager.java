@@ -92,6 +92,20 @@ final class ProjectManager {
         EngineerNetwork.send(player,null); // Retire the previous project before the next periodic snapshot.
         player.sendSystemMessage(Component.literal("Engineer: Selected project " + id));
     }
+    void find(ServerPlayer player,String query) {
+        if(!server.isSameThread() || server.getPlayerList().getPlayer(player.getUUID())!=player || player.hasDisconnected())
+            throw new IllegalStateException("Project search requires your current server connection");
+        var terms=ProjectSearch.terms(query);int shown=0,total=0;
+        for(var project:projects.values()) {
+            // Filter before examining intention; operator status grants no extra visibility.
+            if(!project.access.allows(player.getUUID(),ProjectAccess.Permission.VIEW))continue;
+            if(!ProjectSearch.matches(project.projectId,project.dimension,project.blueprint,terms))continue;
+            total++;if(shown++>=12)continue;
+            String location=project.blueprint==null?"workspace not designed":project.blueprint.anchor().toShortString();
+            player.sendSystemMessage(Component.literal("Engineer: "+project.projectId+" | "+(project.blueprint==null?"New project":project.blueprint.name())+" | "+project.dimension+" at "+location+" | "+project.state));
+        }
+        player.sendSystemMessage(Component.literal(total==0?"Engineer: No accessible saved projects match those words.":"Engineer: "+total+" accessible match(es)"+(total>12?"; showing 12. Narrow your search":"")+". Use project use <id> to choose; search does not select or execute. Saved intention only; notes and current world state were not searched."));
+    }
     void permit(ServerPlayer operator, UUID player) {
         if (!operator(operator)) throw new IllegalStateException("Only server operators grant project creation");
         creators.add(player); var data = new JsonObject(); var entries = new JsonArray(); creators.forEach(p -> entries.add(p.toString())); data.add("creators", entries);
