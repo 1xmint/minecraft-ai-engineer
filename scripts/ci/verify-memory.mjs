@@ -38,6 +38,8 @@ try {
       "shutter-handoff-recovery.done",
       "shutter-construction.done",
       "shutter-undo.done",
+      "shutter-undo-prepared.done",
+      "shutter-undo-recovery.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

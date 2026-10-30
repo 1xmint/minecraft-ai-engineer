@@ -827,3 +827,12 @@ dedicated multiplayer still running. Actual Fabric log15:44:40 UTC confirms all9
 required native tests passed. Construction flow, new handoff flow and new undo
 still need their corresponding dedicated runtime proofs; do not call them passed
 from the native core count.
+
+Strengthen undo proof before publication: fourth boot now fault-stops the real
+beginUndo preparation after durable target/ownership save and before any removal,
+releasing its lease. A fifth actual saved-server boot must retain the three-block
+inverse target, physical mechanism and idle denial, with no execution authority.
+A native `/engineer undo` then reacquires fresh authority, removes only those three
+blocks, retains the player support and releases manual control. Require both
+shutter-undo-prepared.done and shutter-undo-recovery.done in addition to the final
+undo marker. This is real game restart recovery, not a codec reload.
