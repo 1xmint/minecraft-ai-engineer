@@ -337,6 +337,16 @@ claimed proven. The earlier focused input-decoder/fixture check also found no
 concrete bypass or seed flaw. Remaining: explicit physical position reconciliation,
 guarded actuation, mechanical traces, construction and the full M3 player flow.
 
+Update: source4000159 is now all5 green in CI40996526932. Dedicated job completed
+03:23:59 UTC; its actual success log and downloaded coordination/shutter-recovery.done
+(passed), exact project and motion IDs were inspected. Artifacts:
+work/shutter-recovery-proof-40996526932. This proves the synthetic fixture's real
+saved-server restart, retained input WAL and queued-event denial, with no restored
+lease. It does not prove fresh inference, Mojang authentication, player placement,
+authorized input restoration or a functional shutter trial. Reconciliation source
+82bb63f is the next batch awaiting its own runtime proof; it adds the separate
+required shutter-input-recovery.done marker.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
