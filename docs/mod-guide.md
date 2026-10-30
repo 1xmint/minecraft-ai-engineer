@@ -460,3 +460,14 @@ made no claim that the circuit was built or tested. This remains a source featur
 not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
+
+### Mechanical control handoff (development source)
+
+For an accepted sticky-shutter project, `/engineer release` returns mechanical
+control to players without changing blocks. It requires build permission and
+creative mode. Stop and reconcile pending tests or movement first; remain near
+the loaded mechanism until queued updates settle. A refusal preserves the guard
+and player updates. Manual control survives a server restart. A later explicit
+`/engineer test` delegates control again and runs actual off/on/off observations.
+This command does not establish a functional pass. Public shutter generation,
+construction and undo are still under development.

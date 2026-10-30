@@ -28,7 +28,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], expand <x1 y1 z1> <x2 y2 z2>, component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], expand <x1 y1 z1> <x2 y2 z2>, component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, release, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
@@ -128,6 +128,7 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("stop").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->{cancelPlan(s);s.pause("Project stopped by an authorized player");})))
                 .then(Commands.literal("build").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::build)))
                 .then(Commands.literal("resume").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::resume)))
+                .then(Commands.literal("release").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::releaseShutter)))
                 .then(Commands.literal("undo").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.UNDO,EngineeringSession::undo)))
                 .then(Commands.literal("test").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::test)))
                 .then(Commands.literal("status").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.tell("Project "+s.projectId+" | "+s.status()))))

@@ -203,6 +203,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             ShutterEvidence.validate(project.trial.evidence(),design,Blueprint.state(project.trial.shutterOriginalSnapshot()),true);
         }});write("shutter-functional-recovery.done","passed");
     }
+    private static void shutterManualHandoff(ClientGameTestContext context,TestDedicatedServerContext server,boolean restarted){
+        String id=read("shutter-recovery-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runCommand("gamemode creative Alice");
+        if(!restarted){
+            server.runCommand("gamemode survival Alice");MESSAGES.clear();send(context,"engineer release");expectChat(context,"creative mode");
+            server.runOnServer(s->check(session(s,"Alice").shutterOwned && session(s,"Alice").delegation==null,"Survival refusal retains denial ownership without a lease"));
+            server.runCommand("gamemode creative Alice");MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");
+        }
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.shutterOwned && project.delegation==null && project.shutterMotion==null,"Manual control persists without execution authority, including after server restart");});
+        for(boolean powered:List.of(true,false)){
+            server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());var input=project.level().getBlockState(design.input());((net.minecraft.world.level.block.LeverBlock)input.getBlock()).pull(input,project.level(),design.input(),player(s,"Alice"));});
+            server.waitFor(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());return project.level().getBlockState(design.piston()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.EXTENDED)==powered && project.level().getBlockState(design.aperture()).is(powered?Blocks.STONE:Blocks.AIR) && !project.level().getBlockState(design.payload()).is(Blocks.MOVING_PISTON);});
+        }
+        if(restarted){
+            MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));
+            server.runOnServer(s->check(session(s,"Alice").shutterOwned && session(s,"Alice").delegation==null,"Explicit fresh trial reacquires durable denial ownership and releases its execution lease"));
+            MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");
+        }
+        write(restarted?"shutter-handoff-recovery.done":"shutter-handoff.done","passed");
+    }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
     private static final BlockPos REPEATER = LEVER.east();
@@ -499,6 +519,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
+            if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
             send(context,"engineer project use "+recovery.project());
             server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
             server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.undoRequested,"Restart imports the undo target, never an execution lease");});
@@ -527,6 +548,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
                 structuralReplanRecovery(context,server);
+                shutterManualHandoff(context,server,true);
             }
         }
     }

@@ -134,12 +134,13 @@ final class EngineeringSession implements BuildExecutor {
     void claim(ProjectAccess.Permission action, boolean test) {
         claim(action,test,MechanicalPurpose.ORDINARY);
     }
-    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL }
+    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && action==ProjectAccess.Permission.BUILD && (recovery || trial)))throw new IllegalStateException("Mechanical construction is not enabled; reconcile or explicitly test the accepted mechanism");
+        boolean handoff=purpose==MechanicalPurpose.HANDOFF && shutterOwned && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !pendingPlacement && !undoRequested;
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && action==ProjectAccess.Permission.BUILD && (recovery || trial || handoff)))throw new IllegalStateException("Mechanical construction is not enabled; reconcile or explicitly test the accepted mechanism");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -610,6 +611,30 @@ final class EngineeringSession implements BuildExecutor {
     }
     private void ensureJournalCapacity(long additions) {
         if(additions<0 || journal.size()+additions>4096)throw new IllegalStateException("The bounded assistant change journal is full; undo a section before starting another");
+    }
+    /** Explicitly retire denial ownership, without moving blocks or restoring an execution lease. */
+    void releaseShutter(){
+        access.require(actor(),ProjectAccess.Permission.BUILD);requireCreative();
+        if(blueprint==null || !ShutterDesign.describes(blueprint.source()))throw new IllegalStateException("This project has no mechanical control to release");
+        if(!shutterOwned){tell("This mechanism is already under manual player control");return;}
+        var accepted=blueprint;var design=ShutterDesign.read(accepted.source());boolean claimed=false;
+        try{
+            claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.HANDOFF);claimed=true;
+            var fence=delegation;var connection=delegationConnection;var controlling=controller;
+            Runnable authority=()->{
+                if(blueprint!=accepted || !shutterOwned || !Objects.equals(delegation,fence) || delegationConnection!=connection || !controller.equals(controlling) || shutterMotion!=null || hasPendingTest() || pendingPlacement || undoRequested || shutterTrial.running() || shutterRecovery.running())throw new IllegalStateException("Mechanical handoff basis changed");
+                validateMutation();requireCreative();
+                manager.reservations.validateFootprint(manager.scope(this),fence,controlling,revision(),access.revision(),design.writeCells(),design.readCells(),server.getTickCount());
+            };
+            PistonMotionGate.releaseIdle(level(),design,authority,()->{
+                var receipt=new JsonObject();receipt.addProperty("schemaVersion",1);receipt.addProperty("kind","mechanical-manual-release-request");receipt.addProperty("actorId",controlling.toString());receipt.addProperty("observedTick",level().getGameTime());receipt.add("intention",accepted.source().deepCopy());
+                LocalFiles.write(file.resolveSibling(projectId+".release-"+UUID.randomUUID()+".json"),receipt);
+            });
+            var oldState=state;var oldDetail=detail;shutterOwned=false;
+            state="PAUSED";detail="Mechanical control released to players; no blocks changed. Explicit test is required to delegate control again";
+            try{save();}catch(RuntimeException failed){shutterOwned=true;state=oldState;detail=oldDetail;PistonMotionGate.guard(level(),design);try{save();}catch(RuntimeException rollback){failed.addSuppressed(rollback);}throw failed;}
+            checkpoint();tell(detail);
+        }finally{if(claimed)manager.release(this);}
     }
     @Override public void resume() {
         access.require(actor(),ProjectAccess.Permission.BUILD);

@@ -742,3 +742,19 @@ inside persistence, post-receipt permission loss and ordinary vanilla motion aft
 successful release. Runtime proof awaits CI. This is still internal foundation:
 public release command/session ownership persistence, additional deferred-chunk
 coverage and full preview/build/teach/undo remain unfinished. Full goal stays active.
+
+Manual release now compiles as `/engineer release`: fresh BUILD/creative test
+reservation, pinned current connection/fence/design and complete reserved footprint
+checks surround the durable release-request receipt. Ownership false and paused
+status save together after idle denial removal; a failed save reinstalls the
+matching guard and owned state. The fresh lease is always released. It performs
+no block writes and does not grant a functional pass. GPT-6-Luna/high focused
+authority/persistence check found no concrete blockers; no helper tests or edits.
+Dedicated native proof now covers survival refusal, real release, actual vanilla
+lever close/open, fourth saved-server boot with manual control retained, then a
+fresh full functional trial reacquiring ownership and another explicit release.
+Both new handoff markers are required by the companion verifier. A native core
+case also distinguishes loaded non-ticking chunks with queued events. These new
+runtime proofs await CI; no local tests run. Prior core6b1c7a3 CI41007358335 has
+four successful jobs and dedicated multiplayer still live at last inspection.
+Public construction/teach/undo and the full objective remain unfinished.

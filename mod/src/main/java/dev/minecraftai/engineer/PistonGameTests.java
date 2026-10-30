@@ -13,6 +13,15 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest public void manualHandoffRefusesDeferredEventsInLoadedNonTickingChunk(GameTestHelper helper){
+        var level=helper.getLevel();var anchor=new BlockPos(1_000_004,100,1_000_004);
+        // Deliberate fixture loading only: production release never requests a chunk.
+        level.getChunkAt(anchor);var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-deferred-handoff",level.dimension().identifier().toString(),anchor,0);
+        helper.assertTrue(level.hasChunkAt(design.piston()) && !level.shouldTickBlocksAt(design.piston()),"Fixture distinguishes already-loaded chunks from block-ticking chunks");
+        PistonMotionGate.guard(level,design);level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,Direction.EAST.get3DDataValue());int[] receipts={0};
+        rejects(helper,()->PistonMotionGate.releaseIdle(level,design,()->{},()->receipts[0]++),"Deferred loaded-chunk events cannot be handed back as settled motion");
+        helper.assertTrue(receipts[0]==0 && ((PistonEventQueue)(Object)level).engineer$hasPendingOrDispatchingEvent(design.piston()),"Deferred event remains intact and no release is recorded");helper.succeed();
+    }
     @GameTest(maxTicks=35) public void manualHandoffPreservesQueuedEventsAndRequiresFreshAuthority(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-handoff",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
         for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());PistonMotionGate.guard(level,design);
