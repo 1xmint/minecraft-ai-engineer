@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.piston.PistonStructureResolver;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-/** Native physics oracles only. Production blueprints do not yet permit pistons. */
+/** Native physics, transaction and canonical shutter contract proofs. */
 public final class PistonGameTests {
     @GameTest public void shutterConstructionRejectsPoweredOrForeignPartialFrames(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-partial-build",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);

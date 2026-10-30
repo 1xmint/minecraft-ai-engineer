@@ -70,6 +70,13 @@ public final class PistonMotionGate {
         if(prior!=null){if(prior.equals(expected))return;throw new IllegalStateException("Another motion still guards this accepted design");}
         if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");slots.put(binding.piston(),expected);
     }
+    /** Physical observation only; the caller must separately establish current authority. */
+    static void requireQuiescent(ServerLevel level,ShutterDesign.Design design){thread(level);handoffBasis(level,design);}
+    static void requireIdleQuiescent(ServerLevel level,ShutterDesign.Design design){
+        thread(level);var slots=LEVELS.get(level);
+        if(slots==null || !new Idle(design.binding()).equals(slots.get(design.piston())))throw new IllegalStateException("Mechanical mutation requires its idle control guard");
+        handoffBasis(level,design);
+    }
     /** Purely retires an idle denial after a fresh, quiescent handoff. Never edits blocks or queues. */
     static void releaseIdle(ServerLevel level,ShutterDesign.Design design,Runnable authority,Runnable writeAhead){
         thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);var slots=LEVELS.get(level);var expected=new Idle(design.binding());

@@ -803,3 +803,27 @@ wait queried session() before the asynchronous project-use command selected one,
 throwing the intended ambiguous-project refusal. Fix waits on the manager's
 selection map instead, as existing restart flows do; production selection rules
 remain unchanged. Manual release itself still needs runtime proof.
+
+M3 undo slice: allow only a settled, open/off exact partial frame, full reserved
+historical read closure and fresh UNDO permission. Physical quiescence checks
+include both event queues, in-flight dispatch, block ticking, moving entities and
+actual power/extension agreement. An explicit undo can reacquire persistent idle
+control from manual mode before its first removal; no movement ticket is issued.
+Reuse the existing inverse projection, placement journal and player-dependency
+checks, and revalidate the mechanical frame/authority before each removal. Keep
+idle denial after completion until explicit manual release. Powered/closed or
+changed structures refuse without automatic compensating motion; preserve them
+and use manual release/opening or explicit position recovery first.
+Proof adds an occupied-aperture refusal with intact journal, then manual release,
+fresh real native undo of only three assistant blocks, retained player support and
+release of the partial remainder. Required marker shutter-undo.done. Compile and
+GitHub runtime proof pending. Full goal and remaining Phase15 Outcomes stay open.
+
+Undo source compiles for server/client; JavaScript syntax and changed-file
+formatting pass. GPT-6-Luna/high focused destructive/authority check found no
+concrete unsafe removal, authorization or persistence issue; no helper tests or
+edits. Prior construction sourceb652b50 CI41083381732 has four successful jobs and
+dedicated multiplayer still running. Actual Fabric log15:44:40 UTC confirms all91
+required native tests passed. Construction flow, new handoff flow and new undo
+still need their corresponding dedicated runtime proofs; do not call them passed
+from the native core count.

@@ -243,6 +243,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.journal.stream().noneMatch(change->change.pos().equals(new BlockPos(400,100,0))) && project.shutterOwned && project.delegation==null && !project.verified.startsWith("passed:"),"Assistant builds only the three missing blocks; player support remains unowned and geometry is not a pass");});
         MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));write("shutter-construction.done","passed");
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(new BlockPos(403,100,0),Blocks.GLASS.defaultBlockState()));
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"unpowered open partial frame");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.delegation==null && project.level().getBlockState(new BlockPos(403,100,0)).is(Blocks.GLASS),"Unsafe mechanical undo preserves the player aperture edit and complete assistant journal");project.level().setBlockAndUpdate(new BlockPos(403,100,0),Blocks.AIR.defaultBlockState());});
+        MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Latest assistant operation undone");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && !project.undoRequested && project.shutterOwned && project.delegation==null && project.level().getBlockState(new BlockPos(400,100,0)).is(Blocks.STONE),"Fresh undo takes denial control, removes only its operation and preserves the player support");for(var pos:List.of(new BlockPos(401,100,0),new BlockPos(402,100,0),new BlockPos(400,101,0),new BlockPos(403,100,0)))check(project.level().getBlockState(pos).isAir(),"Only assistant mechanism cells are removed, without moving payload into the aperture");});
+        MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");write("shutter-undo.done","passed");
     }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();

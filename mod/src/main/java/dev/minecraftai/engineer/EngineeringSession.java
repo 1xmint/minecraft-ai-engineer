@@ -143,14 +143,15 @@ final class EngineeringSession implements BuildExecutor {
     void claim(ProjectAccess.Permission action, boolean test) {
         claim(action,test,MechanicalPurpose.ORDINARY);
     }
-    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION }
+    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,UNDO }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
         boolean handoff=purpose==MechanicalPurpose.HANDOFF && shutterOwned && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !pendingPlacement && !undoRequested;
         boolean construction=purpose==MechanicalPurpose.CONSTRUCTION && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !undoRequested;
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && action==ProjectAccess.Permission.BUILD && (recovery || trial || handoff || construction)))throw new IllegalStateException("Reconcile mechanical work before requesting this operation");
+        boolean mechanicalUndo=purpose==MechanicalPurpose.UNDO && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running();
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && (action==ProjectAccess.Permission.BUILD && (recovery || trial || handoff || construction) || action==ProjectAccess.Permission.UNDO && mechanicalUndo)))throw new IllegalStateException("Reconcile mechanical work before requesting this operation");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -1151,7 +1152,11 @@ final class EngineeringSession implements BuildExecutor {
             if(selected.isPresent())activeComponent=selected.get().component();
             assignments.task(blueprint,activeComponent);
             activeOperation=selectedOperation;
-            claim(ProjectAccess.Permission.UNDO,true);
+            boolean mechanical=ShutterDesign.describes(blueprint.source());
+            if(mechanical){
+                claim(ProjectAccess.Permission.UNDO,true,MechanicalPurpose.UNDO);validateShutterUndo(false);
+                persistShutterOwnership(ShutterDesign.read(blueprint.source()));validateShutterUndo(true);
+            }else claim(ProjectAccess.Permission.UNDO,true);
             var inverse=undoBatch(selectedOperation);preflightUndo(inverse,journalPositions(inverse),plannedPositions());
             // Keep the old buffer's original label while archiving its captured scope.
             var oldTask=assignments.task(blueprint,previous.component);oldTask.status=previous.state;oldTask.verified=previous.verified;
@@ -1168,6 +1173,14 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     private Set<BlockPos> journalPositions(List<Change> batch){var result=new HashSet<BlockPos>();batch.forEach(change->result.add(change.pos()));return result;}
+    private void validateShutterUndo(boolean guarded){
+        validateMutation(ProjectAccess.Permission.UNDO);requireCreative();var design=ShutterDesign.read(blueprint.source());
+        manager.reservations.validateFootprint(manager.scope(this),delegation,controller,revision(),access.revision(),reservationWrites(ProjectAccess.Permission.UNDO,true),design.readCells(),server.getTickCount());
+        for(var pos:design.writeCells())validateTarget(pos);
+        ShutterEnvironment.validateConstruction(level(),design,design.readCells());
+        if(guarded){if(!shutterOwned)throw new IllegalStateException("Mechanical undo lost persisted control ownership");PistonMotionGate.requireIdleQuiescent(level(),design);}
+        else PistonMotionGate.requireQuiescent(level(),design);
+    }
     private Set<BlockPos> plannedPositions(){var result=new HashSet<BlockPos>();if(blueprint!=null)blueprint.blocks().forEach(block->result.add(block.pos()));return result;}
     private void preflightUndo(List<Change> batch,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
         for(Change change:batch)validateTarget(change.pos());
@@ -1199,6 +1212,7 @@ final class EngineeringSession implements BuildExecutor {
         Set<BlockPos> assistantPositions=journalPositions(batch),plannedPositions=plannedPositions();
         preflightUndo(batch,assistantPositions,plannedPositions);
         while (!journal.isEmpty() && journal.getLast().operation().equals(targetOperation)) {
+            if(ShutterDesign.describes(blueprint.source()))validateShutterUndo(true);
             Change c = journal.getLast();
             if(!level().hasChunkAt(c.pos()))throw new IllegalStateException("Undo target chunk unloaded; journal retained");
             BlockState actual=level().getBlockState(c.pos());

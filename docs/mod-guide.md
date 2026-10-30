@@ -479,5 +479,8 @@ clear surrounding space. Preview leaves the world untouched. `/engineer teach ro
 mechanism. Keep the lever off while `/engineer build` finishes missing blocks.
 `/engineer stop` interrupts; `/engineer resume` requires unchanged player blocks
 and fresh permission. `/engineer test` measures actual aperture behavior and
-restores its original input. Mechanical undo is not yet enabled; this remains
-an unfinished development slice.
+restores its original input. `/engineer undo` removes only recorded assistant blocks from a settled open/off
+shutter, preserving player blocks. For a powered or closed mechanism, first
+release control and open it manually, or reconcile pending position recovery.
+Undo keeps mechanical control until another explicit release. This remains an
+unfinished development slice.
