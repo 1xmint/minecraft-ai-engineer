@@ -484,3 +484,8 @@ shutter, preserving player blocks. For a powered or closed mechanism, first
 release control and open it manually, or reconcile pending position recovery.
 Undo keeps mechanical control until another explicit release. This remains an
 unfinished development slice.
+
+Explicit component delegation uses `/engineer component build root` and
+`/engineer component test root` for a standalone shutter. Release mechanical
+control before requesting a replacement plan or design; known blocked requests
+are rejected before model dispatch.

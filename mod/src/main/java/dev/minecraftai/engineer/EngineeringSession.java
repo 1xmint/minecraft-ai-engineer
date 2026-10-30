@@ -1010,6 +1010,7 @@ final class EngineeringSession implements BuildExecutor {
     void componentTest(String id) {
         access.require(actor(),ProjectAccess.Permission.BUILD);requireCreative();
         if(blueprint==null)throw new IllegalStateException("No component project");
+        if(ShutterDesign.describes(blueprint.source())){ComponentTree.component(blueprint,id);test();return;}
         ensureComponentContextIdle("test a component");
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);

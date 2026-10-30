@@ -5,16 +5,15 @@ partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
 Branch **phase/15-piston-motion**, draft **PR24**. Base main merge PR23:
-d3167a8f0a13c69ed6e301555802481a4bef559d. Source45cd8f2 ran **CI41088537115**:
-Companion, Windows, Fabric and client passed; all16 native mechanical markers and
-exact-trial SQLite replay passed. Dedicated post-run verifier then expected epoch4
-instead of the new actual undo-recovery boot5. Current source records a separate
-fifth-boot receipt and verifies latest sync against it, while independently checking
-the fourth-boot planning pair. It also refuses owned-shutter replacement plans before
-quota/dispatch. Scoped compile/type/format/syntax checks pass; required full CI on
-this source is still pending. Prior legacy electrical planning regression is fixed
-and Companion passed. Inspect current HEAD/CI before claiming this slice green.
-Never restart or cancel a live proof merely because observation expires.
+d3167a8f0a13c69ed6e301555802481a4bef559d. **7caeaa5/all5 CI41093420235 SUCCESS**:
+all91 required native tests, all17 dedicated mechanical markers, five actual server
+boots and strict SQLite trial/epoch checks passed. Evidence downloaded under
+work/shutter-complete-proof-41093420235. The final small component build/test-root
+entry-point integration and native screenshot captures are the current changes;
+compile/type/format checks pass, but they require their own final-source CI before
+PR24 merges. Full Phase1/Phase2, fresh shutter inference, production authentication,
+textured ghosts and general mechanical composition remain unproven/unfinished.
+Inspect current HEAD/CI before shipping. Preserve specific live handles until terminal.
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized; no approval pending. Tests run only on GitHub, never on his slow PC.
 Locally scoped compile/type/format/syntax only. Push regularly. Keep memory only
@@ -249,3 +248,29 @@ replacement already requires manual release. Native construction proof requests
 both plan/design while control is owned and requires the explicit release message,
 unchanged pass/control/no lease, and shutter-planning-denied.done. Public CI still
 fails any unexpected real planner dispatch. Read-only discussion remains allowed.
+
+M3 command audit found component test root still selected the electrical-only
+contract although ordinary test already supported shutters. Route the validated
+standalone mechanical root to the same existing fresh-authority shutter test;
+unknown component IDs still reject and no generic contract is widened. Native
+construction now explicitly delegates with component build root, resumes the
+same assignment after conflict, and calls component test root. Prior ordinary
+build/test flow has actual passing evidence; this adds the component entry points.
+Textured block models remain missing; pinned26.3 renderer inspection found the
+modern extracted BlockModelFeatureRenderer submit API, not the older dispatcher.
+No renderer implementation or visual acceptance is claimed yet.
+
+Component-entry-point batch also captures actual native preview and tested-open
+screenshots at the isolated x600 fixture, using the connected owner's real camera.
+These images will show existing bounds/labels and actual built blocks, not the
+still-missing textured ghost feature. Visual inspection awaits the CI artifacts.
+
+**7caeaa5/all5 CI41093420235 SUCCESS**. Downloaded native evidence to
+work/shutter-complete-proof-41093420235. Required complete five-boot multiplayer
+flow and strict SQLite verifier pass, including separate fourth/fifth boot receipts,
+exact off/on-origin trial history, all17 mechanical markers and zero-dispatch
+controlled replacement refusals. This is the first full green public shutter
+construction/test/recovery/handoff/undo/sharing slice. It does not prove fresh
+shutter model inference, Mojang authentication, textured ghosts or the full goal.
+The small component build/test entry-point and screenshot additions require their
+own final-source CI before PR24 merges.

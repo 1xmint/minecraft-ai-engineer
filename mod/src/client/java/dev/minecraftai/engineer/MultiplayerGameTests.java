@@ -233,7 +233,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
         write(restarted?"shutter-handoff-recovery.done":"shutter-handoff.done","passed");
     }
-    private static void shutterConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+    private static void shutterConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection){
         server.runCommand("forceload add 598 -2 605 2");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(598,100,-2)) && s.overworld().hasChunkAt(new BlockPos(605,100,2)));
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
         send(context,"engineer select1 600 100 0");send(context,"engineer select2 603 101 0");server.waitFor(s->new BlockPos(603,101,0).equals(session(s,"Alice").corner2));
@@ -247,12 +247,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer teach root");expectChat(context,"Place the support and payload");
         MESSAGES.clear();send(context,"engineer component info root");expectChat(context,"mechanical output");
         MESSAGES.clear();send(context,"engineer ask explain the timing");expectChat(context,"8 stable tick intervals");
-        server.runOnServer(s->{commandAs(s,"Alice","engineer build");var project=session(s,"Alice");check(project.state.equals("EXECUTING") && project.shutterOwned && project.level().getBlockState(new BlockPos(601,100,0)).isAir(),"Build must acquire durable control before piston placement: "+project.status());project.tick();check(project.journal.size()==1 && project.level().getBlockState(new BlockPos(601,100,0)).isAir(),"First construction tick places only payload before interruption: "+project.status());project.pause("Native interruption after first assistant placement");check(project.delegation==null,"Interruption releases construction authority");project.level().setBlockAndUpdate(new BlockPos(603,100,0),Blocks.GLASS.defaultBlockState());});
+        server.runCommand("tp Alice 601.5 103 5 180 25");connection.waitForClientboundPackets();context.waitTicks(5);context.takeScreenshot("engineer-shutter-component-preview");
+        server.runOnServer(s->{commandAs(s,"Alice","engineer component build root");var project=session(s,"Alice");check(project.state.equals("EXECUTING") && project.shutterOwned && project.level().getBlockState(new BlockPos(601,100,0)).isAir(),"Build must acquire durable control before piston placement: "+project.status());project.tick();check(project.journal.size()==1 && project.level().getBlockState(new BlockPos(601,100,0)).isAir(),"First construction tick places only payload before interruption: "+project.status());project.pause("Native interruption after first assistant placement");check(project.delegation==null,"Interruption releases construction authority");project.level().setBlockAndUpdate(new BlockPos(603,100,0),Blocks.GLASS.defaultBlockState());});
         MESSAGES.clear();send(context,"engineer resume");expectChat(context,"dependency changed");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(603,100,0)).is(Blocks.GLASS) && project.delegation==null,"Resume preserves an intervening aperture edit");project.level().setBlockAndUpdate(new BlockPos(603,100,0),Blocks.AIR.defaultBlockState());});
         send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.journal.stream().noneMatch(change->change.pos().equals(new BlockPos(600,100,0))) && project.shutterOwned && project.delegation==null && !project.verified.startsWith("passed:"),"Assistant builds only the three missing blocks; player support remains unowned and geometry is not a pass");});
-        MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));write("shutter-construction.done","passed");
+        MESSAGES.clear();send(context,"engineer component test missing");expectChat(context,"only has component root");
+        MESSAGES.clear();send(context,"engineer component test root");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));write("shutter-construction.done","passed");
+        connection.waitForClientboundPackets();context.waitTicks(5);context.takeScreenshot("engineer-shutter-tested-open");
         MESSAGES.clear();send(context,"engineer plan CI replacement while shutter remains controlled");expectChat(context,"Release mechanical control");
         MESSAGES.clear();send(context,"engineer design CI replacement while shutter remains controlled");expectChat(context,"Release mechanical control");
         server.runOnServer(s->check(session(s,"Alice").shutterOwned && session(s,"Alice").delegation==null && session(s,"Alice").verified.startsWith("passed:sticky-shutter:"),"Refused replacement requests preserve control and test evidence without starting inference"));write("shutter-planning-denied.done","passed");
@@ -601,7 +604,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 TestDedicatedServerConnection connection=server.connect()) {
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
-                shutterConstructionFlow(context,server);
+                shutterConstructionFlow(context,server,connection);
             }
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()){
@@ -944,7 +947,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             await(context,()->view(context)!=null && view(context).projectId().equals(shutter),"Authorized viewer receives the mechanical blueprint");
             send(context,"engineer teach root");send(context,"engineer component info root");expectChat(context,"mechanical output");
             send(context,"engineer ask explain the timing");expectChat(context,"8 stable tick intervals");send(context,"engineer next");send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
-            for(String action:List.of("test","release","undo")){MESSAGES.clear();send(context,"engineer "+action);expectChat(context,"permission");}
+            for(String action:List.of("test","component test root","component build root","release","undo")){MESSAGES.clear();send(context,"engineer "+action);expectChat(context,"permission");}
             write("shutter-bob-view.done","passed");awaitFile(context,"shutter-bob-revoked");await(context,()->view(context)==null,"Revocation clears mechanical preview metadata");
             MESSAGES.clear();send(context,"engineer project use "+shutter);expectChat(context,"unavailable or not shared");send(context,"engineer component info root");expectChat(context,"Engineer:");check(MESSAGES.stream().noneMatch(message->message.contains("mechanical output")),"Revoked viewer cannot retrieve shutter component facts");write("shutter-bob-denied.done","passed");
         }
