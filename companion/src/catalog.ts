@@ -354,7 +354,14 @@ export function fittingMechanisms(input: DesignRequest): {
       });
       fits.push({ template: m.template, rotation, maxDelay: m.maxDelay });
     } catch (error) {
-      if (!(error instanceof RequestError) || error.status !== 422) throw error;
+      // Legacy electrical projects may have non-UUID IDs or coordinates outside
+      // the mechanical contract. Omit that option without breaking valid choices.
+      if (
+        !(error instanceof RequestError) ||
+        (error.status !== 422 &&
+          !(m.template === "sticky-shutter" && error.status === 400))
+      )
+        throw error;
     }
   }
   if (!fits.length)

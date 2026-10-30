@@ -9,18 +9,19 @@ https://github.com/1xmint/minecraft-ai-engineer.
 Current branch **phase/15-piston-motion**, based on PR23 main merge
 **d3167a8f0a13c69ed6e301555802481a4bef559d** (2026-10-29T22:05:12Z). Phase14 final
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
-merge. Its first conversation/knowledge slice was also proven on b858364 by all5
-CI40959246919 and whole signed-in manual40960496759. Phase15 is building restored
-denial, reconciliation and a fresh-authority session recovery controller, not a shipped
-piston construction feature. Gate sourcedc08309 passed all5 CI40965363414, including all60
-required native tests (job log22:23:20 UTC inspected). Snapshot sourced04e1fc
-previously passed all5 CI40964080695/all53 native tests.
-Draft PR24 holds Phase15. Full objective unfinished.
-Latest full green:1441171/all5 CI41001189365/all87 native tests. Functional
-controller796f7bb CI41003259383 FAILED at saved-server evidence loading after
-both live off/on-origin trials passed. The current fix uses explicit schema2
-no-moved-state values through Gson; preview/control separation is also underway.
-Inspect actual git/PR/workflow state before continuing.
+merge. Phase14's signed-in discussion/knowledge slice passed whole manual40960496759.
+Phase15 is still draft PR24. Its source includes canonical shutter preview/teaching,
+guarded construction/test/recovery/manual release/undo and bounded model selection.
+The generic piston allowlist remains closed. Latest full green foundation:
+6b1c7a3/all5 CI41007358335/all89 native tests. Later sources passed all91 native
+tests and four CI checks, but dedicated multiplayer exposed test-flow failures.
+Actual ae3e87c run41084840244 proves manual handoff across restart; construction
+then refused isolation because its disposable fixture overlapped the saved AND
+project. Source0d55165 moves only that fixture to x600 and improves diagnostics;
+CI41086749673 is live at last inspection. Shared mechanical viewer proof and
+bounded selector tests are included in that source. No fresh shutter inference
+has run. Public construction/undo and the complete final-source flow still need
+successful dedicated proof. Inspect actual git/PR/workflow state before continuing.
 
 Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
 merging green PRs are authorized; no approval pending. Tests run on GitHub, never
@@ -893,3 +894,23 @@ Move only this disposable construction/undo fixture to x600, preserving the AND
 project and production isolation checks. Add separate pre-placement and first-tick
 assertions with current status so any further refusal is visible. Construction
 and undo still require successful runtime proof; no completion claimed.
+
+Additional M3 companion proof now compiles: authenticated real HTTP gateway calls
+must refuse a non-planning member and impossible dimensions before provider
+invocation. A deterministic shutter decision must round-trip through exact
+canonical validation with bound project/revision and untested status, remain only
+a proposal while accepted revision1 stays unchanged, then persist only after
+explicit server sync accepts revision2. This is an adapter/authority test, not
+fresh model inference. No local tests ran; GitHub runtime pending.
+
+Source inspection while CI41086749673 remains live found a selector compatibility
+regression: fittingMechanisms evaluates every option, and the new strict shutter
+factory rejects legacy non-UUID electrical project IDs with400. Previously valid
+electrical requests could fail before their provider is reached. Treat mechanical
+contract incompatibility as an unavailable mechanical option during fit discovery;
+keep explicit canonical construction/identity rejection intact. Do not rewrite an
+ID or weaken its reader. Added regression covers valid electrical options retained,
+shutter omitted, mechanical-only revision refused and explicit invalid shutter
+factory rejection. Scoped TypeScript/format checks pass; no local runtime tests.
+CI companion npm-test step is still live at inspection; its final logs will decide
+whether this explains its extended duration. Dedicated proof is not cancelled.

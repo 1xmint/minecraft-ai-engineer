@@ -19,6 +19,7 @@ import type {
   ProjectMember,
 } from "../companion/src/gateway-types.js";
 import { PlanningQueue } from "../companion/src/planning-queue.js";
+import { readShutterDesign } from "../companion/src/shutter-design.js";
 
 const OWNER = "11111111-1111-4111-8111-111111111111",
   EDITOR = "22222222-2222-4222-8222-222222222222",
@@ -111,6 +112,92 @@ async function fixture(
 async function json<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
+test("shutter planning remains an operator-owned canonical proposal until native acceptance", async () => {
+  let calls = 0;
+  const f = await fixture({
+    async plan() {
+      calls++;
+      return {
+        template: "sticky-shutter",
+        explanation: "Use the bounded one-cell shutter.",
+        parameters: { delay: 1 },
+        rotation: 0,
+      };
+    },
+  });
+  const projectId = randomUUID(),
+    current = () => context({ projectId });
+  const request = {
+    ...design,
+    projectId,
+    request: "Close a one-cell aperture when its lever is on.",
+    maxSize: { x: 4, y: 2, z: 1 },
+    modelAuthorized: true,
+    isOperator: true,
+  };
+  try {
+    assert.equal((await f.open()).status, 200);
+    assert.equal(
+      (
+        await f.sync(current(), {
+          blueprint: makeReferenceBlueprint({ ...design, projectId }),
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/design", {
+          ...request,
+          context: context({ projectId, actorId: EDITOR }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/design", {
+          ...request,
+          maxSize: { x: 1, y: 1, z: 1 },
+          context: current(),
+        })
+      ).status,
+      422,
+    );
+    assert.equal(
+      calls,
+      0,
+      "Denied membership and impossible dimensions reject before model dispatch",
+    );
+    const response = await f.post("/v2/design", {
+      ...request,
+      context: current(),
+    });
+    assert.equal(response.status, 200);
+    const proposal = await json<{ blueprint: Blueprint }>(response);
+    const shutter = readShutterDesign(proposal.blueprint);
+    assert.equal(calls, 1);
+    assert.equal(shutter.projectId, projectId);
+    assert.equal(shutter.revision, 2);
+    assert.equal(shutter.verification, "untested");
+    const before = await json<{ blueprint: Blueprint }>(
+      await f.post("/v2/project/read", { context: current() }),
+    );
+    assert.equal(
+      before.blueprint.revision,
+      1,
+      "Provider output is an audit proposal, not an accepted intention or world action",
+    );
+    const accepted = context({ projectId, projectRevision: 2 });
+    assert.equal((await f.sync(accepted, { blueprint: shutter })).status, 200);
+    const after = await json<{ blueprint: Blueprint }>(
+      await f.post("/v2/project/read", { context: accepted }),
+    );
+    assert.deepEqual(readShutterDesign(after.blueprint), shutter);
+  } finally {
+    await f.close();
+  }
+});
 
 test("durable boot generations fence delayed unseen boots without retiring the live server", async () => {
   const directory = mkdtempSync(join(tmpdir(), "mce-boot-generation-"));

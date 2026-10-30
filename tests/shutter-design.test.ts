@@ -162,6 +162,28 @@ test("shutter planning uses the exact canonical recipe and reserves aperture dim
     }),
   );
 });
+test("legacy electrical identities do not become invalid when mechanical choices are evaluated", () => {
+  const legacy = {
+    ...input,
+    projectId: "legacy-electrical-project",
+    maxSize: { x: 4, y: 2, z: 1 },
+  };
+  const options = fittingMechanisms(legacy);
+  assert.ok(options.some((option) => option.template === "signal-lamp"));
+  assert.ok(options.every((option) => option.template !== "sticky-shutter"));
+  assert.throws(() =>
+    fittingMechanisms({
+      ...legacy,
+      revision: { template: "sticky-shutter", rotation: 0 },
+    }),
+  );
+  assert.throws(() =>
+    makeMechanismBlueprint(legacy, {
+      template: "sticky-shutter",
+      explanation: "Unsupported identity must not be rewritten.",
+    }),
+  );
+});
 test("shutter contract rejects rewritten behavior, geometry, resources and authority", () => {
   const original = makeShutterDesign(input, identity);
   const changes = [
