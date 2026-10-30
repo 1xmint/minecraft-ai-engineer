@@ -4,13 +4,17 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Current branch **phase/17-project-finding**, draft PR26 stacked on Phase16 PR25.
+Current branch **phase/18-mechanical-diagnosis**, based on merged main **e8b767701ded649314a8cd4c313a4c63ef997b6c**.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
 work/textured-alpha-proof-41103559604 visually prove translucent aligned models,
 partial work, rotated intention and red wrong-facing status. Phase17 PR26 now
-targets main; sourcea462236/CI41104638286 has4 passing checks and live dedicated.
+merged2026-10-30T18:25:55Z as e8b7677. Final9e853fb/all5 CI41105315069
+passed all five literal-search markers (shared/revoked/denied/restarted/text-only),
+native dedicated flow6m59s and memory proof. Evidence:
+work/project-search-final-proof-41105315069. Literal saved-intention retrieval
+ships; notes/semantic recall/summaries remain unfinished.
 Phase15 PR24 merged2026-10-30T17:21:52Z after final8240e30/all5 CI41096787672:
 all91 native tests and all17 mechanical markers, five actual boots, exact SQLite
 history/epoch checks and component build/test commands passed. Native screenshots
@@ -401,3 +405,24 @@ bob-next; later markers/memory proof absent. Do not call it a search/runtime pas
 Native render acceptance now explicitly positions Bob after the extra search command
 pacing and requires camera-local selection before model submits; owner/client
 coordinate this through readiness files. No rendering radius or checks widened.
+
+## Phase18: mechanical diagnosis (E3)
+
+Outcomes:
+- D1: diagnose the supported sticky shutter from actual loaded server observations,
+  distinguishing missing/wrong-facing parts, blocked aperture, moving/inconclusive
+  state, and observed open/closed pose versus requested input. Explain coordinates
+  and what remains untested. Proof: real native world fixtures in each rotation,
+  including negative and moving cases; no inferred functional pass.
+- D2: diagnosis remains observational and current-VIEW scoped, with no mutation,
+  lease acquisition or piston event changes. Proof: unchanged blocks/journal/control
+  state, permission/unloaded rejection and mechanical recovery tests retained.
+
+Decision: reuse the canonical shutter pose/read closure and existing server diagnosis
+entry point. Current Diagnosis.inspect calls the electrical-only catalog contract
+and rejects shutters. Geometry-only comparison cannot explain a legitimately closed
+shutter because payload/head positions differ from its construction blueprint.
+Do not broaden generic piston repair allowlists. First observe/explain exact motion
+states; then add explicit repair previews through the existing guarded mechanical
+transactions. Full repair/connection/timing diagnosis remains part of the objective.
+No new provider call or billed service is needed. Tests run on GitHub only.
