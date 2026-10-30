@@ -758,3 +758,13 @@ case also distinguishes loaded non-ticking chunks with queued events. These new
 runtime proofs await CI; no local tests run. Prior core6b1c7a3 CI41007358335 has
 four successful jobs and dedicated multiplayer still live at last inspection.
 Public construction/teach/undo and the full objective remain unfinished.
+
+Core6b1c7a3 CI41007358335 is now SUCCESS on all5 checks. Actual Fabric job
+123905182726 log05:15:34 UTC confirms all89 required native tests passed, including
+the queued-event/authority handoff core case. Session/command/restart additions
+are committed as eac720b with scoped Java server/client compilation, JavaScript
+syntax and changed-file Prettier checks passed; no local tests. They require their
+own new CI run. Next M3 construction work should reuse the existing placement WAL
+and conflict reconciliation, with an incomplete-frame validator and durable guard
+ownership before piston placement; the finished-mechanism test validator cannot
+serve that purpose. No public mechanical construction is enabled yet.
