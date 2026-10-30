@@ -28,6 +28,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import java.util.List;
 
 /**
  * Actual dedicated server plus native Alice, Bob and Eve client JVMs. Files only
@@ -167,6 +168,40 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Mechanical position reconciled from current observation");
         server.runOnServer(s->check(session(s,"Alice").shutterMotion==null && session(s,"Alice").delegation==null,"Fresh observation closes recovered motion into idle denial"));
         write("shutter-motion-recovery.done","passed");send(context,"engineer project use "+originalProject);server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+    }
+    private static void shutterFunctionalFlow(ClientGameTestContext context,TestDedicatedServerContext server,String originalProject){
+        String offId=read("shutter-recovery-project");send(context,"engineer project use "+offId);server.waitFor(s->offId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runOnServer(s->{commandAs(s,"Alice","engineer test");player(s,"Alice").setGameMode(GameType.SURVIVAL);});
+        server.waitFor(s->!session(s,"Alice").shutterTrial.running());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("failed:") && project.delegation==null && project.trial.pending() && project.shutterMotion==null,"Lost creative authority before movement cannot turn partial mechanical observations into a pass");});
+        server.runCommand("gamemode creative Alice");MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Original mechanical input restored");
+        runShutterTrial(context,server,false,"off");
+        String onId=read("shutter-motion-project");send(context,"engineer project use "+onId);server.waitFor(s->onId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        // Synthetic native-player lever request; the guarded project still requires explicit fresh motion authority.
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());var input=project.level().getBlockState(design.input());((net.minecraft.world.level.block.LeverBlock)input.getBlock()).pull(input,project.level(),design.input(),player(s,"Alice"));});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"Input and pose disagree");
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").shutterRecovery.running() && session(s,"Alice").shutterMotion.phase()==ShutterJournal.Phase.ENDPOINT_OBSERVED);
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Mechanical position reconciled from current observation");
+        runShutterTrial(context,server,true,"on");write("shutter-functional.done","passed");
+        send(context,"engineer project use "+originalProject);server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+    }
+    private static void runShutterTrial(ClientGameTestContext context,TestDedicatedServerContext server,boolean originalOn,String label){
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());var level=project.level();
+            check(project.delegation==null && project.shutterMotion==null && !project.trial.pending() && !project.shutterTrial.running() && project.trial.evidence().size()==(originalOn?4:3),"Complete native trial restores inputs, closes journals and releases authority");
+            check(level.getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==originalOn && level.getBlockState(design.piston()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.EXTENDED)==originalOn,"Trial restores original input and physical piston pose");
+            var original=Blueprint.state(project.trial.shutterOriginalSnapshot());ShutterEvidence.validate(project.trial.evidence(),design,original,true);
+            write("shutter-evidence-"+label,project.trial.evidence().toString());write("shutter-design-"+label,project.blueprint.source().toString());write("shutter-original-"+label,project.trial.shutterOriginalSnapshot());
+        });
+    }
+    private static void shutterFunctionalRecovery(TestDedicatedServerContext server){
+        server.runOnServer(s->{for(String key:List.of("shutter-recovery-project","shutter-motion-project")){
+            var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read(key)));var design=ShutterDesign.read(project.blueprint.source());
+            check(project.verified.startsWith("stale:") && project.delegation==null && !project.shutterTrial.running() && !project.trial.pending(),"Saved functional observations are retained as stale evidence, never restored test authority");
+            ShutterEvidence.validate(project.trial.evidence(),design,Blueprint.state(project.trial.shutterOriginalSnapshot()),true);
+        }});write("shutter-functional-recovery.done","passed");
     }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
@@ -418,6 +453,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE)reconcileShutterInput(context,server,projectId);
             if(!LIVE_ACCEPTANCE)reconcileShutterPosition(context,server,projectId);
             if(!LIVE_ACCEPTANCE)shutterRecoveryMotionFlow(context,server,projectId);
+            if(!LIVE_ACCEPTANCE)shutterFunctionalFlow(context,server,projectId);
             publishServer(server, 2);
             write("restarted", "ready");
             awaitFile(context, "bob-reconnected");
@@ -462,6 +498,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
+            if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             send(context,"engineer project use "+recovery.project());
             server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
             server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.undoRequested,"Restart imports the undo target, never an execution lease");});

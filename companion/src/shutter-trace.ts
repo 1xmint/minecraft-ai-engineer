@@ -165,3 +165,87 @@ export function validateShutterTrace(
     );
   return canonical;
 }
+
+/** Phase order, game-clock continuity, raw summaries and original-state restoration are independently required. */
+export function validateShutterEvidence(
+  value: unknown,
+  intention: unknown,
+  originalInput: string,
+  requirePass = false,
+) {
+  const design = readShutterDesign(intention);
+  const off = shutterExpectedPose(design, false).input,
+    on = shutterExpectedPose(design, true).input;
+  if (originalInput !== off && originalInput !== on)
+    throw new RequestError(
+      "Original mechanical input differs from accepted geometry.",
+    );
+  const count = originalInput === on ? 4 : 3;
+  if (
+    !Array.isArray(value) ||
+    value.length > count ||
+    (requirePass && value.length !== count)
+  )
+    throw new RequestError(
+      "Mechanical evidence needs every phase and original-state restoration.",
+    );
+  let previous = -1;
+  return value.map((entry, index) => {
+    const row = object(entry);
+    exact(row, [
+      "case",
+      "purpose",
+      "tick",
+      "elapsedTicks",
+      "inputs",
+      "outputs",
+      "trace",
+    ]);
+    if (
+      row.case !== index ||
+      row.purpose !== (index < 3 ? "test" : "restore-original")
+    )
+      throw new RequestError("Mechanical case differs from accepted sequence.");
+    const expected = index === 1 || index === 3;
+    const trace = validateShutterTrace(
+      row.trace,
+      design,
+      expected,
+      requirePass || index + 1 < value.length,
+    );
+    const last = trace.samples.at(-1);
+    if (!last) throw new RequestError("Mechanical phase has no samples.");
+    const tick = integer(
+        row.tick,
+        "mechanical tick",
+        0,
+        Number.MAX_SAFE_INTEGER,
+      ),
+      elapsed = integer(row.elapsedTicks, "elapsedTicks", 0, 16);
+    if (
+      tick < elapsed ||
+      elapsed !== last.elapsedTicks ||
+      (previous >= 0 && tick - elapsed !== previous)
+    )
+      throw new RequestError("Mechanical case timestamps disagree.");
+    const inputs = object(row.inputs),
+      outputs = object(row.outputs);
+    exact(inputs, ["input"]);
+    exact(outputs, ["aperture"]);
+    if (
+      inputs.input !== expected ||
+      outputs.aperture !== (last.states.aperture === "minecraft:stone")
+    )
+      throw new RequestError("Mechanical summary differs from raw samples.");
+    previous = tick;
+    return {
+      case: index,
+      purpose: row.purpose,
+      tick,
+      elapsedTicks: elapsed,
+      inputs: { input: expected },
+      outputs: { aperture: outputs.aperture },
+      trace,
+    };
+  });
+}

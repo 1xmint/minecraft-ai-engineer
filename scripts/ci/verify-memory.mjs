@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
+import { validateShutterEvidence } from "../../dist/companion/src/shutter-trace.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -31,11 +32,45 @@ try {
       "shutter-position-reconciled.done",
       "shutter-position-recovery.done",
       "shutter-motion-recovery.done",
+      "shutter-functional.done",
+      "shutter-functional-recovery.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
         "passed",
       );
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
+    for (const label of ["off", "on"]) {
+      const design = JSON.parse(
+        readFileSync(`${coordination}/shutter-design-${label}`, "utf8"),
+      );
+      const cases = JSON.parse(
+        readFileSync(`${coordination}/shutter-evidence-${label}`, "utf8"),
+      );
+      const original = readFileSync(
+        `${coordination}/shutter-original-${label}`,
+        "utf8",
+      ).trim();
+      validateShutterEvidence(cases, design, original, true);
+      const saved = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:sticky-shutter:%' ORDER BY id DESC LIMIT 1",
+        )
+        .get(server.serverId, design.projectId);
+      assert.ok(
+        saved,
+        "Companion must durably retain the measured shutter pass",
+      );
+      const checkpoint = JSON.parse(saved.document).checkpoint;
+      assert.equal(checkpoint.observed.shutterOriginalInput, original);
+      validateShutterEvidence(
+        checkpoint.observed.testEvidence,
+        design,
+        original,
+        true,
+      );
+      assert.deepEqual(checkpoint.observed.testEvidence, cases);
+    }
   if (
     process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
     process.env.MCE_DISCUSSION_ACCEPTANCE === "true"

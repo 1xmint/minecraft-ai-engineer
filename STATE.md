@@ -467,6 +467,42 @@ proofs await CI. This is evidence infrastructure, not the session functional-tri
 controller. Next: feed these actual samples through guarded input/motion phases,
 restore original input/pose, and validate full cycle evidence before any pass.
 
+Timed-evidence1441171 is now all5 green in CI41001189365, including all87 required
+native tests (actual04:08:46 UTC Fabric log inspected). This proves actual timed
+off/on/off physical sampling and exact replay in four rotations, with gap/forgery
+rejections. It does not yet prove the new session functional controller.
+
+Session functional trials now compile. Explicit canonical /engineer test obtains
+a distinct private fresh BUILD/test claim; ordinary mechanical construction stays
+rejected. ShutterTrial pins fence/connection/controller/scope and full environment,
+uses existing per-input WAL plus pre-activation motion preparation, and commits
+through owned one-use tickets. It measures all off/on/off phases, then an additional
+guarded closing phase when original input was on. Each motion endpoint is durably
+recorded/held/reconciled; original input and pose must be restored before a pass.
+Java/TypeScript ShutterEvidence replay requires exact case order, consecutive phase
+game clocks, raw summaries and original-state restoration. Original input metadata
+is retained with scoped evidence in project/history/checkpoint memory. Loading
+retains complete evidence as stale and never restores a running trial or lease.
+
+Stop between phases can retain input WAL without a motion journal. Fresh recovery
+now handles that case; before a restoration that requires motion it creates a
+denial-only preparation, so existing explicit recovery can align the piston later.
+Canonical dynamic open/closed poses are recognized by stale-evidence checks.
+The focused GPT-6-Luna/high authority/persistence check found no concrete blocker;
+no helper tests/edits. Scoped TypeScript/Java compile and changed-file formatting/
+JavaScript syntax passed; native client compile caught a missing List import,
+which was corrected. No local test suites ran.
+
+New ordinary-CI native flows drive interruption before movement, input recovery
+without a motion journal, fresh complete off-origin trial, a native-player lever
+request followed by actual fresh closing recovery, complete on-origin trial and
+later saved-server evidence loading. Companion verification replays actual native
+samples and requires their matching durable SQLite pass checkpoint. Required new
+markers: shutter-functional.done and shutter-functional-recovery.done. Runtime
+proof is pending. Public mechanical preview/build/teach, placement/replacement
+ownership and full M3 acceptance remain unfinished; no phase/overall completion
+is claimed.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

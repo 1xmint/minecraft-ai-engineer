@@ -73,6 +73,7 @@ final class EngineeringSession implements BuildExecutor {
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
+    final ShutterTrial shutterTrial = new ShutterTrial(this);
     ShutterJournal shutterMotion;
     ShutterJournal.Scope acceptedMotionScope(){
         if(blueprint==null || !ShutterDesign.describes(blueprint.source()) || !activeComponent.equals("root"))throw new IllegalStateException("Pending motion needs its accepted mechanical component");
@@ -122,10 +123,14 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("World edits require the authenticated controller in the project dimension, in creative mode");
     }
     void claim(ProjectAccess.Permission action, boolean test) {
-        claim(action,test,false);
+        claim(action,test,MechanicalPurpose.ORDINARY);
     }
-    private void claim(ProjectAccess.Permission action,boolean test,boolean recoveryOnly){
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(recoveryOnly && test && action==ProjectAccess.Permission.BUILD && shutterMotion!=null && state.equals("PAUSED")))throw new IllegalStateException("Mechanical execution is awaiting motion recovery integration; preview only");
+    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL }
+    void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
+    private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
+        boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
+        boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && action==ProjectAccess.Permission.BUILD && (recovery || trial)))throw new IllegalStateException("Mechanical construction is not enabled; reconcile or explicitly test the accepted mechanism");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -596,12 +601,12 @@ final class EngineeringSession implements BuildExecutor {
     @Override public void resume() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && shutterMotion!=null && hasPendingTest()){
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && hasPendingTest()){
             restoreMotionDenial(); // A restored binding stays denied throughout input restoration.
             boolean claimed=false;
             try{
-                claim(ProjectAccess.Permission.BUILD,true,true);claimed=true;validateTestArea();trial.restore();
-                state="PAUSED";detail=hasPendingTest()?"Mechanical input still needs reconciliation; conflicting edits preserved":"Original mechanical input restored; piston motion remains blocked pending explicit position reconciliation";
+                claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.RECOVERY);claimed=true;validateTestArea();trial.restore();
+                state="PAUSED";detail=hasPendingTest()?"Mechanical input still needs reconciliation; conflicting edits preserved":shutterMotion==null?"Original mechanical input restored; accepted mechanism remains guarded and untested":"Original mechanical input restored; piston motion remains blocked pending explicit position reconciliation";
                 save();checkpoint();tell(detail);
             }finally{if(claimed)manager.release(this);}
             return;
@@ -618,7 +623,7 @@ final class EngineeringSession implements BuildExecutor {
     private void reconcileShutterPosition(){
         restoreMotionDenial();boolean claimed=false;var pending=shutterMotion;var scope=acceptedMotionScope();var design=ShutterDesign.read(blueprint.source());
         try{
-            claim(ProjectAccess.Permission.BUILD,true,true);claimed=true;
+            claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.RECOVERY);claimed=true;
             Runnable authority=()->{validateMutation();requireCreative();validateTestArea();if(hasPendingTest())throw new IllegalStateException("Restore pending inputs before physical reconciliation");};
             authority.run();
             boolean powered=level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED);
@@ -638,7 +643,7 @@ final class EngineeringSession implements BuildExecutor {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        try{shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        try{shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
         finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
@@ -656,7 +661,9 @@ final class EngineeringSession implements BuildExecutor {
             if(changed){save();checkpoint();}
         }
         if (blueprint != null && verified.startsWith("passed:") && server.getTickCount()%10==0) {
-            boolean changed=assignmentBlocks().stream().anyMatch(b->!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos())));
+            boolean changed;
+            if(ShutterDesign.describes(blueprint.source())){try{var design=ShutterDesign.read(blueprint.source());ShutterEnvironment.capture(level(),design,design.readCells());var base=level().getBlockState(design.piston());ShutterMotion.capture(level(),design.piston(),!base.getValue(BlockStateProperties.EXTENDED),design.writeCells());changed=base.getValue(BlockStateProperties.EXTENDED)!=level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED);}catch(RuntimeException stale){changed=true;}}
+            else changed=assignmentBlocks().stream().anyMatch(b->!level().hasChunkAt(b.pos()) || !Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(changed){verified="stale: circuit changed or chunks unloaded since test";detail="Functional evidence is stale; inspect and test the current circuit again";state="PAUSED";save();checkpoint();tell(detail);}
         }
         if (state.equals("EXECUTING")) {
@@ -1202,17 +1209,17 @@ final class EngineeringSession implements BuildExecutor {
     boolean hasPendingTest() { return trial.pending(); }
     void test() {
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before testing world state");
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source())){shutterTrial.start();return;}
         trial.start();
     }
-    void tickTest() { trial.tick(); }
+    void tickTest() { if(shutterTrial.running())shutterTrial.tick();else trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
         if(blueprint!=null && ShutterDesign.describes(blueprint.source())){
-            if(shutterMotion==null)throw new IllegalStateException("Mechanical trial controller is not enabled");
-            var observed=shutterMotion.positionState(level(),acceptedMotionScope());
-            if(observed!=ShutterJournal.PositionState.BEFORE && observed!=ShutterJournal.PositionState.TERMINAL)throw new IllegalStateException("Mechanical position is unloaded, unsettled or conflicted; preserve it before restoring input");
             var design=ShutterDesign.read(blueprint.source());
             ShutterEnvironment.captureReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
+            if(shutterMotion!=null){var observed=shutterMotion.positionState(level(),acceptedMotionScope());if(observed!=ShutterJournal.PositionState.BEFORE && observed!=ShutterJournal.PositionState.TERMINAL)throw new IllegalStateException("Mechanical position is unloaded, unsettled or conflicted; preserve it before restoring input");}
+            else{var base=level().getBlockState(design.piston());ShutterMotion.capture(level(),design.piston(),!base.getValue(BlockStateProperties.EXTENDED),design.writeCells());}
             return;
         }
         if(blueprint!=null && ComponentTree.composite(blueprint)) {
@@ -1236,6 +1243,7 @@ final class EngineeringSession implements BuildExecutor {
         observed.addProperty("operationKind",operationKind);observed.addProperty("undoRequested",undoRequested);
         if(undoOperation!=null)observed.addProperty("undoOperation",undoOperation);
         observed.addProperty("tick",level().getGameTime());observed.add("testEvidence",trial.evidence());observed.add("testInputs",trial.inputsSnapshot());
+        if(trial.shutterOriginalSnapshot()!=null)observed.addProperty("shutterOriginalInput",trial.shutterOriginalSnapshot());
         observed.addProperty("componentBasisVersion",ComponentAssignments.BASIS_VERSION);
         JsonObject testScope=trial.scope();if(testScope!=null)observed.add("testScope",testScope);
         if(componentTask.lastPassedScope!=null)observed.add("lastPassedScope",componentTask.lastPassedScope.deepCopy());
