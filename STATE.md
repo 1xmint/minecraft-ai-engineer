@@ -274,3 +274,35 @@ construction/test/recovery/handoff/undo/sharing slice. It does not prove fresh
 shutter model inference, Mojang authentication, textured ghosts or the full goal.
 The small component build/test entry-point and screenshot additions require their
 own final-source CI before PR24 merges.
+
+67b57ee CI41095011005 FAILED dedicated only; other4 checks passed. Downloaded
+work/shutter-component-failure-41095011005. Bob received four real BUILD permission
+refusals, then vanilla kicked him for spamming before the fifth denial command;
+owner subsequently stopped waiting for Bob. Construction/screenshots were not
+reached. Exact26.3 javap confirms command throttle adds20 per packet and drains1
+per tick. Pace each added viewer denial by25 ticks and give owner component-test
+checks the same headroom; do not disable vanilla throttling or permission checks.
+Also explicitly keep the native screenshot camera flying, as existing camera
+fixtures do, so gravity cannot spoil its preview/tested-open capture. No production
+mutation/authority semantics changed. Final-source runtime proof still pending.
+
+## Next slice: textured, directional previews (E3)
+
+- V1: missing planned blocks show their real translucent shape/texture/orientation,
+  with current-step and correctness outlines retained. Proof: native rotated/partial/
+  wrong-orientation screenshots, plus unchanged server blocks/journal in preview.
+- V2: previews disappear on revocation, project/connection/dimension changes; text-only
+  clients remain functional. Proof: native permission/reset and no-overlay flows.
+- V3: nearby current-step blocks take priority within a bounded draw budget, avoiding
+  heavy rendering on Josh's PC. Proof: bounded large-preview selection and native
+  render flow, not a broad performance benchmark.
+
+Decision: reuse vanilla baked block-model submits through Fabric extraction/render
+hooks. Keeping only colored boxes misses the requirement; fake client world blocks
+would blur actual state; custom GPU/atlas machinery adds maintenance without a need.
+Official guide https://docs.fabricmc.net/develop/rendering/world currently documents
+26.2; pinned26.3 javap independently confirms END_EXTRACTION, COLLECT_SUBMITS,
+FabricRenderState/RenderStateDataKey and BlockStateModel.collectParts with native
+BlockModelFeatureRenderer submits. Capture immutable approved frame data in extraction,
+render it without world reads/mutations. Existing ClientPreview identity/permission
+fences remain authoritative presentation inputs. No visual implementation yet.
