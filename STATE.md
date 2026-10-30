@@ -387,3 +387,13 @@ implementation hardcodes body tint -1. Thus counters/compile were insufficient.
 Fix uses vanilla baked quads via native submitCustomGeometry with explicit per-quad
 alpha/fullbright/overlay. No world reads, fake blocks, GPU cache or authority change.
 New-source runtime/visual evidence required before merge; old images are not a pass.
+
+Phase16 source6135aff fresh screenshots in work/textured-alpha-proof-41103559604
+visually confirm translucent native models, cyan current-step outlines, red wrong
+orientation and90-degree rotation. White glow/opaque body is fixed. CI still live.
+Phase17 source3e8ed00 dedicated artifact work/project-search-proof-41103559567
+passed shared/denied literal search but Bob timed out at model submission before
+bob-next; later markers/memory proof absent. Do not call it a search/runtime pass.
+Native render acceptance now explicitly positions Bob after the extra search command
+pacing and requires camera-local selection before model submits; owner/client
+coordinate this through readiness files. No rendering radius or checks widened.

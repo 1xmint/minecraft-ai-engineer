@@ -365,6 +365,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 send(context, "engineer project share Bob editor");
                 server.waitFor(s -> session(s, "Alice").access.allows(player(s, "Bob").getUUID(), ProjectAccess.Permission.BUILD));
                 write("shared", "ready");
+                awaitFile(context,"bob-search-ready");
+                server.runOnServer(s->{var bob=player(s,"Bob");bob.getAbilities().flying=true;bob.onUpdateAbilities();});
+                server.runCommand("tp Bob 1 102 6 180 20");write("bob-search-positioned","ready");
                 awaitFile(context, "bob-next");
                 awaitFile(context, "eve-denied");
                 context.waitTicks(5);
@@ -855,9 +858,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         awaitFile(context, "shared");
         String project = read("project");
         searchProject(context,project,true,"project-find-shared.done");
+        write("bob-search-ready","ready");awaitFile(context,"bob-search-positioned");
+        context.waitFor(client->client.player!=null && client.player.position().distanceToSqr(new net.minecraft.world.phys.Vec3(1.5,102,6.5))<16);
         send(context, "engineer project use " + project);
         send(context, "engineer teach");
         await(context, () -> view(context) != null && view(context).projectId().equals(project), "Bob's shared preview");
+        context.runOnClient(client->check(!PreviewSelection.nearby(ClientPreview.current(),client.player.getEyePosition()).isEmpty(),"Shared render proof requires camera inside the bounded preview radius; actual position "+client.player.position()));
         context.waitFor(client->dev.minecraftai.engineer.client.GhostPreviewRenderer.submittedModelCount()>0);
         write("textured-bob-preview.done","passed");
         send(context, "engineer next");
