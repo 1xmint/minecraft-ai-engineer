@@ -879,3 +879,17 @@ canonicality or composition bypass; no helper tests or edits.
 This planning/sharing batch passes scoped TypeScript and Java server/client
 compilation, changed-file Prettier, JavaScript syntax and diff whitespace checks.
 No local test suite or model inference ran. Runtime tests remain GitHub-only.
+
+Sourceae3e87c CI41084840244 FAILED only dedicated multiplayer; other4 checks
+passed. Downloaded work/shutter-undo-failure-41084840244 confirms both
+shutter-handoff.done and shutter-handoff-recovery.done PASSED: real manual cycles,
+actual restart with manual control, and fresh test/release worked. Public preview,
+teach/info/timing reached the construction fixture, but its initial generic
+assertion failed. The fixture reused x400, already occupied by the actual saved
+AND project: truth-accepted-source confirms anchor400,100,0 and neighboring stone,
+lever/torch/repeater cells within the shutter's required isolation closure. The
+preview's five target cells were air, but the larger read environment was not.
+Move only this disposable construction/undo fixture to x600, preserving the AND
+project and production isolation checks. Add separate pre-placement and first-tick
+assertions with current status so any further refusal is visible. Construction
+and undo still require successful runtime proof; no completion claimed.
