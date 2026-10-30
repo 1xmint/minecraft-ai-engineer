@@ -274,6 +274,29 @@ second TestDedicatedServerContext). Extend that boundary with a separately
 labeled mechanical recovery fixture and a post-boot queued-event denial check;
 do not add another server boot merely for this proof or call it fresh inference.
 
+Saved-server mechanical recovery proof is now written in the ordinary CI native
+multiplayer flow (excluded from live inference runs). Before its existing first
+shutdown it stages a clearly labeled synthetic accepted shutter at320,100,0,
+records a prepared motion in an actual project checkpoint, registers denial,
+persists an on lever and queues a real event. Its one forced chunk stays loaded
+on the same saved world's next boot. Before normal second-boot project commands,
+the flow checks early recovery readiness, exact retained motion identity, no
+lease, on input, ordinary-arm rejection and actual queued-event denial after8
+game ticks. The CI database verifier requires shutter-recovery.done. No new boot,
+model invocation or human construction is claimed. Scoped client Java compile,
+JavaScript syntax and changed-file formatting passed; runtime proof awaits CI.
+
+Input restoration should reuse or align with FunctionalTrial's existing per-input
+write-ahead original/last/before/pending facts rather than invent unrelated
+authority-bearing data. Its current contract/pose observation assumes electrical
+outputs and static build geometry; mechanical trials need actual aperture/head/
+payload samples and guarded input transitions. Keep construction disabled until
+that controller, interruption/reconcile and safe release are integrated.
+
+Startup sourceeb676c0 Fabric passed all75 required native tests in CI40995721852,
+actual03:09:50 UTC log inspected. Four jobs passed; dedicated multiplayer remains
+live at inspection, so whole-run success is not yet claimed.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

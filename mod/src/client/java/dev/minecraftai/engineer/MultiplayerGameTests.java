@@ -35,6 +35,47 @@ import net.minecraft.world.level.block.Blocks;
  * CI deliberately uses offline identities and does not prove production login.
  */
 public final class MultiplayerGameTests implements FabricClientGameTest {
+    /** Synthetic accepted intention/physical fixture; no model call or player construction is claimed. */
+    private static void prepareShutterRecovery(TestDedicatedServerContext server){
+        server.runCommand("forceload add 320 0");
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(321,100,0)));
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var owner=player(s,"Alice").getUUID();var project=java.util.UUID.randomUUID();var level=s.overworld();var dimension=level.dimension().identifier().toString();
+            var design=ShutterDesign.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,new BlockPos(320,100,0),0);
+            var session=new EngineeringSession(manager,project,owner,dimension);session.blueprint=design.blueprint();session.corner1=new BlockPos(320,100,0);session.corner2=new BlockPos(323,101,0);session.activeOperation=java.util.UUID.randomUUID().toString();
+            for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+            check(level.getBlockState(design.aperture()).isAir(),"Synthetic recovery fixture begins with an open aperture");
+            var motion=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            session.shutterMotion=ShutterJournal.prepare(design.motionScope(java.util.UUID.fromString(session.activeOperation)),motion,java.util.UUID.randomUUID());session.state="PAUSED";session.save();
+            manager.projects.put(project,session);session.restoreMotionDenial();
+            level.setBlockAndUpdate(design.input(),level.getBlockState(design.input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,true));
+            level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,design.facing().get3DDataValue());
+            write("shutter-recovery-project",project.toString());write("shutter-recovery-motion",session.shutterMotion.motion().toString());
+        });
+    }
+    private static void assertShutterRecovery(TestDedicatedServerContext server){
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(321,100,0)));
+        long[] queued={0};
+        server.runOnServer(s->{
+            check(EngineerMod.recoveryInitialized(s),"Early recovery hook completed on the actual second saved-server boot");
+            var session=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("shutter-recovery-project")));
+            check(session!=null && session.shutterMotion!=null && session.delegation==null && session.state.equals("PAUSED"),"Saved server restores mechanical facts without execution authority");
+            var design=ShutterDesign.read(session.blueprint.source());var level=session.level();
+            check(session.shutterMotion.motion().toString().equals(read("shutter-recovery-motion")),"Saved boot retains the exact interrupted motion identity");
+            check(level.getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Actual saved world retains the interrupted on input");
+            var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());boolean denied=false;
+            try{PistonMotionGate.arm(level,snapshot,design.writeCells(),()->{},id->{});}catch(IllegalStateException expected){denied=true;}
+            check(denied,"Startup denial cannot be replaced by ordinary arming after reboot");
+            queued[0]=level.getGameTime();level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,design.facing().get3DDataValue());
+        });
+        server.waitFor(s->s.overworld().getGameTime()>=queued[0]+8);
+        server.runOnServer(s->{
+            var session=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("shutter-recovery-project")));var design=ShutterDesign.read(session.blueprint.source());var level=session.level();
+            check(level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE) && !level.getBlockState(design.piston()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.EXTENDED),"Actual queued powered piston remains denied across saved-server restart");
+            check(session.shutterMotion.phase()==ShutterJournal.Phase.PREPARED && session.delegation==null,"Reboot and queued events invent no committed motion or lease");
+        });
+        write("shutter-recovery.done","passed");
+    }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
     private static final BlockPos REPEATER = LEVER.east();
@@ -253,6 +294,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     }catch(java.io.IOException error){throw new AssertionError(error);}
                     commandAs(s,"Alice","engineer project use "+projectId);
                 });
+                if(!LIVE_ACCEPTANCE)prepareShutterRecovery(server);
                 write("prepare-restart", "ready");
                 awaitFile(context, "bob-disconnected");
                 server.waitFor(s -> s.getPlayerList().getPlayerCount() == 1, 12_000);
@@ -266,6 +308,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try (TestDedicatedServerContext server = new TestDedicatedServerContextImpl(context,
                 DedicatedServerImplUtil.start(context, properties));
              TestDedicatedServerConnection connection = server.connect()) {
+            if(!LIVE_ACCEPTANCE)assertShutterRecovery(server);
             send(context, "engineer status");
             server.waitFor(s -> !EngineerMod.managerFor(s).projects.isEmpty());
             await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Several projects could be the target")),"Ambiguous project selection is rejected after restart");

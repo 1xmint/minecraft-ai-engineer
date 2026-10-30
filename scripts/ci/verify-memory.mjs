@@ -24,6 +24,11 @@ if (restoredBoot) {
 
 const db = new DatabaseSync(database, { readOnly: true });
 try {
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
+    assert.equal(
+      readFileSync(`${coordination}/shutter-recovery.done`, "utf8").trim(),
+      "passed",
+    );
   if (
     process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
     process.env.MCE_DISCUSSION_ACCEPTANCE === "true"
