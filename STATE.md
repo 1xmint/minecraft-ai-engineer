@@ -348,3 +348,12 @@ blocks remain physical and exactly two missing blocks submit ghost models; the
 assistant journal stays empty. Native dimension round-trip and project reset are
 now written too. Scoped compilation passes. CI41101114559 remained queued with
 no pending deployment approvals; no runtime verdict or visual proof yet.
+
+Phase16 CI41101340628 artifacts downloaded to work/textured-preview-proof-41101340628.
+Fabric passes; client logs reach dimension round-trip and project reset; both
+textured Bob/revocation markers pass. Images show models/rotation/partial work but
+reveal an actual opacity bug: submitBlockModel last int is outline color, and its
+implementation hardcodes body tint -1. Thus counters/compile were insufficient.
+Fix uses vanilla baked quads via native submitCustomGeometry with explicit per-quad
+alpha/fullbright/overlay. No world reads, fake blocks, GPU cache or authority change.
+New-source runtime/visual evidence required before merge; old images are not a pass.

@@ -51,7 +51,16 @@ public final class GhostPreviewRenderer {
         for(var model:frame.models()){
             poses.pushPose();
             poses.translate(model.pos().getX()-frame.camera().x,model.pos().getY()-frame.camera().y,model.pos().getZ()-frame.camera().z);
-            context.submitNodeCollector().submitBlockModel(poses,RenderTypes.translucentMovingBlock(),model.parts(),new int[0],LightCoordsUtil.FULL_BRIGHT,OverlayTexture.NO_OVERLAY,model.color());
+            // submitBlockModel's last argument is an outline color: its body forces opaque white.
+            // Feed the same baked vanilla quads through the native geometry submission with alpha.
+            context.submitNodeCollector().submitCustomGeometry(poses,RenderTypes.translucentMovingBlock(),(pose,vertices)->{
+                var instance=new com.mojang.blaze3d.vertex.QuadInstance();
+                instance.setColor(model.color());instance.setLightCoords(LightCoordsUtil.FULL_BRIGHT);instance.setOverlayCoords(OverlayTexture.NO_OVERLAY);
+                for(var part:model.parts()){
+                    for(var direction:net.minecraft.core.Direction.values())for(var quad:part.getQuads(direction))vertices.putBakedQuad(pose,quad,instance);
+                    for(var quad:part.getQuads(null))vertices.putBakedQuad(pose,quad,instance);
+                }
+            });
             poses.popPose();submittedModels++;
         }
     }
