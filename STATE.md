@@ -164,6 +164,25 @@ then bind current player permissions/input restoration and prove the full boot.
 
 ## Proven Phase14 Outcomes
 
+Phase15 checkpoint: restored-denial source612ab9d passed all5 checks in
+CI40967730065; actual Fabric log22:42:31 UTC confirms all65 required tests passed.
+The dedicated multiplayer job completed successfully22:48:19 UTC.
+
+Canonical shutter intention is now shared by TypeScript and Java through
+catalog/shutter.json and an exact cross-runtime fixture. Both derive accepted
+geometry, reserved aperture air, behavior, resources and recovery identity from
+the recipe; unknown authority/verification or rewritten metadata rejects. This
+provides the independent accepted frame required by restored journal validation.
+Five native checks cover the shared identity contract and actual recipe-built
+open/close/reopen in four rotations; companion checks cover bounds, metadata,
+aliasing and the fixture. Scoped TypeScript and Java server/client compilation
+passed; new tests await GitHub. No local test suites ran.
+
+Public planning/construction remains disabled for this mechanism. Next: wire the
+mechanical dialect into project validation and execution, then startup denial,
+current player authority, input restoration and actual saved-server recovery.
+This checkpoint does not finish M3 or the overall roadmap.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

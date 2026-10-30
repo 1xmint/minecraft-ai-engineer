@@ -13,6 +13,48 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=35) public void canonicalShutterEast(GameTestHelper helper){canonicalCycle(helper,0,Direction.EAST);}
+    @GameTest(maxTicks=35) public void canonicalShutterSouth(GameTestHelper helper){canonicalCycle(helper,90,Direction.SOUTH);}
+    @GameTest(maxTicks=35) public void canonicalShutterWest(GameTestHelper helper){canonicalCycle(helper,180,Direction.WEST);}
+    @GameTest(maxTicks=35) public void canonicalShutterNorth(GameTestHelper helper){canonicalCycle(helper,270,Direction.NORTH);}
+    private static void canonicalCycle(GameTestHelper helper,int rotation,Direction expectedFacing){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-contract",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(1,2,1)),rotation);
+        helper.assertTrue(design.facing()==expectedFacing,"Recipe rotation has independently expected facing");
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        BlockPos lever=design.input().subtract(helper.absolutePos(BlockPos.ZERO));
+        helper.runAtTickTime(8,()->{
+            helper.assertTrue(level.getBlockState(design.aperture()).isAir(),"Canonical aperture starts empty");
+            ShutterMotion.capture(level,design.piston(),true,design.motionCells());helper.pullLever(lever);
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(level.getBlockState(design.aperture()).is(Blocks.STONE) && level.getBlockState(design.payload()).is(Blocks.PISTON_HEAD),"Canonical source actually closes the aperture");
+            var snapshot=ShutterMotion.capture(level,design.piston(),false,design.motionCells());
+            var scope=design.motionScope(UUID.randomUUID());var record=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());record.requireScope(level,scope);
+            helper.pullLever(lever);
+        });
+        helper.runAtTickTime(24,()->{
+            helper.assertTrue(level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE) && !level.getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED),"Canonical source actually reopens and retrieves payload");helper.succeed();
+        });
+    }
+    @GameTest public void canonicalMechanicalSourceDerivesRecoveryIdentity(GameTestHelper helper) throws Exception {
+        com.google.gson.JsonObject fixture;
+        try(var stream=ShutterDesign.class.getResourceAsStream("/engineer/fixtures/shutter-design.json")){
+            if(stream==null)throw new IllegalStateException("Shared mechanical fixture missing");
+            fixture=com.google.gson.JsonParser.parseString(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        }
+        var design=ShutterDesign.read(fixture);var operation=UUID.randomUUID();var scope=design.motionScope(operation);
+        helper.assertTrue(design.piston().equals(new BlockPos(100,100,101)) && design.aperture().equals(new BlockPos(100,100,103)) && design.facing()==Direction.SOUTH,"Shared source derives the accepted physical frame");
+        helper.assertTrue(scope.blueprint().toString().equals("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") && scope.project().toString().equals("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") && scope.revision()==2 && scope.operation().equals(operation),"Recovery identity comes from accepted design and current operation");
+        var copy=design.source();copy.addProperty("verification","passed");
+        boolean rejected=false;try{ShutterDesign.read(copy);}catch(RuntimeException expected){rejected=true;}
+        helper.assertTrue(rejected && design.source().get("verification").getAsString().equals("untested"),"Data cannot invent verification or alias accepted intention");
+        for(String field:List.of("mechanical","blocks","resources","bounds")){
+            var changed=fixture.deepCopy();changed.remove(field);rejected=false;try{ShutterDesign.read(changed);}catch(RuntimeException expected){rejected=true;}
+            helper.assertTrue(rejected,"Required mechanical metadata cannot be omitted: "+field);
+        }
+        var forged=fixture.deepCopy();forged.addProperty("authority",true);rejected=false;try{ShutterDesign.read(forged);}catch(RuntimeException expected){rejected=true;}
+        helper.assertTrue(rejected,"Mechanical intention carries no authority");helper.succeed();
+    }
     private static Set<BlockPos> footprint(GameTestHelper helper){return footprint(helper,Rotation.NONE);}
     private static Set<BlockPos> footprint(GameTestHelper helper,Rotation rotation){return Set.of(helper.absolutePos(at(1,1,rotation)),helper.absolutePos(at(2,1,rotation)),helper.absolutePos(at(3,1,rotation)));}
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}

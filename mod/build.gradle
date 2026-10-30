@@ -21,6 +21,8 @@ dependencies {
 
 processResources {
     from('../catalog/mechanisms.json') { into 'engineer' }
+    from('../catalog/shutter.json') { into 'engineer' }
+    from('../tests/fixtures/shutter-design.json') { into 'engineer/fixtures' }
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') { expand version: project.version }
 }
