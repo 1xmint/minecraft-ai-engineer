@@ -379,3 +379,11 @@ connection and VIEW filtering precede matching, inaccessible counts are excluded
 and search neither selects nor delegates. Native commands now search actual remembered
 words (Signal lamp), not just known UUIDs, and assert the active preview stays the
 same. Five required markers remain. Runtime proof is still pending, not waived.
+Phase16 CI41101340628 artifacts downloaded to work/textured-preview-proof-41101340628.
+Fabric passes; client logs reach dimension round-trip and project reset; both
+textured Bob/revocation markers pass. Images show models/rotation/partial work but
+reveal an actual opacity bug: submitBlockModel last int is outline color, and its
+implementation hardcodes body tint -1. Thus counters/compile were insufficient.
+Fix uses vanilla baked quads via native submitCustomGeometry with explicit per-quad
+alpha/fullbright/overlay. No world reads, fake blocks, GPU cache or authority change.
+New-source runtime/visual evidence required before merge; old images are not a pass.
