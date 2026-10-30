@@ -204,7 +204,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }});write("shutter-functional-recovery.done","passed");
     }
     private static void shutterManualHandoff(ClientGameTestContext context,TestDedicatedServerContext server,boolean restarted){
-        String id=read("shutter-recovery-project");send(context,"engineer project use "+id);server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        String id=read("shutter-recovery-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
         server.runCommand("gamemode creative Alice");
         if(!restarted){
             server.runCommand("gamemode survival Alice");MESSAGES.clear();send(context,"engineer release");expectChat(context,"creative mode");
@@ -222,6 +222,27 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");
         }
         write(restarted?"shutter-handoff-recovery.done":"shutter-handoff.done","passed");
+    }
+    private static void shutterConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        server.runCommand("forceload add 398 -2 405 2");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(398,100,-2)) && s.overworld().hasChunkAt(new BlockPos(405,100,2)));
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 400 100 0");send(context,"engineer select2 403 101 0");server.waitFor(s->new BlockPos(403,101,0).equals(session(s,"Alice").corner2));
+        send(context,"engineer reference sticky-shutter");server.waitFor(s->session(s,"Alice").blueprint!=null && ShutterDesign.describes(session(s,"Alice").blueprint.source()));
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());write("shutter-construction-project",project.projectId.toString());
+            check(!project.shutterOwned && design.writeCells().stream().allMatch(pos->project.level().getBlockState(pos).isAir()),"Public reference preview changes neither blocks nor mechanical ownership");
+            // Native fixture represents a player's first support, not human mouse placement or AI construction.
+            s.overworld().setBlockAndUpdate(new BlockPos(400,100,0),Blocks.STONE.defaultBlockState());
+        });
+        MESSAGES.clear();send(context,"engineer teach root");expectChat(context,"Place the support and payload");
+        MESSAGES.clear();send(context,"engineer component info root");expectChat(context,"mechanical output");
+        MESSAGES.clear();send(context,"engineer ask explain the timing");expectChat(context,"8 stable tick intervals");
+        server.runOnServer(s->{commandAs(s,"Alice","engineer build");var project=session(s,"Alice");project.tick();project.pause("Native interruption after first assistant placement");check(project.shutterOwned && project.delegation==null && project.journal.size()==1 && project.level().getBlockState(new BlockPos(401,100,0)).isAir(),"Durable denial ownership precedes the first piston placement and interruption releases the lease");project.level().setBlockAndUpdate(new BlockPos(403,100,0),Blocks.GLASS.defaultBlockState());});
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"dependency changed");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.level().getBlockState(new BlockPos(403,100,0)).is(Blocks.GLASS) && project.delegation==null,"Resume preserves an intervening aperture edit");project.level().setBlockAndUpdate(new BlockPos(403,100,0),Blocks.AIR.defaultBlockState());});
+        send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.journal.stream().noneMatch(change->change.pos().equals(new BlockPos(400,100,0))) && project.shutterOwned && project.delegation==null && !project.verified.startsWith("passed:"),"Assistant builds only the three missing blocks; player support remains unowned and geometry is not a pass");});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));write("shutter-construction.done","passed");
     }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
@@ -549,6 +570,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 TestDedicatedServerConnection connection=server.connect()) {
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
+                shutterConstructionFlow(context,server);
             }
         }
     }

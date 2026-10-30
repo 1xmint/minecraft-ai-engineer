@@ -9,6 +9,21 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /** Read dependencies for the fixed floating shutter, independent from its changing motion pose. */
 final class ShutterEnvironment {
     private ShutterEnvironment() { }
+    /** Construction accepts missing intended blocks, never powered/extended or foreign geometry. */
+    static void validateConstruction(ServerLevel level,ShutterDesign.Design design,Set<BlockPos> reservedReads){
+        if(!level.getServer().isSameThread())throw new IllegalStateException("Shutter construction requires the server thread");
+        if(!reservedReads.containsAll(design.readCells()))throw new IllegalStateException("Construction dependencies exceed the reserved read footprint");
+        for(var pos:design.readCells())readable(level,pos);
+        var planned=new HashMap<BlockPos,BlockState>();for(var block:design.worldBlocks())planned.put(block.pos(),block.state());
+        for(var pos:design.readCells()){
+            var actual=level.getBlockState(pos);var expected=planned.get(pos);
+            if(level.getBlockEntity(pos)!=null || !actual.isAir() && (expected==null || !actual.equals(expected)))throw new IllegalStateException("Shutter construction requires an unpowered open partial frame and clear isolation; preserve the edit at "+pos.toShortString());
+        }
+    }
+    static void validateConstructionReserved(ServerLevel level,ShutterDesign.Design design,RegionReservations reservations,RegionReservations.Fence fence,UUID actor,long authorizationRevision,long tick){
+        reservations.validateFootprint(design.reservationScope(),fence,actor,design.revision(),authorizationRevision,design.writeCells(),design.readCells(),tick);
+        validateConstruction(level,design,reservations.permissionFootprint(design.reservationScope(),fence,true,tick));
+    }
     /** The execution caller must additionally supply current player/connection/grant checks. */
     static Snapshot captureReserved(ServerLevel level,ShutterDesign.Design design,RegionReservations reservations,RegionReservations.Fence fence,UUID actor,long authorizationRevision,long tick){
         reservations.validateFootprint(design.reservationScope(),fence,actor,design.revision(),authorizationRevision,design.writeCells(),design.readCells(),tick);

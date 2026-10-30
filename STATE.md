@@ -768,3 +768,38 @@ own new CI run. Next M3 construction work should reuse the existing placement WA
 and conflict reconciliation, with an incomplete-frame validator and durable guard
 ownership before piston placement; the finished-mechanism test validator cannot
 serve that purpose. No public mechanical construction is enabled yet.
+
+M3 construction next slice: preserve an unpowered open partial frame and all
+player blocks while building missing canonical shutter blocks. Proof starts with
+native rejection of powered input, wrong-facing actuator, occupied aperture and
+incomplete read authority, then dedicated real build interruption/resume and
+functional trial. Reuse existing placement WAL and immutable operation scopes;
+acquire durable denial ownership before placing any piston. Do not infer a pass
+from construction. Public reference/build/undo completion remains outstanding.
+
+M3 construction implementation now includes a public `/engineer reference
+sticky-shutter` preview, mechanical component information and offline lesson/timing
+answers. Preview takes no control and writes no blocks. Explicit build acquires
+full read/write reservations, validates all five write targets (including aperture)
+inside the workspace, persists denial ownership before piston placement, and uses
+the existing placement WAL/operation scopes. Exact open/off partial-frame and
+isolation checks run before acquisition and on every execution tick; resume needs
+fresh authority after existing journal/dependency reconciliation. GPT-6-Luna/high
+focused construction authority check found no concrete bypass; no helper tests or
+edits. Generic piston block allowlists remain closed.
+Native fourth-boot proof now uses real public project/select/reference/teach/info/
+ask/build commands, an explicitly synthetic player support, actual assistant
+placement, stop before actuator placement, preserved glass aperture conflict,
+fresh resume and actual off/on/off test. It requires shutter-construction.done.
+New core proof rejects powered input, foreign facing, occupied aperture and
+incomplete read authority. Runtime proof is pending; public mechanical undo,
+AI selection/composition, sharing/denial and full M3 remain unfinished. This is
+not an overall completion or a multiplayer release.
+
+Release source6efcc37 CI41008165978 FAILED only dedicated multiplayer; the other
+four checks passed. Inspected downloaded work/shutter-handoff-failure-41008165978:
+functional/recovery markers passed, but no handoff marker. Native third-boot test
+wait queried session() before the asynchronous project-use command selected one,
+throwing the intended ambiguous-project refusal. Fix waits on the manager's
+selection map instead, as existing restart flows do; production selection rules
+remain unchanged. Manual release itself still needs runtime proof.

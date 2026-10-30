@@ -13,6 +13,19 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest public void shutterConstructionRejectsPoweredOrForeignPartialFrames(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-partial-build",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        ShutterEnvironment.validateConstruction(level,design,design.readCells());
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        ShutterEnvironment.validateConstruction(level,design,design.readCells());
+        var lever=level.getBlockState(design.input());level.setBlock(design.input(),lever.setValue(BlockStateProperties.POWERED,true),2);
+        rejects(helper,()->ShutterEnvironment.validateConstruction(level,design,design.readCells()),"A powered player lever is not safe partial construction");level.setBlock(design.input(),lever,2);
+        level.setBlock(design.aperture(),Blocks.GLASS.defaultBlockState(),2);
+        rejects(helper,()->ShutterEnvironment.validateConstruction(level,design,design.readCells()),"Reserved aperture air preserves an intervening player block");level.setBlock(design.aperture(),Blocks.AIR.defaultBlockState(),2);
+        level.setBlock(design.piston(),level.getBlockState(design.piston()).setValue(BlockStateProperties.FACING,Direction.WEST),2);
+        rejects(helper,()->ShutterEnvironment.validateConstruction(level,design,design.readCells()),"A foreign actuator orientation cannot be adopted");
+        rejects(helper,()->ShutterEnvironment.validateConstruction(level,design,design.writeCells()),"Partial geometry does not replace complete read authority");helper.succeed();
+    }
     @GameTest public void manualHandoffRefusesDeferredEventsInLoadedNonTickingChunk(GameTestHelper helper){
         var level=helper.getLevel();var anchor=new BlockPos(1_000_004,100,1_000_004);
         // Deliberate fixture loading only: production release never requests a chunk.

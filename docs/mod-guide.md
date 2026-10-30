@@ -471,3 +471,13 @@ and player updates. Manual control survives a server restart. A later explicit
 `/engineer test` delegates control again and runs actual off/on/off observations.
 This command does not establish a functional pass. Public shutter generation,
 construction and undo are still under development.
+
+The development shutter slice supports `/engineer reference sticky-shutter` after
+selecting a region at least four blocks long and two high, with two blocks of
+clear surrounding space. Preview leaves the world untouched. `/engineer teach root`,
+`/engineer component info root` and `/engineer ask explain the timing` describe the
+mechanism. Keep the lever off while `/engineer build` finishes missing blocks.
+`/engineer stop` interrupts; `/engineer resume` requires unchanged player blocks
+and fresh permission. `/engineer test` measures actual aperture behavior and
+restores its original input. Mechanical undo is not yet enabled; this remains
+an unfinished development slice.
