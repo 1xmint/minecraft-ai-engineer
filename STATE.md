@@ -409,6 +409,7 @@ coordinate this through readiness files. No rendering radius or checks widened.
 ## Phase18: mechanical diagnosis (E3)
 
 Outcomes:
+
 - D1: diagnose the supported sticky shutter from actual loaded server observations,
   distinguishing missing/wrong-facing parts, blocked aperture, moving/inconclusive
   state, and observed open/closed pose versus requested input. Explain coordinates
