@@ -1,5 +1,6 @@
 import type { Blueprint } from "./types.js";
 import type { ProjectKnowledge } from "./project-knowledge.js";
+import { readShutterDesign } from "./shutter-design.js";
 import { object, text, RequestError } from "./types.js";
 
 export interface DiscussionRequest {
@@ -94,6 +95,10 @@ export function discussionGrounding(
               componentIds: ids.slice(0, 32),
               hasMoreComponents: ids.length > 32,
               provenance: blueprint.provenance,
+              ...(blueprint.provenance.kind === "curated" &&
+              blueprint.provenance.template === "sticky-shutter"
+                ? { mechanical: readShutterDesign(blueprint).mechanical }
+                : {}),
             }
           : null,
       },
@@ -120,13 +125,15 @@ export function discussionGrounding(
         blocks: blocks.slice(0, 64),
         hasMoreBlocks: blocks.length > 64,
         ports: blueprint.ports
-          .filter((port) =>
-            blocks.some(
-              (block) =>
-                block.pos.x === port.pos.x &&
-                block.pos.y === port.pos.y &&
-                block.pos.z === port.pos.z,
-            ),
+          .filter(
+            (port) =>
+              !blueprint.components ||
+              blocks.some(
+                (block) =>
+                  block.pos.x === port.pos.x &&
+                  block.pos.y === port.pos.y &&
+                  block.pos.z === port.pos.z,
+              ),
           )
           .slice(0, 16),
       },

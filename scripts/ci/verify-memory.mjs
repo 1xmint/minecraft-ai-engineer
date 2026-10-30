@@ -63,12 +63,12 @@ try {
       validateShutterEvidence(cases, design, original, true);
       const saved = db
         .prepare(
-          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:sticky-shutter:%' ORDER BY id DESC LIMIT 1",
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:sticky-shutter:%' AND json_extract(document,'$.checkpoint.observed.testEvidence[0].tick')=? ORDER BY id DESC LIMIT 1",
         )
-        .get(server.serverId, design.projectId);
+        .get(server.serverId, design.projectId, cases[0].tick);
       assert.ok(
         saved,
-        "Companion must durably retain the measured shutter pass",
+        "Companion must durably retain this exact measured shutter trial, including when later retests exist",
       );
       const checkpoint = JSON.parse(saved.document).checkpoint;
       assert.equal(checkpoint.observed.shutterOriginalInput, original);

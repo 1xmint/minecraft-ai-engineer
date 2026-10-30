@@ -1,916 +1,234 @@
 # Now
 
 2026-10-30. Active goal: **complete all milestones**: the entire Phase1 engineering
-partner and all six Phase2 features. A catalog, screenshot, release or green CI
-never substitutes for that full objective. Original requirements and multiplayer
-amendment: docs/product-brief.md. Public repo:
-https://github.com/1xmint/minecraft-ai-engineer.
-
-Current branch **phase/15-piston-motion**, based on PR23 main merge
-**d3167a8f0a13c69ed6e301555802481a4bef559d** (2026-10-29T22:05:12Z). Phase14 final
-source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
-merge. Phase14's signed-in discussion/knowledge slice passed whole manual40960496759.
-Phase15 is still draft PR24. Its source includes canonical shutter preview/teaching,
-guarded construction/test/recovery/manual release/undo and bounded model selection.
-The generic piston allowlist remains closed. Latest full green foundation:
-6b1c7a3/all5 CI41007358335/all89 native tests. Later sources passed all91 native
-tests and four CI checks, but dedicated multiplayer exposed test-flow failures.
-Actual ae3e87c run41084840244 proves manual handoff across restart; construction
-then refused isolation because its disposable fixture overlapped the saved AND
-project. Source0d55165 moves only that fixture to x600 and improves diagnostics;
-CI41086749673 is live at last inspection. Shared mechanical viewer proof and
-bounded selector tests are included in that source. No fresh shutter inference
-has run. Public construction/undo and the complete final-source flow still need
-successful dedicated proof. Inspect actual git/PR/workflow state before continuing.
-
-Josh: **skip heavy reviews; build and ship**. Public implementation, pushes and
-merging green PRs are authorized; no approval pending. Tests run on GitHub, never
-on his slow PC. Locally scoped compile/format/syntax only; one Gradle worker.
-No separately billed service/API key. Only the configured account-owning operator
-invokes AI. Keep project memory only in AGENTS.md and this file.
-
-## Phase15 plan: mechanical output and bounded piston motion
-
-- M1: a real sticky-piston shutter closes/opens an aperture when its lever is
-  toggled. Proof: native Minecraft26.3 tests in all horizontal rotations, actual
-  payload/head positions and settling; ordinary piston leaves the payload behind,
-  obstruction/excess push does not invent movement.
-- M2: queued motion cannot expand AI work into undelegated, unloaded or changed
-  space. Proof: actual vanilla resolver sources/destinations/head/base, rejection
-  of destruction/extra payload/conflicting regions, human edits, revocation,
-  delayed events, moving-block finalization and restart. Distinguish direct writes
-  from physics commit/finalization; no restored lease or player-edit overwrite.
-- M3: preview, learn, explicitly build and functionally test the shutter as a
-  project component. Proof: dedicated native commands, authorized/denied sharing,
-  interrupt/reconcile/restart and actual aperture observations. New model/block
-  allowlists require the validated contract. Geometry alone cannot pass or stand
-  in for the remaining larger piston-door capability.
-
-Decision2026-10-29: reuse vanilla PistonStructureResolver for movement projection,
-with server-thread reservations/WAL. Start with a complete shutter slice toward
-doors. Merely adding piston states leaves deferred physics unguarded; a fake
-player adds Phase2 machinery without solving that boundary. Leaving mechanics
-unsupported cannot finish the product. Do not widen public construction yet.
-
-Research: Mojang's push/pull/12-block description:
-https://www.minecraft.net/en-us/article/block-week-piston. Fabric event/mixin hooks:
-https://docs.fabricmc.net/develop/events/. Exact26.3 behavior comes from the pinned
-common jar and native tests. Local javap: checkIfExtend queues blockEvent;
-triggerEvent calls moveBlocks; PistonStructureResolver exposes resolve/toPush/
-toDestroy/pushDirection. PistonMovingBlockEntity finalizes on later ticks only
-while its destination remains MOVING_PISTON. Current leases guard direct writes
-and current trials assume lamp outputs. This needs a spatial transaction around
-deferred physics, with explicit commit/recovery semantics.
-
-Tasks: native physical oracles first (M1/M2); typed movement footprint and failure
-proofs (M2); deferred-physics authority/recovery boundary before enabling blocks
-(M2); mechanical contract/execution/trials and native component flow (M1/M3);
-required CI and narrow auth/mutation check, then ship when Outcomes pass. Tests
-only on GitHub; scoped local compile. No heavy reviews. Current work: physical
-oracles. Production piston construction/generation is not implemented yet.
-
-Eight native piston oracles are written: four rotated repeated shutter cycles,
-ordinary piston negative, obstruction, changed payload footprint and external
-replacement during real animation. Scoped Java server/client compilation passed;
-no local tests run. GitHub runtime proof is next. Public block allowlist unchanged.
-
-Pinned source inspection corrected the initial oracle: moveBlocks(false) removes
-the piston head before constructing the vanilla resolver. Calling resolve(false)
-against the untouched extended world is not a valid pre-transition projection.
-Removed that incorrect API assertion; all physical pull/reopen postconditions
-remain. Production retraction projection must explicitly account for the head
-prelude without editing the world merely to preview it. This changes M2's design;
-an unqualified resolver call is insufficient. Initial6ed2f7 CI40963224460 Fabric
-failed on that assertion in all four rotations. It also exposed the default20
-tick harness deadline for the planned24-tick ordinary-piston test. Give the40-tick
-cycle tests50 ticks and the24-tick negative35 ticks, retaining all physical
-settling assertions. Other jobs were still live; the new source needs full CI.
-No production piston support is claimed.
-
-Corrected0bf063a Fabric job passed all50 required native tests in CI40963599032,
-at22:11:17 UTC. This includes all8 piston oracles; inspected the actual job log.
-Other runtime jobs were still live at inspection, not claimed complete.
-
-ShutterMotion now captures immutable base/head/payload before and terminal states
-for the fixed one-stone sticky shutter, with no writes. It checks delegated cells,
-loaded chunks, horizontal orientation, exact stone/head/air poses, no block entity,
-and vanilla's exact single-source non-destructive extension projection. Retraction
-accounts for the head-removal prelude without mutating preview state. Freshness
-recaptures the live basis; endpoint comparison is explicitly not tick-history
-verification. Snapshot holds level identity and immutable coordinates; it grants
-no execution authority. Production build/generation paths remain unchanged.
-
-Three new native tests cover actual matching terminal poses, immutable/mutable-
-coordinate isolation, stale/replaced/undelegated cells and no chunk loading.
-Scoped Java server/client compilation passed; new runtime proofs await GitHub.
-Next: integrate deferred-motion commit/finalization fences and recovery before
-exposing piston construction, then complete M3's actual player flow.
-
-Event gate core now compiles: a required JAVA_25 mixin intercepts triggerEvent
-before vanilla head removal or payload mutation. Only server-internally armed
-positions are gated; unmanaged pistons keep normal behavior. A one-use ticket
-checks exact event/facing/pose,20-tick expiry, caller's current authority, live
-snapshot and vanilla power signal. A synchronous write-ahead hook precedes commit;
-authority/snapshot/power are rechecked after it. Reentrant/cancelled/duplicate
-events fail closed. Stop before commit rejects movement; cancellation after
-commit observes already-started animation without granting compensating motion.
-Server shutdown clears the ephemeral registry. Endpoint observation is not a pass.
-
-Seven native gate proofs written: actual close/pull commits with fresh rearm,
-revocation after lever write, intervening replacement, failed journal hook,
-cancelled input pulse, expired arm and cancellation during actual moving-block
-animation. Scoped server/client Java compile passed. GPT-6-Luna/high narrow
-mutation-boundary check found no concrete core blockers; no tests/SDK were run by
-the helper. All seven gate proofs passed in CI40965363414. Production construction/generation still
-does not arm the gate. Durable WAL/session/permission integration, read-dependency
-closure, passive release and restart recovery are NOT implemented by this core;
-they remain required before M3 or public piston support can ship.
-
-ShutterJournal core now compiles: bounded strict versioned descriptions bind
-world/dimension/project/blueprint/revision/component/operation plus accepted
-piston position/facing and motion UUID. Phases prepared/commit-recorded/endpoint-
-observed and cancellation are physical facts, never leases or functional passes.
-Terminal states are derived from the fixed mechanism's validated before-image;
-authority/lease/verification fields reject. A fresh server-derived Scope must
-match before inspecting recovery. Unloaded/moving/replaced cells stay explicitly
-unknown/unsettled/conflicted. Reading the record performs no writes or rearming.
-
-New native tests persist preparation, write the commit via the actual gate's
-pre-motion callback, reload from disk, record a later endpoint, and prove no
-implicit retraction permit. They also reject forged payload/authority, foreign
-scope/wrong motion/cancelled preparation and preserve a replacement. Opening-pose
-codec coverage and all rotated snapshot/actual terminal comparisons are added.
-Shared pure pose validation keeps live snapshots and stored descriptions aligned.
-Scoped Java server/client compile passed; these new runtime proofs await CI.
-This proves neither actual saved-server recovery nor production session wiring:
-startup denial before queued events, input restoration, read-dependency capture,
-fresh actor permissions and safe release still must land before public actuation.
-
-Journal source08f4431 Fabric job passed all62 required native tests in
-CI40966805528 (22:34:34 UTC, actual job log inspected). Four checks passed;
-dedicated multiplayer was still live at last inspection, not claimed terminal.
-
-Restored denial core now compiles. A sealed Blocked entry stores only expected
-scope/motion identity; registration checks current accepted identity without
-reading/loading chunks. Ordinary arm refuses it. Explicit rearmBlocked requires
-the exact registered journal, fresh authority, a fresh matching frame and observed
-before/terminal pose, checks the slot again after callbacks, then creates a new
-ticket. No actor, callback, lease or permit is deserialized. A focused
-GPT-6-Luna/high recovery-boundary check found no core blockers.
-
-Three native proofs added: disk reload -> actual queued-event denial -> denied
-resume -> fresh ticket/commit; foreign/changed journal binding rejection; no-load
-registration for an unloaded piston. Scoped Java server/client compile passed;
-these new runtime proofs await CI. This is not yet actual server-bootstrap or
-saved-world restart recovery. The loader must derive expected Scope from the
-accepted mechanical component, never copy identity from the saved journal to
-validate itself. Add that canonical mechanical contract before startup wiring;
-then bind current player permissions/input restoration and prove the full boot.
-
-## Proven Phase14 Outcomes
-
-Phase15 checkpoint: restored-denial source612ab9d passed all5 checks in
-CI40967730065; actual Fabric log22:42:31 UTC confirms all65 required tests passed.
-The dedicated multiplayer job completed successfully22:48:19 UTC.
-
-Canonical shutter intention is now shared by TypeScript and Java through
-catalog/shutter.json and an exact cross-runtime fixture. Both derive accepted
-geometry, reserved aperture air, behavior, resources and recovery identity from
-the recipe; unknown authority/verification or rewritten metadata rejects. This
-provides the independent accepted frame required by restored journal validation.
-Five native checks cover the shared identity contract and actual recipe-built
-open/close/reopen in four rotations; companion checks cover bounds, metadata,
-aliasing and the fixture. Scoped TypeScript and Java server/client compilation
-passed; new tests await GitHub. No local test suites ran.
-
-Public planning/construction remains disabled for this mechanism. Next: wire the
-mechanical dialect into project validation and execution, then startup denial,
-current player authority, input restoration and actual saved-server recovery.
-This checkpoint does not finish M3 or the overall roadmap.
-
-Read-dependency closure: accepted shutter designs now derive all five potential
-write cells (including reserved aperture air), plus a rotated240-cell read volume
-covering the mechanism and two-block isolation margin. ShutterEnvironment checks
-the complete reserved/loaded volume before any reads, captures fixed input/support
-and air dependencies separately from changing motion cells, and can recheck the
-expected input state at event time. It grants no permission or lease. New native
-proofs exercise a late player edit causing actual gate denial before WAL/physics,
-preservation of that edit, incomplete read reservations and no chunk loading.
-Production session reservations and journal recovery still need this integration.
-Scoped Java server/client compilation passed; these new tests await CI. Contract
-source4ab3cf3 has four successful CI40993844465 jobs; dedicated multiplayer remains
-live at inspection, so the whole run is not yet claimed successful.
-
-Reservation integration: RegionReservations.validateFootprint now checks the
-normal epoch/actor/project/auth revision/expiry fence before requiring all
-potential motion writes in the lease's write set and all dependencies in its
-read/write closure. ShutterEnvironment.captureReserved derives project scope and
-revision from accepted design, validates those exact footprints, then captures
-only against the lease's actual reserved cells. This does not replace the
-execution caller's current Minecraft connection or project-grant checks.
-Two new native tests cover actual event denial after lease revocation, missing
-aperture write authority, missing dependencies, neighboring-project conflicts,
-wrong actor and changed grants. Scoped Java server/client compilation passed;
-new proofs await CI. GPT-6-Luna/high focused reservation check found no concrete
-boundary blockers; no helper tests or edits. Production session wiring remains.
-
-Isolation source23377a1 Fabric passed all72 required native tests in
-CI40994181567 (actual job log02:53:49 UTC inspected). Four jobs passed; dedicated
-multiplayer is still live at inspection. Prior contract-only CI40993844465 was
-superseded/cancelled after its other four jobs passed; never claim it all-green.
-
-Canonical project integration now compiles: Java Blueprint.parse recognizes only
-the exact shutter recipe (without widening the generic circuit block allowlist),
-ComponentTree validates the full canonical record and exposes its root identity,
-and companion server synchronization preserves its metadata only after the
-existing project/world/dimension/revision fence. Session reservation getters use
-the accepted shutter's complete write/read footprints. Native contract coverage
-now includes actual component identity and untested assignments; companion checks
-cover synchronization, identity rejection, tampering and alias isolation.
-
-EngineeringSession.claim explicitly refuses mechanical execution until motion
-recovery/input restoration are wired. No public planner/catalog entry is added.
-This enables accepted intention storage/preview as a prerequisite for startup
-scope validation; it is not a claim of player-facing construction or restart
-recovery. Scoped TypeScript and Java server/client compile passed. GPT-6-Luna/high
-focused canonical/guard check found no concrete bypass; no tests or edits by the
-helper. New runtime coverage awaits CI. Next: derive startup denial bindings from
-these accepted component identities and wire input/commit recovery before lifting
-the execution guard and proving the full dedicated-server shutter flow.
-
-Isolation checkpoint23377a1 is now all5 green in CI40994181567, including the
-dedicated multiplayer job. Reservation679f25f and canonical integration13df4c6
-are the next source batch awaiting runtime verification. Pinned26.3 startup
-inspection in work/minecraft-server-startup-26.3.txt confirms loadLevel calls
-createLevels then prepareLevels before the normal server tick loop. Choose an
-early level-load hook only after checking exact Fabric hook position and whether
-spawn preparation executes queued physics; SERVER_STARTED alone is not assumed
-early enough. FunctionalTrial.load is data-only but still assumes electrical
-contracts for pending inputs, so mechanical recovery needs its own typed state.
-
-Startup recovery wiring now compiles. A required MinecraftServer.createLevels
-RETURN mixin initializes the project manager after dimensions exist, before
-loadLevel proceeds to spawn preparation. The pinned GameTestServer also calls
-loadLevel. Project checkpoints persist strict shutterMotion facts; load derives
-expected scope from the accepted canonical component and active operation, checks
-the workspace, then startup installs denial-only bindings. Save revalidates that
-scope. Pending motion blocks intention/workspace replacement and overlapping
-neighbor assignments, including an otherwise permitted owner. No lease/ticket
-is restored. Invalid data fails startup before normal project execution.
-
-New native proof asserts hook completion before test ticks, writes/reloads a real
-project checkpoint, checks absent delegation, invokes the production manager's
-denial restoration, rejects an altered journal operation and a neighboring lease,
-then checks actual queued motion stays denied. Scoped Java server/client compile
-passed. GPT-6-Luna/high focused scope/startup check found no concrete blockers;
-no helper tests or edits. This is not a full saved-world reboot proof yet. Input
-restoration, actual commit orchestration, explicit fresh-authority reconciliation,
-safe release and mechanical trials remain before lifting the execution guard.
-
-Canonical/reservation source654ab73 Fabric passed all74 required native tests in
-CI40995004043 (actual log03:02:19 UTC inspected). Four jobs passed; dedicated
-multiplayer remains live at inspection, so the whole run is not yet all-green.
-
-Update: canonical/reservation654ab73 is now all5 green in CI40995004043. Recovery
-hook/checkpoint sourcefe203f5 is the next batch awaiting its own runtime proof.
-The existing dedicated harness already reboots the same saved world between its
-first and second flows (MultiplayerGameTests.java around prepare-restart and the
-second TestDedicatedServerContext). Extend that boundary with a separately
-labeled mechanical recovery fixture and a post-boot queued-event denial check;
-do not add another server boot merely for this proof or call it fresh inference.
-
-Saved-server mechanical recovery proof is now written in the ordinary CI native
-multiplayer flow (excluded from live inference runs). Before its existing first
-shutdown it stages a clearly labeled synthetic accepted shutter at320,100,0,
-records a prepared motion in an actual project checkpoint, registers denial,
-persists an on lever and queues a real event. Its one forced chunk stays loaded
-on the same saved world's next boot. Before normal second-boot project commands,
-the flow checks early recovery readiness, exact retained motion identity, no
-lease, on input, ordinary-arm rejection and actual queued-event denial after8
-game ticks. The CI database verifier requires shutter-recovery.done. No new boot,
-model invocation or human construction is claimed. Scoped client Java compile,
-JavaScript syntax and changed-file formatting passed; runtime proof awaits CI.
-
-Input restoration should reuse or align with FunctionalTrial's existing per-input
-write-ahead original/last/before/pending facts rather than invent unrelated
-authority-bearing data. Its current contract/pose observation assumes electrical
-outputs and static build geometry; mechanical trials need actual aperture/head/
-payload samples and guarded input transitions. Keep construction disabled until
-that controller, interruption/reconcile and safe release are integrated.
-
-Startup sourceeb676c0 Fabric passed all75 required native tests in CI40995721852,
-actual03:09:50 UTC log inspected. Four jobs passed; dedicated multiplayer remains
-live at inspection, so whole-run success is not yet claimed.
-
-Update: startup sourceeb676c0 is now all5 green in CI40995721852, including the
-dedicated server. The new saved-server fixture09f06e9 still awaits its own CI.
-
-Mechanical pending inputs now decode through FunctionalTrial's existing WAL,
-using a canonical input-only recovery contract with no output cases or functional
-pass. Ordinary test startup remains unsupported/claim-gated for shutters. The
-saved-server fixture also stages the actual input WAL (original off, last on,
-before off) under the accepted component scope, then verifies its retention and
-continued absence of a lease on boot. This proves neither an authorized input
-restoration nor mechanical functional testing yet. Scoped Java server/client
-compile passed; the updated runtime proof awaits CI.
-
-Explicit input reconciliation now compiles. A private claim exception is limited
-to PAUSED canonical shutters with pending motion AND input WAL, BUILD permission
-and test/isolation acquisition. Only the explicit resume branch can request it;
-ordinary mechanical claims remain rejected. Resume validates/restores the denial
-binding, obtains a fresh normal creative/connection/project-grant/reservation
-fence, checks a stable before/terminal pose and complete reserved environment,
-then uses existing input WAL restoration. It remains PAUSED, retains the motion
-record/denial, creates no commit/pass, and releases only a successfully acquired
-lease in finally. Changed/unloaded/unsettled data remains preserved.
-
-The native saved-server flow now forces the four chunks covering its complete
-isolation envelope, then drives survival-mode resume refusal and creative-mode
-owner resume through the native connection. It requires original off restoration,
-no lease, retained prepared motion and continued arm denial; component build after
-input restoration must refuse without replacing operation identity. The verifier
-requires shutter-input-recovery.done in ordinary CI. Planning/context changes are
-also blocked while motion remains pending, before model dispatch. Scoped Java
-server/client compile and JavaScript syntax/format checks passed; new runtime
-proofs await CI. GPT-6-Luna/high focused reconciliation check found no concrete
-fresh-authority, overwrite or release bypass; no helper tests/edits.
-
-Prior WAL/saved-server source4000159 Fabric passed all75 required native tests in
-CI40996526932 (actual03:18:12 UTC log inspected). Four jobs passed; dedicated
-multiplayer is still live at inspection, so the new reboot marker is not yet
-claimed proven. The earlier focused input-decoder/fixture check also found no
-concrete bypass or seed flaw. Remaining: explicit physical position reconciliation,
-guarded actuation, mechanical traces, construction and the full M3 player flow.
-
-Update: source4000159 is now all5 green in CI40996526932. Dedicated job completed
-03:23:59 UTC; its actual success log and downloaded coordination/shutter-recovery.done
-(passed), exact project and motion IDs were inspected. Artifacts:
-work/shutter-recovery-proof-40996526932. This proves the synthetic fixture's real
-saved-server restart, retained input WAL and queued-event denial, with no restored
-lease. It does not prove fresh inference, Mojang authentication, player placement,
-authorized input restoration or a functional shutter trial. Reconciliation source
-82bb63f is the next batch awaiting its own runtime proof; it adds the separate
-required shutter-input-recovery.done marker.
-
-Physical reconciliation now compiles. A second explicit resume after input WAL
-restoration obtains a fresh recovery-only lease, checks accepted scope, full
-environment, stable before/terminal pose and agreement between input and piston.
-The gate durably records an observation receipt, rechecks authority/pose/binding,
-then changes pending denial to identity-bound idle denial, never to a ticket.
-The original physical journal and observed pose/tick are archived separately;
-clearing the checkpoint does not invent a commit or functional pass. Checkpoint
-failure restores the old journal/pending denial. Both phases always release their
-fresh lease. Canonical mechanical designs with no pending motion are now guarded
-on startup too, so clearing a journal cannot silently restore vanilla actuation.
-
-Two new native core tests cover missing authority, failed receipt persistence,
-post-receipt revocation, no ticket, matching rollback, foreign replacement and
-no-load idle registration. The dedicated flow adds conflicting glass preservation,
-explicit owner reconciliation, receipt inspection, no pass/lease and retained
-idle denial on the already-existing third saved-server boot. The verifier requires
-shutter-position-reconciled.done and shutter-position-recovery.done. Scoped Java
-server/client compile, changed JavaScript format/syntax checks passed; runtime
-proofs await CI. GPT-6-Luna/high focused boundary check found no concrete scope,
-permission or rollback flaw, and ran no tests/edits. Accepted-design replacement,
-placement ownership, guarded actuation and functional mechanical trials remain
-unfinished; no public shutter planner/catalog or construction is enabled.
-
-Input reconciliation source0a526f6 is now all5 green in CI40997277706/all75 native
-tests. Dedicated job success03:33:32 UTC; downloaded both shutter recovery markers
-(passed) and inspected alice.log03:29:44 creative-mode refusal, original input
-restoration and refused component-build messages. Artifacts:
-work/shutter-input-proof-40997277706. This proves native command input restoration
-after the real saved boot, its failure path and retained physical denial; no new
-inference or production account authentication is claimed. Physical reconciliation
-source6baa750 is the next batch awaiting its own CI and later-boot markers.
-
-Guarded actuation core now compiles. armGuarded requires the exact idle accepted
-design AND operation scope, fresh caller authority, a matching fresh physical
-snapshot and unchanged guard before issuing a new one-use ticket. hold requires
-the current owned ticket, exact operation/motion/physical description, then denies
-new events without reversing already-started physics. Explicit rearm tickets also
-retain their validated operation scope. No caller authority is serialized.
-
-Five new native tests cover durable preparation/actual commit, physical close and
-pull, endpoint/hold/reconcile and fresh ticket identity in all four rotations;
-foreign guards, revoked authority, journal/motion/operation substitution and
-actual queued-event denial after hold. Scoped Java server/client compile passed;
-new runtime proofs await CI. The GPT-6-Luna/high focused check found an operation
-substitution denial dead end in the initial API; fixed by storing exact Scope on
-the ticket and checking it at hold, with a specific negative case. The helper
-verified that fix without running tests or editing. No production trial controller
-or public construction is enabled by this core. Next: orchestrate journal/input
-WAL and current session authority through it, then mechanical game-tick traces
-and the full build/teach/test flow.
-
-Physical reconciliation source42a5b4c Fabric passed all77 required native tests
-in CI40998225016 (actual03:36:03 UTC log inspected). Four jobs passed; dedicated
-multiplayer is still live at inspection, so its later-boot markers are not yet
-claimed proven.
-
-Update: physical reconciliation42a5b4c is now all5 green in CI40998225016/all77
-native tests. Downloaded shutter-position-reconciled.done and
-shutter-position-recovery.done (both passed), and inspected Alice03:38:52 UTC
-conflict refusal followed by observed-position reconciliation. Artifacts:
-work/shutter-position-proof-40998225016. The existing later saved boot retained
-the accepted design's idle denial after pending journal clearance. This is no
-actuation permit or functional pass. Guarded actuation corec02de7d is the next
-batch awaiting CI; no new SDK calls/local test suites ran.
-
-Guarded-ticket source7d311f4 is now all5 green in CI40998959184, including all82
-required native tests (actual03:44:23 UTC log inspected). This covers four real
-owned close/pull cycles through durable preparation/commit, hold and reconciliation,
-plus substituted operation rejection and stopped queued motion. It is not the
-full player-facing construction/test experience.
-
-Actual session recovery orchestration now compiles. When restored input disagrees
-with a stable piston pose, explicit resume keeps its newly acquired recovery lease
-for one bounded queued move. ShutterRecoveryMotion pins the exact fence, current
-connection/controller, accepted scope, motion ID and input/environment. It archives
-the previous record before rearming, saves preparation before queueing, saves commit
-synchronously in the event hook, then monitors current authority/pose and timeout.
-Observed endpoint is durable before returning to pending denial/releasing the lease;
-another fresh resume records physical reconciliation. No input write, restored
-controller/lease or functional pass is invented. Failure stops/holds/cancels facts;
-pause releases in finally. Shutdown pauses sessions before finally clearing gates.
-
-The ordinary dedicated CI flow now explicitly seeds a labeled prior closed-pose/
-commit fixture, then drives native survival refusal, deterministic mode loss after
-preparation/before commit, and a fresh real payload pull under a new motion ID. It
-checks durable endpoint, unchanged off lever, original-record preservation, no pass,
-fresh observation and lease release. Verifier requires shutter-motion-recovery.done.
-The seeded prior closure is not actual AI construction/commit evidence. Scoped
-Java server/client compilation and JavaScript syntax/format checks passed; new
-runtime proof awaits CI. GPT-6-Luna/high focused current-authority/persistence/
-lifecycle check found no concrete blocker, with no tests or edits. Functional
-mechanical trace/controller and accepted-design placement/replacement ownership
-still remain before public preview/build/teach/test and full M3 can ship.
-
-Session recoverya5f2c77 is now all5 green in CI41000239381/all82 required native
-tests (actual03:58:54 UTC Fabric log inspected). Downloaded
-shutter-motion-recovery.done (passed) and inspected Alice04:02:08 mode-loss stop,
-then04:02:09 fresh recovery/settled messages. Artifacts:
-work/shutter-motion-proof-41000239381. This proves the real session pull, rejected
-pre-commit mode change, preserved original record, fresh motion identity, durable
-endpoint and released lease under the labeled synthetic prior-closure fixture.
-It is explicitly not a functional test or AI-generated/human-built prior closure.
-
-Timed physical evidence now compiles. ShutterTrace records raw input/base/front/
-aperture block states, entity kinds and moved states on each loaded server tick.
-Accepted design identity/frame/phase bind a digest. It allows bounded legitimate
-settling states, rejects unexpected physical/entity states, and requires all
-consecutive0..16 samples:8 settling ticks plus8 stable tick intervals. Exact
-replay recomputes metadata/verdict; one endpoint, gaps, wrong apertures, moving
-entities in the stable window and forged identity/timing/pass reject.
-
-Java and TypeScript share a synthetic codec fixture, clearly separate from world
-evidence. Five new native tests cover actual off/on/off tick observations in four
-rotations, replay/tampering/gaps and the shared codec; companion tests cover exact
-identity, partial evidence and negative samples. Scoped TypeScript/Java compile
-and changed JSON/TypeScript formatting passed. No local tests ran; new runtime
-proofs await CI. This is evidence infrastructure, not the session functional-trial
-controller. Next: feed these actual samples through guarded input/motion phases,
-restore original input/pose, and validate full cycle evidence before any pass.
-
-Timed-evidence1441171 is now all5 green in CI41001189365, including all87 required
-native tests (actual04:08:46 UTC Fabric log inspected). This proves actual timed
-off/on/off physical sampling and exact replay in four rotations, with gap/forgery
-rejections. It does not yet prove the new session functional controller.
-
-Session functional trials now compile. Explicit canonical /engineer test obtains
-a distinct private fresh BUILD/test claim; ordinary mechanical construction stays
-rejected. ShutterTrial pins fence/connection/controller/scope and full environment,
-uses existing per-input WAL plus pre-activation motion preparation, and commits
-through owned one-use tickets. It measures all off/on/off phases, then an additional
-guarded closing phase when original input was on. Each motion endpoint is durably
-recorded/held/reconciled; original input and pose must be restored before a pass.
-Java/TypeScript ShutterEvidence replay requires exact case order, consecutive phase
-game clocks, raw summaries and original-state restoration. Original input metadata
-is retained with scoped evidence in project/history/checkpoint memory. Loading
-retains complete evidence as stale and never restores a running trial or lease.
-
-Stop between phases can retain input WAL without a motion journal. Fresh recovery
-now handles that case; before a restoration that requires motion it creates a
-denial-only preparation, so existing explicit recovery can align the piston later.
-Canonical dynamic open/closed poses are recognized by stale-evidence checks.
-The focused GPT-6-Luna/high authority/persistence check found no concrete blocker;
-no helper tests/edits. Scoped TypeScript/Java compile and changed-file formatting/
-JavaScript syntax passed; native client compile caught a missing List import,
-which was corrected. No local test suites ran.
-
-New ordinary-CI native flows drive interruption before movement, input recovery
-without a motion journal, fresh complete off-origin trial, a native-player lever
-request followed by actual fresh closing recovery, complete on-origin trial and
-later saved-server evidence loading. Companion verification replays actual native
-samples and requires their matching durable SQLite pass checkpoint. Required new
-markers: shutter-functional.done and shutter-functional-recovery.done. Runtime
-proof is pending. Public mechanical preview/build/teach, placement/replacement
-ownership and full M3 acceptance remain unfinished; no phase/overall completion
-is claimed.
-
-Functional controller796f7bb CI41003259383 had four successful checks but FAILED
-dedicated multiplayer on the next saved-server boot. Downloaded artifact:
-work/shutter-functional-failure-41003259383. shutter-functional.done is passed;
-Alice04:34:21/04:34:25 UTC logs confirm both original off/on live cycles reached
-their checks, but overall durability is NOT proven. Startup04:37:38 refused
-"Mechanical sample cells differ from accepted frame". LocalFiles.GSON's default
-null omission removed null-valued moved-state members from persisted/transported
-evidence. Strict replay correctly rejected the incomplete frame; do not weaken it.
-
-Fix now compiles: wire trace schema2 uses explicit "none" moved-state strings for
-every cell, retaining the physical pose-v1 digest contract. Java/TypeScript readers
-and shared fixture agree; null/missing cells remain rejected. The actual timed
-world tests now replay through LocalFiles.GSON serialization, not only an in-memory
-JsonObject, covering disk/HTTP encoding. Scoped TypeScript/Java compilation and
-changed-file formatting passed; the full saved-server/SQLite proof must rerun.
-This pre-release format change does not migrate or alter retained failed artifacts.
-
-Ownership steps serving M3: (1) preview save/load must leave a player's vanilla
-piston running; (2) explicit fresh test/build delegation must persist denial-control
-ownership before world work and never restore a lease; (3) safe manual handoff,
-placement/replacement lifecycle and public preview/build/teach/undo remain to land.
-The first two foundations are implemented: new preview checkpoints store
-shutterOwned=false; startup only guards owned idle designs. Explicit testing takes
-ownership after current BUILD/creative/reserved-environment/operation checks, saves
-before installing the guard, and rolls metadata back on registration failure.
-Pending motion saves owned=true and contradictory loaded false rejects. Legacy
-checkpoints without the field conservatively retain prior guarding. Owned designs
-cannot yet be replaced; explicit handoff is still required before exposing that.
-New native tests drive actual vanilla motion after preview reload and reject
-discarding control on pending motion. GPT-6-Luna/high focused ownership check found
-no concrete bypass, with no tests/edits. Runtime proof of this batch is pending.
-
-Update:28002e0 CI41004663696 dedicated multiplayer PASSED, plus Fabric/all88 native
-tests, Windows and client. Downloaded shutter-functional.done and
-shutter-functional-recovery.done (passed), and inspected Alice04:48:45 permission
-interruption,04:48:48 off-origin pass and04:48:51 on-origin pass. Artifacts:
-work/shutter-functional-proof-41004663696. The saved-server and actual SQLite replay
-now pass with explicit moved-state values. Overall CI is still FAILED: companion
-found a misplaced negative test expecting valid design schema1 to reject. Corrected
-it to invalid design schema2, and separately checks old trace schema1 rejects;
-no reader rule was relaxed. Scoped TypeScript check/format passed; new tests await CI.
-
-Follow-up guards compile: controlled workspaces cannot be reselected/expanded or
-handed to a player before release, preventing old guard locations from being left
-behind a changed workspace. Replacement was already blocked. These are not a
-manual-release implementation. Pinned26.3 ServerLevel inspection confirms both
-private blockEvents and blockEventsToReschedule queues, plus shouldTickBlocksAt.
-Handoff must account for deferred events in loaded but non-ticking chunks; stable
-pose alone or a timer without queue/ticking evidence is insufficient. Do not clear
-player event queues to make release pass. Safe handoff/placement and public flow
-remain the next M3 work after this batch is green.
-
-- C1: explicit free-form selected-project/component engineering question gets
-  grounded read-only explanation, clarification or unsupported reply. Native
-  command, bounded provider, sources and no invented world authority are proven
-  for the fixed explanation flow. Existing cached lesson asks stay offline.
-- C2: explicit owner goals/constraints/preferences/decisions persist and inform
-  later reasoning. Connected owner append, authorized member read, immutable
-  authorship/revision, optimistic append/replay, SQLite rollback/corruption and
-  actual service/game restart are covered. Knowledge is separate from geometry
-  and measured evidence, with no private inventories.
-- C3: current owner/operator/connection gates before model dispatch; queue/budget,
-  durable replay, pre/post knowledge fences and stale native callback checks.
-  Stop and knowledge changes cancel reasoning; late results cannot be accepted.
-  Current project/auth/epoch, actual connection, selected lesson component/stage,
-  configured operator and dimension are checked again at callback time.
-
-Implemented: `/engineer remember <goal|constraint|preference|decision> <literal>`;
-`/engineer notes`; `/engineer discuss <question>`. Notes are append-only, max512
-characters, current read32/latest display8; older history stays stored. Recent8
-notes inform design reasoning and discussion, explicitly labeled owner-authored
-requirements, never observed/verified facts. Knowledge revisions are independent
-of blueprint revisions. Queued dispatch and completed results require the same
-knowledge revision; note edits abort active inference. Empty-note design context
-remains byte-for-byte compatible with older signed-in receipts.
-
-Discussion uses intended project/component sources and recent notes, no fresh
-world observations or private inventory. Reply schema: explanation/clarification/
-unsupported, bounded text and supplied-source IDs. Model text is literal advice,
-never commands, execution authority, a lesson change or a test result. Accepted
-conversation references are audit records. No automatic retry. Owner notes are
-explicit; no inferred/automatic memory summaries yet.
-
-Standalone mechanisms expose logical `root`; internal recipe block-group names
-are not selectable project components. CI caught and fixed that real mismatch.
-The manual proof artifact allowlist also needed its new -discussion suffix;
-focused GPT-6-Luna/high auth/transport checks caught it. No broad review cycle.
-
-## Phase14 proof and current gates
-
-- Foundation fc5b9e3: all5 CI40917639392; strict literal codec/storage and failures.
-- Native notes9198c2a: all5 CI40956149245; owner record, editor read/denial,
-  revocation, actual later boot read revision2 and append revision3, unchanged
-  blueprint/world evidence. Artifacts work/knowledge-proof-40956149245.
-- Conversation/cancellation c9b011d: all5 CI40958107235; deterministic native
-  revision2/3 answers; provider waits for real HTTP cancellation then deliberately
-  returns late, which is discarded. Exactly2 accepted audits/3 explicit starts.
-  Actual companion4392->4529 and later server boot. Artifacts
-  work/discussion-proof-40958107235. These were fixtures, not fresh inference.
-- Exact live-proof sourceb858364: all5 CI40959246919, inspected native logs at
-  21:42:34/21:44:17 UTC and passed cancellation/recovery markers. Artifacts
-  work/discussion-proof-40959246919. SDK/CLI0.164.0; no local test suites run.
-- **Fresh whole manual40960496759 SUCCESS**, response40961355992 SUCCESS on that
-  same source. Exactly one official SDK/Luna discussion call,10919 input/140 output.
-  Minecraft received it21:52:41 UTC. It cited both literal owner notes, preserved
-  the six-block entrance constraint, stated that visibility rationale was not
-  recorded, and claimed no evidence of construction or testing.
-- Native editor read/denial, revocation, real companion4709->5253, saved-server
-  reboot and revision2 read -> revision3 append passed. SQLite required one
-  discussion dispatch/answer and all3 literal owner notes; no block writes,
-  blueprint relabeling or functional evidence invented. Both live-discussion
-  markers passed. Artifacts work/live-discussion-proof-40960496759.
-- Request digest2b1b24e69d36bfef9e32957cd6806b74b21e42b13d3e9c7efaafd792b4e80cb5;
-  result5a666a4b4fdf67b866c095230571455c0d03255009dda02b3c96f82654d248e6.
-  Private started/untrusted/response receipts remain under
-  AppData/Roaming/minecraft-ai-engineer/acceptance. **That call is consumed; no
-  further SDK calls are needed for this slice.** Never reuse a started receipt.
-- Exact synthetic request/reply is tests/fixtures/live-discussion.json; offline
-  archive validation at its historical time never authorizes another request or
-  replays it into a different project. Screenshot inspected and copied unchanged:
-  docs/images/grounded-discussion.png. It proves received advice, not construction.
-
-Manual bridge: only the fixed synthetic notes/canonical intended lamp context,
-question, connected owner, run/source/stage/digest and15-minute expiry. GitHub gets
-bounded data only. Local responder alone invokes signed-in Codex. Durable exclusive
-started receipt forbids another model call; publication may retry a saved valid
-response. Normal native discussion deadline100s; CI-only manual exchange900s.
-
-## Shipped foundations and earlier evidence
-
-Dedicated Fabric server first, integrated-compatible logical-server core;
-server-owned identity/project ownership/permissions, real connection/epoch fences,
-shared authorized blueprints, private per-player tutorial cursors, component
-assignments and bounded write/read reservations. Creative build/repair/undo,
-targeted inspection and private inventory reads. Intended/observed/verified remain
-separate. Disconnect/revocation/conflict/restart never restores an execution lease.
-Optional overlay currently shows colored bounds/labels, not textured ghosts.
-Published alpha remains the older single-player reference, not these source features.
-
-PR19 structural revisions merged1e97bc3; b17ba07 all5 CI40797460992. Native old/new
-diff, explicit owner expansion/apply, no-edit preview, conflict/stop, third boot,
-12/16 timing, inverse repeated-position undo preserving player supports.
-PR20 restored layouts merged55a4858; 8c4e21e all5 CI40801344596. Fourth boot retains
-true old IDs; stale/corrupt/changed-base requests reject before quota. Undo retains
-immutable restoredLayout; operation scopes bind all captured physical bases.
-PR21 signed-in structural proof merged e3f26d8: whole40806992766 SUCCESS on ccd89d2,
-all5 CI40806790413. Actual player first support, AI rest, modification apply,
-stop/client conflict/removal/resume, real12/16 timing, service/game restart,
-shared lesson/revocation. Replay a504014 all5 CI40808845287. Failed40805062670 is
-retained: reversed repeaters matched geometry but failed actual timing. Four SDK
-calls consumed; no more for that slice. Repeater facing names its INPUT side.
-
-PR18 buffers mergedbebf6ca; final076e4dc all5 CI40768389557. Actual40766098371
-accepted raw8-block12/16 buffer and timing/sharing/restarts, but whole run failed
-at creative inventory fixture cleanup; corrected replay passed. Never call that
-whole manual run successful. Retained screenshots show actual blocks.
-
-PR22 Boolean logic mergedbb4e81f: finala3a3fcf all5 CI40913824351. Whole actual
-manual40910817937 SUCCESS on d3c8486/all5 CI40908760538. Luna behavior10795in/97out,
-Sol geometry12322in/1020out;13 rawblocks, named AND a/b0001, settle20. Separate
-owner confirm, preview with no edits, build, all8 actual forward/reverse rows,
-service4778->5851, revocation interruption, third boot, fresh resume, original
-a ON/b OFF restoration and retest passed. Trials16:30:43/16:31:11 UTC. Synthetic
-lever/backing section was seeded, not human mouse placement/Mojang auth.
-Exact positive/rejections: tests/fixtures/live-boolean-_.json. Failed40906470078:
-missing wall-lever backing and false serial-AND claim. Failed40908843817: overlapping
-torch/lamp. Rejected locally, no construction; cancelled after terminal rejection.
-All6 Boolean calls consumed; no more for Phase13. Artifacts work/live-boolean-proof-_
-and docs/images/boolean-restarted.png retain evidence. Replay is not fresh inference.
-
-Boolean behavior: schema2 truth-table,1..4 unique named inputs, complete2^N Boolean
-rows MSB-first, settle0..128 plus8 stable ticks. Digest truth-v2|names|bits|settle;
-legacy buffer-v1 edge identity unchanged. Generated outer schema1/revision2 binds
-named actual levers/lamp with no hidden ports. Actual every-tick traces reject
-transients, gaps, swapped rows/input vectors and forged verdicts. Restoration WAL
-survives interruption; fresh authority is required for resume. Geometry cannot pass
-function tests. Timed buffers preserve independently accepted rising/falling edges.
-
-## Runtime and operating decisions
-
-Java25 / Minecraft26.3 / FabricLoader0.20.1 / API0.165.0+26.3 / Loom1.17.21 /
-Gradle9.6; Node24.14 / TypeScript / SQLite / official SDK+CLI0.164.0. Toolchain:
-task work/fabric-tools/jdk-25.0.5+8. PowerShell login:false; max-workers1.
-Tests only on GitHub; locally scoped compile/format/syntax. Protected main has5
-required checks and zero required reviewers. Merge green focused PRs.
-
-One private localhost companion beside Josh's server/PC, no hosting purchase,
-public AI endpoint, credential sharing or separately billed fallback. General
-shared multi-user subscription eligibility remains unresolved; operator approval
-is not provider permission. Configured account-owning operator alone invokes AI.
-Planner forces ChatGPT login/openai provider, disables tools/apps and uses isolated
-read-only SDK work. No private inventories in shared model context/SQLite/audit.
-Model policy: Luna for catalog/behavior/buffers/discussion; Sol medium for Boolean
-geometry. Explicit MCE_MODEL overrides defaults, MCE_GEOMETRY_MODEL overrides only
-geometry. Doctor catalog probe does not prove Boolean-model availability. No retry.
-Official SDK/structured output docs rechecked before the discussion proof.
+partner and all six Phase2 features. Full requirements: docs/product-brief.md.
+Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
+
+Branch **phase/15-piston-motion**, draft **PR24**. Base main merge PR23:
+d3167a8f0a13c69ed6e301555802481a4bef559d. Pushed source0d55165 ran
+**CI41086749673**, now terminal FAILURE: all16 native mechanical markers passed,
+but the dedicated post-run SQLite verifier selected the wrong later retest.
+Companion npm-test timed out after10 minutes; Windows/Fabric/client passed.
+Local commit **f205ed7** fixes incompatible legacy electrical fit discovery and adds
+an authenticated HTTP shutter-proposal/acceptance proof. Current edits fix exact
+trial audit lookup and preserve mechanical ports/intent in discussion grounding.
+Push this batch and inspect its new complete CI result before claiming the slice green.
+Never restart or cancel a live proof merely because observation expires.
+Inspect actual git/CI before continuing.
+Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
+authorized; no approval pending. Tests run only on GitHub, never on his slow PC.
+Locally scoped compile/type/format/syntax only. Push regularly. Keep memory only
+in AGENTS.md and STATE.md. Earlier detailed chronology remains in Git history.
+
+## Phase15 Outcomes and next work
+
+- M1: real sticky shutter opens/closes an aperture, with actual sticky payload/head
+  settling in all horizontal rotations. Ordinary piston/obstruction negatives.
+- M2: motion writes and reads remain inside fresh delegated loaded scope through
+  queued commit, later finalization, human conflict, revocation and restart.
+  Durable records are facts/denials, never restored leases or functional passes.
+- M3: public preview/learn/build/test/undo as a project component, authorized sharing,
+  denial, interruption/reconciliation/restart and actual aperture observations.
+  Larger piston doors and general mechanical composition are still beyond this slice.
+
+Written source includes canonical reference/lessons/info/timing; guarded creative
+construction; off/on/off trials (plus original-ON restoration); recovery; explicit
+manual release; settled open-frame undo; and bounded AI catalog selection. Generic
+piston block allowlists remain closed. Do not ship this draft until final-source
+M1/M2/M3 proofs pass. Source features are not the published multiplayer release.
+
+Next actions:
+
+1. Finish observing CI41086749673. Inspect actual dedicated markers/logs and any
+   companion failure. Push f205ed7 after the current run is terminal, avoiding cancellation.
+2. Prove public build/interruption/aperture-conflict/resume/test, shared viewer
+   lesson/denial/revocation, prepared undo across fifth saved-server boot, and real
+   SQLite evidence replay. Fix actual failures without weakening production fences.
+3. Prove bounded shutter planning through gateway and then a fresh signed-in
+   selection/native flow, if needed after deterministic source is green. No new
+   shutter model call has run. Never replay old consumed receipts as fresh inference.
+4. Reconcile Phase15 Outcomes, finish any missing integration, update user/setup
+   docs and merge the green complete slice. Keep all broader milestones active.
+
+## Current implementation boundaries
+
+Canonical recipe catalog/shutter.json and ShutterDesign Java/TS derive exact
+geometry, metadata, resources and ports. Four placed blocks plus reserved aperture
+make five write cells; a rotated240-cell loaded read closure covers isolation and
+quasi-connectivity. Input off opens; on pushes one stone into the aperture. Sources
+reject forged geometry/behavior/authority/verification. General composition excludes
+mechanical templates explicitly; logical root is the standalone component.
+
+ShutterMotion uses vanilla's exact non-destructive one-source resolver. Retraction
+accounts for vanilla removing the head before resolving; preview never edits world.
+PistonMotionGate gates triggerEvent before that prelude. One-use scope-bound tickets
+recheck connection/grants/reservations/snapshot/power around synchronous motion WAL.
+Idle/Blocked states deny events. Hold does not reverse already-started finalization.
+ShutterJournal binds full accepted world/project/revision/component/operation scope.
+Early MinecraftServer.createLevels RETURN restores denials before normal world ticks.
+No loaded record restores a controller, callback, ticket or lease.
+
+EngineeringSession persists shutterOwned separately from preview. Preview never
+freezes a vanilla piston. Explicit fresh testing/construction acquires denial control;
+owned designs/workspaces cannot be replaced/reselected until release. Construction
+validates exact open/off partial geometry and clear isolation, uses existing placement
+WAL/operation scopes, and persists control before piston placement. Each tick and
+write rechecks authority/frame. Functional recovery restores original input under
+fresh permission, then separately reconciles/realigns physical position. Recovery
+alone never passes a function test.
+
+ShutterTrace wire **schema2**, pose-v1 digest:17 consecutive samples,8 settling ticks
+plus8 stable intervals. Explicit moved-state **"none" strings** are required: default
+Gson drops JsonNull members. Java/TS replay checks every raw state/entity/moved cell,
+phase order/identity/timing/summaries and original input/pose restoration. Matching
+endpoints or synthetic geometry do not prove function. Saved complete evidence is
+stale after reload, never resumed running state. SQLite/native samples must agree.
+
+Manual release observes both vanilla event queues and in-flight dispatch through
+required read-only mixins. Requires loaded/ticking/quiescent physical frame, no moving
+entities, actual power/extension agreement, fresh BUILD/creative/reserved authority,
+exact idle binding and post-receipt rechecks. It deletes no events and edits no blocks.
+False ownership saves after guard retirement; save failure reinstalls denial. Undo
+requires fresh UNDO rights, settled open/off partial frame, historical reserved reads,
+quiescence and per-target checks. It removes only inverse journal entries, preserves
+player blocks and retains denial until explicit release. Powered/closed frames refuse;
+open manually after release or use explicit position recovery first.
+
+Bounded planner adds sticky-shutter via separate immutable PLANNING_MECHANISMS,
+routing only to the canonical factory; delay is fixed1, movement space must fit,
+revision template/rotation cannot change. Electrical MECHANISMS/component allowlist
+stay separate. No arbitrary piston geometry, larger-door substitution or invented
+verification. Current operator/quota/cancellation/proposal-acceptance fences remain.
+
+## Evidence and current failures
+
+Latest full green foundation: **6b1c7a3/all5 CI41007358335/all89 native tests**.
+Later sources passed all91 native tests and four jobs but dedicated flows exposed
+fixture/wait issues. Current full-source runtime is still unproven.
+
+- 796f7bb/CI41003259383: live off/on-origin trials passed, saved boot rejected missing
+  moved-state members. Fixed with schema2 "none" values, strict Gson roundtrip proof.
+  28002e0/CI41004663696 dedicated/SQLite recovery passed; its companion negative-test
+  typo was corrected by c97fb29/all5 CI41005633394.
+- 6efcc37/CI41008165978: native90 and four jobs passed; native restart wait queried
+  session before project selection. Fixed by waiting on manager selection map.
+- b652b50/CI41083381732: native91 and four jobs passed; handoff wait read EXTENDED on
+  transient MOVING_PISTON. ae3e87c waits for all exact settled pose cells instead.
+- **ae3e87c/CI41084840244**: both shutter-handoff.done and shutter-handoff-recovery.done
+  passed. Actual release/manual cycles/restart/fresh test/release proven. Public
+  preview/teach/info/timing worked, but construction fixture reused x400 occupied
+  by saved AND circuitry. truth-accepted-source confirms neighboring blocks inside
+  isolation. 0d55165 moves construction/undo fixture only to **x600**, preserving AND
+  and production checks, and adds separate status-bearing placement assertions.
+- f205ed7 fixes discovered fit regression: legacy electrical project IDs can be
+  non-UUID; evaluating the strict shutter option must omit that incompatible option
+  rather than invalidate all electrical choices. Explicit shutter identity remains
+  strict. New tests cover this and authenticated HTTP proposal/acceptance. No local
+  tests. CI41086749673 companion tests remain live; final logs still needed.
+
+Downloaded failed evidence directories under task work/: shutter-functional-failure-
+41003259383, shutter-handoff-failure-41008165978, shutter-construction-failure-
+41083381732, shutter-undo-failure-41084840244. Passing functional/SQLite proof:
+shutter-functional-proof-41004663696. Native offline players and synthetic support
+fixtures never establish Mojang authentication, human mouse placement or inference.
+
+Dedicated required markers include shutter-recovery/input-recovery/position-reconciled/
+position-recovery/motion-recovery/functional/functional-recovery/handoff/handoff-recovery/
+construction/sharing/bob-view/bob-denied/undo/undo-prepared/undo-recovery .done files.
+Verifier scripts/ci/verify-memory.mjs requires actual native observations and SQLite
+checkpoint replay. Fifth boot tests durable prepared undo, never a restored lease.
+Focused GPT-6-Luna/high checks found no concrete authority/destructive/model-boundary
+blockers; do not restart broad review. Follow up only for a changed sensitive boundary.
+
+## Shipped foundations and model-call receipts
+
+Dedicated logical-server core, integrated compatibility, server-owned identity,
+permissions, project memory, per-player tutorials, component assignments, bounded
+reservations, creative build/repair/undo and private inventory inspection exist.
+Intended/observed/verified stay separate. Current overlay is bounds/labels, not
+textured ghosts. Published v0.1.0-alpha.1 remains the older single-player reference.
+
+Earlier green milestones: PR19 structural revisions main1e97bc3; PR20 restored
+layouts55a4858; PR21 signed-in structural proof e3f26d8 (whole40806992766 on ccd89d2,
+all5 CI40806790413; replay a504014/all5 CI40808845287); PR22 Boolean logic bb4e81f
+(finala3a3fcf/all5 CI40913824351; whole40910817937 on d3c8486/all5 CI40908760538).
+Native tests caught reversed repeaters and false serial-AND proposals: repeater
+facing names its INPUT side. Keep physics proof, never trust a geometry/rationale claim.
+
+**Four structural and six Boolean SDK calls are consumed; never repeat them.**
+Phase14 PR23 finald6a4f3d/all5 CI40961971444; whole signed-in discussion40960496759
+on b858364/all5 CI40959246919 and response40961355992 passed. Exactly one Luna call,
+10919 input/140 output, received21:52:41 UTC; cited literal notes, preserved six-block
+constraint and admitted missing rationale. **That discussion call is consumed.**
+Request digest2b1b24e69d36bfef9e32957cd6806b74b21e42b13d3e9c7efaafd792b4e80cb5;
+result5a666a4b4fdf67b866c095230571455c0d03255009dda02b3c96f82654d248e6.
+Private exclusive started/untrusted/response receipts remain under
+AppData/Roaming/minecraft-ai-engineer/acceptance. Historical tests/fixtures/live-_.json
+and screenshots are codec/evidence archives, never authorization for another call.
+Docs/acceptance-guide.md and Git history retain detailed earlier evidence.
+
+Explicit notes/grounded discussion ship as `/engineer remember`, notes, discuss;
+immutable owner authorship, read grants, knowledge revision fences and cancellation
+are proven. Routine lesson ask stays offline. This first slice does not complete
+natural action interpretation, inferred summaries or general project retrieval.
+
+## Operating decisions
+
+One private localhost companion beside Josh's server on his PC. No hosting purchase,
+public AI endpoint, credential sharing, separately billed service or API key. Only
+the configured account-owning operator invokes Codex. General shared multi-user
+subscription eligibility remains unresolved; operator approval is not provider permission.
+Existing official SDK uses ChatGPT login, tools/apps disabled, isolated read-only
+reasoning. No private inventories in shared prompts/memory/audit. No automatic retry.
+
+Java25/Minecraft26.3/FabricLoader0.20.1/API0.165.0+26.3/Loom1.17.21/Gradle9.6;
+Node24.14/TypeScript/SQLite; SDK+CLI0.164.0. Toolchain task work/fabric-tools/
+jdk-25.0.5+8. PowerShell login:false. Gradle max-workers1. Protected main has5
+required checks, zero required reviewers. Merge green complete PRs. Default Luna
+for catalog/behavior/buffer/discussion, Sol medium for Boolean geometry. Respect
+MCE_MODEL and MCE_GEOMETRY_MODEL. No new mechanical model call has run.
 
 ## Remaining full roadmap
 
-1. Broader electrical/mechanical engineering: comparator/observer/piston behavior,
-   signal strength/attenuation, connections, mechanics and larger systems. Preserve
-   functional game-tick proof, movement dependencies and player edits; no
-   buffer/catalog/Boolean-only substitute for the engineering partner.
-2. Remaining E1: natural action interpretation, broader follow-up/recent-reference
-   handling, durable rationale/summary retrieval and later project identification.
-   First discussion/explicit-note slice does not complete this requirement.
-3. E3: broader missing/orientation/connection/timing/interference/inconclusive
-   diagnosis, explicit repair previews and textured directional ghosts.
+1. Broader electrical/mechanical engineering: comparators, observers, signal strength,
+   connections, larger piston mechanisms and multicomponent systems; actual tick proof.
+2. E1: natural action interpretation, broader recent/follow-up references, durable
+   rationale/summaries, later project identification and retrieval.
+3. E3: richer missing/orientation/connection/timing/interference/inconclusive diagnosis,
+   explicit repair previews and textured directional ghosts.
 4. E4: full signed-in preview -> player functional section -> AI rest -> interrupt/
-   modify/resume -> actual tests -> service/game restart -> later explanation and
-   richer visuals. Bounded proofs do not establish that complete experience.
+   modify/resume -> actual tests -> service/game restart -> later explanation/visuals.
+   Bounded fixtures do not prove this complete experience.
 5. Phase2, all unstarted: voice; physical NPC; genuine survival gathering/placement;
    schematic import/export; measured size/resources/latency/reliability optimization;
    multiple coordinated independent builders.
-6. Completed multiplayer release/package/setup instructions; published alpha is
-   still the older single-player reference. Production authentication and shared
-   subscription eligibility require evidence, not synthetic offline player proofs.
+6. Multiplayer release/package/setup, production authentication and eligibility evidence.
+   Do not relabel the old single-player alpha or synthetic native players as complete.
 
-Next after PR23 ships: establish mechanical behavior contracts and piston-motion
-failure boundaries before expanding the generated block allowlist. Write the next
-slice's Outcomes from actual source/mechanics research; retain all full milestones.
+CI41086749673 dedicated native game flow COMPLETED successfully (Alice BUILD
+SUCCESSFUL in5m34s). Downloaded work/shutter-planning-failure-41086749673 confirms
+all16 mechanical markers passed, including viewer sharing/denial/revocation,
+construction/interruption/conflict/test, manual handoff/restart and prepared undo
+recovered on fifth actual boot. The dedicated job still FAILED afterwards in
+verify-memory.mjs:81: SQLite query picked the latest pass for the project (tick5350)
+instead of the earlier archived off-origin trial (tick796). The later fourth-boot
+retest is legitimate and both sets must remain distinct. Filter the durable audit
+lookup by the archived trial's first actual tick; retain full strict replay,
+original-input equality and exact full-evidence comparison. Do not drop tick fields
+or loosen the validator. Companion job still live; full CI remains unproven.
 
-2026-10-30 continuation: committed c97fb29 passed all5 checks in CI41005633394,
-including dedicated multiplayer. Safe handoff core now inspects both vanilla
-block-event queues and in-flight event dispatch through a required read-only
-ServerLevel mixin. releaseIdle requires an exact idle design binding, complete
-already-loaded read bounds, a block-ticking base, no pending/dispatching event,
-no moving blocks and actual vanilla power/extension agreement. It rechecks current
-authority, guard and physical basis after the durable request callback; it never
-clears queues, edits blocks or grants a motion ticket. Core compile passed.
-New native test covers queued-event preservation/refusal, a newly queued event
-inside persistence, post-receipt permission loss and ordinary vanilla motion after
-successful release. Runtime proof awaits CI. This is still internal foundation:
-public release command/session ownership persistence, additional deferred-chunk
-coverage and full preview/build/teach/undo remain unfinished. Full goal stays active.
+Read-only mechanical discussion now includes the canonical mechanical intention
+and retains both standalone ports, including the reserved-air aperture that has
+no placed block. The prior generic port filter omitted it. Electrical/composite
+port filtering remains unchanged; worldEvidence stays not-inspected and no pass
+or fresh observation is supplied. Added a regression distinguishing four placed
+blocks from the two intended ports. Scoped TypeScript/format checks pass; no local
+runtime tests or model call. This is intended grounding, not measured evidence.
 
-Manual release now compiles as `/engineer release`: fresh BUILD/creative test
-reservation, pinned current connection/fence/design and complete reserved footprint
-checks surround the durable release-request receipt. Ownership false and paused
-status save together after idle denial removal; a failed save reinstalls the
-matching guard and owned state. The fresh lease is always released. It performs
-no block writes and does not grant a functional pass. GPT-6-Luna/high focused
-authority/persistence check found no concrete blockers; no helper tests or edits.
-Dedicated native proof now covers survival refusal, real release, actual vanilla
-lever close/open, fourth saved-server boot with manual control retained, then a
-fresh full functional trial reacquiring ownership and another explicit release.
-Both new handoff markers are required by the companion verifier. A native core
-case also distinguishes loaded non-ticking chunks with queued events. These new
-runtime proofs await CI; no local tests run. Prior core6b1c7a3 CI41007358335 has
-four successful jobs and dedicated multiplayer still live at last inspection.
-Public construction/teach/undo and the full objective remain unfinished.
-
-Core6b1c7a3 CI41007358335 is now SUCCESS on all5 checks. Actual Fabric job
-123905182726 log05:15:34 UTC confirms all89 required native tests passed, including
-the queued-event/authority handoff core case. Session/command/restart additions
-are committed as eac720b with scoped Java server/client compilation, JavaScript
-syntax and changed-file Prettier checks passed; no local tests. They require their
-own new CI run. Next M3 construction work should reuse the existing placement WAL
-and conflict reconciliation, with an incomplete-frame validator and durable guard
-ownership before piston placement; the finished-mechanism test validator cannot
-serve that purpose. No public mechanical construction is enabled yet.
-
-M3 construction next slice: preserve an unpowered open partial frame and all
-player blocks while building missing canonical shutter blocks. Proof starts with
-native rejection of powered input, wrong-facing actuator, occupied aperture and
-incomplete read authority, then dedicated real build interruption/resume and
-functional trial. Reuse existing placement WAL and immutable operation scopes;
-acquire durable denial ownership before placing any piston. Do not infer a pass
-from construction. Public reference/build/undo completion remains outstanding.
-
-M3 construction implementation now includes a public `/engineer reference
-sticky-shutter` preview, mechanical component information and offline lesson/timing
-answers. Preview takes no control and writes no blocks. Explicit build acquires
-full read/write reservations, validates all five write targets (including aperture)
-inside the workspace, persists denial ownership before piston placement, and uses
-the existing placement WAL/operation scopes. Exact open/off partial-frame and
-isolation checks run before acquisition and on every execution tick; resume needs
-fresh authority after existing journal/dependency reconciliation. GPT-6-Luna/high
-focused construction authority check found no concrete bypass; no helper tests or
-edits. Generic piston block allowlists remain closed.
-Native fourth-boot proof now uses real public project/select/reference/teach/info/
-ask/build commands, an explicitly synthetic player support, actual assistant
-placement, stop before actuator placement, preserved glass aperture conflict,
-fresh resume and actual off/on/off test. It requires shutter-construction.done.
-New core proof rejects powered input, foreign facing, occupied aperture and
-incomplete read authority. Runtime proof is pending; public mechanical undo,
-AI selection/composition, sharing/denial and full M3 remain unfinished. This is
-not an overall completion or a multiplayer release.
-
-Release source6efcc37 CI41008165978 FAILED only dedicated multiplayer; the other
-four checks passed. Inspected downloaded work/shutter-handoff-failure-41008165978:
-functional/recovery markers passed, but no handoff marker. Native third-boot test
-wait queried session() before the asynchronous project-use command selected one,
-throwing the intended ambiguous-project refusal. Fix waits on the manager's
-selection map instead, as existing restart flows do; production selection rules
-remain unchanged. Manual release itself still needs runtime proof.
-
-M3 undo slice: allow only a settled, open/off exact partial frame, full reserved
-historical read closure and fresh UNDO permission. Physical quiescence checks
-include both event queues, in-flight dispatch, block ticking, moving entities and
-actual power/extension agreement. An explicit undo can reacquire persistent idle
-control from manual mode before its first removal; no movement ticket is issued.
-Reuse the existing inverse projection, placement journal and player-dependency
-checks, and revalidate the mechanical frame/authority before each removal. Keep
-idle denial after completion until explicit manual release. Powered/closed or
-changed structures refuse without automatic compensating motion; preserve them
-and use manual release/opening or explicit position recovery first.
-Proof adds an occupied-aperture refusal with intact journal, then manual release,
-fresh real native undo of only three assistant blocks, retained player support and
-release of the partial remainder. Required marker shutter-undo.done. Compile and
-GitHub runtime proof pending. Full goal and remaining Phase15 Outcomes stay open.
-
-Undo source compiles for server/client; JavaScript syntax and changed-file
-formatting pass. GPT-6-Luna/high focused destructive/authority check found no
-concrete unsafe removal, authorization or persistence issue; no helper tests or
-edits. Prior construction sourceb652b50 CI41083381732 has four successful jobs and
-dedicated multiplayer still running. Actual Fabric log15:44:40 UTC confirms all91
-required native tests passed. Construction flow, new handoff flow and new undo
-still need their corresponding dedicated runtime proofs; do not call them passed
-from the native core count.
-
-Strengthen undo proof before publication: fourth boot now fault-stops the real
-beginUndo preparation after durable target/ownership save and before any removal,
-releasing its lease. A fifth actual saved-server boot must retain the three-block
-inverse target, physical mechanism and idle denial, with no execution authority.
-A native `/engineer undo` then reacquires fresh authority, removes only those three
-blocks, retains the player support and releases manual control. Require both
-shutter-undo-prepared.done and shutter-undo-recovery.done in addition to the final
-undo marker. This is real game restart recovery, not a codec reload.
-
-Construction sourceb652b50 CI41083381732 FAILED only dedicated multiplayer; all
-other4 checks passed and Fabric confirmed all91 native tests. Downloaded artifact
-work/shutter-construction-failure-41083381732 shows actual manual release reached
-native lever motion, then the test wait read EXTENDED from vanilla's temporary
-MOVING_PISTON base during retraction (MultiplayerGameTests:217). No handoff marker
-completed, and construction flow was not reached. Fix waits for all exact accepted
-base/front/aperture endpoint states and no moving entities, rather than reading a
-property absent on transient blocks. Production motion/authority rules unchanged.
-The full handoff/construction/undo flow still requires a successful new run.
-
-M3 bounded planning integration: structured catalog selection can now choose
-sticky-shutter through a separate immutable planning-options list. The electrical
-recipe library and composed-component template type still exclude mechanics.
-Only the canonical shutter factory may produce its geometry/metadata; delay2+,
-unknown adaptations, a changed revision template/rotation and insufficient
-aperture dimensions reject. Model explanations cannot rewrite the recipe or
-claim a pass. The prompt explicitly distinguishes this one-cell shutter from
-larger doors and arbitrary piston mechanisms. Existing operator ownership,
-connection/cancellation, quota and proposal/acceptance fences remain in place.
-Official Codex SDK page fetched: https://developers.openai.com/codex/sdk ; pinned
-SDK declaration retains outputSchema for structured turns. No SDK/runtime update,
-API key or fresh model call. Existing account-owning operator restriction remains.
-New companion tests cover canonical output, fit-before-dispatch options, adaptation
-and revision refusals, and continued component-tree rejection. Scoped npm run
-check passes; runtime tests await GitHub. CI41084840244 on prior ae3e87c still has
-four successful jobs with dedicated multiplayer live at inspection. General
-mechanical composition and a fresh signed-in shutter selection proof are not done.
-
-M3 sharing proof added to ordinary native multiplayer flow while Bob is still
-connected: owner shares the actual accepted shutter as viewer, Bob receives its
-mechanical preview/info/lesson/timing and changes only his own tutorial cursor.
-Viewer test/release/undo requests must all deny permission before world authority;
-owner verifies idle ownership/no lease or pending input/motion. Actual revoke
-must clear Bob's overlay and refuse subsequent component facts. Three new markers
-are mandatory. No production authorization rules changed and no model call is
-involved. This is still pending runtime proof, not Mojang authentication evidence.
-The focused GPT-6-Luna/high planner-boundary check found no concrete authority,
-canonicality or composition bypass; no helper tests or edits.
-
-This planning/sharing batch passes scoped TypeScript and Java server/client
-compilation, changed-file Prettier, JavaScript syntax and diff whitespace checks.
-No local test suite or model inference ran. Runtime tests remain GitHub-only.
-
-Sourceae3e87c CI41084840244 FAILED only dedicated multiplayer; other4 checks
-passed. Downloaded work/shutter-undo-failure-41084840244 confirms both
-shutter-handoff.done and shutter-handoff-recovery.done PASSED: real manual cycles,
-actual restart with manual control, and fresh test/release worked. Public preview,
-teach/info/timing reached the construction fixture, but its initial generic
-assertion failed. The fixture reused x400, already occupied by the actual saved
-AND project: truth-accepted-source confirms anchor400,100,0 and neighboring stone,
-lever/torch/repeater cells within the shutter's required isolation closure. The
-preview's five target cells were air, but the larger read environment was not.
-Move only this disposable construction/undo fixture to x600, preserving the AND
-project and production isolation checks. Add separate pre-placement and first-tick
-assertions with current status so any further refusal is visible. Construction
-and undo still require successful runtime proof; no completion claimed.
-
-Additional M3 companion proof now compiles: authenticated real HTTP gateway calls
-must refuse a non-planning member and impossible dimensions before provider
-invocation. A deterministic shutter decision must round-trip through exact
-canonical validation with bound project/revision and untested status, remain only
-a proposal while accepted revision1 stays unchanged, then persist only after
-explicit server sync accepts revision2. This is an adapter/authority test, not
-fresh model inference. No local tests ran; GitHub runtime pending.
-
-Source inspection while CI41086749673 remains live found a selector compatibility
-regression: fittingMechanisms evaluates every option, and the new strict shutter
-factory rejects legacy non-UUID electrical project IDs with400. Previously valid
-electrical requests could fail before their provider is reached. Treat mechanical
-contract incompatibility as an unavailable mechanical option during fit discovery;
-keep explicit canonical construction/identity rejection intact. Do not rewrite an
-ID or weaken its reader. Added regression covers valid electrical options retained,
-shutter omitted, mechanical-only revision refused and explicit invalid shutter
-factory rejection. Scoped TypeScript/format checks pass; no local runtime tests.
-CI companion npm-test step is still live at inspection; its final logs will decide
-whether this explains its extended duration. Dedicated proof is not cancelled.
+CI41086749673 is now terminal FAILURE. Companion exceeded its10-minute job
+limit (test output stopped after component-memory cases; no explicit exception
+pinpoints its barrier). The incompatible-fit path is fixed from source evidence,
+but a successful rerun is still required to establish that it resolves the hang.
+No live handle is being discarded or restarted on an observation timeout.
+All historical model calls, including PR18 buffer proof40766098371, are consumed;
+archived results never authorize a new inference.
