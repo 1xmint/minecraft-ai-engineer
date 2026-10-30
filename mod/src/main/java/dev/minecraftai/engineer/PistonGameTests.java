@@ -13,6 +13,34 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=70) public void timedShutterTraceEast(GameTestHelper helper){timedTrace(helper,0);}
+    @GameTest(maxTicks=70) public void timedShutterTraceSouth(GameTestHelper helper){timedTrace(helper,90);}
+    @GameTest(maxTicks=70) public void timedShutterTraceWest(GameTestHelper helper){timedTrace(helper,180);}
+    @GameTest(maxTicks=70) public void timedShutterTraceNorth(GameTestHelper helper){timedTrace(helper,270);}
+    private static void timedTrace(GameTestHelper helper,int rotation){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-timed-shutter",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),rotation);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        ShutterTrace[] traces={new ShutterTrace(design,false),new ShutterTrace(design,true),new ShutterTrace(design,false)};long[] starts={0,0,0};
+        for(int tick=8;tick<=58;tick++){final int at=tick;helper.runAtTickTime(tick,()->{
+            int phase=at<25?0:at<42?1:2;if(at==8 || at==25 || at==42){starts[phase]=level.getGameTime();if(at!=8)helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));}
+            traces[phase].observe(level.getGameTime()-starts[phase],level);
+            if(at==24 || at==41 || at==58)helper.assertTrue(traces[phase].passed(),"Actual consecutive mechanical phase must settle and stay correct: "+traces[phase].failure());
+            if(at==58){
+                for(int i=0;i<3;i++)helper.assertTrue(ShutterTrace.read(traces[i].json(),design,i==1).passed(),"Actual raw physical samples replay against independently accepted pose");
+                var forged=traces[1].json();forged.getAsJsonArray("samples").get(12).getAsJsonObject().getAsJsonObject("states").addProperty("aperture","minecraft:air");boolean rejected=false;try{ShutterTrace.read(forged,design,true);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"Forged pass cannot conceal a wrong physical aperture sample");
+                var gap=traces[1].json();gap.getAsJsonArray("samples").remove(9);rejected=false;try{ShutterTrace.read(gap,design,true);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"Missing mechanical game-tick evidence cannot retain a pass");helper.succeed();
+            }
+        });}
+    }
+    @GameTest public void sharedMechanicalTraceFixtureBindsAcceptedIntention(GameTestHelper helper) throws Exception {
+        com.google.gson.JsonObject source,raw;
+        try(var design=ShutterTrace.class.getResourceAsStream("/engineer/fixtures/shutter-design.json");var trace=ShutterTrace.class.getResourceAsStream("/engineer/fixtures/shutter-trace.json")){
+            source=com.google.gson.JsonParser.parseString(new String(design.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();raw=com.google.gson.JsonParser.parseString(new String(trace.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        }
+        var design=ShutterDesign.read(source);helper.assertTrue(ShutterTrace.read(raw,design,true).passed(),"Synthetic cross-runtime fixture validates codec, not a live world");
+        boolean rejected=false;try{ShutterTrace.read(raw,design,false);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"Stored phase cannot choose its own accepted intention");
+        var endpoint=raw.deepCopy();var rows=endpoint.getAsJsonArray("samples");while(rows.size()>1)rows.remove(0);rejected=false;try{ShutterTrace.read(endpoint,design,true);}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,"One matching endpoint is insufficient functional evidence");helper.succeed();
+    }
     @GameTest(maxTicks=35) public void ownedShutterCycleEast(GameTestHelper helper) throws Exception {ownedCycle(helper,0);}
     @GameTest(maxTicks=35) public void ownedShutterCycleSouth(GameTestHelper helper) throws Exception {ownedCycle(helper,90);}
     @GameTest(maxTicks=35) public void ownedShutterCycleWest(GameTestHelper helper) throws Exception {ownedCycle(helper,180);}

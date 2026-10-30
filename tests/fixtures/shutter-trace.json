@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "intentionDigest": "f5f07e6d02e9ff049f2182130c2b3a626b4f70c3ecfa521e4294a7c78d18c9d9",
+  "expected": "closed",
+  "settleGameTicks": 8,
+  "stableGameTicks": 8,
+  "samples": [
+    {
+      "elapsedTicks": 0,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 1,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 2,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 3,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 4,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 5,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 6,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 7,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 8,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 9,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 10,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 11,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 12,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 13,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 14,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 15,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    },
+    {
+      "elapsedTicks": 16,
+      "states": {
+        "input": "minecraft:lever[face=floor,facing=south,powered=true]",
+        "base": "minecraft:sticky_piston[extended=true,facing=south]",
+        "front": "minecraft:piston_head[facing=south,short=false,type=sticky]",
+        "aperture": "minecraft:stone"
+      },
+      "entities": {
+        "input": "none",
+        "base": "none",
+        "front": "none",
+        "aperture": "none"
+      },
+      "moved": {
+        "input": null,
+        "base": null,
+        "front": null,
+        "aperture": null
+      }
+    }
+  ],
+  "verdict": "passed",
+  "failure": ""
+}

@@ -43,6 +43,12 @@ final class ShutterDesign {
         RegionReservations.Scope reservationScope(){return new RegionReservations.Scope(world,dimension,project);}
         int revision(){return revision;}
         Binding binding(){return new Binding(world,dimension,project,id,revision,piston(),facing());}
+        Map<String,BlockState> pose(boolean closed){
+            var planned=new HashMap<BlockPos,BlockState>();for(var block:worldBlocks())planned.put(block.pos(),block.state());
+            var open=Map.of(piston(),planned.get(piston()),payload(),planned.get(payload()),aperture(),net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            var cells=closed?ShutterMotion.terminalFor(piston(),true,open):open;
+            return Map.of("base",cells.get(piston()),"front",cells.get(payload()),"aperture",cells.get(aperture()),"input",planned.get(input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED,closed));
+        }
         Blueprint blueprint(){
             var stages=new ArrayList<Blueprint.Stage>();for(var element:source.getAsJsonArray("stages")){var stage=element.getAsJsonObject();stages.add(new Blueprint.Stage(stage.get("id").getAsString(),stage.get("title").getAsString(),stage.get("explanation").getAsString()));}
             return new Blueprint(id.toString(),project.toString(),revision,world,dimension,source.get("name").getAsString(),anchor,rotation,worldBlocks(),List.copyOf(stages),source());

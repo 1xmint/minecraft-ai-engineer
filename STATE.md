@@ -1,6 +1,6 @@
 # Now
 
-2026-10-29. Active goal: **complete all milestones**: the entire Phase1 engineering
+2026-10-30. Active goal: **complete all milestones**: the entire Phase1 engineering
 partner and all six Phase2 features. A catalog, screenshot, release or green CI
 never substitutes for that full objective. Original requirements and multiplayer
 amendment: docs/product-brief.md. Public repo:
@@ -440,6 +440,32 @@ runtime proof awaits CI. GPT-6-Luna/high focused current-authority/persistence/
 lifecycle check found no concrete blocker, with no tests or edits. Functional
 mechanical trace/controller and accepted-design placement/replacement ownership
 still remain before public preview/build/teach/test and full M3 can ship.
+
+Session recoverya5f2c77 is now all5 green in CI41000239381/all82 required native
+tests (actual03:58:54 UTC Fabric log inspected). Downloaded
+shutter-motion-recovery.done (passed) and inspected Alice04:02:08 mode-loss stop,
+then04:02:09 fresh recovery/settled messages. Artifacts:
+work/shutter-motion-proof-41000239381. This proves the real session pull, rejected
+pre-commit mode change, preserved original record, fresh motion identity, durable
+endpoint and released lease under the labeled synthetic prior-closure fixture.
+It is explicitly not a functional test or AI-generated/human-built prior closure.
+
+Timed physical evidence now compiles. ShutterTrace records raw input/base/front/
+aperture block states, entity kinds and moved states on each loaded server tick.
+Accepted design identity/frame/phase bind a digest. It allows bounded legitimate
+settling states, rejects unexpected physical/entity states, and requires all
+consecutive0..16 samples:8 settling ticks plus8 stable tick intervals. Exact
+replay recomputes metadata/verdict; one endpoint, gaps, wrong apertures, moving
+entities in the stable window and forged identity/timing/pass reject.
+
+Java and TypeScript share a synthetic codec fixture, clearly separate from world
+evidence. Five new native tests cover actual off/on/off tick observations in four
+rotations, replay/tampering/gaps and the shared codec; companion tests cover exact
+identity, partial evidence and negative samples. Scoped TypeScript/Java compile
+and changed JSON/TypeScript formatting passed. No local tests ran; new runtime
+proofs await CI. This is evidence infrastructure, not the session functional-trial
+controller. Next: feed these actual samples through guarded input/motion phases,
+restore original input/pose, and validate full cycle evidence before any pass.
 
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
