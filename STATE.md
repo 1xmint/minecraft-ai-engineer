@@ -836,3 +836,13 @@ A native `/engineer undo` then reacquires fresh authority, removes only those th
 blocks, retains the player support and releases manual control. Require both
 shutter-undo-prepared.done and shutter-undo-recovery.done in addition to the final
 undo marker. This is real game restart recovery, not a codec reload.
+
+Construction sourceb652b50 CI41083381732 FAILED only dedicated multiplayer; all
+other4 checks passed and Fabric confirmed all91 native tests. Downloaded artifact
+work/shutter-construction-failure-41083381732 shows actual manual release reached
+native lever motion, then the test wait read EXTENDED from vanilla's temporary
+MOVING_PISTON base during retraction (MultiplayerGameTests:217). No handoff marker
+completed, and construction flow was not reached. Fix waits for all exact accepted
+base/front/aperture endpoint states and no moving entities, rather than reading a
+property absent on transient blocks. Production motion/authority rules unchanged.
+The full handoff/construction/undo flow still requires a successful new run.
