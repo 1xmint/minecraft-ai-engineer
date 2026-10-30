@@ -5,16 +5,16 @@ partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
 Branch **phase/15-piston-motion**, draft **PR24**. Base main merge PR23:
-d3167a8f0a13c69ed6e301555802481a4bef559d. Pushed source0d55165 ran
-**CI41086749673**, now terminal FAILURE: all16 native mechanical markers passed,
-but the dedicated post-run SQLite verifier selected the wrong later retest.
-Companion npm-test timed out after10 minutes; Windows/Fabric/client passed.
-Local commit **f205ed7** fixes incompatible legacy electrical fit discovery and adds
-an authenticated HTTP shutter-proposal/acceptance proof. Current edits fix exact
-trial audit lookup and preserve mechanical ports/intent in discussion grounding.
-Push this batch and inspect its new complete CI result before claiming the slice green.
+d3167a8f0a13c69ed6e301555802481a4bef559d. Source45cd8f2 ran **CI41088537115**:
+Companion, Windows, Fabric and client passed; all16 native mechanical markers and
+exact-trial SQLite replay passed. Dedicated post-run verifier then expected epoch4
+instead of the new actual undo-recovery boot5. Current source records a separate
+fifth-boot receipt and verifies latest sync against it, while independently checking
+the fourth-boot planning pair. It also refuses owned-shutter replacement plans before
+quota/dispatch. Scoped compile/type/format/syntax checks pass; required full CI on
+this source is still pending. Prior legacy electrical planning regression is fixed
+and Companion passed. Inspect current HEAD/CI before claiming this slice green.
 Never restart or cancel a live proof merely because observation expires.
-Inspect actual git/CI before continuing.
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized; no approval pending. Tests run only on GitHub, never on his slow PC.
 Locally scoped compile/type/format/syntax only. Push regularly. Keep memory only
@@ -39,8 +39,8 @@ M1/M2/M3 proofs pass. Source features are not the published multiplayer release.
 
 Next actions:
 
-1. Finish observing CI41086749673. Inspect actual dedicated markers/logs and any
-   companion failure. Push f205ed7 after the current run is terminal, avoiding cancellation.
+1. Observe the required CI on current HEAD. Inspect actual dedicated markers, boot
+   receipts and SQLite checks; preserve specific live handles until terminal.
 2. Prove public build/interruption/aperture-conflict/resume/test, shared viewer
    lesson/denial/revocation, prepared undo across fifth saved-server boot, and real
    SQLite evidence replay. Fix actual failures without weakening production fences.
@@ -232,3 +232,20 @@ but a successful rerun is still required to establish that it resolves the hang.
 No live handle is being discarded or restarted on an observation timeout.
 All historical model calls, including PR18 buffer proof40766098371, are consumed;
 archived results never authorize a new inference.
+
+Source45cd8f2 CI41088537115: Companion now PASSED, alongside Windows/Fabric/client.
+All16 native mechanical markers passed again and exact-trial SQLite evidence lookup
+passed. Dedicated post-run verifier then failed at177: it still expected fourth-boot
+synced_epoch although the new undo proof starts a fifth boot and correctly resyncs
+projects. Fix records an independent shutter-undo-server receipt from the running
+fifth server, requires same server/world and a different epoch from structural boot4,
+and checks latest metadata against that receipt. Historical fourth-boot identity
+and structural proof remain separate. No database self-derived epoch substitution
+or weakened authority comparison. Full CI remains pending on the corrected source.
+
+Avoid known-unusable inference: catalog and generated planning now reject an owned
+shutter immediately, before cancellation/dispatch/quota, because accepting its
+replacement already requires manual release. Native construction proof requests
+both plan/design while control is owned and requires the explicit release message,
+unchanged pass/control/no lease, and shutter-planning-denied.done. Public CI still
+fails any unexpected real planner dispatch. Read-only discussion remains allowed.

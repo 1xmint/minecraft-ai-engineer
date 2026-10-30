@@ -253,6 +253,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.journal.stream().noneMatch(change->change.pos().equals(new BlockPos(600,100,0))) && project.shutterOwned && project.delegation==null && !project.verified.startsWith("passed:"),"Assistant builds only the three missing blocks; player support remains unowned and geometry is not a pass");});
         MESSAGES.clear();send(context,"engineer test");expectChat(context,"Actual shutter off/on/off test running");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sticky-shutter:"));write("shutter-construction.done","passed");
+        MESSAGES.clear();send(context,"engineer plan CI replacement while shutter remains controlled");expectChat(context,"Release mechanical control");
+        MESSAGES.clear();send(context,"engineer design CI replacement while shutter remains controlled");expectChat(context,"Release mechanical control");
+        server.runOnServer(s->check(session(s,"Alice").shutterOwned && session(s,"Alice").delegation==null && session(s,"Alice").verified.startsWith("passed:sticky-shutter:"),"Refused replacement requests preserve control and test evidence without starting inference"));write("shutter-planning-denied.done","passed");
         server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(new BlockPos(603,100,0),Blocks.GLASS.defaultBlockState()));
         MESSAGES.clear();send(context,"engineer undo");expectChat(context,"unpowered open partial frame");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.delegation==null && project.level().getBlockState(new BlockPos(603,100,0)).is(Blocks.GLASS),"Unsafe mechanical undo preserves the player aperture edit and complete assistant journal");project.level().setBlockAndUpdate(new BlockPos(603,100,0),Blocks.AIR.defaultBlockState());});
@@ -262,6 +265,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("shutter-undo-prepared.done","passed");
     }
     private static void shutterUndoRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var previous=JsonParser.parseString(read("restored-layout-server")).getAsJsonObject();check(!manager.epoch.toString().equals(previous.get("serverEpoch").getAsString()),"Mechanical undo recovery uses an actual fifth server epoch");var boot=new JsonObject();boot.addProperty("serverId",manager.serverId);boot.addProperty("serverEpoch",manager.epoch.toString());boot.addProperty("worldId",manager.worldId);write("shutter-undo-server",boot.toString());});
         String id=read("shutter-construction-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
         server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(600,100,0)));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.undoRequested && project.shutterOwned && project.delegation==null && project.journal.size()==3 && project.level().getBlockState(new BlockPos(601,100,0)).is(Blocks.STICKY_PISTON),"Actual saved-server restart retains mechanical undo target and geometry, never execution authority");});

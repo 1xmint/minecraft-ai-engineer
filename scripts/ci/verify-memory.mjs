@@ -17,7 +17,21 @@ const restoredBoot =
   process.env.MCE_LIVE_ACCEPTANCE !== "true"
     ? JSON.parse(readFileSync(`${coordination}/restored-layout-server`, "utf8"))
     : undefined;
-const currentEpoch = restoredBoot?.serverEpoch ?? server.serverEpoch;
+const undoBoot =
+  process.env.MCE_LIVE_ACCEPTANCE !== "true"
+    ? JSON.parse(readFileSync(`${coordination}/shutter-undo-server`, "utf8"))
+    : undefined;
+const currentEpoch =
+  undoBoot?.serverEpoch ?? restoredBoot?.serverEpoch ?? server.serverEpoch;
+if (undoBoot) {
+  assert.equal(undoBoot.serverId, server.serverId);
+  assert.equal(undoBoot.worldId, server.worldId);
+  assert.notEqual(
+    undoBoot.serverEpoch,
+    restoredBoot.serverEpoch,
+    "Undo recovery is a real fifth boot after structural recovery",
+  );
+}
 if (restoredBoot) {
   assert.equal(restoredBoot.serverId, server.serverId);
   assert.equal(restoredBoot.worldId, server.worldId);
@@ -37,6 +51,7 @@ try {
       "shutter-handoff.done",
       "shutter-handoff-recovery.done",
       "shutter-construction.done",
+      "shutter-planning-denied.done",
       "shutter-sharing.done",
       "shutter-bob-view.done",
       "shutter-bob-denied.done",
@@ -674,6 +689,16 @@ try {
       4,
       "Only the two explicit behavior/geometry pairs spend quota; the changed restored basis is rejected before dispatch",
     );
+    const fourthBootStarts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start' AND json_extract(document,'$.serverEpoch')=?",
+      )
+      .get(server.serverId, structuralId, restoredBoot.serverEpoch);
+    assert.equal(
+      fourthBootStarts.count,
+      2,
+      "The repeated behavior/geometry pair remains independently bound to the actual fourth boot",
+    );
     const structuralRow = db
       .prepare(
         "SELECT project_revision,synced_epoch FROM gateway_projects WHERE server_id=? AND project_id=?",
@@ -681,8 +706,8 @@ try {
       .get(server.serverId, structuralId);
     assert.equal(
       structuralRow.synced_epoch,
-      restoredBoot.serverEpoch,
-      "Repeated structural work synchronizes against its actual fourth boot",
+      currentEpoch,
+      "Repeated structural work retains its revision while metadata synchronizes against the latest actual boot",
     );
     const originalStructural = JSON.parse(
       readFileSync(`${coordination}/structural-before`, "utf8"),

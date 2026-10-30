@@ -331,6 +331,7 @@ final class GeneratedPlanning {
     }
 
     private static void requireSafeDesignState(EngineeringSession session) {
+        if(session.shutterOwned)throw new IllegalStateException("Release mechanical control before requesting a replacement design");
         if (session.state.equals("EXECUTING") || session.state.equals("PLANNING") || session.pendingPlacement
                 || session.undoRequested || session.testTick >= 0 || session.hasPendingTest() || session.shutterMotion!=null
                 || (!session.baseline.isEmpty() && !session.state.equals("COMPLETED")))
