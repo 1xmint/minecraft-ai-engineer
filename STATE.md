@@ -183,6 +183,19 @@ mechanical dialect into project validation and execution, then startup denial,
 current player authority, input restoration and actual saved-server recovery.
 This checkpoint does not finish M3 or the overall roadmap.
 
+Read-dependency closure: accepted shutter designs now derive all five potential
+write cells (including reserved aperture air), plus a rotated240-cell read volume
+covering the mechanism and two-block isolation margin. ShutterEnvironment checks
+the complete reserved/loaded volume before any reads, captures fixed input/support
+and air dependencies separately from changing motion cells, and can recheck the
+expected input state at event time. It grants no permission or lease. New native
+proofs exercise a late player edit causing actual gate denial before WAL/physics,
+preservation of that edit, incomplete read reservations and no chunk loading.
+Production session reservations and journal recovery still need this integration.
+Scoped Java server/client compilation passed; these new tests await CI. Contract
+source4ab3cf3 has four successful CI40993844465 jobs; dedicated multiplayer remains
+live at inspection, so the whole run is not yet claimed successful.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

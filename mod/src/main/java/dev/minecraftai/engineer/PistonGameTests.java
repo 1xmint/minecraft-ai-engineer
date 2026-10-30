@@ -13,6 +13,31 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=25) public void shutterIsolationChangeDeniesTheActualQueuedEvent(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-dependencies",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        int[] commits={0};
+        helper.runAtTickTime(8,()->{
+            var reads=design.readCells();helper.assertTrue(reads.size()==240 && reads.containsAll(design.writeCells()) && design.writeCells().contains(design.aperture()),"Reservations include the empty aperture and complete rotated isolation volume");
+            rejects(helper,()->ShutterEnvironment.capture(level,design,design.writeCells()),"Moving-cell reservation alone cannot authorize environmental reads");
+            var environment=ShutterEnvironment.capture(level,design,reads);environment.requireFresh(level,false);
+            var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            PistonMotionGate.arm(level,snapshot,design.writeCells(),()->environment.requireFresh(level,level.getBlockState(design.input()).getValue(BlockStateProperties.POWERED)),id->commits[0]++);
+            helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+            level.setBlockAndUpdate(design.input().above(),Blocks.GLASS.defaultBlockState());
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(commits[0]==0 && level.getBlockState(design.aperture()).isAir() && !level.getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED),"Changed read dependencies stop real queued motion before commit");
+            helper.assertTrue(level.getBlockState(design.input().above()).is(Blocks.GLASS),"Player replacement survives denial");helper.succeed();
+        });
+    }
+    @GameTest public void shutterDependencyDiscoveryDoesNotLoadChunks(GameTestHelper helper){
+        var level=helper.getLevel();var far=helper.absolutePos(new BlockPos(1_000_000,3,1_000_000));
+        var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-dependencies",level.dimension().identifier().toString(),far,270);
+        helper.assertTrue(!level.hasChunkAt(far),"Dependency discovery starts unloaded");
+        rejects(helper,()->ShutterEnvironment.capture(level,design,design.readCells()),"Read discovery cannot load a missing dependency chunk");
+        helper.assertTrue(!level.hasChunkAt(far),"Rejected dependency discovery did not load the chunk");helper.succeed();
+    }
     @GameTest(maxTicks=35) public void canonicalShutterEast(GameTestHelper helper){canonicalCycle(helper,0,Direction.EAST);}
     @GameTest(maxTicks=35) public void canonicalShutterSouth(GameTestHelper helper){canonicalCycle(helper,90,Direction.SOUTH);}
     @GameTest(maxTicks=35) public void canonicalShutterWest(GameTestHelper helper){canonicalCycle(helper,180,Direction.WEST);}

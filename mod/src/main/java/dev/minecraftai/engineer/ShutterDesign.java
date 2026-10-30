@@ -29,6 +29,13 @@ final class ShutterDesign {
         BlockPos aperture(){return absolute(root().getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos"));}
         Direction facing(){return Blueprint.rotation(rotation).rotate(Direction.EAST);}
         Set<BlockPos> motionCells(){return Set.of(piston(),payload(),aperture());}
+        Set<BlockPos> writeCells(){var cells=new HashSet<BlockPos>(motionCells());for(var block:worldBlocks())cells.add(block.pos());return Set.copyOf(cells);}
+        Set<BlockPos> readCells(){
+            var cells=new HashSet<BlockPos>();
+            // Two-block clear isolation margin includes quasi-connectivity and input support.
+            for(int x=-2;x<=5;x++)for(int y=-2;y<=3;y++)for(int z=-2;z<=2;z++)cells.add(new BlockPos(x,y,z).rotate(Blueprint.rotation(rotation)).offset(anchor).immutable());
+            return Set.copyOf(cells);
+        }
         ShutterJournal.Scope motionScope(UUID operation){return new ShutterJournal.Scope(world,dimension,project,id,revision,"root",operation,piston(),facing());}
         List<Blueprint.PlannedBlock> worldBlocks(){
             var blocks=new ArrayList<Blueprint.PlannedBlock>();
