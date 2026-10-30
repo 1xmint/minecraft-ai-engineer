@@ -9,6 +9,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /** Read dependencies for the fixed floating shutter, independent from its changing motion pose. */
 final class ShutterEnvironment {
     private ShutterEnvironment() { }
+    /** The execution caller must additionally supply current player/connection/grant checks. */
+    static Snapshot captureReserved(ServerLevel level,ShutterDesign.Design design,RegionReservations reservations,RegionReservations.Fence fence,UUID actor,long authorizationRevision,long tick){
+        reservations.validateFootprint(design.reservationScope(),fence,actor,design.revision(),authorizationRevision,design.writeCells(),design.readCells(),tick);
+        return capture(level,design,reservations.permissionFootprint(design.reservationScope(),fence,true,tick));
+    }
     static final class Snapshot {
         private final ServerLevel level;
         private final BlockPos input;

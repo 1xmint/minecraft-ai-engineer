@@ -13,6 +13,40 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=25) public void revokedShutterReservationDeniesQueuedPhysics(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-lease",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        var reservations=new RegionReservations(UUID.randomUUID());var actor=UUID.randomUUID();int[] commits={0};
+        helper.runAtTickTime(8,()->{
+            var scope=design.reservationScope();var fence=reservations.acquire(scope,actor,1,1,ProjectAccess.Permission.BUILD,design.writeCells(),design.readCells(),level.getGameTime());
+            var dependencies=ShutterEnvironment.captureReserved(level,design,reservations,fence,actor,1,level.getGameTime());
+            var motion=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            Runnable current=()->{
+                reservations.validateFootprint(scope,fence,actor,1,1,design.writeCells(),design.readCells(),level.getGameTime());
+                dependencies.requireFresh(level,level.getBlockState(design.input()).getValue(BlockStateProperties.POWERED));
+            };
+            PistonMotionGate.arm(level,motion,design.writeCells(),current,id->commits[0]++);
+            helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));reservations.revoke(scope);
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(commits[0]==0 && level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE),"Revocation after input write blocks actual queued motion before WAL or payload movement");helper.succeed();
+        });
+    }
+    @GameTest public void shutterLeaseReservesAirWritesAndReadDependenciesSeparately(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),2,UUID.randomUUID(),"native-lease",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),90);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());
+        var reservations=new RegionReservations(UUID.randomUUID());var actor=UUID.randomUUID();var scope=design.reservationScope();var placed=new HashSet<BlockPos>();design.worldBlocks().forEach(block->placed.add(block.pos()));
+        var incomplete=reservations.acquire(scope,actor,2,1,ProjectAccess.Permission.BUILD,placed,design.readCells(),0);
+        rejects(helper,()->ShutterEnvironment.captureReserved(level,design,reservations,incomplete,actor,1,0),"Reading empty aperture never grants its deferred write");
+        var missingReads=reservations.acquire(scope,actor,2,1,ProjectAccess.Permission.BUILD,design.writeCells(),Set.of(),0);
+        rejects(helper,()->ShutterEnvironment.captureReserved(level,design,reservations,missingReads,actor,1,0),"Write authority cannot stand in for missing read reservations");
+        var fence=reservations.acquire(scope,actor,2,1,ProjectAccess.Permission.BUILD,design.writeCells(),design.readCells(),0);
+        ShutterEnvironment.captureReserved(level,design,reservations,fence,actor,1,0).requireFresh(level,false);
+        var neighboring=new RegionReservations.Scope(scope.world(),scope.dimension(),UUID.randomUUID());var dependency=design.input().above();
+        rejects(helper,()->reservations.acquire(neighboring,UUID.randomUUID(),1,1,ProjectAccess.Permission.BUILD,Set.of(dependency),Set.of(),0),"Another AI project cannot write through a shutter read reservation");
+        rejects(helper,()->ShutterEnvironment.captureReserved(level,design,reservations,fence,UUID.randomUUID(),1,0),"Another actor cannot borrow the reservation");
+        rejects(helper,()->ShutterEnvironment.captureReserved(level,design,reservations,fence,actor,2,0),"Changed grants require a fresh reservation");helper.succeed();
+    }
     @GameTest(maxTicks=25) public void shutterIsolationChangeDeniesTheActualQueuedEvent(GameTestHelper helper){
         var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-dependencies",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
         for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());

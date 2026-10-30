@@ -196,6 +196,24 @@ Scoped Java server/client compilation passed; these new tests await CI. Contract
 source4ab3cf3 has four successful CI40993844465 jobs; dedicated multiplayer remains
 live at inspection, so the whole run is not yet claimed successful.
 
+Reservation integration: RegionReservations.validateFootprint now checks the
+normal epoch/actor/project/auth revision/expiry fence before requiring all
+potential motion writes in the lease's write set and all dependencies in its
+read/write closure. ShutterEnvironment.captureReserved derives project scope and
+revision from accepted design, validates those exact footprints, then captures
+only against the lease's actual reserved cells. This does not replace the
+execution caller's current Minecraft connection or project-grant checks.
+Two new native tests cover actual event denial after lease revocation, missing
+aperture write authority, missing dependencies, neighboring-project conflicts,
+wrong actor and changed grants. Scoped Java server/client compilation passed;
+new proofs await CI. GPT-6-Luna/high focused reservation check found no concrete
+boundary blockers; no helper tests or edits. Production session wiring remains.
+
+Isolation source23377a1 Fabric passed all72 required native tests in
+CI40994181567 (actual job log02:53:49 UTC inspected). Four jobs passed; dedicated
+multiplayer is still live at inspection. Prior contract-only CI40993844465 was
+superseded/cancelled after its other four jobs passed; never claim it all-green.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven

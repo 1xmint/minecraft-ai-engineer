@@ -37,6 +37,8 @@ final class ShutterDesign {
             return Set.copyOf(cells);
         }
         ShutterJournal.Scope motionScope(UUID operation){return new ShutterJournal.Scope(world,dimension,project,id,revision,"root",operation,piston(),facing());}
+        RegionReservations.Scope reservationScope(){return new RegionReservations.Scope(world,dimension,project);}
+        int revision(){return revision;}
         List<Blueprint.PlannedBlock> worldBlocks(){
             var blocks=new ArrayList<Blueprint.PlannedBlock>();
             for(var element:source.getAsJsonArray("blocks")){var block=element.getAsJsonObject();BlockState state=Blueprint.state(text(block.get("state"),512)).rotate(Blueprint.rotation(rotation));blocks.add(new Blueprint.PlannedBlock(absolute(block.getAsJsonObject("pos")),state,text(block.get("stage"),64),"root"));}
