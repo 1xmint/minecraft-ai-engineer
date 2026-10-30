@@ -30,6 +30,7 @@ try {
       "shutter-input-recovery.done",
       "shutter-position-reconciled.done",
       "shutter-position-recovery.done",
+      "shutter-motion-recovery.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

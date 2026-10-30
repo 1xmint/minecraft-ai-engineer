@@ -72,8 +72,9 @@ final class EngineeringSession implements BuildExecutor {
     long nextPlacement;
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
+    final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
     ShutterJournal shutterMotion;
-    private ShutterJournal.Scope acceptedMotionScope(){
+    ShutterJournal.Scope acceptedMotionScope(){
         if(blueprint==null || !ShutterDesign.describes(blueprint.source()) || !activeComponent.equals("root"))throw new IllegalStateException("Pending motion needs its accepted mechanical component");
         var design=ShutterDesign.read(blueprint.source());
         if(!design.writeCells().stream().allMatch(this::contains))throw new IllegalStateException("Pending motion escapes its delegated workspace");
@@ -619,6 +620,11 @@ final class EngineeringSession implements BuildExecutor {
         try{
             claim(ProjectAccess.Permission.BUILD,true,true);claimed=true;
             Runnable authority=()->{validateMutation();requireCreative();validateTestArea();if(hasPendingTest())throw new IllegalStateException("Restore pending inputs before physical reconciliation");};
+            authority.run();
+            boolean powered=level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED);
+            if(powered!=level().getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED)){
+                state="PAUSED";detail="Recovering mechanical position under fresh authority; queued movement is bounded and journaled";shutterRecovery.start(design,scope);tell(detail);return;
+            }
             PistonMotionGate.reconcileBlocked(level(),pending,scope,design,authority,observed->{
                 var receipt=new JsonObject();receipt.addProperty("schemaVersion",1);receipt.addProperty("kind","mechanical-position-reconciliation");receipt.addProperty("observedTick",level().getGameTime());receipt.addProperty("position",observed.name().toLowerCase(Locale.ROOT));receipt.addProperty("inputPowered",level().getBlockState(design.input()).getValue(BlockStateProperties.POWERED));receipt.addProperty("actorId",actor().toString());receipt.add("originalMotion",pending.json());
                 LocalFiles.write(file.resolveSibling(projectId+".motion-"+pending.motion()+".reconciled.json"),receipt);
@@ -626,18 +632,19 @@ final class EngineeringSession implements BuildExecutor {
             shutterMotion=null;
             try{save();}catch(RuntimeException failed){shutterMotion=pending;PistonMotionGate.restoreBlocked(level(),pending,scope);throw failed;}
             state="PAUSED";detail="Mechanical position reconciled from current observation; motion remains guarded and untested";save();checkpoint();tell(detail);
-        }finally{if(claimed)manager.release(this);}
+        }finally{if(claimed && !shutterRecovery.running())manager.release(this);}
     }
     @Override public void pause(String reason) {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        if (hasPendingTest()) restoreTest();
-        manager.release(this);
+        try{shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
     @Override public String status() { return state + ": " + detail + "; assistant recorded changes=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
+        if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
         if(blueprint!=null && ComponentTree.composite(blueprint) && server.getTickCount()%10==0) {

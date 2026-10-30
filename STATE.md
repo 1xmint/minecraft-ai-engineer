@@ -11,8 +11,8 @@ Current branch **phase/15-piston-motion**, based on PR23 main merge
 source **d6a4f3da151425fdce4b5c8f0f053cff3b9c70f1** passed all5 CI40961971444 before
 merge. Its first conversation/knowledge slice was also proven on b858364 by all5
 CI40959246919 and whole signed-in manual40960496759. Phase15 is building restored
-denial and explicit reconciliation after physics, snapshots and the event gate, not a shipped
-piston feature. Gate sourcedc08309 passed all5 CI40965363414, including all60
+denial, reconciliation and a fresh-authority session recovery controller, not a shipped
+piston construction feature. Gate sourcedc08309 passed all5 CI40965363414, including all60
 required native tests (job log22:23:20 UTC inspected). Snapshot sourced04e1fc
 previously passed all5 CI40964080695/all53 native tests.
 Draft PR24 holds Phase15. Full objective unfinished.
@@ -411,6 +411,35 @@ work/shutter-position-proof-40998225016. The existing later saved boot retained
 the accepted design's idle denial after pending journal clearance. This is no
 actuation permit or functional pass. Guarded actuation corec02de7d is the next
 batch awaiting CI; no new SDK calls/local test suites ran.
+
+Guarded-ticket source7d311f4 is now all5 green in CI40998959184, including all82
+required native tests (actual03:44:23 UTC log inspected). This covers four real
+owned close/pull cycles through durable preparation/commit, hold and reconciliation,
+plus substituted operation rejection and stopped queued motion. It is not the
+full player-facing construction/test experience.
+
+Actual session recovery orchestration now compiles. When restored input disagrees
+with a stable piston pose, explicit resume keeps its newly acquired recovery lease
+for one bounded queued move. ShutterRecoveryMotion pins the exact fence, current
+connection/controller, accepted scope, motion ID and input/environment. It archives
+the previous record before rearming, saves preparation before queueing, saves commit
+synchronously in the event hook, then monitors current authority/pose and timeout.
+Observed endpoint is durable before returning to pending denial/releasing the lease;
+another fresh resume records physical reconciliation. No input write, restored
+controller/lease or functional pass is invented. Failure stops/holds/cancels facts;
+pause releases in finally. Shutdown pauses sessions before finally clearing gates.
+
+The ordinary dedicated CI flow now explicitly seeds a labeled prior closed-pose/
+commit fixture, then drives native survival refusal, deterministic mode loss after
+preparation/before commit, and a fresh real payload pull under a new motion ID. It
+checks durable endpoint, unchanged off lever, original-record preservation, no pass,
+fresh observation and lease release. Verifier requires shutter-motion-recovery.done.
+The seeded prior closure is not actual AI construction/commit evidence. Scoped
+Java server/client compilation and JavaScript syntax/format checks passed; new
+runtime proof awaits CI. GPT-6-Luna/high focused current-authority/persistence/
+lifecycle check found no concrete blocker, with no tests or edits. Functional
+mechanical trace/controller and accepted-design placement/replacement ownership
+still remain before public preview/build/teach/test and full M3 can ship.
 
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native

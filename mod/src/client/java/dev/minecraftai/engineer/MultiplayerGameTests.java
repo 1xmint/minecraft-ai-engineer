@@ -136,6 +136,38 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         });
         write("shutter-position-recovery.done","passed");
     }
+    /** Prior closed pose/commit is a synthetic fault fixture; subsequent recovery is the real session path. */
+    private static void shutterRecoveryMotionFlow(ClientGameTestContext context,TestDedicatedServerContext server,String originalProject){
+        server.runCommand("forceload add 350 -2 357 2");
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(350,100,-2)) && s.overworld().hasChunkAt(new BlockPos(357,100,2)) && s.overworld().hasChunkAt(new BlockPos(350,100,2)) && s.overworld().hasChunkAt(new BlockPos(357,100,-2)));
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var project=java.util.UUID.randomUUID();var level=s.overworld();var dimension=level.dimension().identifier().toString();var design=ShutterDesign.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,new BlockPos(352,100,0),0);
+            for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());var snapshot=ShutterMotion.capture(level,design.piston(),true,design.writeCells());
+            var session=new EngineeringSession(manager,project,player(s,"Alice").getUUID(),dimension);session.blueprint=design.blueprint();session.corner1=new BlockPos(352,100,0);session.corner2=new BlockPos(355,101,0);session.activeOperation=java.util.UUID.randomUUID().toString();
+            var motion=java.util.UUID.randomUUID();session.shutterMotion=ShutterJournal.prepare(design.motionScope(java.util.UUID.fromString(session.activeOperation)),snapshot,motion).commitRecorded(motion);session.state="PAUSED";session.save();manager.projects.put(project,session);session.restoreMotionDenial();
+            for(var cell:snapshot.terminal().entrySet())level.setBlockAndUpdate(cell.getKey(),cell.getValue());
+            write("shutter-motion-project",project.toString());write("shutter-motion-original",motion.toString());
+        });
+        String id=read("shutter-motion-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runCommand("gamemode survival Alice");MESSAGES.clear();send(context,"engineer resume");expectChat(context,"creative mode");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.shutterRecovery.running() && project.delegation==null && project.shutterMotion.motion().toString().equals(read("shutter-motion-original")),"Noncreative request cannot arm recovery or replace pending motion facts");});
+        server.runCommand("gamemode creative Alice");
+        // Deterministic mode-change injection occurs after command preparation, before queued vanilla commit.
+        server.runOnServer(s->{commandAs(s,"Alice","engineer resume");player(s,"Alice").setGameMode(GameType.SURVIVAL);});
+        server.waitFor(s->!session(s,"Alice").shutterRecovery.running());
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());check(project.delegation==null && project.shutterMotion.cancelled() && project.shutterMotion.phase()==ShutterJournal.Phase.PREPARED && project.level().getBlockState(design.aperture()).is(Blocks.STONE),"Mode change before commit denies real recovery movement and releases its fresh lease");write("shutter-motion-denied",project.shutterMotion.motion().toString());});
+        server.runCommand("gamemode creative Alice");MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Recovering mechanical position under fresh authority");
+        server.waitFor(s->!session(s,"Alice").shutterRecovery.running() && session(s,"Alice").shutterMotion.phase()==ShutterJournal.Phase.ENDPOINT_OBSERVED);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());var level=project.level();
+            check(project.delegation==null && !project.shutterMotion.motion().toString().equals(read("shutter-motion-denied")) && level.getBlockState(design.aperture()).isAir() && level.getBlockState(design.payload()).is(Blocks.STONE) && !level.getBlockState(design.piston()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.EXTENDED),"Fresh native resume actually retracts the sticky payload under a new committed ticket");
+            check(!level.getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED) && !project.verified.startsWith("passed:"),"Recovery aligns physical position with unchanged off input without inventing a functional pass");
+            try{var persisted=JsonParser.parseString(java.nio.file.Files.readString(project.file)).getAsJsonObject();check(persisted.getAsJsonObject("shutterMotion").get("phase").getAsString().equals("endpoint-observed"),"Actual recovery endpoint is durable");check(java.nio.file.Files.exists(project.file.resolveSibling(project.projectId+".motion-"+read("shutter-motion-original")+".before-recovery.json")),"Original interrupted record is preserved before new recovery motion");}catch(java.io.IOException failure){throw new AssertionError(failure);}
+        });
+        MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Mechanical position reconciled from current observation");
+        server.runOnServer(s->check(session(s,"Alice").shutterMotion==null && session(s,"Alice").delegation==null,"Fresh observation closes recovered motion into idle denial"));
+        write("shutter-motion-recovery.done","passed");send(context,"engineer project use "+originalProject);server.waitFor(s->originalProject.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+    }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
     private static final BlockPos REPEATER = LEVER.east();
@@ -385,6 +417,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             });
             if(!LIVE_ACCEPTANCE)reconcileShutterInput(context,server,projectId);
             if(!LIVE_ACCEPTANCE)reconcileShutterPosition(context,server,projectId);
+            if(!LIVE_ACCEPTANCE)shutterRecoveryMotionFlow(context,server,projectId);
             publishServer(server, 2);
             write("restarted", "ready");
             awaitFile(context, "bob-reconnected");
