@@ -9,6 +9,18 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void savedProjectSearchUsesLiteralIntentionWithoutInference(GameTestHelper helper){
+        var plan=Blueprint.reference("search-proof","minecraft:overworld",BlockPos.ZERO,0);
+        var id=java.util.UUID.randomUUID();
+        helper.assertTrue(ProjectSearch.matches(id,"minecraft:overworld",plan,ProjectSearch.terms("OVERWORLD")),"Dimension lookup ignores case");
+        helper.assertTrue(ProjectSearch.matches(id,"minecraft:overworld",plan,ProjectSearch.terms(plan.name())),"Saved blueprint name is retrievable");
+        helper.assertTrue(ProjectSearch.matches(id,"minecraft:overworld",plan,ProjectSearch.terms(id.toString())),"Exact identity remains searchable");
+        helper.assertTrue(!ProjectSearch.matches(id,"minecraft:overworld",plan,ProjectSearch.terms("overworld absent-search-word")),"Every requested word must occur; no invented semantic match");
+        helper.assertTrue(ProjectSearch.matches(id,"minecraft:overworld",null,ProjectSearch.terms("new project")),"Undesigned saved projects remain findable");
+        reject(helper,()->ProjectSearch.terms("   "),"Empty searches cannot enumerate accidentally");
+        reject(helper,()->ProjectSearch.terms("x".repeat(161)),"Query work stays bounded");
+        reject(helper,()->ProjectSearch.terms("red\nstone"),"Control characters cannot inject chat output");helper.succeed();
+    }
     @GameTest public void largePreviewPrioritizesCurrentMissingBlocksWithoutWorldReads(GameTestHelper helper){
         var ghosts=new java.util.ArrayList<ProjectView.Ghost>();
         for(int x=0;x<20;x++)for(int z=0;z<20;z++)ghosts.add(new ProjectView.Ghost(new BlockPos(x,100,z),Blocks.STONE.defaultBlockState(),false,false,false));

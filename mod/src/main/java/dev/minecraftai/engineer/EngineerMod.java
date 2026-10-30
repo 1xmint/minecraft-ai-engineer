@@ -58,6 +58,7 @@ public final class EngineerMod implements ModInitializer {
                     .then(Commands.literal("list").executes(ctx->withManager(ctx.getSource(),(m,p)->{
                         for(var s:m.projects.values())if(s.access.allows(p.getUUID(),ProjectAccess.Permission.VIEW))p.sendSystemMessage(Component.literal("Engineer: "+s.projectId+" | "+(s.blueprint==null?"New project":s.blueprint.name())+" | "+s.state));
                     })))
+                    .then(Commands.literal("find").then(Commands.argument("query",StringArgumentType.greedyString()).executes(ctx->withManager(ctx.getSource(),(m,p)->m.find(p,StringArgumentType.getString(ctx,"query"))))))
                     .then(Commands.literal("use").then(Commands.argument("project",StringArgumentType.word()).executes(ctx->withManager(ctx.getSource(),(m,p)->m.use(p,UUID.fromString(StringArgumentType.getString(ctx,"project")))))))
                     .then(Commands.literal("share").then(Commands.argument("player",StringArgumentType.word()).then(Commands.argument("role",StringArgumentType.word()).executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{
                         var role=ProjectAccess.Role.valueOf(StringArgumentType.getString(ctx,"role").toUpperCase(Locale.ROOT));

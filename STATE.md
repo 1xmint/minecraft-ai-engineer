@@ -4,7 +4,13 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Branch **phase/16-textured-previews**, based on merged main **17a4d89d519d486cc55d77d134ee934baadfe15f**.
+Current branch **phase/17-project-finding**, draft PR26 stacked on Phase16 PR25.
+Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
+Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
+texture/revocation markers and memory proof. Fresh screenshots in
+work/textured-alpha-proof-41103559604 visually prove translucent aligned models,
+partial work, rotated intention and red wrong-facing status. Phase17 PR26 now
+targets main; sourcea462236/CI41104638286 has4 passing checks and live dedicated.
 Phase15 PR24 merged2026-10-30T17:21:52Z after final8240e30/all5 CI41096787672:
 all91 native tests and all17 mechanical markers, five actual boots, exact SQLite
 history/epoch checks and component build/test commands passed. Native screenshots
@@ -349,6 +355,34 @@ assistant journal stays empty. Native dimension round-trip and project reset are
 now written too. Scoped compilation passes. CI41101114559 remained queued with
 no pending deployment approvals; no runtime verdict or visual proof yet.
 
+## Next slice: saved project finding (E1, branch phase/17-project-finding)
+
+Outcomes: F1 find saved intention by literal remembered words, with explicit ID,
+dimension/location and no implicit selection/execution; native query and negative
+proof. F2 only current VIEW grants reveal results, including after revocation and
+restart; dedicated owner/viewer/denied proof. Search stays local and invokes no model.
+Decision: reuse server-loaded saved blueprint names/lessons/components. UUID-only
+listing is insufficient; semantic inference adds quota and ambiguity. Notes search
+remains separate until its companion permission boundary is integrated. Phase16
+PR25 and CI41101340628 remain pending on source28eaead; this branch builds atop it.
+
+Project finding first source compiles. New /engineer project find <words> checks
+the current connection, filters each project by current VIEW before matching,
+returns at most12 descriptions and leaves selection/execution untouched. Literal
+matching tests are written for CI; native sharing/revocation/restart proof remains.
+This branch is not shipped. Phase16 CI41101340628 remains queued.
+
+Project-search native proof now requires five real-command markers: shared viewer,
+revoked viewer, denied outsider, post-restart viewer and overlay-disabled viewer.
+Added25-tick command spacing; no permission/spam fences relaxed. Server/client
+compile and verifier syntax pass locally. Runtime tests remain GitHub-only and
+pending. Existing GPT-6-Luna/high helper is checking only the disclosure boundary.
+
+Focused GPT-6-Luna/high search review found no disclosure/authority blocker: current
+connection and VIEW filtering precede matching, inaccessible counts are excluded,
+and search neither selects nor delegates. Native commands now search actual remembered
+words (Signal lamp), not just known UUIDs, and assert the active preview stays the
+same. Five required markers remain. Runtime proof is still pending, not waived.
 Phase16 CI41101340628 artifacts downloaded to work/textured-preview-proof-41101340628.
 Fabric passes; client logs reach dimension round-trip and project reset; both
 textured Bob/revocation markers pass. Images show models/rotation/partial work but
@@ -357,3 +391,13 @@ implementation hardcodes body tint -1. Thus counters/compile were insufficient.
 Fix uses vanilla baked quads via native submitCustomGeometry with explicit per-quad
 alpha/fullbright/overlay. No world reads, fake blocks, GPU cache or authority change.
 New-source runtime/visual evidence required before merge; old images are not a pass.
+
+Phase16 source6135aff fresh screenshots in work/textured-alpha-proof-41103559604
+visually confirm translucent native models, cyan current-step outlines, red wrong
+orientation and90-degree rotation. White glow/opaque body is fixed. CI still live.
+Phase17 source3e8ed00 dedicated artifact work/project-search-proof-41103559567
+passed shared/denied literal search but Bob timed out at model submission before
+bob-next; later markers/memory proof absent. Do not call it a search/runtime pass.
+Native render acceptance now explicitly positions Bob after the extra search command
+pacing and requires camera-local selection before model submits; owner/client
+coordinate this through readiness files. No rendering radius or checks widened.

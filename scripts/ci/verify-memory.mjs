@@ -42,6 +42,11 @@ try {
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
     for (const marker of [
       "shutter-recovery.done",
+      "project-find-shared.done",
+      "project-find-revoked.done",
+      "project-find-restarted.done",
+      "project-find-denied.done",
+      "project-find-text.done",
       "textured-bob-preview.done",
       "textured-revocation.done",
       "shutter-input-recovery.done",
