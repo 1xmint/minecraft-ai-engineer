@@ -9,6 +9,18 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void largePreviewPrioritizesCurrentMissingBlocksWithoutWorldReads(GameTestHelper helper){
+        var ghosts=new java.util.ArrayList<ProjectView.Ghost>();
+        for(int x=0;x<20;x++)for(int z=0;z<20;z++)ghosts.add(new ProjectView.Ghost(new BlockPos(x,100,z),Blocks.STONE.defaultBlockState(),false,false,false));
+        var current=new ProjectView.Ghost(new BlockPos(40,100,0),Blocks.REPEATER.defaultBlockState(),true,false,false);ghosts.add(current);
+        var far=new ProjectView.Ghost(new BlockPos(1000,100,0),Blocks.STONE.defaultBlockState(),true,false,false);ghosts.add(far);
+        var complete=new ProjectView.Ghost(new BlockPos(0,101,0),Blocks.STONE.defaultBlockState(),true,true,false);ghosts.add(complete);
+        var view=new ProjectView(java.util.UUID.randomUUID(),"preview-proof","minecraft:overworld","project","epoch",1,1,1,0,"Preview",ghosts);
+        var selected=PreviewSelection.nearby(view,new net.minecraft.world.phys.Vec3(.5,100.5,.5));
+        helper.assertTrue(selected.size()==PreviewSelection.MAX_VISIBLE_BLOCKS && selected.contains(current),"A large preview stays bounded while current missing work outranks closer later steps");
+        helper.assertTrue(!selected.contains(far) && !selected.contains(complete),"Distant and completed geometry cannot displace nearby missing work");
+        helper.assertTrue(PreviewSelection.nearby(null,net.minecraft.world.phys.Vec3.ZERO).isEmpty(),"Clearing an approved preview leaves no selectable rendering data");helper.succeed();
+    }
     @GameTest
     public void legacyAdoptionIsPrivateAndPaused(GameTestHelper helper){
         var owner=java.util.UUID.randomUUID();var id=java.util.UUID.randomUUID();var source=new com.google.gson.JsonObject();

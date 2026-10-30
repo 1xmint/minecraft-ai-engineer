@@ -4,16 +4,18 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Branch **phase/15-piston-motion**, draft **PR24**. Base main merge PR23:
-d3167a8f0a13c69ed6e301555802481a4bef559d. **7caeaa5/all5 CI41093420235 SUCCESS**:
-all91 required native tests, all17 dedicated mechanical markers, five actual server
-boots and strict SQLite trial/epoch checks passed. Evidence downloaded under
-work/shutter-complete-proof-41093420235. The final small component build/test-root
-entry-point integration and native screenshot captures are the current changes;
-compile/type/format checks pass, but they require their own final-source CI before
-PR24 merges. Full Phase1/Phase2, fresh shutter inference, production authentication,
-textured ghosts and general mechanical composition remain unproven/unfinished.
-Inspect current HEAD/CI before shipping. Preserve specific live handles until terminal.
+Branch **phase/16-textured-previews**, based on merged main **17a4d89d519d486cc55d77d134ee934baadfe15f**.
+Phase15 PR24 merged2026-10-30T17:21:52Z after final8240e30/all5 CI41096787672:
+all91 native tests and all17 mechanical markers, five actual boots, exact SQLite
+history/epoch checks and component build/test commands passed. Native screenshots
+were inspected: bounds/labels and built blocks render; normal chat obscures part
+of each image. They do not prove textured ghosts. Evidence:
+work/shutter-component-proof-41096787672. No fresh shutter inference or production
+Mojang authentication claim. Full objective remains unfinished.
+Phase16 implements the recorded V1/V2/V3 textured-preview Outcomes below. Current
+step: bounded selection and immutable client-to-render snapshot publication, then
+native block-model submits, lifecycle tests and clean visual evidence. Tests only
+on GitHub; no local game/test runs. Inspect actual git/CI before claiming progress.
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized; no approval pending. Tests run only on GitHub, never on his slow PC.
 Locally scoped compile/type/format/syntax only. Push regularly. Keep memory only
@@ -306,3 +308,52 @@ FabricRenderState/RenderStateDataKey and BlockStateModel.collectParts with nativ
 BlockModelFeatureRenderer submits. Capture immutable approved frame data in extraction,
 render it without world reads/mutations. Existing ClientPreview identity/permission
 fences remain authoritative presentation inputs. No visual implementation yet.
+
+Phase16 focused GPT-6-Luna/high challenge found two concrete points: ProjectManager.use
+must clear/publish immediately instead of leaving the old preview until its5-tick
+refresh; and render extraction must not read unsynchronized client cache fields.
+Use an immediate null preview on selection, and a single volatile immutable approved
+ProjectView input published by the existing client-thread accept/reset handlers.
+Extraction reads that input and its provided level/camera context; drawing reads
+only per-frame data. Publish an empty frame when no current input matches. Reuse
+vanilla model submissions; no custom world blocks or GPU caches. No authority or
+canonical-data bypass found. No helper edits/tests or model call.
+
+Phase16 first implementation now compiles: nearby selection caps256 within48 blocks
+and prioritizes current missing work; both old outlines and textured submits use
+that budget. Existing accept/reset publishes one volatile immutable approved input.
+Extraction validates dimension, derives native model parts and stores immutable
+per-frame data; COLLECT_SUBMITS uses only it with translucent vanilla block rendering,
+no fake world or custom GPU cache. Project use/create immediately clears prior preview.
+Pinned26.3 moved full-bright lighting to LightCoordsUtil; initial compile caught the
+obsolete LightTexture name and it was corrected. No local runtime tests ran.
+
+Written native proofs cover large selection priority/culling, real positive model
+submission with unchanged server blocks/journal, wrong-facing physical block kept,
+90-degree rotated intended models, disconnect cache clear and distant culling.
+Bob's actual missing-block shared preview must submit models, then revocation must
+clear the immutable input and model submissions; both new markers are required.
+Existing no-overlay role remains. Clean native shutter screenshots now clear chat.
+Runtime/alpha/alignment/visual proof is pending GitHub; do not claim textured ghosts
+work merely from compile or submission counters. Project/dimension transition
+coverage still needs strengthening after the first rendering proof.
+
+Phase16 source370e209 is pushed in draft PR25. Server/client compilation passed;
+CI41100991399 is queued, not failed. Added native dimension round-trip and empty
+project transition checks to close V2 coverage; scoped client compilation passes.
+No runtime or visual acceptance yet. All broader milestones remain active.
+
+Phase16 adds an explicit partial-build screenshot: four fixture-placed correct
+blocks remain physical and exactly two missing blocks submit ghost models; the
+assistant journal stays empty. Native dimension round-trip and project reset are
+now written too. Scoped compilation passes. CI41101114559 remained queued with
+no pending deployment approvals; no runtime verdict or visual proof yet.
+
+Phase16 CI41101340628 artifacts downloaded to work/textured-preview-proof-41101340628.
+Fabric passes; client logs reach dimension round-trip and project reset; both
+textured Bob/revocation markers pass. Images show models/rotation/partial work but
+reveal an actual opacity bug: submitBlockModel last int is outline color, and its
+implementation hardcodes body tint -1. Thus counters/compile were insufficient.
+Fix uses vanilla baked quads via native submitCustomGeometry with explicit per-quad
+alpha/fullbright/overlay. No world reads, fake blocks, GPU cache or authority change.
+New-source runtime/visual evidence required before merge; old images are not a pass.

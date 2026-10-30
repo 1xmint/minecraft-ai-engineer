@@ -1,6 +1,7 @@
 package dev.minecraftai.engineer.client;
 
 import dev.minecraftai.engineer.ProjectView;
+import dev.minecraftai.engineer.PreviewSelection;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -18,10 +19,11 @@ public final class EngineerClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         if (!ClientPreview.enabled()) return;
         ClientPreview.initialize();
+        GhostPreviewRenderer.initialize();
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             ProjectView view=ClientPreview.current();if(view==null)return;
             try(var collection=client.collectPerTickGizmos()) {
-                for(ProjectView.Ghost ghost:view.blocks()) {
+                for(ProjectView.Ghost ghost:PreviewSelection.nearby(view,client.player.getEyePosition())) {
                     int color=ghost.wrong()?0xffff5555:ghost.matches()?0xff55dd88:ghost.currentStage()?0xff55ddff:0xff778899;
                     int fill=(ghost.currentStage()?0x33000000:0x11000000)|(color&0xffffff);
                     Gizmos.cuboid(ghost.pos(),0.003f,GizmoStyle.strokeAndFill(color,ghost.currentStage()?2f:1f,fill));
@@ -39,6 +41,7 @@ public final class EngineerClient implements ClientModInitializer {
             Minecraft client=Minecraft.getInstance();ProjectView view=ClientPreview.current();if(view==null)return;
             graphics.text(client.font,view.text(),8,8,0xff55ddff,true);
             graphics.text(client.font,"Cyan: current step | Green: correct | Red: fix block/orientation | /engineer",8,20,0xffdddddd,true);
+            graphics.text(client.font,"Translucent: planned blocks | Preview does not change the world",8,32,0xffdddddd,true);
         });
     }
 }
