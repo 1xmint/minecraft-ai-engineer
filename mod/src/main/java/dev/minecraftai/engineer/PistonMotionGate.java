@@ -70,6 +70,29 @@ public final class PistonMotionGate {
         if(prior!=null){if(prior.equals(expected))return;throw new IllegalStateException("Another motion still guards this accepted design");}
         if(slots.size()>=64)throw new IllegalStateException("Too many managed piston transactions");slots.put(binding.piston(),expected);
     }
+    /** Purely retires an idle denial after a fresh, quiescent handoff. Never edits blocks or queues. */
+    static void releaseIdle(ServerLevel level,ShutterDesign.Design design,Runnable authority,Runnable writeAhead){
+        thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);var slots=LEVELS.get(level);var expected=new Idle(design.binding());
+        if(slots==null || !expected.equals(slots.get(design.piston())))throw new IllegalStateException("Reconcile active mechanical work before releasing control");
+        authority.run();var before=handoffBasis(level,design);writeAhead.run();authority.run();
+        if(LEVELS.get(level)!=slots || !expected.equals(slots.get(design.piston())) || !before.equals(handoffBasis(level,design)))throw new IllegalStateException("Mechanism changed while recording manual handoff");
+        slots.remove(design.piston());
+    }
+    private static Map<BlockPos,BlockState> handoffBasis(ServerLevel level,ShutterDesign.Design design){
+        for(var pos:design.readCells())if(!level.hasChunkAt(pos) || pos.getY()<level.getMinY() || pos.getY()>level.getMaxY() || !level.getWorldBorder().isWithinBounds(pos))throw new IllegalStateException("Manual handoff requires the complete already loaded workspace");
+        if(!level.shouldTickBlocksAt(design.piston()) || ((PistonEventQueue)(Object)level).engineer$hasPendingOrDispatchingEvent(design.piston()))throw new IllegalStateException("Wait nearby for pending mechanism updates to settle before releasing control");
+        var states=new HashMap<BlockPos,BlockState>();
+        for(var pos:design.motionCells()){
+            var state=level.getBlockState(pos);
+            if(state.is(net.minecraft.world.level.block.Blocks.MOVING_PISTON) || level.getBlockEntity(pos) instanceof net.minecraft.world.level.block.piston.PistonMovingBlockEntity)throw new IllegalStateException("Moving blocks must settle before manual handoff");states.put(pos,state);
+        }
+        var base=states.get(design.piston());
+        if(base.getBlock() instanceof net.minecraft.world.level.block.piston.PistonBaseBlock piston){
+            boolean signal=((PistonPowerView)(Object)piston).engineer$powered(level,design.piston(),base.getValue(BlockStateProperties.FACING));
+            if(signal!=base.getValue(BlockStateProperties.EXTENDED))throw new IllegalStateException("Piston signal and pose disagree; reconcile before manual handoff");
+        }
+        return Map.copyOf(states);
+    }
     /** Fresh managed actuation is distinct from observing/reconciling an old journal. */
     static Ticket armGuarded(ServerLevel level,ShutterDesign.Design design,ShutterJournal.Scope scope,ShutterMotion.Snapshot snapshot,Set<BlockPos> writes,Runnable authority,Consumer<UUID> writeAhead){
         thread(level);Objects.requireNonNull(authority);Objects.requireNonNull(writeAhead);

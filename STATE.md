@@ -728,3 +728,17 @@ Official SDK/structured output docs rechecked before the discussion proof.
 Next after PR23 ships: establish mechanical behavior contracts and piston-motion
 failure boundaries before expanding the generated block allowlist. Write the next
 slice's Outcomes from actual source/mechanics research; retain all full milestones.
+
+2026-10-30 continuation: committed c97fb29 passed all5 checks in CI41005633394,
+including dedicated multiplayer. Safe handoff core now inspects both vanilla
+block-event queues and in-flight event dispatch through a required read-only
+ServerLevel mixin. releaseIdle requires an exact idle design binding, complete
+already-loaded read bounds, a block-ticking base, no pending/dispatching event,
+no moving blocks and actual vanilla power/extension agreement. It rechecks current
+authority, guard and physical basis after the durable request callback; it never
+clears queues, edits blocks or grants a motion ticket. Core compile passed.
+New native test covers queued-event preservation/refusal, a newly queued event
+inside persistence, post-receipt permission loss and ordinary vanilla motion after
+successful release. Runtime proof awaits CI. This is still internal foundation:
+public release command/session ownership persistence, additional deferred-chunk
+coverage and full preview/build/teach/undo remain unfinished. Full goal stays active.

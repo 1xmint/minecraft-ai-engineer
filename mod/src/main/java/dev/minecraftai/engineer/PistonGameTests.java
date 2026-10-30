@@ -13,6 +13,27 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics oracles only. Production blueprints do not yet permit pistons. */
 public final class PistonGameTests {
+    @GameTest(maxTicks=35) public void manualHandoffPreservesQueuedEventsAndRequiresFreshAuthority(GameTestHelper helper){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-handoff",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        for(var block:design.worldBlocks())level.setBlockAndUpdate(block.pos(),block.state());PistonMotionGate.guard(level,design);
+        int[] receipts={0};
+        helper.runAtTickTime(8,()->{
+            rejects(helper,()->PistonMotionGate.releaseIdle(level,design,()->{throw new IllegalStateException("Revoked");},()->receipts[0]++),"Manual handoff requires current authority");
+            level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,Direction.EAST.get3DDataValue());
+            rejects(helper,()->PistonMotionGate.releaseIdle(level,design,()->{},()->receipts[0]++),"Queued motion prevents handoff");
+            helper.assertTrue(receipts[0]==0 && ((PistonEventQueue)(Object)level).engineer$hasPendingOrDispatchingEvent(design.piston()),"Refusal neither records release nor deletes the queued player event");
+        });
+        helper.runAtTickTime(16,()->{
+            helper.assertTrue(!level.getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED),"The existing guard denies the drained event");
+            rejects(helper,()->PistonMotionGate.releaseIdle(level,design,()->{},()->level.blockEvent(design.piston(),Blocks.STICKY_PISTON,0,Direction.EAST.get3DDataValue())),"An event queued during persistence invalidates handoff");
+        });
+        helper.runAtTickTime(24,()->{
+            int[] checks={0};rejects(helper,()->PistonMotionGate.releaseIdle(level,design,()->{if(++checks[0]>1)throw new IllegalStateException("Grant changed during persistence");},()->receipts[0]++),"Authority is rechecked after the receipt");
+            PistonMotionGate.releaseIdle(level,design,()->{},()->receipts[0]++);
+            helper.pullLever(design.input().subtract(helper.absolutePos(BlockPos.ZERO)));
+        });
+        helper.runAtTickTime(32,()->{helper.assertTrue(level.getBlockState(design.aperture()).is(Blocks.STONE),"Fresh successful handoff returns ordinary vanilla motion to the player");helper.succeed();});
+    }
     @GameTest(maxTicks=25) public void previewCheckpointDoesNotAcquirePistonControl(GameTestHelper helper){
         var level=helper.getLevel();var manager=EngineerMod.managerFor(level.getServer());var project=UUID.randomUUID();var owner=UUID.randomUUID();var dimension=level.dimension().identifier().toString();var design=ShutterDesign.create(UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(2,3,2)),0);
         // The physical machine is a native fixture, never assistant placement or delegated control.
