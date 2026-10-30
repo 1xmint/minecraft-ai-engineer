@@ -233,6 +233,16 @@ helper. New runtime coverage awaits CI. Next: derive startup denial bindings fro
 these accepted component identities and wire input/commit recovery before lifting
 the execution guard and proving the full dedicated-server shutter flow.
 
+Isolation checkpoint23377a1 is now all5 green in CI40994181567, including the
+dedicated multiplayer job. Reservation679f25f and canonical integration13df4c6
+are the next source batch awaiting runtime verification. Pinned26.3 startup
+inspection in work/minecraft-server-startup-26.3.txt confirms loadLevel calls
+createLevels then prepareLevels before the normal server tick loop. Choose an
+early level-load hook only after checking exact Fabric hook position and whether
+spawn preparation executes queued physics; SERVER_STARTED alone is not assumed
+early enough. FunctionalTrial.load is data-only but still assumes electrical
+contracts for pending inputs, so mechanical recovery needs its own typed state.
+
 - C1: explicit free-form selected-project/component engineering question gets
   grounded read-only explanation, clarification or unsupported reply. Native
   command, bounded provider, sources and no invented world authority are proven
