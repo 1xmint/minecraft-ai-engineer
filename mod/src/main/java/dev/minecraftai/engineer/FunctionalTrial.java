@@ -19,6 +19,7 @@ final class FunctionalTrial {
     private int vector,nextTick;
     private BehaviorSpec generatedBehavior;
     private TruthTableSpec truthBehavior;
+    private BlockState shutterOriginal;
     private SettledTrace settled;
     private TransitionTrace transition;
     private JsonObject generatedRow;
@@ -27,7 +28,8 @@ final class FunctionalTrial {
     boolean pending(){return !inputs.isEmpty();}
     JsonArray evidence(){return evidence.deepCopy();}
     JsonObject scope(){return evidenceScope==null?null:evidenceScope.deepCopy();}
-    void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();evidenceScope=null;evidenceBlueprint=null;contract=null;}
+    String shutterOriginalSnapshot(){return shutterOriginal==null?null:Blueprint.describe(shutterOriginal);}
+    void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();evidenceScope=null;evidenceBlueprint=null;contract=null;shutterOriginal=null;}
     private void archiveEvidence(){
         if(evidence.isEmpty())return;var s=session;
         if(evidenceScope==null || evidenceBlueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
@@ -37,6 +39,7 @@ final class FunctionalTrial {
         history.addProperty("archivedAtTick",s.level().getGameTime());history.add("cases",evidence.deepCopy());
         history.add("blueprint",evidenceBlueprint.deepCopy());history.addProperty("component",evidenceScope.get("component").getAsString());history.addProperty("componentBasis",evidenceScope.get("basis").getAsString());
         history.addProperty("componentBasisVersion",evidenceScope.get("basisVersion").getAsInt());history.add("functionalScope",evidenceScope.deepCopy());
+        if(shutterOriginal!=null)history.addProperty("shutterOriginalInput",Blueprint.describe(shutterOriginal));
         LocalFiles.write(s.file.resolveSibling(s.projectId+".evidence-"+UUID.randomUUID()+".json"),history);
     }
 
@@ -254,6 +257,9 @@ final class FunctionalTrial {
         row.add("inputs",observedInputs);row.add("outputs",observedOutputs);evidence.add(row);
     }
     private void apply(Map<String,Boolean> values){
+        apply(values,()->{});
+    }
+    private void apply(Map<String,Boolean> values,Runnable beforeActivation){
         var s=session;
         for(var old:new ArrayList<>(inputs.values())){
             s.validateMutation();s.validateTestArea();s.validateTarget(old.pos());
@@ -262,6 +268,7 @@ final class FunctionalTrial {
             BlockState wanted=actual.setValue(BlockStateProperties.POWERED,values.get(old.name()));
             if(actual.equals(wanted))continue;
             inputs.put(old.name(),new Input(old.name(),old.pos(),old.original(),wanted,actual,true));s.save();
+            beforeActivation.run();
             activate(old.pos(),actual,wanted,ProjectAccess.Permission.BUILD);
             inputs.put(old.name(),new Input(old.name(),old.pos(),old.original(),wanted,actual,false));s.save();
         }
@@ -279,6 +286,12 @@ final class FunctionalTrial {
             try{
                 var action=s.delegation.action();s.validateMutation(action);s.requireCreative();s.validateTarget(input.pos());
                 BlockState actual=s.level().getBlockState(input.pos());
+                if(s.blueprint!=null && ShutterDesign.describes(s.blueprint.source()) && s.shutterMotion==null){
+                    s.validateTestArea();var design=ShutterDesign.read(s.blueprint.source());boolean target=actual.equals(input.original())?actual.getValue(BlockStateProperties.POWERED):input.original().getValue(BlockStateProperties.POWERED);
+                    if(target!=s.level().getBlockState(design.piston()).getValue(BlockStateProperties.EXTENDED)){
+                        var snapshot=ShutterMotion.capture(s.level(),design.piston(),target,design.writeCells());var scope=s.acceptedMotionScope();s.shutterMotion=ShutterJournal.prepare(scope,snapshot,UUID.randomUUID());s.save();s.restoreMotionDenial();
+                    }
+                }
                 if(actual.equals(input.original())){inputs.remove(input.name());s.save();continue;}
                 if(!actual.equals(input.last())){
                     // A crash before a write cannot be distinguished from a player
@@ -303,12 +316,15 @@ final class FunctionalTrial {
         return entries;
     }
     void write(JsonObject json){
+        if(shutterOriginal!=null)json.addProperty("shutterOriginalInput",Blueprint.describe(shutterOriginal));
         json.add("testInputs",inputsSnapshot());json.add("functionalEvidence",evidence.deepCopy());
         if(evidenceScope!=null)json.add("functionalScope",evidenceScope.deepCopy());
         // Readable legacy alias for the first remaining input; the array owns recovery.
         if(pending()){var first=inputs.values().iterator().next();json.addProperty("testOriginal",Blueprint.describe(first.original()));json.addProperty("testLast",Blueprint.describe(first.last()));}
     }
     void load(JsonObject json){
+        shutterOriginal=json.has("shutterOriginalInput")?Blueprint.state(json.get("shutterOriginalInput").getAsString()):null;
+        if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
         validateCases(evidence);
@@ -331,10 +347,15 @@ final class FunctionalTrial {
             if(session.blueprint==null)throw new IllegalStateException("Legacy functional evidence has no intended blueprint");
         }
         if(session.blueprint!=null && GeneratedBlueprint.isGenerated(session.blueprint))validateGeneratedEvidence(evidence,GeneratedBlueprint.behavior(session.blueprint),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
+        if(session.blueprint!=null && ShutterDesign.describes(session.blueprint.source()) && (!evidence.isEmpty() || shutterOriginal!=null))ShutterEvidence.validate(evidence,ShutterDesign.read(session.blueprint.source()),shutterOriginal,session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;
         if(entries!=null && entries.isEmpty()){if(json.has("testOriginal"))throw new IllegalStateException("Conflicting test recovery formats");return;}
-        contract=EngineeringContracts.contract(session.executionBlueprint());
+        if(ShutterDesign.describes(session.executionBlueprint().source())){
+            var design=ShutterDesign.read(session.executionBlueprint().source());
+            // Recovery needs only the independently accepted input identity. No lamp cases or functional pass.
+            contract=new MechanismCatalog.Contract("sticky-shutter-input-recovery",List.of(new MechanismCatalog.Port("input",design.input(),true)),List.of(),0);
+        }else contract=EngineeringContracts.contract(session.executionBlueprint());
         if(entries==null){
             var port=contract.ports().stream().filter(MechanismCatalog.Port::input).findFirst().orElseThrow();
             if(contract.ports().stream().filter(MechanismCatalog.Port::input).count()!=1)throw new IllegalStateException("Scalar test recovery cannot authorize a multi-input mechanism");
@@ -392,4 +413,14 @@ final class FunctionalTrial {
         if(inputs.containsKey(input.name()) || !input.original().is(Blocks.LEVER) || !Blueprint.matches(planned,input.original()) || !Blueprint.matches(planned,input.last()) || !Blueprint.matches(planned,input.before()))throw new IllegalStateException("Invalid recovery input state");
         inputs.put(input.name(),input);
     }
+    BlockState beginShutter(){
+        var s=session;if(pending())throw new IllegalStateException("Reconcile pending inputs first");archiveEvidence();var design=ShutterDesign.read(s.blueprint.source());var actual=s.level().getBlockState(design.input());
+        shutterOriginal=actual;contract=new MechanismCatalog.Contract("sticky-shutter-input",List.of(new MechanismCatalog.Port("input",design.input(),true)),List.of(),0);inputs.put("input",new Input("input",design.input(),actual,actual,actual,false));evidence=new JsonArray();evidenceScope=makeScope(s.blueprint,"root",ComponentAssignments.BASIS_VERSION);evidenceBlueprint=s.blueprint.source().deepCopy();return actual;
+    }
+    void applyShutter(boolean powered,Runnable beforeActivation){apply(Map.of("input",powered),beforeActivation);}
+    void recordShutter(JsonArray rows){evidence=rows.deepCopy();session.save();}
+    void finishShutter(){
+        var input=inputs.get("input");if(input==null || input.pending() || !session.level().getBlockState(input.pos()).equals(input.original()))throw new IllegalStateException("Mechanical test must restore the exact original input");inputs.clear();session.save();
+    }
+    void requireShutterInput(){var input=inputs.get("input");if(input==null || input.pending() || !session.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Mechanical test input changed; preserve its restoration journal");}
 }

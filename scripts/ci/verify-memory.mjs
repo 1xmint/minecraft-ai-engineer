@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
+import { validateShutterEvidence } from "../../dist/companion/src/shutter-trace.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -16,7 +17,21 @@ const restoredBoot =
   process.env.MCE_LIVE_ACCEPTANCE !== "true"
     ? JSON.parse(readFileSync(`${coordination}/restored-layout-server`, "utf8"))
     : undefined;
-const currentEpoch = restoredBoot?.serverEpoch ?? server.serverEpoch;
+const undoBoot =
+  process.env.MCE_LIVE_ACCEPTANCE !== "true"
+    ? JSON.parse(readFileSync(`${coordination}/shutter-undo-server`, "utf8"))
+    : undefined;
+const currentEpoch =
+  undoBoot?.serverEpoch ?? restoredBoot?.serverEpoch ?? server.serverEpoch;
+if (undoBoot) {
+  assert.equal(undoBoot.serverId, server.serverId);
+  assert.equal(undoBoot.worldId, server.worldId);
+  assert.notEqual(
+    undoBoot.serverEpoch,
+    restoredBoot.serverEpoch,
+    "Undo recovery is a real fifth boot after structural recovery",
+  );
+}
 if (restoredBoot) {
   assert.equal(restoredBoot.serverId, server.serverId);
   assert.equal(restoredBoot.worldId, server.worldId);
@@ -24,6 +39,62 @@ if (restoredBoot) {
 
 const db = new DatabaseSync(database, { readOnly: true });
 try {
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
+    for (const marker of [
+      "shutter-recovery.done",
+      "shutter-input-recovery.done",
+      "shutter-position-reconciled.done",
+      "shutter-position-recovery.done",
+      "shutter-motion-recovery.done",
+      "shutter-functional.done",
+      "shutter-functional-recovery.done",
+      "shutter-handoff.done",
+      "shutter-handoff-recovery.done",
+      "shutter-construction.done",
+      "shutter-planning-denied.done",
+      "shutter-sharing.done",
+      "shutter-bob-view.done",
+      "shutter-bob-denied.done",
+      "shutter-undo.done",
+      "shutter-undo-prepared.done",
+      "shutter-undo-recovery.done",
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+        "passed",
+      );
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
+    for (const label of ["off", "on"]) {
+      const design = JSON.parse(
+        readFileSync(`${coordination}/shutter-design-${label}`, "utf8"),
+      );
+      const cases = JSON.parse(
+        readFileSync(`${coordination}/shutter-evidence-${label}`, "utf8"),
+      );
+      const original = readFileSync(
+        `${coordination}/shutter-original-${label}`,
+        "utf8",
+      ).trim();
+      validateShutterEvidence(cases, design, original, true);
+      const saved = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:sticky-shutter:%' AND json_extract(document,'$.checkpoint.observed.testEvidence[0].tick')=? ORDER BY id DESC LIMIT 1",
+        )
+        .get(server.serverId, design.projectId, cases[0].tick);
+      assert.ok(
+        saved,
+        "Companion must durably retain this exact measured shutter trial, including when later retests exist",
+      );
+      const checkpoint = JSON.parse(saved.document).checkpoint;
+      assert.equal(checkpoint.observed.shutterOriginalInput, original);
+      validateShutterEvidence(
+        checkpoint.observed.testEvidence,
+        design,
+        original,
+        true,
+      );
+      assert.deepEqual(checkpoint.observed.testEvidence, cases);
+    }
   if (
     process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
     process.env.MCE_DISCUSSION_ACCEPTANCE === "true"
@@ -618,6 +689,16 @@ try {
       4,
       "Only the two explicit behavior/geometry pairs spend quota; the changed restored basis is rejected before dispatch",
     );
+    const fourthBootStarts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start' AND json_extract(document,'$.serverEpoch')=?",
+      )
+      .get(server.serverId, structuralId, restoredBoot.serverEpoch);
+    assert.equal(
+      fourthBootStarts.count,
+      2,
+      "The repeated behavior/geometry pair remains independently bound to the actual fourth boot",
+    );
     const structuralRow = db
       .prepare(
         "SELECT project_revision,synced_epoch FROM gateway_projects WHERE server_id=? AND project_id=?",
@@ -625,8 +706,8 @@ try {
       .get(server.serverId, structuralId);
     assert.equal(
       structuralRow.synced_epoch,
-      restoredBoot.serverEpoch,
-      "Repeated structural work synchronizes against its actual fourth boot",
+      currentEpoch,
+      "Repeated structural work retains its revision while metadata synchronizes against the latest actual boot",
     );
     const originalStructural = JSON.parse(
       readFileSync(`${coordination}/structural-before`, "utf8"),

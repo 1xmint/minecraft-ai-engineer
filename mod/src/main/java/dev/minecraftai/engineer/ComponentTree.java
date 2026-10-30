@@ -118,6 +118,7 @@ public final class ComponentTree {
 
     /** Validates single recipes or verifies every persisted composite field against regeneration. */
     public static void validate(Blueprint blueprint) {
+        if(ShutterDesign.describes(blueprint.source())){ShutterDesign.validate(blueprint);return;}
         if(GeneratedBlueprint.isGenerated(blueprint)){GeneratedBlueprint.validate(blueprint);return;}
         if (!composite(blueprint)) { MechanismCatalog.contract(blueprint); return; }
         JsonObject source = blueprint.source();

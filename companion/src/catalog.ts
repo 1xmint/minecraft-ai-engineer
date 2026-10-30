@@ -1,6 +1,7 @@
 import raw from "../../catalog/mechanisms.json" with { type: "json" };
 import { randomUUID } from "node:crypto";
 import { rotatePosition } from "./geometry.js";
+import { makeShutterDesign, SHUTTER_OPTION } from "./shutter-design.js";
 import {
   type Blueprint,
   type DesignRequest,
@@ -16,7 +17,7 @@ import {
 } from "./types.js";
 
 export interface Mechanism {
-  id: Exclude<Plan["template"], "unsupported">;
+  id: Exclude<Plan["template"], "unsupported" | "sticky-shutter">;
   name: string;
   explanation: string;
   maxDelay: number;
@@ -158,6 +159,15 @@ function immutable<T>(value: T): T {
 export const MECHANISMS: ReadonlyArray<Mechanism> = immutable(
   array(raw.mechanisms, "mechanisms", 64).map(readMechanism),
 );
+export const PLANNING_MECHANISMS = immutable([
+  ...MECHANISMS.map((m) => ({
+    template: m.id,
+    name: m.name,
+    explanation: m.explanation,
+    maxDelay: m.maxDelay,
+  })),
+  SHUTTER_OPTION,
+]);
 if (new Set(MECHANISMS.map((m) => m.id)).size !== MECHANISMS.length)
   throw new RequestError("Duplicate catalog identity.");
 export function mechanism(id: string): Mechanism {
@@ -169,11 +179,17 @@ export function adaptation(
   template: string,
   value: unknown,
 ): { delay: number } {
-  const m = mechanism(template),
-    v = object(value);
+  const v = object(value);
   if (Object.keys(v).some((key) => key !== "delay"))
     throw new RequestError("Unknown mechanism adaptation.");
-  return { delay: integer(v.delay, "delay", 1, m.maxDelay) };
+  return {
+    delay: integer(
+      v.delay,
+      "delay",
+      1,
+      template === "sticky-shutter" ? 1 : mechanism(template).maxDelay,
+    ),
+  };
 }
 function bounds(blocks: { pos: Position }[]) {
   return {
@@ -195,6 +211,20 @@ export function makeMechanismBlueprint(
 ): Blueprint {
   if (plan.template === "unsupported")
     throw new RequestError(plan.explanation, 422);
+  if (plan.template === "sticky-shutter") {
+    adaptation(plan.template, plan.parameters ?? { delay: 1 });
+    const rotation = plan.rotation ?? input.rotation;
+    if (
+      input.revision &&
+      (input.revision.template !== plan.template ||
+        input.revision.rotation !== rotation)
+    )
+      throw new RequestError(
+        "A revision must keep the current mechanism and rotation.",
+        422,
+      );
+    return makeShutterDesign({ ...input, rotation });
+  }
   const m = mechanism(plan.template),
     delay = adaptation(m.id, plan.parameters ?? { delay: 1 }).delay,
     rotation = plan.rotation ?? input.rotation;
@@ -291,9 +321,11 @@ export function makeMechanismBlueprint(
     verification: "untested",
   };
 }
-export function fittingMechanisms(
-  input: DesignRequest,
-): { template: Mechanism["id"]; rotation: Rotation; maxDelay: number }[] {
+export function fittingMechanisms(input: DesignRequest): {
+  template: Exclude<Plan["template"], "unsupported">;
+  rotation: Rotation;
+  maxDelay: number;
+}[] {
   const fits: ReturnType<typeof fittingMechanisms> = [];
   const candidates = input.revision
     ? [
@@ -302,24 +334,34 @@ export function fittingMechanisms(
           rotation: input.revision.rotation,
         },
       ]
-    : MECHANISMS.flatMap((m) =>
+    : PLANNING_MECHANISMS.flatMap((m) =>
         ([0, 90, 180, 270] as const).map((rotation) => ({
-          template: m.id,
+          template: m.template,
           rotation,
         })),
       );
   for (const candidate of candidates) {
-    const m = mechanism(candidate.template),
-      rotation = candidate.rotation;
+    const m = PLANNING_MECHANISMS.find(
+      (m) => m.template === candidate.template,
+    );
+    if (!m) throw new RequestError("Unsupported mechanism.", 422);
+    const rotation = candidate.rotation;
     try {
       makeMechanismBlueprint(input, {
-        template: m.id,
+        template: m.template,
         explanation: m.explanation,
         rotation,
       });
-      fits.push({ template: m.id, rotation, maxDelay: m.maxDelay });
+      fits.push({ template: m.template, rotation, maxDelay: m.maxDelay });
     } catch (error) {
-      if (!(error instanceof RequestError) || error.status !== 422) throw error;
+      // Legacy electrical projects may have non-UUID IDs or coordinates outside
+      // the mechanical contract. Omit that option without breaking valid choices.
+      if (
+        !(error instanceof RequestError) ||
+        (error.status !== 422 &&
+          !(m.template === "sticky-shutter" && error.status === 400))
+      )
+        throw error;
     }
   }
   if (!fits.length)

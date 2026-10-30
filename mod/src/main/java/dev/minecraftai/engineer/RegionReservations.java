@@ -50,6 +50,14 @@ final class RegionReservations {
         if(!leases.get(scope).writes.contains(target))
             throw new IllegalStateException("Mutation target is outside the reserved write set");
     }
+    /** Deferred physics needs every possible write plus its complete captured read closure. */
+    void validateFootprint(Scope scope,Fence fence,UUID actor,int projectRevision,long authorityRevision,Set<BlockPos> writes,Set<BlockPos> reads,long now){
+        validate(scope,fence,actor,projectRevision,authorityRevision,now);
+        Lease lease=leases.get(scope);
+        if(!lease.writes.containsAll(writes))throw new IllegalStateException("Deferred motion exceeds its reserved write set");
+        Set<BlockPos> readable=new HashSet<>(lease.reads);readable.addAll(lease.writes);
+        if(!readable.containsAll(reads))throw new IllegalStateException("Deferred motion dependencies exceed the reserved read closure");
+    }
     /** The exact immutable footprint acquired by this lease, after normal authority validation. */
     Set<BlockPos> permissionFootprint(Scope scope,Fence fence,boolean includeReads,long now) {
         Lease lease=leases.get(scope);

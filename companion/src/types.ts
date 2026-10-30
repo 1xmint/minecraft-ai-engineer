@@ -25,7 +25,7 @@ export interface ComponentMechanismNode {
   id: string;
   parent: string;
   kind: "mechanism";
-  template: Exclude<Plan["template"], "unsupported">;
+  template: Exclude<Plan["template"], "unsupported" | "sticky-shutter">;
   anchor: Position;
   rotation: Rotation;
   parameters: { delay: number };
@@ -137,7 +137,8 @@ export interface Checkpoint {
   verified?: unknown;
 }
 export interface Plan {
-  template: "signal-lamp" | "not-gate" | "or-gate" | "unsupported";
+  template:
+    "signal-lamp" | "not-gate" | "or-gate" | "sticky-shutter" | "unsupported";
   explanation: string;
   parameters?: { delay: number };
   rotation?: Rotation;

@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "revision": 2,
+  "projectId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "worldId": "contract-proof",
+  "dimension": "minecraft:overworld",
+  "name": "Sticky piston shutter",
+  "explanation": "An off lever leaves the aperture open. Power extends a sticky piston and pushes its stone payload into the aperture; removing power pulls the payload back.",
+  "anchor": {
+    "x": 100,
+    "y": 100,
+    "z": 100
+  },
+  "rotation": 90,
+  "blocks": [
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "support",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:sticky_piston[extended=false,facing=east]",
+      "stage": "actuator",
+      "component": "root",
+      "prerequisites": ["support"]
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+      "stage": "input",
+      "component": "root",
+      "prerequisites": ["support", "actuator"]
+    }
+  ],
+  "stages": [
+    {
+      "id": "support",
+      "title": "Place the support and payload",
+      "explanation": "Place the power support and separate stone payload; keep the aperture empty.",
+      "prerequisites": []
+    },
+    {
+      "id": "actuator",
+      "title": "Install the sticky piston",
+      "explanation": "Place the retracted sticky piston facing from its power support toward the payload and aperture.",
+      "prerequisites": ["support"]
+    },
+    {
+      "id": "input",
+      "title": "Add the off lever",
+      "explanation": "Place an off floor lever on the power support. Actuation requires a separate authorized transaction.",
+      "prerequisites": ["support", "actuator"]
+    }
+  ],
+  "bounds": {
+    "min": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "max": {
+      "x": 3,
+      "y": 1,
+      "z": 0
+    }
+  },
+  "resources": {
+    "minecraft:stone": 2,
+    "minecraft:sticky_piston": 1,
+    "minecraft:lever": 1
+  },
+  "ports": [
+    {
+      "name": "input",
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "kind": "input"
+    },
+    {
+      "name": "aperture",
+      "pos": {
+        "x": 3,
+        "y": 0,
+        "z": 0
+      },
+      "kind": "output"
+    }
+  ],
+  "tests": [
+    {
+      "id": "shutter-cycle",
+      "description": "Observe actual aperture, payload, piston and head through off/on/off cycles, allowing eight game ticks to settle and requiring eight stable ticks per state."
+    }
+  ],
+  "provenance": {
+    "kind": "curated",
+    "template": "sticky-shutter",
+    "minecraft": "26.3",
+    "catalogRevision": 1
+  },
+  "mechanical": {
+    "schemaVersion": 1,
+    "function": "shutter",
+    "piston": {
+      "x": 1,
+      "y": 0,
+      "z": 0
+    },
+    "payload": {
+      "x": 2,
+      "y": 0,
+      "z": 0
+    },
+    "input": "input",
+    "output": "aperture",
+    "off": "open",
+    "on": "closed",
+    "settleGameTicks": 8,
+    "stableGameTicks": 8
+  },
+  "verification": "untested"
+}

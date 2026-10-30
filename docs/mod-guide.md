@@ -460,3 +460,32 @@ made no claim that the circuit was built or tested. This remains a source featur
 not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
+
+### Mechanical control handoff (development source)
+
+For an accepted sticky-shutter project, `/engineer release` returns mechanical
+control to players without changing blocks. It requires build permission and
+creative mode. Stop and reconcile pending tests or movement first; remain near
+the loaded mechanism until queued updates settle. A refusal preserves the guard
+and player updates. Manual control survives a server restart. A later explicit
+`/engineer test` delegates control again and runs actual off/on/off observations.
+This command does not establish a functional pass. Public shutter generation,
+construction and undo are still under development.
+
+The development shutter slice supports `/engineer reference sticky-shutter` after
+selecting a region at least four blocks long and two high, with two blocks of
+clear surrounding space. Preview leaves the world untouched. `/engineer teach root`,
+`/engineer component info root` and `/engineer ask explain the timing` describe the
+mechanism. Keep the lever off while `/engineer build` finishes missing blocks.
+`/engineer stop` interrupts; `/engineer resume` requires unchanged player blocks
+and fresh permission. `/engineer test` measures actual aperture behavior and
+restores its original input. `/engineer undo` removes only recorded assistant blocks from a settled open/off
+shutter, preserving player blocks. For a powered or closed mechanism, first
+release control and open it manually, or reconcile pending position recovery.
+Undo keeps mechanical control until another explicit release. This remains an
+unfinished development slice.
+
+Explicit component delegation uses `/engineer component build root` and
+`/engineer component test root` for a standalone shutter. Release mechanical
+control before requesting a replacement plan or design; known blocked requests
+are rejected before model dispatch.

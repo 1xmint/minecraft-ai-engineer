@@ -38,10 +38,10 @@ final class LessonAssistant {
         if(s.blueprint==null)throw new IllegalStateException("Load a design before asking for lesson details");
         if(target==null)target=currentComponent(s,true);
         Blueprint selected=ComponentTree.component(s.blueprint,target);
-        var contract=EngineeringContracts.contract(selected);
+        boolean mechanical=ShutterDesign.describes(selected.source());var contract=mechanical?null:EngineeringContracts.contract(selected);
         int delay=selected.source().has("parameters")?selected.source().getAsJsonObject("parameters").get("delay").getAsInt():1;
         boolean generated=GeneratedBlueprint.isGenerated(selected);
-        Blueprint canonical=generated?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
+        Blueprint canonical=generated || mechanical?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
             s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?GeneratedBlueprint.behavior(selected).summary():canonical.source().get("explanation").getAsString()));
             String current=currentComponent(s,false);
@@ -59,8 +59,10 @@ final class LessonAssistant {
                 if(blocks.size()>8)s.tell("This step contains "+blocks.size()+" planned blocks; the preview shows the rest.");
             } else s.tell("Build order for this component: "+String.join(" -> ",canonical.stages().stream().map(Blueprint.Stage::title).toList())+". Your lesson selection is unchanged.");
             materials(s,target,canonical);
-            for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
+            if(mechanical){var design=ShutterDesign.read(selected.source());s.tell("Intended lever input at "+design.input().toShortString()+"; mechanical aperture output at "+design.aperture().toShortString()+". Off opens; on closes.");}
+            else for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
         } else if(topic==Topic.MATERIALS)materials(s,target,canonical);
+        else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
         else if(generated) {
             s.tell(GeneratedBlueprint.behavior(selected).summary());
         } else {

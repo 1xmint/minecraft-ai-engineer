@@ -1,9 +1,44 @@
 import { plannerConfig } from "../companion/src/provider.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import { discussionGrounding } from "../companion/src/discussion.js";
+import { makeShutterDesign } from "../companion/src/shutter-design.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateDiscussionReply } from "../companion/src/discussion.js";
+test("mechanical discussion retains the reserved-air aperture as an intended output", () => {
+  const blueprint = makeShutterDesign({
+    request: "A one-cell shutter",
+    projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    worldId: "world",
+    dimension: "minecraft:overworld",
+    anchor: { x: 600, y: 100, z: 0 },
+    rotation: 0,
+  });
+  const result = discussionGrounding(
+    blueprint.name,
+    blueprint.revision,
+    blueprint,
+    { schemaVersion: 1, revision: 0, notes: [], hasEarlier: false },
+    "root",
+  );
+  const context = JSON.parse(result.text);
+  assert.equal(context.worldEvidence, "not-inspected");
+  const project = context.sources.find(
+    (source: any) => source.id === "project",
+  );
+  assert.deepEqual(project.data.design.mechanical, blueprint.mechanical);
+  const component = context.sources.find(
+    (source: any) => source.id === "component:root",
+  );
+  assert.equal(component.data.ports.length, 2);
+  assert.ok(component.data.ports.some((port: any) => port.name === "aperture"));
+  assert.equal(
+    component.data.blocks.length,
+    4,
+    "Reserved aperture is a port, not an invented placed block",
+  );
+  assert.ok(!Object.hasOwn(project.data.design, "verified"));
+});
 
 test("discussion is bounded read-only advice with references only to supplied project sources", () => {
   const reply = {

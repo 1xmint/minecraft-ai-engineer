@@ -1,4 +1,5 @@
 import { validateGeneratedBlueprint } from "./generated.js";
+import { readShutterDesign } from "./shutter-design.js";
 import {
   type Blueprint,
   type Position,
@@ -124,6 +125,11 @@ export function serverBlueprint(
     typeof v.rotation !== "number"
   )
     throw new RequestError("Invalid blueprint rotation.");
+  if (
+    v.mechanical !== undefined ||
+    object(v.provenance).template === "sticky-shutter"
+  )
+    return readShutterDesign(v);
   if (object(v.provenance).kind === "generated")
     return validateGeneratedBlueprint(v);
   if (!Array.isArray(v.stages) || v.stages.length < 1 || v.stages.length > 64)
