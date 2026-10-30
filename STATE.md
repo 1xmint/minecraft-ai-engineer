@@ -5,8 +5,12 @@ partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
 Current branch **phase/17-project-finding**, draft PR26 stacked on Phase16 PR25.
-Phase16 source28eaead/CI41101340628 and Phase17 source73f9818/CI41102554684
-are queued, not runtime-proven. Both depend on merged main17a4d89.
+Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
+Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
+texture/revocation markers and memory proof. Fresh screenshots in
+work/textured-alpha-proof-41103559604 visually prove translucent aligned models,
+partial work, rotated intention and red wrong-facing status. Phase17 PR26 now
+targets main; sourcea462236/CI41104638286 has4 passing checks and live dedicated.
 Phase15 PR24 merged2026-10-30T17:21:52Z after final8240e30/all5 CI41096787672:
 all91 native tests and all17 mechanical markers, five actual boots, exact SQLite
 history/epoch checks and component build/test commands passed. Native screenshots
