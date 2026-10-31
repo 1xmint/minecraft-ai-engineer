@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import native from "./fixtures/observer-edges.json" with { type: "json" };
 import {
   validatePulseEvidence,
   validatePulseTrace,
@@ -7,6 +8,13 @@ import {
 import { makeMechanismBlueprint, mechanism } from "../companion/src/catalog.js";
 import { validatePlan, PLAN_SCHEMA } from "../companion/src/provider.js";
 
+test("companion replays actual native edges in all four rotations", () => {
+  assert.equal(native.sourceRun, 41225064861);
+  assert.equal(native.edges.length, 8);
+  assert.equal(new Set(native.edges.map((edge) => edge.rotation)).size, 4);
+  for (const edge of native.edges)
+    assert.equal(validatePulseTrace(edge.trace, true).verdict, "passed");
+});
 const trace = (from = false) => ({
   schemaVersion: 1,
   function: "observer-pulse",

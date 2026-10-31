@@ -9,13 +9,17 @@ Current branch: **phase/21-observer-pulses**, based on main
 2026-10-31T17:23:46Z. Final head0f78de1 passed all5 CI41223355084. Natural requests,
 scoped follow-ups, guarded action delegation and planning are shipped in source.
 Draft PR30: https://github.com/1xmint/minecraft-ai-engineer/pull/30. Current
-implementation head0f13621. Native observer pulse semantics and strict local trace
-validation passed all five checks in CI41225064861 (112 required native tests).
+implementation checkpoint6ca16d8. Native observer pulse semantics and strict trace
+validation passed all five checks in CI41225064861 on0f13621 (112 native tests).
 Canonical observer catalog/component planning, guarded temporal trial, strict
 Java/TypeScript evidence replay, lessons/orientation repair and dedicated-player
 build/test/interrupt/restart/undo proof are now implemented for the next CI run.
-Local scoped type/format/syntax and Java/server/client compilation passed; runtime
-integration remains unproven. Next: inspect CI and fix actual integration failures.
+CI41226129816 on6ca16d8 passed Companion, Windows planner, Minecraft client and
+Fabric (113 native tests). Dedicated flow proved build, both original input states,
+interruption, actual saved-server restart and fresh retest, then failed at an
+incorrect undo expectation: the real guard preserved a manually switched-on lever.
+The proof now requires this refusal and explicit player restoration before retrying
+undo; production undo guards are unchanged. Next: prove this and expanded coverage.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
@@ -179,12 +183,24 @@ callback or lease. Lessons distinguish intended timing from measured results;
 orientation diagnosis/repair preserves dynamic power. New dedicated-client flow
 and SQLite verifier require actual off/on initial-state trials, interrupted-input
 restoration, a new server epoch, fresh testing and assistant-only undo preserving
-a player support. These new flows have not passed CI yet. A GPT-6-Luna/high helper
-is checking execution/recovery boundaries only; no broad review cycle.
+a player support. First integration evidence is task work/
+`observer-integration-41226129816`; markers functional/interrupted/recovered passed,
+undo did not. The failure is the test expecting removal of a player-edited lever,
+not a missing observer pulse. A GPT-6-Luna/high helper completed the focused
+execution/recovery check with no concrete blocker; no broad review cycle.
 
-Next: prove integration, strengthen observer-specific conflict/revocation/shared/
-text-only and composite coverage, archive actual shared evidence/screenshots and
-document supported commands before merging. Never route observer tests through
+Expanded proof is now written/compiled: viewer-denied world actions, revocation
+during a pulse with fresh owner reconciliation, preserved player lamp replacement,
+text-only authorized observer lessons, and a composed observer leaf beside an
+independent lamp. SQLite replay requires their markers, exact scopes and actual
+distinct server epochs. `tests/fixtures/observer-edges.json` archives eight measured
+edges from CI41225064861 for cross-language regression; it supplies no authority.
+A new native screenshot and development command guide are prepared. These added
+flows and corrected undo still need CI proof. Local compile/type/format/syntax
+checks pass; no local tests ran.
+
+Next: prove expanded integration, inspect durable evidence and actual screenshot,
+then finish supported-command docs before merging. Never route observer tests through
 the settled Boolean vector loop. No model calls ran for this phase; archival
 receipts confer no new inference authority. Keep every broader milestone active
 until its own proof exists.

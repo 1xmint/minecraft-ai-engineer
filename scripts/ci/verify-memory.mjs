@@ -406,6 +406,11 @@ try {
       "observer-interrupted.done",
       "observer-recovered.done",
       "observer-undo.done",
+      "observer-viewer.done",
+      "observer-revoked.done",
+      "observer-conflict.done",
+      "observer-composite.done",
+      "observer-text.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -455,6 +460,31 @@ try {
       epochs.size >= 2,
       "Observer results come from actual distinct dedicated-server boots",
     );
+    const compositeProject = readFileSync(
+      `${coordination}/observer-composite-project`,
+      "utf8",
+    ).trim();
+    const compositeReport = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:observer-pulse:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, compositeProject);
+    assert.ok(
+      compositeReport,
+      "Selected observer leaf evidence reaches durable memory",
+    );
+    const composite = JSON.parse(compositeReport.document),
+      observed = composite.checkpoint.observed;
+    assert.equal(observed.testScope.component, "pulse");
+    assert.equal(observed.component, "pulse");
+    assert.equal(observed.testScope.projectId, compositeProject);
+    assert.equal(
+      observed.testScope.blueprintRevision,
+      composite.context.projectRevision,
+    );
+    assert.equal(observed.testScope.basis, observed.componentBasis);
+    assert.deepEqual(observed.testInputs, []);
+    validatePulseEvidence(observed.testEvidence, true);
   }
   const catalogEvidence = [];
   for (const template of ["or-gate", "not-gate"]) {

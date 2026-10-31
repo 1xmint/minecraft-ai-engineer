@@ -19,6 +19,11 @@ public final class ObserverGameTests {
             for(var element:changed.getAsJsonArray("blocks"))if(element.getAsJsonObject().get("state").getAsString().contains("observer"))element.getAsJsonObject().addProperty("state","minecraft:observer[facing=east,powered=false]");
             rejects(helper,()->ComponentTree.validate(Blueprint.parse(changed,"test","minecraft:overworld")),"A model cannot invent another observer layout under catalog provenance");
             rejects(helper,()->MechanismCatalog.create("observer-pulse","test","minecraft:overworld",BlockPos.ZERO,rotation,2),"Observer timing is not a repeater adaptation");
+            var intended=blueprint.blocks().stream().filter(block->block.state().is(net.minecraft.world.level.block.Blocks.OBSERVER)).findFirst().orElseThrow().state();
+            var wrong=intended.setValue(BlockStateProperties.FACING,intended.getValue(BlockStateProperties.FACING).getOpposite()).setValue(BlockStateProperties.POWERED,true);
+            var correction=Diagnosis.corrected(intended,wrong);
+            helper.assertTrue(correction.getValue(BlockStateProperties.FACING)==intended.getValue(BlockStateProperties.FACING) && correction.getValue(BlockStateProperties.POWERED),"Orientation correction preserves observed native dynamic power rather than inventing an off state");
+            rejects(helper,()->Diagnosis.corrected(intended,net.minecraft.world.level.block.Blocks.GLASS.defaultBlockState()),"Observer correction cannot replace another player block kind");
         }
         helper.succeed();
     }
