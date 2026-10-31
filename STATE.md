@@ -647,3 +647,17 @@ citations and late replies after changed notes. Scoped TS check passes. Earlier
 source CI41153488975 Companion/Windows pass, other jobs were live at observation;
 that run does not prove these new endpoint cases. Native command/delegation wiring,
 fresh inference and complete N1–N4 proof are still pending.
+
+Phase20 native draft adds /engineer request and one-use /engineer act delegation.
+Known lesson requests avoid inference; exact stop/stop building remain immediate
+with BUILD rights. Other requests require the configured owner/operator and PLAN.
+Existing request frames bind actor, actual player/connection, epoch, selection,
+dimension, revision, grants and personal lesson. Typed Java decoding rejects extra
+fields, arbitrary actions/targets and authority; direct Java dispatch reuses guarded
+session actions and fresh VIEW/BUILD/UNDO checks. Inferred world actions retain an
+ephemeral nonce plus execution/workspace/operation/progress fingerprint, consumed
+before dispatch; no pending consent survives restart. Two native contract tests
+and development-only usage docs are added. Scoped server/client compilation passed,
+then final changed Java/tests compiled successfully; no local tests ran. Native
+command acceptance, cancellation/consent negatives, fresh inference and full N1–N4
+proof remain pending. Focused existing GPT-6-Luna/high consent review requested.

@@ -13,6 +13,10 @@ final class ProjectKnowledgeClient {
     private final ProjectManager manager;
     private final Map<UUID,Frame> active=new HashMap<>();
     private boolean closed;
+    private record Pending(Frame frame,NaturalActions.Choice choice,UUID nonce,String executionState) {}
+    private final Map<UUID,Pending> pendingActions=new HashMap<>();
+    private static String executionState(EngineeringSession s){return s.state+"|"+s.activeComponent+"|"+s.corner1+"|"+s.corner2+"|"+s.activeOperation+"|"+s.stage+"|"+s.journal.size()+"|"+s.pendingPlacement+"|"+s.undoRequested+"|"+s.testTick;}
+
     private static final class Frame {
         final EngineeringSession session;final UUID actor,epoch;final ServerPlayer player;
         final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
@@ -48,7 +52,7 @@ final class ProjectKnowledgeClient {
         try{return Companion.gateway(f.session,route,body,f.actor);}catch(RuntimeException failure){finish(f);throw failure;}
     }
     private void tell(Frame f,String message){if(current(f))f.player.sendSystemMessage(Component.literal("Engineer: "+message));}
-    private void finish(Frame f){active.remove(f.actor,f);if(f.future!=null && !f.future.isDone())f.future.cancel(true);}
+    private void finish(Frame f){var pending=pendingActions.get(f.actor);if(pending!=null && pending.frame()==f)pendingActions.remove(f.actor);active.remove(f.actor,f);if(f.future!=null && !f.future.isDone())f.future.cancel(true);}
     void tick(){for(var f:new ArrayList<>(active.values()))if(!current(f)){if(sameScope(f))f.player.sendSystemMessage(Component.literal(f.discussion?"Engineer: Discussion timed out; ask again explicitly. No automatic retry.":"Engineer: Project-note result not confirmed. Read notes before retrying a write."));finish(f);}}
     void close(){closed=true;for(var f:new ArrayList<>(active.values()))finish(f);}
 
@@ -101,6 +105,54 @@ final class ProjectKnowledgeClient {
         }));
     }
     void cancelDiscussion(EngineeringSession s) {for(var f:new ArrayList<>(active.values()))if(f.session==s && f.discussion)finish(f);}
+    void interpret(EngineeringSession s,String message) {
+        String normalized=message==null?"":message.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();
+        if(Set.of("stop","stop building","stopbuilding").contains(normalized)) {
+            s.access.require(s.actor(),ProjectAccess.Permission.BUILD);EngineerMod.cancelPlan(s);s.pause("Project stopped by an authorized player");return;
+        }
+        if(Set.of("explain this part again","explain this part","what does this part do","explain the timing","show me how the timing works","explain the materials","what are you working on").contains(normalized)) {
+            LessonAssistant.ask(s,normalized);return;
+        }
+        if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Interpretation requires the single configured account-owning operator");
+        s.access.require(s.actor(),ProjectAccess.Permission.PLAN);
+        if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
+        var f=start(s,true);String capturedState=executionState(s);
+        String selected=f.component!=null?f.component:s.blueprint!=null && !ComponentTree.composite(s.blueprint)?"root":null;
+        var body=new JsonObject();body.addProperty("message",message);body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
+        if(selected!=null)body.addProperty("componentId",selected);
+        tell(f,"Interpreting one engineering request. World work requires a separately reviewed action.");
+        f.future=request(f,"/v2/interpret",body);
+        f.future.whenComplete((reply,error)->manager.server.execute(()->{
+            if(!current(f)){finish(f);return;}
+            boolean retained=false;
+            try {
+                if(error!=null || !"not-inspected".equals(string(reply.get("worldEvidence"),32)))throw new IllegalStateException("Interpretation unavailable");
+                number(reply.get("knowledgeRevision"));
+                var choice=NaturalActions.read(reply.getAsJsonObject("reply"),selected,s.blueprint!=null);
+                if(!choice.kind().equals("action")){tell(f,"AI "+choice.kind()+": "+choice.text());return;}
+                if(choice.component()!=null)ComponentTree.component(s.blueprint,choice.component());
+                if(choice.needsConsent()) {
+                    if(!capturedState.equals(executionState(s)))throw new IllegalStateException("Project execution changed");
+                    var nonce=UUID.randomUUID();pendingActions.put(f.actor,new Pending(f,choice,nonce,capturedState));retained=true;
+                    tell(f,"Proposed action: "+choice.action()+" | project "+s.projectId+" | component "+(choice.component()==null?"project":choice.component())+". No world work has started.");
+                    tell(f,"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
+                } else {
+                    s.commandActor=f.actor;
+                    try{NaturalActions.dispatch(s,choice);}finally{s.commandActor=null;}
+                }
+            }catch(RuntimeException invalid){tell(f,"Request result not confirmed. Check the selected project and ask again explicitly; no automatic retry.");}
+            finally{if(!retained)finish(f);}
+        }));
+    }
+    void act(EngineeringSession s,String nonce) {
+        var pending=pendingActions.get(s.actor());
+        if(pending==null || pending.frame().session!=s || !pending.nonce().toString().equals(nonce))throw new IllegalStateException("No matching pending action");
+        var f=pending.frame();
+        boolean valid=current(f) && pending.executionState().equals(executionState(s));
+        finish(f); // One-use consent, consumed before any dispatch or failed live check.
+        if(!valid)throw new IllegalStateException("Action expired or project context changed; request it again");
+        NaturalActions.dispatch(s,pending.choice());
+    }
     void discuss(EngineeringSession s,String message) {
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Discussion requires the single configured account-owning operator");
         if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the engineering question within 1000 characters");

@@ -526,3 +526,22 @@ execution permission. Undo is scoped to the latest recorded operation and preser
 its exact original states. Correct geometry still needs an explicit functional test.
 This branch's complete repair/restart/undo flow is awaiting native acceptance and
 is not a released repair feature.
+
+## Natural requests (development branch, acceptance pending)
+
+Use `/engineer request <message>` for the selected project. Known lesson questions
+reuse offline answers. Exact `stop` and `stop building` requests stop immediately
+with BUILD permission. Other interpretation requires the configured account-owning
+operator and project owner; it makes one bounded subscription request.
+
+The interpreter can choose an existing action or ask a clarification. It cannot
+choose an arbitrary project, location, permission or command. Component actions
+use your current lesson component; choose a lesson first for composite projects.
+Inferred build, test, repair, resume, undo and stop actions show a server-generated
+summary and a one-use `/engineer act <nonce>` delegation. Changing the connection,
+project, grants, lesson or execution context invalidates that pending action.
+Existing creative, loaded-world, reservation, conflict and repair-preview checks
+still apply when you delegate. Pending consent is not saved across restart.
+
+This path is under construction; native acceptance and fresh model proof remain
+pending. The published alpha does not include it.
