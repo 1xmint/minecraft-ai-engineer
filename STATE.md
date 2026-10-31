@@ -885,3 +885,14 @@ STATE.md paragraph indentation. Native/Fabric/Windows checks remain independent;
 keep the dedicated handle live until terminal. Format only the changed project
 memory file before the next push, and require actual Companion test evidence on
 that new source rather than treating the earlier type check as a test pass.
+
+Source2469f91 CI41219014537 terminal: dedicated multiplayer/Fabric/client/Windows
+pass; Companion stopped at STATE.md formatting before its tests. Downloaded
+work/natural-request-proof-41219014537 and read all13 natural markers: every one
+passed, including actual saved-server consent denial. Native flow BUILD SUCCESSFUL
+8m46s and strict SQLite memory-proof.json exists; the verifier completed its exact
+six typed reply/9 dispatch assertions alongside old functional and shutter replay.
+No fresh inference ran. Local3829d6d fixes only project-memory formatting and passes
+the scoped check; append this actual proof, format that file again, then push for
+all five checks and actual Companion tests on the final source. A native green job
+alone is not permission to claim the whole goal or the fresh signed-in proof done.
