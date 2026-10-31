@@ -10,6 +10,38 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native temporal feasibility, independent of catalog support or model output. */
 public final class ObserverGameTests {
+    @GameTest public void pulseEvidenceRejectsFalsePassAndRewrittenTiming(GameTestHelper helper){
+        for(boolean from:new boolean[]{false,true}){
+            var good=new PulseTrace(from);var off=new PulseTrace(from);var gap=new PulseTrace(from);
+            var extra=new PulseTrace(from);var wrongLamp=new PulseTrace(from);var changedInput=new PulseTrace(from);
+            for(int tick=0;tick<=PulseTrace.HORIZON;tick++){
+                boolean pulse=tick>=2 && tick<4,lit=tick>=2 && tick<8;
+                good.sample(tick,!from,pulse,pulse,lit);off.sample(tick,!from,false,false,false);
+                if(tick!=3)gap.sample(tick,!from,pulse,pulse,lit);
+                extra.sample(tick,!from,pulse || tick==12,pulse,lit);
+                wrongLamp.sample(tick,!from,pulse,pulse,pulse);
+                changedInput.sample(tick,tick==9?from:!from,pulse,pulse,lit);
+            }
+            helper.assertTrue(good.passed() && PulseTrace.read(good.json()).passed(),"Both real edge directions can be verified from complete evidence");
+            helper.assertTrue(!off.passed() && off.verdict().equals("failed"),"A steady off endpoint is not a pulse");
+            helper.assertTrue(!gap.passed() && gap.verdict().equals("inconclusive"),"Missing pulse ticks cannot prove a pass");
+            helper.assertTrue(!extra.passed() && !wrongLamp.passed() && !changedInput.passed(),"Reject extra pulses, incorrect receiver response and changed inputs");
+            rejects(helper,()->good.sample(16,!from,false,false,false),"Duplicate ticks are rejected");
+            var rewritten=good.json();rewritten.addProperty("delayGameTicks",3);
+            rejects(helper,()->PulseTrace.read(rewritten),"Stored timing cannot rewrite the intended contract");
+            var invented=off.json();invented.addProperty("verdict","passed");
+            rejects(helper,()->PulseTrace.read(invented),"An archived pass claim must match its samples");
+            var authority=good.json();authority.addProperty("actorId","owner");
+            rejects(helper,()->PulseTrace.read(authority),"Evidence cannot import execution authority");
+            var copy=good.json();copy.getAsJsonArray("samples").remove(0);
+            helper.assertTrue(good.passed() && good.json().getAsJsonArray("samples").size()==17,"Exported samples cannot mutate captured observations");
+        }
+        helper.succeed();
+    }
+    private static void rejects(GameTestHelper helper,Runnable action,String message){
+        boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}
+        helper.assertTrue(rejected,message);
+    }
     @GameTest(maxTicks=110) public void observerEast(GameTestHelper helper){pulse(helper,Rotation.NONE,false);}
     @GameTest(maxTicks=110) public void observerSouth(GameTestHelper helper){pulse(helper,Rotation.CLOCKWISE_90,false);}
     @GameTest(maxTicks=110) public void observerWest(GameTestHelper helper){pulse(helper,Rotation.CLOCKWISE_180,false);}
@@ -26,17 +58,19 @@ public final class ObserverGameTests {
         block(helper,1,1,0,"minecraft:observer[facing="+(wrongFacing?"north":"west")+",powered=false]",rotation);
         block(helper,2,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
         var input=at(0,1,0,rotation);var observer=at(1,1,0,rotation);var receiver=at(2,1,0,rotation);
-        var samples=new JsonArray();long[] origin={0};
+        var samples=new JsonArray();long[] origin={0};var edges=new PulseTrace[]{new PulseTrace(false),new PulseTrace(true)};
         // Placement updates settle first. Each edge is followed by a full quiet interval.
-        helper.runAtTickTime(20,()->origin[0]=helper.getLevel().getGameTime());
-        helper.runAtTickTime(24,()->helper.pullLever(input));
-        helper.runAtTickTime(48,()->helper.pullLever(input));
-        // A side-neighbor block update must not trigger the front-facing detector.
-        helper.runAtTickTime(72,()->block(helper,1,1,1,"minecraft:glass",rotation));
         for(int tick=20;tick<=96;tick++){
             final int expectedElapsed=tick-20;
             helper.runAtTickTime(tick,()->{
-                var level=helper.getLevel();long elapsed=level.getGameTime()-origin[0];
+                var level=helper.getLevel();
+                // GameTest does not order separate callbacks scheduled for the same tick.
+                // Couple each stimulus and its first sample in one callback.
+                if(expectedElapsed==0)origin[0]=level.getGameTime();
+                if(expectedElapsed==4 || expectedElapsed==28)helper.pullLever(input);
+                // A side-neighbor update must not trigger the front-facing detector.
+                if(expectedElapsed==52)block(helper,1,1,1,"minecraft:glass",rotation);
+                long elapsed=level.getGameTime()-origin[0];
                 boolean powered=level.getBlockState(helper.absolutePos(observer)).getValue(BlockStateProperties.POWERED);
                 boolean signal=level.hasNeighborSignal(helper.absolutePos(receiver));
                 boolean lit=level.getBlockState(helper.absolutePos(receiver)).getValue(BlockStateProperties.LIT);
@@ -51,7 +85,14 @@ public final class ObserverGameTests {
                 helper.assertTrue(powered==pulse,"Observer must emit exactly two game ticks after a two-tick delay: "+evidence);
                 helper.assertTrue(signal==pulse,"The intended receiver must actually receive the pulse: "+evidence);
                 helper.assertTrue(lit==lamp,"Lamp response must include its measured four-tick shutoff delay: "+evidence);
+                if(!wrongFacing){
+                    for(int edge=0;edge<2;edge++){
+                        long edgeElapsed=elapsed-(edge==0?4:28);
+                        if(edgeElapsed>=0 && edgeElapsed<=PulseTrace.HORIZON)edges[edge].sample(edgeElapsed,inputOn,powered,signal,lit);
+                    }
+                }
                 if(expectedElapsed==76){
+                    if(!wrongFacing)for(var edge:edges)helper.assertTrue(edge.passed() && PulseTrace.read(edge.json()).passed(),"Native traces satisfy the strict pulse evidence contract: "+edge.json());
                     System.out.println("ENGINEER_OBSERVER_TRACE "+evidence);
                     helper.succeed();
                 }
