@@ -4,6 +4,7 @@ import type { Blueprint } from "./types.js";
 export const NATURAL_ACTIONS = [
   "status",
   "design",
+  "plan",
   "explain",
   "timing",
   "materials",
@@ -22,6 +23,7 @@ export const NATURAL_ACTIONS = [
 export type NaturalAction = (typeof NATURAL_ACTIONS)[number];
 
 const ACTION_MEANINGS: Readonly<Record<NaturalAction, string>> = {
+  plan: "Request a separately confirmed catalog blueprint selection from the original player requirements: delayed lamp, NOT gate, two-input OR, or fixed one-cell sticky shutter. Preview only; no construction. Never substitute the shutter for a larger door or claim arbitrary mechanics are supported.",
   design:
     "Request a separately confirmed AI behavior/design proposal from the original player requirements. No geometry, edits or construction are approved by this choice; supported design scope is a timed lever/lamp buffer or up to four-input combinational Boolean logic.",
   status:
@@ -90,6 +92,7 @@ export function naturalCapabilities(
   const result = new Map<NaturalAction, ReadonlySet<string | null>>([
     ["status", new Set([null])],
     ["design", new Set([null])],
+    ["plan", new Set([null])],
   ]);
   if (!blueprint) return result;
   for (const action of [

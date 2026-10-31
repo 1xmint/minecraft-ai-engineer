@@ -37,6 +37,7 @@ public final class EngineerGameTests {
         advice.addProperty("kind","action");advice.addProperty("action","status");advice.add("basis",com.google.gson.JsonParser.parseString("[\"project\"]"));
         helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"Status can be interpreted before a design exists");
         advice.addProperty("action","design");helper.assertTrue(NaturalActions.read(advice,null,false).needsConsent(),"New AI planning requires separate consent before dispatch");
+        advice.addProperty("action","plan");helper.assertTrue(NaturalActions.read(advice,null,false).needsConsent(),"Catalog selection also requires explicit consent before its extra request");
         var substituted=advice.deepCopy();substituted.addProperty("request","Build something the player never requested");reject(helper,()->NaturalActions.read(substituted,null,false),"The model cannot replace the original design requirements");helper.succeed();
     }
     @GameTest public void savedProjectSearchUsesLiteralIntentionWithoutInference(GameTestHelper helper){

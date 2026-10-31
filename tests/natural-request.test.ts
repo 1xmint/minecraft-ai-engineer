@@ -31,7 +31,7 @@ const reply = {
 test("advertised targets come from saved physical components, never arbitrary player prose", () => {
   assert.deepEqual(
     [...naturalCapabilities(undefined).keys()],
-    ["status", "design"],
+    ["status", "design", "plan"],
   );
   const blueprint = makeReferenceBlueprint({
     request: "A delayed lamp",
@@ -240,6 +240,29 @@ test("new design selection has no model-authored requirements, geometry, or appr
     { behavior: {} },
     { blocks: [] },
     { modelAuthorized: true },
+    { componentId: "entrance" },
+  ])
+    assert.throws(() =>
+      validateNaturalReply({ ...input, ...extra }, offered, sources),
+    );
+});
+
+test("catalog planning cannot carry a model-selected template, geometry or altered requirements", () => {
+  const input = {
+    schemaVersion: 1,
+    kind: "action",
+    action: "plan",
+    componentId: null,
+    text: "Request a catalog preview.",
+    basis: ["project"],
+  };
+  const offered = naturalCapabilities(undefined);
+  assert.equal(validateNaturalReply(input, offered, sources).action, "plan");
+  for (const extra of [
+    { request: "changed goal" },
+    { template: "sticky-shutter" },
+    { parameters: { delay: 1 } },
+    { blocks: [] },
     { componentId: "entrance" },
   ])
     assert.throws(() =>

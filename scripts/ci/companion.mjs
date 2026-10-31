@@ -120,20 +120,23 @@ const server = createCompanionServer({
         };
       }
       const action =
-        input.message ===
-        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
-          ? "design"
-          : input.message === "CI report selected project status."
-            ? "status"
-            : input.message === "CI propose stopping the selected project."
-              ? "stop"
-              : input.message === "CI build selected lamp."
-                ? "build"
-                : input.message === "CI test selected lamp."
-                  ? "test"
-                  : input.message === "CI undo selected lamp."
-                    ? "undo"
-                    : null;
+        input.message === "CI choose a one-cell sticky shutter." ||
+        input.message === "CI cancel a pending shutter selection."
+          ? "plan"
+          : input.message ===
+              "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+            ? "design"
+            : input.message === "CI report selected project status."
+              ? "status"
+              : input.message === "CI propose stopping the selected project."
+                ? "stop"
+                : input.message === "CI build selected lamp."
+                  ? "build"
+                  : input.message === "CI test selected lamp."
+                    ? "test"
+                    : input.message === "CI undo selected lamp."
+                      ? "undo"
+                      : null;
       const componentId =
         action === "build" || action === "test" ? "root" : null;
       if (!action || !capabilities.get(action)?.has(componentId))
@@ -250,7 +253,48 @@ const server = createCompanionServer({
         return structuredClone(structuralFixture.geometry);
       return structuredClone(generatedFixture.geometry);
     },
-    async plan() {
+    async plan(input, signal) {
+      if (input.request === "CI cancel a pending shutter selection.") {
+        const coordination = join(config.directory, "..", "coordination");
+        writeFileSync(
+          join(coordination, "natural-catalog-late-dispatched"),
+          "ready",
+        );
+        const deadline = Date.now() + 10_000;
+        while (!signal.aborted && Date.now() < deadline) await delay(20);
+        if (!signal.aborted)
+          throw new Error(
+            "Changed project selection did not cancel catalog transport",
+          );
+        writeFileSync(
+          join(coordination, "natural-catalog-cancelled.done"),
+          "passed",
+        );
+        return {
+          template: "sticky-shutter",
+          explanation: "CI obsolete catalog selection",
+          parameters: { delay: 1 },
+          rotation: 0,
+        };
+      }
+      if (input.request === "CI choose a one-cell sticky shutter.") {
+        writeFileSync(
+          join(
+            config.directory,
+            "..",
+            "coordination",
+            "natural-catalog-dispatched.done",
+          ),
+          "passed",
+        );
+        return {
+          template: "sticky-shutter",
+          explanation:
+            "Synthetic canonical shutter preview; untested and no construction authorized.",
+          parameters: { delay: 1 },
+          rotation: 0,
+        };
+      }
       writeFileSync(
         join(config.directory, "inference-attempted"),
         "unexpected provider call",

@@ -537,7 +537,7 @@ operator and project owner; it makes one bounded subscription request.
 The interpreter can choose an existing action or ask a clarification. It cannot
 choose an arbitrary project, location, permission or command. Component actions
 use your current lesson component; choose a lesson first for composite projects.
-Inferred design, build, test, repair, resume, undo and stop actions show a server-generated
+Inferred plan, design, build, test, repair, resume, undo and stop actions show a server-generated
 summary and a one-use `/engineer act <nonce>` delegation. Changing the connection,
 project, grants, lesson or execution context invalidates that pending action.
 Existing creative, loaded-world, reservation, conflict and repair-preview checks
@@ -555,6 +555,12 @@ original words. It supports the existing timed lever/lamp buffer and bounded Boo
 logic design flow. You separately confirm the proposed behavior before geometry;
 accepting a design choice never approves construction. Unsupported mechanical or
 other design requests must explain their limits rather than substitute a buffer.
+
+Catalog planning is a separate choice for the existing delayed lamp, NOT gate,
+two-input OR gate and one-cell sticky shutter. Confirming it starts one catalog
+selection request from your original words and produces an untested preview. It
+does not delegate construction or expand the selected workspace. Larger doors and
+unsupported mechanisms must be declined rather than silently replaced.
 
 This path is under construction; native acceptance and fresh model proof remain
 pending. The published alpha does not include it.

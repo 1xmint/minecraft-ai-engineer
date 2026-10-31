@@ -144,7 +144,7 @@ public final class EngineerMod implements ModInitializer {
             for(var entry:new ArrayList<>(PLANS.entrySet())) {
                 var s=entry.getKey();var request=entry.getValue();if(s.server!=server)continue;
                 ServerPlayer actor=server.getPlayerList().getPlayer(request.actor());
-                if(!s.state.equals("PLANNING") || actor==null || actor.connection!=request.connection() || !s.manager.operator(actor) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
+                if(!s.state.equals("PLANNING") || actor==null || actor.connection!=request.connection() || !s.manager.modelOperator(actor) || !Objects.equals(s.manager.selections.get(request.actor()),s.projectId) || !s.dimension.equals(actor.level().dimension().identifier().toString()) || s.revision()!=request.revision() || s.access.revision()!=request.authorization()) {
                     cancelPlan(s);s.pause("Planning context changed; request cancelled");
                 }
             }
@@ -207,7 +207,9 @@ public final class EngineerMod implements ModInitializer {
         Throwable t=error;while(t.getCause()!=null)t=t.getCause();
         String message=t.getMessage()==null?"Operation failed; inspect local logs":t.getMessage();return message.substring(0,Math.min(350,message.length()));
     }
-    private static void plan(EngineeringSession s,String request) {
+    static void plan(EngineeringSession s,String request) {
+        s.access.require(s.actor(),ProjectAccess.Permission.PLAN);
+        if(!s.server.isSameThread() || !s.projectId.equals(s.manager.selections.get(s.actor())))throw new IllegalStateException("Select this project on the active server before planning");
         if(!s.manager.modelOperator(s.player()) || !s.owner.equals(s.actor()))throw new IllegalStateException("Planning requires the single configured account-owning operator; shared subscription access is not enabled");
         if(s.state.equals("PLANNING") || PLANS.containsKey(s))throw new IllegalStateException("Planning is active; stop it first");
         if(s.shutterOwned)throw new IllegalStateException("Release mechanical control before requesting a replacement plan");
@@ -225,7 +227,8 @@ public final class EngineerMod implements ModInitializer {
             if(PLANS.get(s)!=pending)return;PLANS.remove(s);
             if(!s.state.equals("PLANNING") || MANAGERS.get(s.server)!=s.manager || !pending.epoch().equals(s.manager.epoch) || s.revision()!=pending.revision()
                     || s.access.revision()!=pending.authorization() || !s.access.allows(actor,ProjectAccess.Permission.PLAN)
-                    || s.server.getPlayerList().getPlayer(actor)==null || s.server.getPlayerList().getPlayer(actor).connection!=pending.connection() || !s.manager.operator(s.server.getPlayerList().getPlayer(actor))){s.pause("Planning authority changed; late result discarded");return;}
+                    || s.server.getPlayerList().getPlayer(actor)==null || s.server.getPlayerList().getPlayer(actor).connection!=pending.connection() || !s.manager.modelOperator(s.server.getPlayerList().getPlayer(actor)) || !Objects.equals(s.manager.selections.get(actor),s.projectId)
+                    || !s.dimension.equals(s.server.getPlayerList().getPlayer(actor).level().dimension().identifier().toString())){s.pause("Planning authority changed; late result discarded");return;}
             s.commandActor=actor;
             try {
                 if(error!=null)throw new IllegalStateException(safe(error));

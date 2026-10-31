@@ -6,10 +6,10 @@ import java.util.*;
 /** Typed interpretation only. No model text is ever parsed as a Minecraft command. */
 final class NaturalActions {
     record Choice(String kind,String action,String component,String text) {
-        boolean needsConsent(){return action!=null && Set.of("build","resume","test","repair","undo","stop","design").contains(action);}
+        boolean needsConsent(){return action!=null && Set.of("build","resume","test","repair","undo","stop","design","plan").contains(action);}
     }
     private static final Set<String> COMPONENT=Set.of("explain","timing","materials","teach","diagnose","build","test","repair");
-    private static final Set<String> PROJECT=Set.of("status","design","next","repeat","pause_lesson","resume","undo","stop");
+    private static final Set<String> PROJECT=Set.of("status","design","plan","next","repeat","pause_lesson","resume","undo","stop");
     static Choice read(JsonObject value,String selected,boolean hasDesign) {
         if(value==null || !value.keySet().equals(Set.of("schemaVersion","kind","action","componentId","text","basis"))
                 || !value.get("schemaVersion").isJsonPrimitive() || !value.getAsJsonPrimitive("schemaVersion").isNumber()
@@ -28,7 +28,7 @@ final class NaturalActions {
         if(!kind.equals("action")) {
             if(action!=null || component!=null)throw new IllegalArgumentException("Advice cannot carry an action");
         } else {
-            if(action==null || basis.isEmpty() || (!hasDesign && !Set.of("status","design").contains(action)))throw new IllegalArgumentException("Unavailable action");
+            if(action==null || basis.isEmpty() || (!hasDesign && !Set.of("status","design","plan").contains(action)))throw new IllegalArgumentException("Unavailable action");
             if(COMPONENT.contains(action)) {
                 if(selected==null || !selected.equals(component) || !component.matches("[a-z][a-z0-9_-]{0,31}"))throw new IllegalArgumentException("Unavailable component");
             } else if(!PROJECT.contains(action) || component!=null)throw new IllegalArgumentException("Unavailable action target");
@@ -36,9 +36,13 @@ final class NaturalActions {
         return new Choice(kind,action,component,prose);
     }
     static void dispatch(EngineeringSession s,Choice choice,String originalRequest) {
-        s.access.require(s.actor(),choice.action().equals("design")?ProjectAccess.Permission.PLAN:choice.action().equals("undo")?ProjectAccess.Permission.UNDO:
+        s.access.require(s.actor(),Set.of("design","plan").contains(choice.action())?ProjectAccess.Permission.PLAN:choice.action().equals("undo")?ProjectAccess.Permission.UNDO:
                 choice.needsConsent()?ProjectAccess.Permission.BUILD:ProjectAccess.Permission.VIEW);
         switch(choice.action()) {
+            case "plan" -> {
+                if(originalRequest==null || originalRequest.isBlank() || originalRequest.length()>1000)throw new IllegalArgumentException("Missing original planning requirements");
+                EngineerMod.plan(s,originalRequest);
+            }
             case "design" -> {
                 if(originalRequest==null || originalRequest.isBlank() || originalRequest.length()>1000)throw new IllegalArgumentException("Missing original design requirements");
                 s.manager.generated.design(s,originalRequest);

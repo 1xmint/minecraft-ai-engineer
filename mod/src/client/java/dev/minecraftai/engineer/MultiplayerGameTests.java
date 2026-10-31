@@ -1842,7 +1842,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Use a visible lamp for the output.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
-        if(!LIVE_DISCUSSION)naturalConstructionFlow(context,server);
+        if(!LIVE_DISCUSSION){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);}
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static String actionNonce(){
@@ -1909,6 +1909,27 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer request stop building");awaitFile(context,"natural-request-cancelled.done");context.waitTicks(10);
         check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete interpretation")),"Exact stop discards a deliberately late interpretation");
         write("natural-request-construction.done","passed");
+    }
+
+    private static void naturalCatalogFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 990 98 -4");send(context,"engineer select2 1010 105 4");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(1010,105,4)));
+        String catalogProject=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        MESSAGES.clear();send(context,"engineer request CI cancel a pending shutter selection.");expectChat(context,"/engineer act ");String cancelled=actionNonce();
+        send(context,"engineer act "+cancelled);awaitFile(context,"natural-catalog-late-dispatched");
+        send(context,"engineer project use "+previous);awaitFile(context,"natural-catalog-cancelled.done");context.waitTicks(10);
+        check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete catalog selection")),"A deliberately late catalog reply is not displayed after project selection changes");
+        server.runOnServer(s->{var old=EngineerMod.managerFor(s).projects.get(UUID.fromString(catalogProject));check(old.blueprint==null && old.delegation==null && old.state.equals("PAUSED"),"Selection changes prevent accepting a late blueprint into the old project");});
+        send(context,"engineer project use "+catalogProject);server.waitFor(s->session(s,"Alice").projectId.toString().equals(catalogProject));
+        MESSAGES.clear();send(context,"engineer request CI choose a one-cell sticky shutter.");expectChat(context,"/engineer act ");String nonce=actionNonce();
+        expectChat(context,"one additional AI catalog-selection request");
+        check(!Files.exists(directory().resolve("natural-catalog-dispatched.done")),"Natural catalog selection cannot dispatch another request before consent");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.delegation==null && !project.state.equals("PLANNING"),"Interpretation alone cannot accept a catalog blueprint or reserve the world");});
+        send(context,"engineer act "+nonce);awaitFile(context,"natural-catalog-dispatched.done");server.waitFor(s->session(s,"Alice").blueprint!=null);
+        server.runOnServer(s->{var project=session(s,"Alice");check(ShutterDesign.describes(project.blueprint.source()) && project.journal.isEmpty() && project.delegation==null && !project.shutterOwned && !project.verified.startsWith("passed:"),"A confirmed canonical shutter plan is only an untested preview, never construction or piston authority");});
+        MESSAGES.clear();send(context,"engineer act "+nonce);expectChat(context,"No matching pending action");write("natural-request-catalog.done","passed");
     }
 
     private static void prepareNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

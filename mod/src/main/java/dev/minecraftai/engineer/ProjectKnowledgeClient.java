@@ -151,6 +151,7 @@ final class ProjectKnowledgeClient {
                     if(!capturedState.equals(executionState(s)))throw new IllegalStateException("Project execution changed");
                     var nonce=UUID.randomUUID();pendingActions.put(f.actor,new Pending(f,choice,nonce,capturedState,message));retained=true;
                     tell(f,"Proposed action: "+choice.action()+" | project "+s.projectId+" | component "+(choice.component()==null?"project":choice.component())+". No world work has started.");
+                    if(choice.action().equals("plan"))tell(f,"Plan delegation starts one additional AI catalog-selection request from your original words. Preview only; no world edit is approved.");
                     if(choice.action().equals("design"))tell(f,"Design delegation starts one additional AI behavior-proposal request from your original words. Geometry still requires its own confirmation; no world edit is approved.");
                     tell(f,"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
                 } else {

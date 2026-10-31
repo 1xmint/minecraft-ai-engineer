@@ -771,3 +771,21 @@ regression exercises that exact HTTP encoder and asserts both required fields an
 explicit null survive roundtrip. No parser membership, source or authority fence is
 weakened. Fresh runtime proof must cover this plus clarification/design additions;
 old failed runs are not evidence that those complete flows work.
+
+Phase20 adds plan/null as a separate explicitly delegated catalog-selection action
+using the original literal request. It covers existing delayed lamp/NOT/OR/shutter
+choices, explains one additional AI request and produces only an untested preview.
+Existing EngineerMod.plan now explicitly checks server-thread/current selection at
+entry and current configured model operator, selected project and dimension at tick
+and callback before accepting late data. One-use action consent still precedes
+request/budget dispatch. Native deterministic catalog flow checks no dispatch or
+blueprint before consent, a canonical shutter preview with no world lease/journal/
+piston ownership/pass, and replay denial. A deliberately late synthetic catalog
+reply after switching projects must abort transport and leave the old project's
+blueprint absent and state paused. Required catalog/cancel/dispatch markers cover
+these paths. Pure Java/TS checks reject model-provided template/geometry/requirements.
+Focused GPT-6-Luna/high check found no input-substitution or late-reply bypass.
+Scoped server/client compile, TS and script checks pass for the route; final native
+cancellation test additions await CI compilation/runtime. CI41155571154 on69395a6
+has four green checks with dedicated native still live. Hold this next batch until
+that run is terminal. No fresh inference/local tests; all broader milestones active.
