@@ -8,7 +8,10 @@ Current branch: **phase/21-observer-pulses**, based on main
 **caa7de6738c10af7534dfb5f1876c32e6fd893d7**. Phase20 PR29 merged at
 2026-10-31T17:23:46Z. Final head0f78de1 passed all5 CI41223355084. Natural requests,
 scoped follow-ups, guarded action delegation and planning are shipped in source.
-Next: native observer pulse semantics, then the complete guarded component flow.
+Draft PR30: https://github.com/1xmint/minecraft-ai-engineer/pull/30. Current
+implementation head0f13621. Native observer pulse semantics and strict local trace
+validation passed Fabric CI41225064861 (112 required tests). The remaining jobs
+were still running when checked. Next: complete guarded observer component flow.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
@@ -145,5 +148,26 @@ Next tasks:
 4. O4: public native/component/lesson/planning integration and real dedicated-player
    proof; inspect exact source CI, markers, SQLite replay and screenshots before merge.
 
-No Phase21 implementation or runtime test has run yet. No new inference is authorized
-by archival receipts. Keep every broader milestone active until its own proof exists.
+Phase21 progress (2026-10-31): O1 native feasibility passed on0f13621 in
+CI41225064861, Fabric job124607463255: all112 required tests, five complete native
+observer traces (four valid rotations plus wrong-facing negative). Each trace
+contains77 consecutive actual game ticks, both input edges, held quiet periods,
+receiver signal, lamp state and an unrelated side-neighbor update. Actual delay2,
+width2, lamp release4 match the pinned contract. `PulseTrace` rejects steady-off
+false passes, gaps, duplicates, extra pulses, changed input, incorrect lamp timing,
+rewritten contracts and invented pass/authority fields; native edge samples also
+round-trip through it. Evidence: task work/`observer-native-41225064861/fabric-job.log`.
+Local compileJava passed; no local tests or model calls ran.
+
+First native run41224876801 failed because GameTest does not order separate
+same-tick callbacks. The fixed fixture couples each input change and first sample
+in one callback. The proof expectations were retained. The earlier run was
+superseded by the changed source, not retried due to an observation timeout.
+
+O2/O3/O4 remain incomplete: no canonical observer blueprint, shared TypeScript
+temporal evidence, scoped durable evidence/recovery, guarded public build/test/
+undo, lessons/planning or multiplayer acceptance integration yet. Observer support
+is deliberately not advertised by the product. Next implement canonical temporal
+contracts using existing input restoration and reservations; never route observer
+tests through the settled Boolean vector loop. No new inference is authorized by
+archival receipts. Keep every broader milestone active until its own proof exists.
