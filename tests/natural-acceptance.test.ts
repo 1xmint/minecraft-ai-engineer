@@ -278,3 +278,60 @@ test("manual natural broker consumes one exact exchange even across abort and pr
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("archived signed-in natural reply remains bound evidence, never a fresh execution reply", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("../../tests/fixtures/live-natural.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const request = readNaturalAcceptanceRequest(
+    fixture.request,
+    fixture.request.run,
+    fixture.acceptedAt,
+  );
+  const response = readNaturalAcceptanceResponse(
+    fixture.response,
+    fixture.request,
+    fixture.acceptedAt,
+  );
+  assert.equal(
+    request.run.sourceSha,
+    "8214fbd8d1a97bfc702d0669e85641a4e4c5bcc4",
+  );
+  assert.equal(request.run.runId, "41221809497");
+  assert.equal(response.provenance.model, "gpt-6-luna");
+  assert.equal(response.provenance.inputTokens, 11519);
+  assert.equal(response.provenance.outputTokens, 73);
+  assert.equal(response.result.action, "diagnose");
+  assert.equal(response.result.componentId, "root");
+  assert.throws(() =>
+    readNaturalAcceptanceResponse(
+      fixture.response,
+      fixture.request,
+      request.expiresAt,
+    ),
+  );
+  const {
+    schemaVersion: _version,
+    stage: _stage,
+    expiresAt: _expires,
+    digest: _digest,
+    ...fields
+  } = fixture.request;
+  const rebound = createNaturalAcceptanceRequest({
+    ...fields,
+    context: {
+      ...fields.context,
+      connectionId: "44444444-4444-4444-8444-444444444444",
+    },
+  });
+  assert.throws(() =>
+    readNaturalAcceptanceResponse(
+      fixture.response,
+      rebound,
+      fixture.acceptedAt,
+    ),
+  );
+});

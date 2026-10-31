@@ -527,7 +527,7 @@ its exact original states. Correct geometry still needs an explicit functional t
 This branch's complete repair/restart/undo flow is awaiting native acceptance and
 is not a released repair feature.
 
-## Natural requests (development branch, acceptance pending)
+## Natural requests (development branch)
 
 Use `/engineer request <message>` for the selected project. Known lesson questions
 reuse offline answers. Exact `stop` and `stop building` requests stop immediately
@@ -562,5 +562,7 @@ selection request from your original words and produces an untested preview. It
 does not delegate construction or expand the selected workspace. Larger doors and
 unsupported mechanisms must be declined rather than silently replaced.
 
-This path is under construction; native acceptance and fresh model proof remain
-pending. The published alpha does not include it.
+The bounded action path has passed native and signed-in acceptance. The published
+single-player alpha does not include it.
+
+![Native read-only diagnosis after natural interpretation](images/natural-diagnosis.png)

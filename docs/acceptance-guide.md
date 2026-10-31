@@ -329,5 +329,15 @@ lease, denied editor model access, literal notes, a real companion replacement a
 saved-server recovery without restoring a diagnosis proposal. Inspect
 `live-natural-model.done`, `live-natural-recovery.done`, the SQLite proof and the
 `engineer-natural-diagnosis` screenshot. This proves one fresh interpretation and
-its native dispatch; synthetic routing tests are separate evidence. No fresh natural
-model receipt has been recorded yet, and older discussion receipts cannot be reused.
+its native dispatch; synthetic routing tests are separate evidence. The fresh natural proof passed on source `8214fbd` in
+[run41221809497](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41221809497),
+following all five deterministic checks in run41221636372. Exactly one
+GPT-6-Luna call used 11,519 input and 73 output tokens with SDK0.164.0. The native
+flow completed in10m28s with both natural markers, actual companion replacement,
+saved-server recovery and strict SQLite verification. The screenshot was inspected
+and is saved as `docs/images/natural-diagnosis.png`.
+
+`tests/fixtures/live-natural.json` archives the exact synthetic request/reply for
+codec regression tests. It is expired historical evidence, never a fresh native
+response or authority. The private started/untrusted/response receipts remain local.
+This call is consumed; do not invoke it again or reuse older discussion receipts.

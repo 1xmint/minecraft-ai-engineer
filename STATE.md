@@ -1,17 +1,17 @@
 # Now
 
-2026-10-30. Active goal: **complete all milestones**: the entire Phase1 engineering
+2026-10-31. Active goal: **complete all milestones**: the entire Phase1 engineering
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
 Current branch **phase/20-natural-requests**, based on merged main **5b29a9cac013aecf92c03aba4137939ae6178184**.
 Latest shipped: Phase19 PR28, finale881d73/all5 CI41151376521/all103 native tests.
-Phase20 source43bc27b passed all5 CI41219942803, including all106 native tests
-and all13 natural markers. Manual dry41220876264 proved typed diagnosis/recovery
-and strict SQLite with synthetic-fixture provenance/zero tokens; its final workflow
-stage override misrouted verification to catalog and is being corrected. No fresh
-natural SDK call has run. Next: green final source, then one fresh signed-in natural
-request and native proof, before merging PR29. All broader milestones remain active.
+Phase20 source8214fbd passed all5 CI41221636372 and fresh signed-in natural
+acceptance41221809497 (response41222705526). Exactly one Luna call: 11519 input,
+73 output, SDK0.164.0. Native10m28s, actual diagnosis/recovery markers and strict
+SQLite proof inspected. This call is consumed; no further inference for this slice.
+Next: archive-only final CI and merge PR29, then continue the broader roadmap.
+All Phase2 features and remaining engineering/release milestones stay active.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -920,3 +920,21 @@ fell back to catalog for natural. Fix adds the exact natural branch there, retai
 all other stage choices. No code/permission/parser change or another model call.
 Require new source CI before the one planned signed-in interpretation. No actual
 natural SDK call has run; historical model receipts remain consumed.
+
+Phase20 N1�N4 bounded action flow is proven on8214fbd: all five deterministic
+checks CI41221636372; signed-in acceptance41221809497 and response41222705526
+both pass. Real SDK0.164.0/gpt-6-luna call used11519 input/0 cached/73 output,
+selecting diagnose/root with project and component:root basis and no world claim.
+Requestdigestc5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9,
+resultdigest658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
+Private exclusive started/untrusted/response receipts stay local and consumed.
+Downloaded work/natural-live-proof-41221809497: accepted provenance agrees, both
+live-natural markers passed, native BUILD SUCCESSFUL10m28s and strict SQLite proof
+exists. Inspected actual screenshot: six missing-part corrections/repair proposal,
+READY preview, no construction or false pass. Shared editor model denial, actual
+companion replacement and saved-server recovery with no restored diagnosis/lease
+passed. This is one fresh natural selection, not universal NLP/engineering coverage.
+Archive exact public synthetic request/reply and image, add expired/rebound regression
+coverage and final user docs, then run final-source CI before merge. No more model
+calls are required. All broader engineering/memory/human acceptance, multiplayer
+release/provider eligibility and all six Phase2 milestones remain active.
