@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
 import { validateShutterEvidence } from "../../dist/companion/src/shutter-trace.js";
+import { validatePulseEvidence } from "../../dist/companion/src/pulse-trace.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -397,6 +398,62 @@ try {
     assert.ok(
       finishes.size >= 2,
       "Distinct actual truth trials before and after saved-server restart reach SQLite",
+    );
+  }
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+    for (const marker of [
+      "observer-functional.done",
+      "observer-interrupted.done",
+      "observer-recovered.done",
+      "observer-undo.done",
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+        "passed",
+      );
+    const observerProject = readFileSync(
+      `${coordination}/observer-project`,
+      "utf8",
+    ).trim();
+    const reports = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:observer-pulse:%' ORDER BY id",
+      )
+      .all(server.serverId, observerProject);
+    assert.ok(
+      reports.length >= 4,
+      "Actual observer trials for both input states and after restart reach SQLite",
+    );
+    const initialStates = new Set(),
+      epochs = new Set();
+    for (const stored of reports) {
+      const report = JSON.parse(stored.document),
+        observed = report.checkpoint.observed,
+        scope = observed.testScope;
+      const intended = JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, observerProject, report.context.projectRevision)
+          .document,
+      );
+      assert.equal(intended.provenance.template, "observer-pulse");
+      assert.equal(scope.projectId, observerProject);
+      assert.equal(scope.blueprintId, intended.id);
+      assert.equal(scope.blueprintRevision, intended.revision);
+      assert.equal(scope.component, "root");
+      assert.equal(scope.basis, observed.componentBasis);
+      assert.match(scope.basis, /^[a-f0-9]{64}$/u);
+      assert.deepEqual(observed.testInputs, []);
+      const cases = validatePulseEvidence(observed.testEvidence, true);
+      initialStates.add(cases[0].originalInput);
+      epochs.add(report.context.serverEpoch);
+    }
+    assert.deepEqual([...initialStates].sort(), [false, true]);
+    assert.ok(
+      epochs.size >= 2,
+      "Observer results come from actual distinct dedicated-server boots",
     );
   }
   const catalogEvidence = [];

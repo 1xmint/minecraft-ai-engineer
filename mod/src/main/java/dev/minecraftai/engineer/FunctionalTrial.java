@@ -22,6 +22,8 @@ final class FunctionalTrial {
     private BlockState shutterOriginal;
     private SettledTrace settled;
     private TransitionTrace transition;
+    private PulseTrace pulse;
+    private boolean pulseOriginal;
     private JsonObject generatedRow;
     private long startedGameTick,phaseStart,lastBaseline=-1;
     FunctionalTrial(EngineeringSession session){this.session=session;}
@@ -61,8 +63,8 @@ final class FunctionalTrial {
         var accepted=GeneratedBlueprint.isGenerated(s.executionBlueprint())?GeneratedBlueprint.behavior(s.executionBlueprint()):null;
         generatedBehavior=accepted instanceof BehaviorSpec buffer?buffer:null;
         truthBehavior=accepted instanceof TruthTableSpec truth?truth:null;settled=null;
-        generatedRow=null;transition=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
-        s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+" truth table running";
+        generatedRow=null;transition=null;pulse=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
+        s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+(contract.pulse()!=null?" pulse test running":" truth table running");
         s.save();s.checkpoint();
         s.tell(s.detail);
     }
@@ -71,6 +73,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(contract.pulse()!=null){tickPulse();return;}
             if(truthBehavior!=null){tickTruth();return;}
             if(generatedBehavior!=null){tickGenerated();return;}
             if(s.testTick>=nextTick){
@@ -91,6 +94,49 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickPulse(){
+        var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0){
+            if(s.testTick<contract.settleTicks())return;
+            pulseOriginal=inputs.get("input").original().getValue(BlockStateProperties.POWERED);
+            beginPulse(now,0);return;
+        }
+        samplePulse(now);
+        boolean complete=vector==0?now-phaseStart==PulseEvidence.BASELINE:pulse.complete();
+        if(!complete)return;
+        PulseEvidence.validate(evidence,false);s.save();
+        if(vector<2){beginPulse(now,vector+1);return;}
+        PulseEvidence.validate(evidence,true);int elapsed=s.testTick;
+        restore();if(pending())throw new IllegalStateException("Observer inputs still need safe restoration; no pass recorded");
+        s.verified="passed:observer-pulse:2 edges@"+elapsed;
+        s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString()).lastPassedScope=evidenceScope.deepCopy();
+        s.state="COMPLETED";s.detail="Actual Minecraft observer test passed: both edges, two-game-tick delay and pulse, receiver and lamp sampled every tick; original input restored";
+        s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
+    }
+    private void beginPulse(long now,int index){
+        vector=index;phaseStart=now;
+        if(index>0){apply(Map.of("input",index==1?!pulseOriginal:pulseOriginal));pulse=new PulseTrace(index==1?pulseOriginal:!pulseOriginal);}
+        generatedRow=new JsonObject();generatedRow.addProperty("case",index);generatedRow.addProperty("originalInput",pulseOriginal);
+        if(index==0){var baseline=new JsonObject();baseline.addProperty("schemaVersion",1);baseline.addProperty("function","observer-baseline");baseline.add("samples",new JsonArray());generatedRow.add("pulse",baseline);}
+        evidence.add(generatedRow);samplePulse(now);session.save();
+    }
+    private void samplePulse(long now){
+        long elapsed=now-phaseStart;int horizon=vector==0?PulseEvidence.BASELINE:PulseTrace.HORIZON;
+        if(elapsed<0 || elapsed>horizon)throw new IllegalStateException("inconclusive: observer sampling window missed");
+        var blueprint=session.executionBlueprint();var detector=blueprint.blocks().stream().filter(b->b.state().is(Blocks.OBSERVER)).findFirst().orElseThrow().pos();
+        var receiver=contract.ports().stream().filter(p->!p.input()).findFirst().orElseThrow().pos();
+        var level=session.level();boolean input=level.getBlockState(inputs.get("input").pos()).getValue(BlockStateProperties.POWERED);
+        boolean powered=level.getBlockState(detector).getValue(BlockStateProperties.POWERED),signal=level.hasNeighborSignal(receiver),lamp=level.getBlockState(receiver).getValue(BlockStateProperties.LIT);
+        if(vector==0){
+            var samples=generatedRow.getAsJsonObject("pulse").getAsJsonArray("samples");
+            if(elapsed!=samples.size())throw new IllegalStateException("inconclusive: observer baseline game tick missing");
+            var row=new JsonObject();row.addProperty("elapsedTicks",elapsed);row.addProperty("input",input);row.addProperty("observer",powered);row.addProperty("receiver",signal);row.addProperty("lamp",lamp);samples.add(row);
+        }else{pulse.sample(elapsed,input,powered,signal,lamp);generatedRow.add("pulse",pulse.json());}
+        generatedRow.addProperty("tick",now);generatedRow.addProperty("elapsedTicks",elapsed);
+        var in=new JsonObject();in.addProperty("input",input);generatedRow.add("inputs",in);var out=new JsonObject();out.addProperty("output",lamp);generatedRow.add("outputs",out);
+        if(vector==0 && (input!=pulseOriginal || powered || signal || lamp))throw new IllegalStateException("Observer baseline is not quiet; no edge trial started");
+        if(vector>0 && (pulse.verdict().equals("failed") || pulse.verdict().equals("inconclusive")))throw new IllegalStateException(pulse.failure());
     }
     private void tickTruth() {
         var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
@@ -347,6 +393,7 @@ final class FunctionalTrial {
             if(session.blueprint==null)throw new IllegalStateException("Legacy functional evidence has no intended blueprint");
         }
         if(session.blueprint!=null && GeneratedBlueprint.isGenerated(session.blueprint))validateGeneratedEvidence(evidence,GeneratedBlueprint.behavior(session.blueprint),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
+        if(session.blueprint!=null && !ShutterDesign.describes(session.blueprint.source()) && EngineeringContracts.contract(session.executionBlueprint()).pulse()!=null)PulseEvidence.validate(evidence,session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         if(session.blueprint!=null && ShutterDesign.describes(session.blueprint.source()) && (!evidence.isEmpty() || shutterOriginal!=null))ShutterEvidence.validate(evidence,ShutterDesign.read(session.blueprint.source()),shutterOriginal,session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
         if(entries==null && !json.has("testOriginal"))return;

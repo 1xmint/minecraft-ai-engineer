@@ -10,6 +10,18 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native temporal feasibility, independent of catalog support or model output. */
 public final class ObserverGameTests {
+    @GameTest public void observerCatalogCannotAuthorizeArbitraryGeometry(GameTestHelper helper){
+        for(int rotation:new int[]{0,90,180,270}){
+            var blueprint=MechanismCatalog.create("observer-pulse","test","minecraft:overworld",new BlockPos(2,3,2),rotation,1);
+            var contract=MechanismCatalog.contract(blueprint);
+            helper.assertTrue(contract.pulse()!=null && contract.cases().isEmpty() && blueprint.blocks().size()==6,"Observer uses canonical geometry and a distinct temporal contract in every rotation");
+            var changed=blueprint.source().deepCopy();
+            for(var element:changed.getAsJsonArray("blocks"))if(element.getAsJsonObject().get("state").getAsString().contains("observer"))element.getAsJsonObject().addProperty("state","minecraft:observer[facing=east,powered=false]");
+            rejects(helper,()->ComponentTree.validate(Blueprint.parse(changed,"test","minecraft:overworld")),"A model cannot invent another observer layout under catalog provenance");
+            rejects(helper,()->MechanismCatalog.create("observer-pulse","test","minecraft:overworld",BlockPos.ZERO,rotation,2),"Observer timing is not a repeater adaptation");
+        }
+        helper.succeed();
+    }
     @GameTest public void pulseEvidenceRejectsFalsePassAndRewrittenTiming(GameTestHelper helper){
         for(boolean from:new boolean[]{false,true}){
             var good=new PulseTrace(from);var off=new PulseTrace(from);var gap=new PulseTrace(from);

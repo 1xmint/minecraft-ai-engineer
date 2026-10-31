@@ -10,8 +10,12 @@ Current branch: **phase/21-observer-pulses**, based on main
 scoped follow-ups, guarded action delegation and planning are shipped in source.
 Draft PR30: https://github.com/1xmint/minecraft-ai-engineer/pull/30. Current
 implementation head0f13621. Native observer pulse semantics and strict local trace
-validation passed Fabric CI41225064861 (112 required tests). The remaining jobs
-were still running when checked. Next: complete guarded observer component flow.
+validation passed all five checks in CI41225064861 (112 required native tests).
+Canonical observer catalog/component planning, guarded temporal trial, strict
+Java/TypeScript evidence replay, lessons/orientation repair and dedicated-player
+build/test/interrupt/restart/undo proof are now implemented for the next CI run.
+Local scoped type/format/syntax and Java/server/client compilation passed; runtime
+integration remains unproven. Next: inspect CI and fix actual integration failures.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
@@ -164,10 +168,23 @@ same-tick callbacks. The fixed fixture couples each input change and first sampl
 in one callback. The proof expectations were retained. The earlier run was
 superseded by the changed source, not retried due to an observation timeout.
 
-O2/O3/O4 remain incomplete: no canonical observer blueprint, shared TypeScript
-temporal evidence, scoped durable evidence/recovery, guarded public build/test/
-undo, lessons/planning or multiplayer acceptance integration yet. Observer support
-is deliberately not advertised by the product. Next implement canonical temporal
-contracts using existing input restoration and reservations; never route observer
-tests through the settled Boolean vector loop. No new inference is authorized by
-archival receipts. Keep every broader milestone active until its own proof exists.
+O2/O3/O4 remain incomplete pending runtime proof. Integration adds a canonical
+six-block catalog recipe (one observer, lever, lamp, three supports), fixed delay
+parameter1, separate Pulse contract with zero Boolean vectors, and component
+composition/planning. Generated geometry keeps its prior restrictions. Trials
+capture the actual original input, observe a quiet baseline and both edges at
+consecutive game ticks, then finish only with full replay and exact restoration.
+Saved evidence retains existing project/component scope and never restores a
+callback or lease. Lessons distinguish intended timing from measured results;
+orientation diagnosis/repair preserves dynamic power. New dedicated-client flow
+and SQLite verifier require actual off/on initial-state trials, interrupted-input
+restoration, a new server epoch, fresh testing and assistant-only undo preserving
+a player support. These new flows have not passed CI yet. A GPT-6-Luna/high helper
+is checking execution/recovery boundaries only; no broad review cycle.
+
+Next: prove integration, strengthen observer-specific conflict/revocation/shared/
+text-only and composite coverage, archive actual shared evidence/screenshots and
+document supported commands before merging. Never route observer tests through
+the settled Boolean vector loop. No model calls ran for this phase; archival
+receipts confer no new inference authority. Keep every broader milestone active
+until its own proof exists.
