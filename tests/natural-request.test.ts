@@ -29,7 +29,10 @@ const reply = {
 };
 
 test("advertised targets come from saved physical components, never arbitrary player prose", () => {
-  assert.deepEqual([...naturalCapabilities(undefined).keys()], ["status"]);
+  assert.deepEqual(
+    [...naturalCapabilities(undefined).keys()],
+    ["status", "design"],
+  );
   const blueprint = makeReferenceBlueprint({
     request: "A delayed lamp",
     worldId: "world",
@@ -219,4 +222,27 @@ test("a composite project never silently selects one of several physical targets
     sources,
   );
   assert.equal(clarification.action, null);
+});
+
+test("new design selection has no model-authored requirements, geometry, or approval fields", () => {
+  const input = {
+    schemaVersion: 1,
+    kind: "action",
+    action: "design",
+    componentId: null,
+    text: "Request a behavior proposal.",
+    basis: ["project"],
+  };
+  const offered = naturalCapabilities(undefined);
+  assert.equal(validateNaturalReply(input, offered, sources).action, "design");
+  for (const extra of [
+    { request: "replace the player's intent" },
+    { behavior: {} },
+    { blocks: [] },
+    { modelAuthorized: true },
+    { componentId: "entrance" },
+  ])
+    assert.throws(() =>
+      validateNaturalReply({ ...input, ...extra }, offered, sources),
+    );
 });

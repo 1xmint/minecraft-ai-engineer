@@ -120,17 +120,20 @@ const server = createCompanionServer({
         };
       }
       const action =
-        input.message === "CI report selected project status."
-          ? "status"
-          : input.message === "CI propose stopping the selected project."
-            ? "stop"
-            : input.message === "CI build selected lamp."
-              ? "build"
-              : input.message === "CI test selected lamp."
-                ? "test"
-                : input.message === "CI undo selected lamp."
-                  ? "undo"
-                  : null;
+        input.message ===
+        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+          ? "design"
+          : input.message === "CI report selected project status."
+            ? "status"
+            : input.message === "CI propose stopping the selected project."
+              ? "stop"
+              : input.message === "CI build selected lamp."
+                ? "build"
+                : input.message === "CI test selected lamp."
+                  ? "test"
+                  : input.message === "CI undo selected lamp."
+                    ? "undo"
+                    : null;
       const componentId =
         action === "build" || action === "test" ? "root" : null;
       if (!action || !capabilities.get(action)?.has(componentId))
@@ -203,6 +206,19 @@ const server = createCompanionServer({
       };
     },
     async proposeBehavior(input) {
+      if (
+        input.request ===
+        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+      )
+        writeFileSync(
+          join(
+            config.directory,
+            "..",
+            "coordination",
+            "natural-design-behavior-dispatched.done",
+          ),
+          "passed",
+        );
       if (input.request === truthRequest)
         return structuredClone(truthFixture.proposal);
       if (

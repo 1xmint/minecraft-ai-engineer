@@ -28,7 +28,9 @@ public final class EngineerGameTests {
         var advice=com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"kind\":\"clarification\",\"action\":null,\"componentId\":null,\"text\":\"Which component?\",\"basis\":[]}").getAsJsonObject();
         helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"A clarification has no action");
         advice.addProperty("kind","action");advice.addProperty("action","status");advice.add("basis",com.google.gson.JsonParser.parseString("[\"project\"]"));
-        helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"Status can be interpreted before a design exists");helper.succeed();
+        helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"Status can be interpreted before a design exists");
+        advice.addProperty("action","design");helper.assertTrue(NaturalActions.read(advice,null,false).needsConsent(),"New AI planning requires separate consent before dispatch");
+        var substituted=advice.deepCopy();substituted.addProperty("request","Build something the player never requested");reject(helper,()->NaturalActions.read(substituted,null,false),"The model cannot replace the original design requirements");helper.succeed();
     }
     @GameTest public void savedProjectSearchUsesLiteralIntentionWithoutInference(GameTestHelper helper){
         var plan=Blueprint.reference("search-proof","minecraft:overworld",BlockPos.ZERO,0);

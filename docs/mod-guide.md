@@ -537,7 +537,7 @@ operator and project owner; it makes one bounded subscription request.
 The interpreter can choose an existing action or ask a clarification. It cannot
 choose an arbitrary project, location, permission or command. Component actions
 use your current lesson component; choose a lesson first for composite projects.
-Inferred build, test, repair, resume, undo and stop actions show a server-generated
+Inferred design, build, test, repair, resume, undo and stop actions show a server-generated
 summary and a one-use `/engineer act <nonce>` delegation. Changing the connection,
 project, grants, lesson or execution context invalidates that pending action.
 Existing creative, loaded-world, reservation, conflict and repair-preview checks
@@ -549,6 +549,12 @@ Follow-ups may use the last dispatched action for up to five minutes within the
 same player connection, project, grants and component. This records the requested
 action, not a claim that it finished or passed. Changing scope or restarting clears
 that context. Use project notes for requirements you want remembered durably.
+
+A design choice delegates one additional AI behavior-proposal request using your
+original words. It supports the existing timed lever/lamp buffer and bounded Boolean
+logic design flow. You separately confirm the proposed behavior before geometry;
+accepting a design choice never approves construction. Unsupported mechanical or
+other design requests must explain their limits rather than substitute a buffer.
 
 This path is under construction; native acceptance and fresh model proof remain
 pending. The published alpha does not include it.

@@ -742,3 +742,19 @@ has four checks green with dedicated native live; hold this next batch until tha
 run terminates. Natural design creation/revision beyond existing action capabilities
 and broader product/Phase2 milestones still remain; do not treat these boundaries
 as completion of the original natural-language engineering objective.
+
+Phase20 extends natural choices to the existing generated-design proposal flow,
+including an undesigned selected project. A design/null choice requires explicit
+one-use act consent and warns that it spends one additional behavior-proposal
+request. Pending stores the original literal player request separately; model
+prose cannot replace requirements or supply behavior/blocks/approval. Native dispatch
+requires PLAN, then GeneratedPlanning independently requires owner/operator,
+PLAN+EDIT, current selection/workspace and safe state; geometry retains its own
+behavior confirmation. Native deterministic generated-confirmation flow now begins
+through natural interpretation, asserts no behavior-dispatch marker before act,
+then proves actual proposal dispatch after act before its existing workspace-change/
+geometry/build/test/restart checks. Java/TS rejection tests cover forged requirements
+and pre-design consent. Focused GPT-6-Luna/high check found no substitution,
+second-call admission or authority bypass. Scoped server/client compile and TS/
+script checks pass; runtime/fresh inference remain pending. Mechanical catalog
+selection and broader natural revisions/engineering remain beyond this addition.

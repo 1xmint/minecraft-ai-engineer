@@ -13,7 +13,7 @@ final class ProjectKnowledgeClient {
     private final ProjectManager manager;
     private final Map<UUID,Frame> active=new HashMap<>();
     private boolean closed;
-    private record Pending(Frame frame,NaturalActions.Choice choice,UUID nonce,String executionState) {}
+    private record Pending(Frame frame,NaturalActions.Choice choice,UUID nonce,String executionState,String originalRequest) {}
     private final Map<UUID,Pending> pendingActions=new HashMap<>();
     private record Recent(Frame frame,NaturalActions.Choice choice) {}
     private final Map<UUID,Recent> recentActions=new HashMap<>();
@@ -149,12 +149,13 @@ final class ProjectKnowledgeClient {
                 if(choice.component()!=null)ComponentTree.component(s.blueprint,choice.component());
                 if(choice.needsConsent()) {
                     if(!capturedState.equals(executionState(s)))throw new IllegalStateException("Project execution changed");
-                    var nonce=UUID.randomUUID();pendingActions.put(f.actor,new Pending(f,choice,nonce,capturedState));retained=true;
+                    var nonce=UUID.randomUUID();pendingActions.put(f.actor,new Pending(f,choice,nonce,capturedState,message));retained=true;
                     tell(f,"Proposed action: "+choice.action()+" | project "+s.projectId+" | component "+(choice.component()==null?"project":choice.component())+". No world work has started.");
+                    if(choice.action().equals("design"))tell(f,"Design delegation starts one additional AI behavior-proposal request from your original words. Geometry still requires its own confirmation; no world edit is approved.");
                     tell(f,"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
                 } else {
                     s.commandActor=f.actor;
-                    try{NaturalActions.dispatch(s,choice);rememberAction(s,choice);}finally{s.commandActor=null;}
+                    try{NaturalActions.dispatch(s,choice,message);rememberAction(s,choice);}finally{s.commandActor=null;}
                 }
             }catch(RuntimeException invalid){tell(f,"Request result not confirmed. Check the selected project and ask again explicitly; no automatic retry.");}
             finally{if(!retained)finish(f);}
@@ -167,7 +168,7 @@ final class ProjectKnowledgeClient {
         boolean valid=current(f) && pending.executionState().equals(executionState(s));
         finish(f); // One-use consent, consumed before any dispatch or failed live check.
         if(!valid)throw new IllegalStateException("Action expired or project context changed; request it again");
-        NaturalActions.dispatch(s,pending.choice());rememberAction(s,pending.choice());
+        NaturalActions.dispatch(s,pending.choice(),pending.originalRequest());rememberAction(s,pending.choice());
     }
     void discuss(EngineeringSession s,String message) {
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Discussion requires the single configured account-owning operator");

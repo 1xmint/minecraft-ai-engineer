@@ -748,7 +748,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("generated-project",id);
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
         String request=LIVE_GENERATED?"engineer design Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.":"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
-        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ",LIVE_GENERATED?900_000:20_000);
+        MESSAGES.clear();
+        if(!LIVE_GENERATED){
+            send(context,"engineer request CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"/engineer act ");String designNonce=actionNonce();
+            expectChat(context,"one additional AI behavior-proposal request");check(!java.nio.file.Files.exists(directory().resolve("natural-design-behavior-dispatched.done")),"Selecting design cannot spend a second request before explicit delegation");
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && !project.state.equals("PLANNING") && project.delegation==null,"Natural design selection does not dispatch behavior inference or approve geometry before consent");});
+            MESSAGES.clear();send(context,"engineer act "+designNonce);
+        } else send(context,request);
+        expectChat(context,"/engineer confirm ",LIVE_GENERATED?900_000:20_000);
+        if(!LIVE_GENERATED){awaitFile(context,"natural-design-behavior-dispatched.done");write("natural-request-design.done","passed");}
         String first=confirmationNonce();
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.revision()==revision && project.delegation==null,"Behavior proposal changes neither canonical intent nor world authority");});
         String accepted=first;
