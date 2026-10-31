@@ -625,3 +625,13 @@ action-bearing clarifications and invented/duplicate citations reject. New CI ca
 cover these boundaries and input mutation after validation. Scoped TypeScript check
 passes; no local tests ran. Provider/server routes and native delegation are not yet
 wired, so this is not a usable natural-request feature or completed N1–N4 proof.
+
+Phase20 provider now exposes optional typed interpretation through the existing
+isolated tool-disabled SDK run, with the same timeout, cancellation and no retry.
+It snapshots action/target choices and source IDs before inference, then validates
+the result against those admitted facts. Dedicated instructions keep discussion
+read-only and natural interpretation separate. CI cases cover hostile newline prose
+remaining JSON data, bounded messages and retained tool restrictions. Scoped TS
+check passes. No inference ran; gateway admission, native dispatch/consent and
+end-to-end proof remain pending. Branch pushes alone do not run CI; opening the
+working PR enables the existing pull-request workflow.
