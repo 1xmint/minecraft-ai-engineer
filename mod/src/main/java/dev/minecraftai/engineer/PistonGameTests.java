@@ -13,6 +13,32 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics, transaction and canonical shutter contract proofs. */
 public final class PistonGameTests {
+    @GameTest public void staticShutterRepairEast(GameTestHelper helper){staticRepair(helper,0);}
+    @GameTest public void staticShutterRepairSouth(GameTestHelper helper){staticRepair(helper,90);}
+    @GameTest public void staticShutterRepairWest(GameTestHelper helper){staticRepair(helper,180);}
+    @GameTest public void staticShutterRepairNorth(GameTestHelper helper){staticRepair(helper,270);}
+    private static void staticRepair(GameTestHelper helper,int rotation){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-static-repair",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),rotation);
+        for(var block:design.worldBlocks())level.setBlock(block.pos(),block.state(),2);
+        level.setBlock(design.piston(),level.getBlockState(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getOpposite()),2);
+        level.setBlock(design.input(),level.getBlockState(design.input()).setValue(BlockStateProperties.HORIZONTAL_FACING,design.facing().getOpposite()),2);
+        level.setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);
+        var report=ShutterDiagnosis.inspect(level,design);var observed=report.observed();
+        var corrections=ShutterRepair.corrections(design,observed,report.blockEntities());
+        helper.assertTrue(corrections.size()==3 && corrections.stream().allMatch(target->target.before().equals(observed.get(target.pos()))),"Repair preview records exact missing and wrong-facing states in every rotation");
+        helper.assertTrue(corrections.stream().anyMatch(target->target.pos().equals(design.piston()) && target.after().getValue(BlockStateProperties.FACING)==design.facing()),"Actuator correction follows canonical rotation");
+        helper.assertTrue(observed.entrySet().stream().allMatch(entry->level.getBlockState(entry.getKey()).equals(entry.getValue())),"Static repair preview never edits its observed world");
+        var incomplete=new HashMap<>(observed);incomplete.remove(design.input());
+        rejects(helper,()->ShutterRepair.corrections(design,incomplete,Set.of()),"Partial observation cannot authorize corrections");
+        var powered=new HashMap<>(observed);powered.put(design.input(),observed.get(design.input()).setValue(BlockStateProperties.POWERED,true));
+        rejects(helper,()->ShutterRepair.corrections(design,powered,Set.of()),"Powered input must be reconciled before static repair");
+        var extended=new HashMap<>(observed);extended.put(design.piston(),observed.get(design.piston()).setValue(BlockStateProperties.EXTENDED,true));
+        rejects(helper,()->ShutterRepair.corrections(design,extended,Set.of()),"Extended actuator is a motion recovery problem");
+        var obstructed=new HashMap<>(observed);obstructed.put(design.aperture(),Blocks.GLASS.defaultBlockState());
+        rejects(helper,()->ShutterRepair.corrections(design,obstructed,Set.of()),"Player obstruction is preserved, never a replacement target");
+        rejects(helper,()->ShutterRepair.corrections(design,observed,Set.of(design.input())),"Protected entities cannot become repair targets");
+        rejects(helper,()->ShutterRepair.corrected(Blocks.GLASS.defaultBlockState(),Blocks.AIR.defaultBlockState()),"Even an empty cell cannot broaden mechanical target kinds");helper.succeed();
+    }
     @GameTest public void shutterDiagnosisEast(GameTestHelper helper){diagnosis(helper,0);}
     @GameTest public void shutterDiagnosisSouth(GameTestHelper helper){diagnosis(helper,90);}
     @GameTest public void shutterDiagnosisWest(GameTestHelper helper){diagnosis(helper,180);}

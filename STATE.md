@@ -471,3 +471,22 @@ existing journaled motion recovery. Static orientation/attachment corrections ne
 explicit before/after review and inverse-undo checks; existing foreign blocks remain
 preserved. Plan and implement the complete preview/apply/recovery/undo flow, then
 prove it on GitHub before calling this slice complete. No new model call required.
+
+Phase19 foundation now contains ShutterRepair.corrections: exact complete240-cell
+observations, no entities/foreign aperture or margin blocks, and only canonical
+missing parts, retracted actuator facing, or off floor-lever facing corrections.
+Generic Diagnosis.corrected is unchanged. ShutterDiagnosis.Report carries only
+protected entity positions, never contents. Four native rotation tests are written
+for exact before/after preview, preserved world, incomplete snapshot, power/extension,
+foreign obstruction, protected entity and unsupported target rejection. No public
+repair preview/apply path is wired yet, and this slice is not shippable.
+
+Focused GPT-6-Luna/high undo check confirms current construction validation rejects
+legitimate restored wrong-facing states. Undo clears baseline/repairTargets and pops
+journal entries, so original-state facts must be retained durably, bound to the
+selected repair operation and its accepted design scope, throughout partial undo.
+Permit only canonical states or those exact approved original states at their
+recorded targets; retain fresh UNDO, complete reads, idle/quiescent denial and
+per-write checks. Never broaden same-block variants or restore a lease from memory.
+Next: wire preview and specialized execution; persist operation-bound repair basis;
+prove conflict/revocation, interruption/restart, exact undo and actual function.

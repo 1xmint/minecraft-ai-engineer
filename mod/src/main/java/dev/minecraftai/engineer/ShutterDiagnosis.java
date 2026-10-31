@@ -9,8 +9,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** A single physical observation, never a motion authorization or a functional verdict. */
 final class ShutterDiagnosis {
-    record Report(Map<BlockPos,BlockState> observed,List<String> messages) {
-        Report{observed=Map.copyOf(observed);messages=List.copyOf(messages);}
+    record Report(Map<BlockPos,BlockState> observed,List<String> messages,Set<BlockPos> blockEntities) {
+        Report{observed=Map.copyOf(observed);messages=List.copyOf(messages);blockEntities=Set.copyOf(blockEntities);}
     }
     private ShutterDiagnosis() { }
     static Report inspect(ServerLevel level,ShutterDesign.Design design) {
@@ -50,6 +50,6 @@ final class ShutterDiagnosis {
         if(matches)messages.add("Observed "+(closed?"closed":"open")+" mechanical pose matches the input request at this instant.");
         messages.add("Single snapshot only: this does not verify timing, reliability or function; existing test history is separate. Run an explicit controlled test when safe; diagnosis changed no blocks, motion guards or execution permissions.");
         messages.add("No automatic mechanical repair is proposed from this observation. Use the guarded position/recovery workflow for interrupted motion; generic block repair cannot move a piston safely.");
-        return new Report(observed,messages);
+        return new Report(observed,messages,entities);
     }
 }
