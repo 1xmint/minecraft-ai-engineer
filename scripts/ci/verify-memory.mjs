@@ -141,7 +141,7 @@ try {
       "knowledge-recovery.done",
       ...(liveDiscussion
         ? ["live-discussion-model.done", "live-discussion-recovery.done"]
-        : ["discussion-cancelled.done"]),
+        : ["discussion-cancelled.done", "natural-request-consent.done"]),
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

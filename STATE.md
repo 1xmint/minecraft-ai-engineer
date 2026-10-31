@@ -661,3 +661,14 @@ and development-only usage docs are added. Scoped server/client compilation pass
 then final changed Java/tests compiled successfully; no local tests ran. Native
 command acceptance, cancellation/consent negatives, fresh inference and full N1–N4
 proof remain pending. Focused existing GPT-6-Luna/high consent review requested.
+
+Focused GPT-6-Luna/high check found no concrete actor/connection/revision/permission
+or consent bypass in the new paths. Native CI flow now exercises exact offline
+lesson reuse, a synthetic typed status reply, no execution before delegation,
+wrong nonce rejection, successful one-use stop delegation, replay denial and exact
+stale-consent denial after a changed lesson. It asserts no block writes, journal,
+functional evidence or blueprint relabeling; required natural-request-consent.done
+is included in normal deterministic memory verification. Synthetic replies are
+explicit fixtures, not fresh model inference. Script syntax passes; native CI proof
+is still pending. Broader BUILD/test/repair/undo mutation, wrong-actor/revocation,
+interruption/restart/cancellation and fresh signed-in inference still need coverage.

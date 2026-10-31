@@ -1822,6 +1822,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
             check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
         }
+        if(!LIVE_DISCUSSION)naturalRequestFlow(context,server);
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
@@ -1833,6 +1834,29 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
+    private static String actionNonce(){
+        var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");
+        for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find())return match.group(1);}
+        throw new IllegalStateException("No server-generated action nonce");
+    }
+    private static void naturalRequestFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        MESSAGES.clear();send(context,"engineer request what are you working on");expectChat(context,"Assistant task:");
+        MESSAGES.clear();send(context,"engineer request CI report selected project status.");expectChat(context,"Assistant task:");
+        String before=server.computeOnServer(s->session(s,"Alice").state);
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String first=actionNonce();
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals(before),"Interpretation alone cannot change execution state");assertKnowledgeHasNoWorldAuthority(project);});
+        MESSAGES.clear();send(context,"engineer act "+UUID.randomUUID());expectChat(context,"No matching pending action");
+        MESSAGES.clear();send(context,"engineer act "+first);expectChat(context,"Project stopped by an authorized player");
+        MESSAGES.clear();send(context,"engineer act "+first);expectChat(context,"No matching pending action");
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String stale=actionNonce();
+        send(context,"engineer next");context.waitTicks(5);
+        MESSAGES.clear();send(context,"engineer act "+stale);expectChat(context,"Engineer:");
+        check(MESSAGES.stream().anyMatch(message->message.contains("No matching pending action") || message.contains("Action expired or project context changed")),"Changed lesson denies stale consent explicitly");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Project stopped by an authorized player")),"Stale consent never dispatches even the stop action");
+        server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));
+        write("natural-request-consent.done","passed");
+    }
+
     private static void knowledgeRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("knowledge-project");send(context,"engineer project use "+id);
         server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));

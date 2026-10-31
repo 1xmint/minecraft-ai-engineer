@@ -50,6 +50,27 @@ const server = createCompanionServer({
   // This provider cannot invoke the SDK; production retains its default4/minute.
   actorPlansPerMinute: 12,
   provider: {
+    async interpret(input, _signal, context, capabilities) {
+      const source = JSON.parse(context);
+      if (source.worldEvidence !== "not-inspected")
+        throw new Error("Invented natural-request world evidence");
+      const action =
+        input.message === "CI report selected project status."
+          ? "status"
+          : input.message === "CI propose stopping the selected project."
+            ? "stop"
+            : null;
+      if (!action || !capabilities.get(action)?.has(null))
+        throw new Error("Unexpected natural-request fixture choice");
+      return {
+        schemaVersion: 1,
+        kind: "action",
+        action,
+        componentId: null,
+        text: "Synthetic typed choice; not model inference.",
+        basis: ["project"],
+      };
+    },
     async discuss(input, _signal, context) {
       const source = JSON.parse(context);
       if (source.worldEvidence !== "not-inspected")
