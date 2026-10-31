@@ -617,3 +617,11 @@ Read before implementation: product brief natural-reference/permissions sections
 LessonAssistant, ProjectKnowledgeClient, GeneratedPlanning and companion gateway/
 discussion/provider admission. No separately billed API, key or hosting service.
 All remaining roadmap items and all six Phase2 features remain active.
+
+Phase20 foundation adds a strict six-field natural reply contract and immutable
+validation against trusted advertised action/target pairs and supplied source IDs.
+Unknown commands, coordinates, consent/permission fields, unsupported targets,
+action-bearing clarifications and invented/duplicate citations reject. New CI cases
+cover these boundaries and input mutation after validation. Scoped TypeScript check
+passes; no local tests ran. Provider/server routes and native delegation are not yet
+wired, so this is not a usable natural-request feature or completed N1–N4 proof.
