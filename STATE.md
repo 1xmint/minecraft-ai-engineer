@@ -4,7 +4,9 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Current branch **phase/19-mechanical-repair**, based on merged main **e824fdef283c846d56aa7cc512accb3401774678**.
+Current branch **phase/20-natural-requests**, based on merged main **5b29a9cac013aecf92c03aba4137939ae6178184**.
+Latest shipped: Phase19 PR28, finale881d73/all5 CI41151376521/all103 native tests.
+Next: bounded natural request interpretation through existing server actions.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -565,3 +567,53 @@ Three required markers and a fourth strict SQLite shutter-trial replay (repair-s
 cover this flow. No production timing or permission rule is changed. Scoped client
 compilation passes; source/runtime proof remains pending. This is written coverage,
 not yet evidence that grant revocation or the full R1/R2/R3 slice has passed.
+
+Phase19 PR28 merged2026-10-31T00:51:21Z as5b29a9cac013aecf92c03aba4137939ae6178184.
+Finale881d73/all5 CI41151376521/all103 required native tests pass. Downloaded
+work/mechanical-repair-shared-proof-41151376521: all nine repair markers pass,
+native flow7m25s, six actual server boots, strict SQLite replay of owner/shared
+post-repair trials and earlier off/on-origin trials. Final preview image inspected:
+red wrong-facing parts, cyan missing payload and preserved green player support.
+Actual shared BUILD revocation retains VIEW, retires the old fence, denies repair/
+resume, and does not automatically resume after regrant; Bob explicitly resumes
+before an actual physical trial. Owner interruption, conflict, fresh resume and
+partial undo across saved-server boots restore exact originals without a lease.
+No new provider inference ran. This closes the bounded static shutter repair slice,
+not broader engineering or the overall goal. Historical model-call receipts remain
+consumed. The old published alpha remains distinct from these source features.
+
+## Phase20: natural requests through typed actions (E1)
+
+Outcomes:
+
+- N1: plain-language requests for the selected project/component resolve to known
+  capabilities or a useful clarification. Reuse existing lesson handling for simple
+  requests; unknown/ambiguous references never invent an action or silently select
+  another project. Prove realistic phrases, ambiguous/unsupported requests and
+  malformed model output with deterministic CI cases and real native commands.
+- N2: interpretation never grants execution authority. Server-generated summaries
+  and explicit delegation/confirmation use existing guarded actions, with fresh
+  actor/connection, project/component, epoch/revision/grant and relevant world-state
+  checks. Prove no unexpected mutation, wrong-actor/stale-context/revocation denial,
+  one-use consent where required, and unchanged direct stop/command behavior.
+- N3: follow-ups use server-owned current component, personal tutorial cursor and
+  recent explicit context. Durable requirements come from project memory, not an
+  assumed long-running model conversation. Keep private inventories/world text out
+  of shared reasoning; treat literal notes as data, never executable instructions.
+- N4: provider admission remains account-owning operator-only before quota dispatch,
+  with bounded one-request work, cancellation and no automatic retry. Prove denied
+  admission, timeout/cancellation/restart behavior and native text-only compatibility.
+  Only after deterministic source is green, plan a fresh bounded signed-in receipt;
+  never reuse old consumed structural/Boolean/discussion receipts as new inference.
+
+Decision: reuse the existing constrained subscription provider, knowledge/context
+fences and native action methods. Model output is a strict typed choice, never a
+command string, shell program, permission grant or arbitrary coordinate executor.
+Blind chat execution would violate the brief's uncertain-target rule; leaving only
+slash-command memorization misses natural follow-ups. Preserve existing direct
+commands and immediate stop semantics, avoid model calls for obvious offline lesson
+requests, and review inferred world-changing actions through explicit delegation.
+Read before implementation: product brief natural-reference/permissions sections,
+LessonAssistant, ProjectKnowledgeClient, GeneratedPlanning and companion gateway/
+discussion/provider admission. No separately billed API, key or hosting service.
+All remaining roadmap items and all six Phase2 features remain active.
