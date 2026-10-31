@@ -683,3 +683,16 @@ stop action after actual planning-grant withdrawal or a new server epoch, assert
 transport abort, rejection, one call and no automatic retry. Final scoped client
 compile, TS check and script syntax pass; runtime CI remains pending. No inference
 or local tests ran. These checks do not yet prove all N1–N4 Outcomes.
+
+Phase20 further native acceptance draft covers a real connected Bob editor trying
+the operator's private nonce, followed by Alice successfully using her unchanged
+nonce; actual deop/reop invalidates prior pending consent and never auto-delegates.
+Exact stop-building interrupts an in-flight synthetic interpretation and requires
+transport abort plus suppression of a deliberately late reply. At the end of the
+second real saved-server boot, a new pending stop nonce is acknowledged with no
+subsequent selection/commands; third boot explicitly selects that project and must
+deny the old nonce with no lease, undo/test or writes. Required authority/cancel/
+restart-prepared/restarted markers extend strict verification. Scoped client compile
+and script syntax pass for this draft; runtime proof is pending. Current source
+982480f CI41154172044 Companion/Fabric/Windows pass, client/dedicated were live.
+These additions are not yet pushed, allowing that actual native run to finish.

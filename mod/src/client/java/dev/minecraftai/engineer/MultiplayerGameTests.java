@@ -647,6 +647,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
+            if(!LIVE_ACCEPTANCE)prepareNaturalRestart(context,server);
         }
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
@@ -654,6 +655,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
             TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
+            if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1868,7 +1870,16 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer select1 900 100 0");send(context,"engineer select2 905 101 0");send(context,"engineer reference signal-lamp");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(900,100,0)));
         server.runCommand("tp Alice 902 108 15 180 25");server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(900,100,0)));
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);});
+        MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String withdrawn=actionNonce();
+        server.runOnServer(s->{commandAs(s,"Bob","engineer act "+withdrawn);var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"Another connected editor cannot consume the operator's nonce");});
+        server.runCommand("deop Alice");context.waitTicks(5);
+        MESSAGES.clear();send(context,"engineer act "+withdrawn);expectChat(context,"No matching pending action");
+        server.runCommand("op Alice");context.waitTicks(5);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"Restoring operator status never delegates old inferred work");});
+        write("natural-request-authority.done","passed");
         MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String nonce=actionNonce();
+        server.runOnServer(s->commandAs(s,"Bob","engineer act "+nonce));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred build cannot reserve or place blocks before consent");});
         send(context,"engineer act "+nonce);server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Confirmed inferred build uses actual production placements");check(!project.verified.startsWith("passed:"),"Construction does not invent functional verification");});
@@ -1876,7 +1887,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(!saved(session(s,"Alice")).getAsJsonArray("functionalEvidence").isEmpty(),"Inferred test records actual game evidence"));
         delegateNatural(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
         server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred undo restores exact assistant placements and releases authority");});
+        write("natural-request-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        MESSAGES.clear();send(context,"engineer request CI cancel this interpretation.");awaitFile(context,"natural-request-dispatched");
+        send(context,"engineer request stop building");awaitFile(context,"natural-request-cancelled.done");context.waitTicks(10);
+        check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete interpretation")),"Exact stop discards a deliberately late interpretation");
         write("natural-request-construction.done","passed");
+    }
+
+    private static void prepareNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("natural-request-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");
+        write("natural-request-old-nonce",actionNonce());write("natural-request-restart-prepared.done","passed");
+        // No subsequent selection or commands: close the actual server with consent pending.
+    }
+    private static void recoverNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("natural-request-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        MESSAGES.clear();send(context,"engineer act "+read("natural-request-old-nonce"));expectChat(context,"No matching pending action");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"Saved facts cannot restore natural-action consent or execution authority");});
+        write("natural-request-restarted.done","passed");
     }
 
     private static void knowledgeRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

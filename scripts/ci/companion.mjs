@@ -54,6 +54,29 @@ const server = createCompanionServer({
       const source = JSON.parse(context);
       if (source.worldEvidence !== "not-inspected")
         throw new Error("Invented natural-request world evidence");
+      if (input.message === "CI cancel this interpretation.") {
+        const coordination = join(config.directory, "..", "coordination");
+        writeFileSync(
+          join(coordination, "natural-request-dispatched"),
+          "ready",
+        );
+        const deadline = Date.now() + 10_000;
+        while (!_signal.aborted && Date.now() < deadline) await delay(20);
+        if (!_signal.aborted)
+          throw new Error("Exact stop did not cancel interpretation transport");
+        writeFileSync(
+          join(coordination, "natural-request-cancelled.done"),
+          "passed",
+        );
+        return {
+          schemaVersion: 1,
+          kind: "clarification",
+          action: null,
+          componentId: null,
+          text: "CI obsolete interpretation must never display",
+          basis: [],
+        };
+      }
       const action =
         input.message === "CI report selected project status."
           ? "status"
