@@ -1846,6 +1846,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer request what are you working on");expectChat(context,"Assistant task:");
         MESSAGES.clear();send(context,"engineer request CI report selected project status.");expectChat(context,"Assistant task:");
         MESSAGES.clear();send(context,"engineer request CI follow up on selected project status.");expectChat(context,"Assistant task:");write("natural-request-followup.done","passed");
+        MESSAGES.clear();send(context,"engineer request Make that other one smaller.");expectChat(context,"AI clarification:");expectChat(context,"Which component do you mean?");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"Ambiguity cannot create pending consent");
+        MESSAGES.clear();send(context,"engineer request Gather survival materials for this machine.");expectChat(context,"AI unsupported:");expectChat(context,"Survival gathering is not available yet");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"Unsupported work cannot silently substitute creative building");
+        server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("natural-request-clarification.done","passed");
         String before=server.computeOnServer(s->session(s,"Alice").state);
         MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String first=actionNonce();
         server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals(before),"Interpretation alone cannot change execution state");assertKnowledgeHasNoWorldAuthority(project);});

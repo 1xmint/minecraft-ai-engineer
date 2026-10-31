@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { plannerConfig, plannerModel } from "../companion/src/provider.js";
+import { makeComponentBlueprint } from "../companion/src/components.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
   validateNaturalReply,
@@ -169,4 +170,53 @@ test("recent intentions cannot add targets, commands, verification, or consent",
     { action: "run_shell", componentId: null },
   ])
     assert.throws(() => readRecentAction(value, capabilities));
+});
+
+test("a composite project never silently selects one of several physical targets", () => {
+  const blueprint = makeComponentBlueprint(
+    {
+      request: "Two independent lamps",
+      worldId: "world",
+      dimension: "minecraft:overworld",
+      anchor: { x: 0, y: 100, z: 0 },
+      rotation: 0,
+    },
+    [
+      { id: "root", kind: "group" },
+      ...["entrance", "exit"].map((id, index) => ({
+        id,
+        parent: "root",
+        kind: "mechanism" as const,
+        template: "signal-lamp" as const,
+        anchor: { x: index * 12, y: 0, z: 0 },
+        rotation: 0 as const,
+        parameters: { delay: 1 },
+        dependsOn: [],
+      })),
+    ],
+  );
+  for (const selected of [undefined, "root", "foreign"])
+    assert.equal(naturalCapabilities(blueprint, selected).has("build"), false);
+  const selected = naturalCapabilities(blueprint, "entrance");
+  assert.deepEqual([...selected.get("build")!], ["entrance"]);
+  assert.throws(() =>
+    validateNaturalReply(
+      { ...reply, action: "build", componentId: "exit" },
+      selected,
+      sources,
+    ),
+  );
+  const clarification = validateNaturalReply(
+    {
+      schemaVersion: 1,
+      kind: "clarification",
+      action: null,
+      componentId: null,
+      text: "Do you mean the entrance or exit component?",
+      basis: ["project"],
+    },
+    naturalCapabilities(blueprint),
+    sources,
+  );
+  assert.equal(clarification.action, null);
 });

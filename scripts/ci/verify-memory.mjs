@@ -145,6 +145,7 @@ try {
             "discussion-cancelled.done",
             "natural-request-consent.done",
             "natural-request-followup.done",
+            "natural-request-clarification.done",
             "natural-request-construction.done",
             "natural-request-authority.done",
             "natural-request-cancelled.done",

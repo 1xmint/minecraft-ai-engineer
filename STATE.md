@@ -727,3 +727,18 @@ that hold. Native test/undo previews wait12 actual ticks and assert the displaye
 lesson remains stable before delegation. No context fence is weakened. Also bound
 request text before normalization/offline shortcuts and expose request/act in help.
 New source must prove this fix plus the unpushed follow-up/cancel/restart additions.
+
+Phase20 adds explicit model action meanings, including lesson pause versus project
+stop, intended materials versus survival gathering, actual test request versus a
+passed result, and guarded existing design work versus redesign. Only advertised
+choices receive definitions; no capability or execution authority is added. Pure
+CI coverage proves composite groups/no selection cannot silently select a physical
+build target or switch to another leaf. Native deterministic clarification and
+unsupported-survival replies must produce no action nonce/world work; a new required
+clarification marker records that flow. These synthetic cases prove routing and
+negative execution behavior, not fresh English interpretation by a model. Scoped
+client compile, TS check and script syntax pass. CI41154915000 ondd26920 currently
+has four checks green with dedicated native live; hold this next batch until that
+run terminates. Natural design creation/revision beyond existing action capabilities
+and broader product/Phase2 milestones still remain; do not treat these boundaries
+as completion of the original natural-language engineering objective.

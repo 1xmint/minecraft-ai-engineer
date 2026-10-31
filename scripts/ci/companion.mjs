@@ -55,6 +55,24 @@ const server = createCompanionServer({
       const source = JSON.parse(context);
       if (source.worldEvidence !== "not-inspected")
         throw new Error("Invented natural-request world evidence");
+      if (input.message === "Make that other one smaller.")
+        return {
+          schemaVersion: 1,
+          kind: "clarification",
+          action: null,
+          componentId: null,
+          text: "Which component do you mean? Name it or choose its lesson first.",
+          basis: ["project"],
+        };
+      if (input.message === "Gather survival materials for this machine.")
+        return {
+          schemaVersion: 1,
+          kind: "unsupported",
+          action: null,
+          componentId: null,
+          text: "Survival gathering is not available yet; this request has not started world work.",
+          basis: ["project"],
+        };
       if (input.message === "CI cancel this interpretation.") {
         const coordination = join(config.directory, "..", "coordination");
         writeFileSync(
