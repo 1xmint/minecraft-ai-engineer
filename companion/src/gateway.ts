@@ -1,3 +1,7 @@
+import {
+  naturalCapabilities,
+  validateNaturalReply,
+} from "./natural-request.js";
 import { discussionGrounding, validateDiscussionReply } from "./discussion.js";
 import {
   validateBehavior,
@@ -135,6 +139,7 @@ export class ServerGateway {
         "/v2/knowledge/read",
         "/v2/knowledge/note",
         "/v2/discuss",
+        "/v2/interpret",
         "/v2/design",
         "/v2/behavior/propose",
         "/v2/design/generated",
@@ -251,6 +256,7 @@ export class ServerGateway {
         blueprint: memory.blueprint(context) ?? null,
       };
     }
+    if (pathname === "/v2/interpret") return this.interpret(v, context, signal);
     if (pathname === "/v2/discuss") return this.discuss(v, context, signal);
     if (
       pathname === "/v2/behavior/propose" ||
@@ -355,6 +361,128 @@ export class ServerGateway {
             blueprint,
             projectId: context.projectId,
             message: plan.explanation,
+          };
+        },
+      );
+    } finally {
+      signal.removeEventListener("abort", abort);
+      this.planning.delete(active);
+    }
+  }
+  private async interpret(
+    v: Record<string, unknown>,
+    context: GatewayContext,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    const memory = this.options.memory;
+    const project = memory.assertCurrent(context, "plan");
+    if (
+      project.members.find((member) => member.actorId === context.actorId)
+        ?.role !== "owner"
+    )
+      throw new RequestError(
+        "Natural interpretation is limited to the account-owning project operator.",
+        403,
+      );
+    const fields = [
+      "context",
+      "message",
+      "componentId",
+      "modelAuthorized",
+      "isOperator",
+    ];
+    if (Object.keys(v).some((key) => !fields.includes(key)))
+      throw new RequestError("Unknown interpretation field.");
+    if (
+      !context.connectionId ||
+      !optionalBoolean(v.modelAuthorized, "modelAuthorized") ||
+      !optionalBoolean(v.isOperator, "isOperator")
+    )
+      throw new RequestError(
+        "Interpretation requires the connected account-owning operator's explicit request.",
+        403,
+      );
+    const message = text(v.message, "interpretation message", 1000);
+    const componentId =
+      v.componentId === undefined
+        ? undefined
+        : identifier(v.componentId, "interpretation component");
+    const blueprint = memory.blueprint(context);
+    const selected =
+      componentId ?? (blueprint && !blueprint.components ? "root" : undefined);
+    const capabilities = naturalCapabilities(blueprint, selected);
+    const grounding = discussionGrounding(
+      project.name,
+      context.projectRevision,
+      blueprint,
+      memory.knowledge(context),
+      selected,
+    );
+    const interpret = this.options.provider.interpret?.bind(
+      this.options.provider,
+    );
+    if (!interpret)
+      throw new RequestError(
+        "This provider does not support project interpretation.",
+        503,
+      );
+    memory.claim(context, "project-interpretation");
+    const controller = new AbortController(),
+      active = { context, controller };
+    const abort = () => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) controller.abort();
+    this.planning.add(active);
+    try {
+      return await this.options.queue.run(
+        `${context.serverId}:${context.actorId}`,
+        controller.signal,
+        async () => {
+          this.requireEpoch(context);
+          memory.assertReasoningCurrent(context, grounding.knowledgeRevision);
+          memory.consumePlanningBudget(
+            context,
+            this.options.actorPlansPerMinute ?? 4,
+            this.options.serverPlansPerHour ?? 24,
+          );
+          const reply = validateNaturalReply(
+            await interpret(
+              Object.freeze({ message }),
+              controller.signal,
+              grounding.text,
+              capabilities,
+              grounding.availableBasis,
+              Object.freeze({ ...context }),
+            ),
+            capabilities,
+            grounding.availableBasis,
+          );
+          if (controller.signal.aborted)
+            throw new RequestError(
+              "Interpretation cancelled; no answer accepted.",
+              503,
+            );
+          this.requireEpoch(context);
+          memory.assertReasoningCurrent(context, grounding.knowledgeRevision);
+          memory.audit(
+            context.serverId,
+            context.projectId,
+            "interpretation-reply",
+            {
+              context,
+              knowledgeRevision: grounding.knowledgeRevision,
+              message,
+              componentId: componentId ?? null,
+              reply,
+              worldEvidence: "not-inspected",
+            },
+          );
+          return {
+            protocol: 2,
+            context,
+            knowledgeRevision: grounding.knowledgeRevision,
+            worldEvidence: "not-inspected",
+            reply,
           };
         },
       );

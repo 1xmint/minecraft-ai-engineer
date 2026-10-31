@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { plannerConfig, plannerModel } from "../companion/src/provider.js";
+import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
   validateNaturalReply,
   naturalRequestPrompt,
+  naturalCapabilities,
   type NaturalCapabilities,
 } from "../companion/src/natural-request.js";
 
@@ -23,6 +25,21 @@ const reply = {
   text: "Inspect the selected entrance.",
   basis: ["component:entrance"],
 };
+
+test("advertised targets come from saved physical components, never arbitrary player prose", () => {
+  assert.deepEqual([...naturalCapabilities(undefined).keys()], ["status"]);
+  const blueprint = makeReferenceBlueprint({
+    request: "A delayed lamp",
+    worldId: "world",
+    dimension: "minecraft:overworld",
+    anchor: { x: 0, y: 100, z: 0 },
+    rotation: 0,
+  });
+  const standalone = naturalCapabilities(blueprint);
+  assert.deepEqual([...standalone.get("diagnose")!], ["root"]);
+  assert.deepEqual([...standalone.get("stop")!], [null]);
+  assert.equal(naturalCapabilities(blueprint, "invented").has("build"), false);
+});
 
 test("interpretation keeps tool restrictions and serializes hostile prose as data", () => {
   const config = plannerConfig("natural");

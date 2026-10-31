@@ -635,3 +635,15 @@ remaining JSON data, bounded messages and retained tool restrictions. Scoped TS
 check passes. No inference ran; gateway admission, native dispatch/consent and
 end-to-end proof remain pending. Branch pushes alone do not run CI; opening the
 working PR enables the existing pull-request workflow.
+
+Phase20 adds /v2/interpret with explicit connected owner/operator model admission
+before claim, budget and inference. Choices derive from the saved blueprint and
+selected physical component; absent/composite ambiguous targets do not get invented.
+Existing epoch, project/grant and knowledge-revision fences wrap queued inference,
+with cancellation and post-response validation/audit; this endpoint writes no world
+state or design. HTTP CI cases now cover no-connection/editor/outsider/operator-off
+admission, missing targets, request replay, literal intention grounding, invented
+citations and late replies after changed notes. Scoped TS check passes. Earlier
+source CI41153488975 Companion/Windows pass, other jobs were live at observation;
+that run does not prove these new endpoint cases. Native command/delegation wiring,
+fresh inference and complete N1–N4 proof are still pending.

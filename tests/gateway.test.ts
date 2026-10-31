@@ -2107,3 +2107,157 @@ test("discussion rejects invented sources and note changes invalidate late model
     await f.close();
   }
 });
+
+test("natural interpretation returns only a typed choice and denies quota access before dispatch", async () => {
+  let calls = 0,
+    captured = "";
+  const f = await fixture({
+    ...plan,
+    async interpret(_input, _signal, shared) {
+      calls++;
+      captured = shared;
+      return {
+        schemaVersion: 1 as const,
+        kind: "action" as const,
+        action: "status" as const,
+        componentId: null,
+        text: "The intended project uses a lamp; no world inspection was performed.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Why does this project use a lamp?",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    for (const c of [
+      context(),
+      context({ actorId: EDITOR, connectionId: generatedConnection }),
+      context({ actorId: EVE, connectionId: generatedConnection }),
+    ])
+      assert.equal(
+        (await f.post("/v2/interpret", { ...input, context: c })).status,
+        403,
+      );
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          isOperator: false,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          componentId: "missing",
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      409,
+    );
+    assert.equal(calls, 0);
+    const c = context({ connectionId: generatedConnection });
+    const response = await f.post("/v2/interpret", { ...input, context: c });
+    assert.equal(response.status, 200);
+    const reply = await json<{
+      worldEvidence: string;
+      knowledgeRevision: number;
+      reply: { kind: string };
+    }>(response);
+    assert.equal(reply.worldEvidence, "not-inspected");
+    assert.equal(reply.knowledgeRevision, 0);
+    assert.equal(JSON.parse(captured).sources[0].kind, "intended-design");
+    assert.equal(
+      (await f.post("/v2/interpret", { ...input, context: c })).status,
+      409,
+    );
+    assert.equal(calls, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});
+
+test("natural interpretation rejects invented sources and discards late replies after note changes", async () => {
+  let release!: () => void, started!: () => void;
+  const ready = new Promise<void>((resolve) => (started = resolve)),
+    gate = new Promise<void>((resolve) => (release = resolve));
+  let calls = 0;
+  const f = await fixture({
+    ...plan,
+    async interpret() {
+      calls++;
+      if (calls === 1)
+        return {
+          schemaVersion: 1 as const,
+          kind: "action" as const,
+          action: "status" as const,
+          componentId: null,
+          text: "An invented private fact.",
+          basis: ["inventory:other-player"],
+        };
+      started();
+      await gate;
+      return {
+        schemaVersion: 1 as const,
+        kind: "action" as const,
+        action: "status" as const,
+        componentId: null,
+        text: "Obsolete project advice.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Explain the project.",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      400,
+    );
+    const pending = f.post("/v2/interpret", {
+      ...input,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await ready;
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          expectedRevision: 0,
+          note: {
+            schemaVersion: 1,
+            kind: "decision",
+            text: "Preserve the entrance.",
+          },
+        })
+      ).status,
+      200,
+    );
+    release();
+    assert.notEqual((await pending).status, 200);
+    assert.equal(calls, 2);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    release();
+    await f.close();
+  }
+});

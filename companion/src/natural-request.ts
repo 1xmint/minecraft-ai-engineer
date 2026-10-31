@@ -1,4 +1,5 @@
 import { object, text, RequestError } from "./types.js";
+import type { Blueprint } from "./types.js";
 
 export const NATURAL_ACTIONS = [
   "status",
@@ -26,6 +27,49 @@ export type NaturalCapabilities = ReadonlyMap<
 >;
 export interface NaturalRequest {
   readonly message: string;
+}
+
+/** Only the explicitly selected physical component is eligible for interpretation. */
+export function naturalCapabilities(
+  blueprint: Blueprint | undefined,
+  selectedComponent?: string,
+): NaturalCapabilities {
+  const result = new Map<NaturalAction, ReadonlySet<string | null>>([
+    ["status", new Set([null])],
+  ]);
+  if (!blueprint) return result;
+  for (const action of [
+    "next",
+    "repeat",
+    "pause_lesson",
+    "resume",
+    "undo",
+    "stop",
+  ] as const)
+    result.set(action, new Set([null]));
+  const selected =
+    selectedComponent ?? (blueprint.components ? undefined : "root");
+  const physical =
+    selected !== undefined &&
+    (blueprint.components
+      ? blueprint.components.nodes.some(
+          (node) => node.id === selected && node.kind === "mechanism",
+        )
+      : selected === "root");
+  if (physical) {
+    for (const action of [
+      "explain",
+      "timing",
+      "materials",
+      "teach",
+      "diagnose",
+      "build",
+      "test",
+      "repair",
+    ] as const)
+      result.set(action, new Set([selected]));
+  }
+  return result;
 }
 
 export function naturalRequestPrompt(
