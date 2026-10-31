@@ -858,7 +858,7 @@ compile, JS/Bash syntax and formatting pass. No workflow or model call was start
 
 Verifier integration also found the normal flow now has six explicit typed replies
 (status/status/clarification/unsupported/stop/stop), in addition to three old
- discussion dispatches. SQLite verification now requires those exact reply triples,
+discussion dispatches. SQLite verification now requires those exact reply triples,
 knowledge revision2, not-inspected provenance and exactly9 starts; live discussion
 requires one explanation, live natural exactly one diagnose/root and one start.
 No unknown/denied call can be hidden in a relaxed total. These expectations need
@@ -879,3 +879,9 @@ Final source must prove recovered consent denial, later boot flows and strict SQ
 (including the newly corrected exact interpretation dispatch counts). No fresh
 model inference or local tests ran. The terminal handle permits pushing pending
 manual-mode wiring and this causal fixture fix for their own complete CI proof.
+
+Source2469f91 CI41219014537 Companion stopped before tests at format:check due to
+STATE.md paragraph indentation. Native/Fabric/Windows checks remain independent;
+keep the dedicated handle live until terminal. Format only the changed project
+memory file before the next push, and require actual Companion test evidence on
+that new source rather than treating the earlier type check as a test pass.
