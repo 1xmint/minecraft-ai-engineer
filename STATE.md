@@ -1,10 +1,17 @@
 # Now
 
-2026-10-30. Active goal: **complete all milestones**: the entire Phase1 engineering
+2026-10-31. Active goal: **complete all milestones**: the entire Phase1 engineering
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Current branch **phase/19-mechanical-repair**, based on merged main **e824fdef283c846d56aa7cc512accb3401774678**.
+Current branch **phase/20-natural-requests**, based on merged main **5b29a9cac013aecf92c03aba4137939ae6178184**.
+Latest shipped: Phase19 PR28, finale881d73/all5 CI41151376521/all103 native tests.
+Phase20 source8214fbd passed all5 CI41221636372 and fresh signed-in natural
+acceptance41221809497 (response41222705526). Exactly one Luna call: 11519 input,
+73 output, SDK0.164.0. Native10m28s, actual diagnosis/recovery markers and strict
+SQLite proof inspected. This call is consumed; no further inference for this slice.
+Next: archive-only final CI and merge PR29, then continue the broader roadmap.
+All Phase2 features and remaining engineering/release milestones stay active.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -565,3 +572,369 @@ Three required markers and a fourth strict SQLite shutter-trial replay (repair-s
 cover this flow. No production timing or permission rule is changed. Scoped client
 compilation passes; source/runtime proof remains pending. This is written coverage,
 not yet evidence that grant revocation or the full R1/R2/R3 slice has passed.
+
+Phase19 PR28 merged2026-10-31T00:51:21Z as5b29a9cac013aecf92c03aba4137939ae6178184.
+Finale881d73/all5 CI41151376521/all103 required native tests pass. Downloaded
+work/mechanical-repair-shared-proof-41151376521: all nine repair markers pass,
+native flow7m25s, six actual server boots, strict SQLite replay of owner/shared
+post-repair trials and earlier off/on-origin trials. Final preview image inspected:
+red wrong-facing parts, cyan missing payload and preserved green player support.
+Actual shared BUILD revocation retains VIEW, retires the old fence, denies repair/
+resume, and does not automatically resume after regrant; Bob explicitly resumes
+before an actual physical trial. Owner interruption, conflict, fresh resume and
+partial undo across saved-server boots restore exact originals without a lease.
+No new provider inference ran. This closes the bounded static shutter repair slice,
+not broader engineering or the overall goal. Historical model-call receipts remain
+consumed. The old published alpha remains distinct from these source features.
+
+## Phase20: natural requests through typed actions (E1)
+
+Outcomes:
+
+- N1: plain-language requests for the selected project/component resolve to known
+  capabilities or a useful clarification. Reuse existing lesson handling for simple
+  requests; unknown/ambiguous references never invent an action or silently select
+  another project. Prove realistic phrases, ambiguous/unsupported requests and
+  malformed model output with deterministic CI cases and real native commands.
+- N2: interpretation never grants execution authority. Server-generated summaries
+  and explicit delegation/confirmation use existing guarded actions, with fresh
+  actor/connection, project/component, epoch/revision/grant and relevant world-state
+  checks. Prove no unexpected mutation, wrong-actor/stale-context/revocation denial,
+  one-use consent where required, and unchanged direct stop/command behavior.
+- N3: follow-ups use server-owned current component, personal tutorial cursor and
+  recent explicit context. Durable requirements come from project memory, not an
+  assumed long-running model conversation. Keep private inventories/world text out
+  of shared reasoning; treat literal notes as data, never executable instructions.
+- N4: provider admission remains account-owning operator-only before quota dispatch,
+  with bounded one-request work, cancellation and no automatic retry. Prove denied
+  admission, timeout/cancellation/restart behavior and native text-only compatibility.
+  Only after deterministic source is green, plan a fresh bounded signed-in receipt;
+  never reuse old consumed structural/Boolean/discussion receipts as new inference.
+
+Decision: reuse the existing constrained subscription provider, knowledge/context
+fences and native action methods. Model output is a strict typed choice, never a
+command string, shell program, permission grant or arbitrary coordinate executor.
+Blind chat execution would violate the brief's uncertain-target rule; leaving only
+slash-command memorization misses natural follow-ups. Preserve existing direct
+commands and immediate stop semantics, avoid model calls for obvious offline lesson
+requests, and review inferred world-changing actions through explicit delegation.
+Read before implementation: product brief natural-reference/permissions sections,
+LessonAssistant, ProjectKnowledgeClient, GeneratedPlanning and companion gateway/
+discussion/provider admission. No separately billed API, key or hosting service.
+All remaining roadmap items and all six Phase2 features remain active.
+
+Phase20 foundation adds a strict six-field natural reply contract and immutable
+validation against trusted advertised action/target pairs and supplied source IDs.
+Unknown commands, coordinates, consent/permission fields, unsupported targets,
+action-bearing clarifications and invented/duplicate citations reject. New CI cases
+cover these boundaries and input mutation after validation. Scoped TypeScript check
+passes; no local tests ran. Provider/server routes and native delegation are not yet
+wired, so this is not a usable natural-request feature or completed N1–N4 proof.
+
+Phase20 provider now exposes optional typed interpretation through the existing
+isolated tool-disabled SDK run, with the same timeout, cancellation and no retry.
+It snapshots action/target choices and source IDs before inference, then validates
+the result against those admitted facts. Dedicated instructions keep discussion
+read-only and natural interpretation separate. CI cases cover hostile newline prose
+remaining JSON data, bounded messages and retained tool restrictions. Scoped TS
+check passes. No inference ran; gateway admission, native dispatch/consent and
+end-to-end proof remain pending. Branch pushes alone do not run CI; opening the
+working PR enables the existing pull-request workflow.
+
+Phase20 adds /v2/interpret with explicit connected owner/operator model admission
+before claim, budget and inference. Choices derive from the saved blueprint and
+selected physical component; absent/composite ambiguous targets do not get invented.
+Existing epoch, project/grant and knowledge-revision fences wrap queued inference,
+with cancellation and post-response validation/audit; this endpoint writes no world
+state or design. HTTP CI cases now cover no-connection/editor/outsider/operator-off
+admission, missing targets, request replay, literal intention grounding, invented
+citations and late replies after changed notes. Scoped TS check passes. Earlier
+source CI41153488975 Companion/Windows pass, other jobs were live at observation;
+that run does not prove these new endpoint cases. Native command/delegation wiring,
+fresh inference and complete N1–N4 proof are still pending.
+
+Phase20 native draft adds /engineer request and one-use /engineer act delegation.
+Known lesson requests avoid inference; exact stop/stop building remain immediate
+with BUILD rights. Other requests require the configured owner/operator and PLAN.
+Existing request frames bind actor, actual player/connection, epoch, selection,
+dimension, revision, grants and personal lesson. Typed Java decoding rejects extra
+fields, arbitrary actions/targets and authority; direct Java dispatch reuses guarded
+session actions and fresh VIEW/BUILD/UNDO checks. Inferred world actions retain an
+ephemeral nonce plus execution/workspace/operation/progress fingerprint, consumed
+before dispatch; no pending consent survives restart. Two native contract tests
+and development-only usage docs are added. Scoped server/client compilation passed,
+then final changed Java/tests compiled successfully; no local tests ran. Native
+command acceptance, cancellation/consent negatives, fresh inference and full N1–N4
+proof remain pending. Focused existing GPT-6-Luna/high consent review requested.
+
+Focused GPT-6-Luna/high check found no concrete actor/connection/revision/permission
+or consent bypass in the new paths. Native CI flow now exercises exact offline
+lesson reuse, a synthetic typed status reply, no execution before delegation,
+wrong nonce rejection, successful one-use stop delegation, replay denial and exact
+stale-consent denial after a changed lesson. It asserts no block writes, journal,
+functional evidence or blueprint relabeling; required natural-request-consent.done
+is included in normal deterministic memory verification. Synthetic replies are
+explicit fixtures, not fresh model inference. Script syntax passes; native CI proof
+is still pending. Broader BUILD/test/repair/undo mutation, wrong-actor/revocation,
+interruption/restart/cancellation and fresh signed-in inference still need coverage.
+
+Phase20 acceptance draft adds a separate x900 lamp project: no reservation/write
+before inferred BUILD consent, actual production construction, no pass from geometry,
+separate inferred TEST consent with actual functional evidence, then inferred UNDO
+consent restoring assistant blocks and releasing authority. Required deterministic
+marker natural-request-construction.done joins existing consent proof. No old note
+project/world assertions are relaxed. HTTP cases deliberately return a late valid
+stop action after actual planning-grant withdrawal or a new server epoch, asserting
+transport abort, rejection, one call and no automatic retry. Final scoped client
+compile, TS check and script syntax pass; runtime CI remains pending. No inference
+or local tests ran. These checks do not yet prove all N1–N4 Outcomes.
+
+Phase20 further native acceptance draft covers a real connected Bob editor trying
+the operator's private nonce, followed by Alice successfully using her unchanged
+nonce; actual deop/reop invalidates prior pending consent and never auto-delegates.
+Exact stop-building interrupts an in-flight synthetic interpretation and requires
+transport abort plus suppression of a deliberately late reply. At the end of the
+second real saved-server boot, a new pending stop nonce is acknowledged with no
+subsequent selection/commands; third boot explicitly selects that project and must
+deny the old nonce with no lease, undo/test or writes. Required authority/cancel/
+restart-prepared/restarted markers extend strict verification. Scoped client compile
+and script syntax pass for this draft; runtime proof is pending. Current source
+982480f CI41154172044 Companion/Fabric/Windows pass, client/dedicated were live.
+These additions are not yet pushed, allowing that actual native run to finish.
+
+Phase20 N3 now includes a bounded ephemeral recent-action cache: last successfully
+dispatched typed intention only, actor/session/connection/epoch/revision/grant/
+dimension/operator/component-bound, max128 players, five-minute expiry, no success
+claim or authority. Same-component lesson progression may retain that intention;
+in-flight interpretation/consent still requires the exact personal lesson stage.
+Gateway validates the two-field action/target against current capabilities before
+quota, adds a recent-action source labelled result-not-supplied/authority-none, and
+still requires fresh server action checks. HTTP/codec negatives cover invented
+source, commands, nonce, verification and foreign target; a native synthetic
+follow-up must consume the actual preceding status intention. No conversation or
+private inventories are stored. Focused GPT-6-Luna/high check found no concrete
+context leak or authority bypass. TS/server/client compile and script syntax pass;
+final added native follow-up awaits CI. The deterministic fixture now allows24
+requests/minute and64/hour for expanded scenarios; it cannot invoke inference and
+production defaults remain4/minute and24/hour. Native proof still pending; no model
+call or local test ran. Held new commits while CI41154172044 dedicated run is live.
+
+Source982480f CI41154172044 terminal: Companion/Fabric/Windows/client pass;
+dedicated fails waiting for inferred undo. Downloaded work/natural-request-failure-
+41154172044 shows natural-request-consent.done passed, actual inferred lamp build,
+and actual functional pass (3 vectors/32 ticks). Undo preview was correctly rejected
+because automatic tutorial advancement changed the exact lesson before delegation.
+The failed timeout was acceptance waiting on undo that never started, not a native
+placement or test failure. Production now holds only automatic personal lesson
+advancement while a current discussion/interpretation or its pending consent exists;
+manual lesson changes still invalidate it and world execution is never paused by
+that hold. Native test/undo previews wait12 actual ticks and assert the displayed
+lesson remains stable before delegation. No context fence is weakened. Also bound
+request text before normalization/offline shortcuts and expose request/act in help.
+New source must prove this fix plus the unpushed follow-up/cancel/restart additions.
+
+Phase20 adds explicit model action meanings, including lesson pause versus project
+stop, intended materials versus survival gathering, actual test request versus a
+passed result, and guarded existing design work versus redesign. Only advertised
+choices receive definitions; no capability or execution authority is added. Pure
+CI coverage proves composite groups/no selection cannot silently select a physical
+build target or switch to another leaf. Native deterministic clarification and
+unsupported-survival replies must produce no action nonce/world work; a new required
+clarification marker records that flow. These synthetic cases prove routing and
+negative execution behavior, not fresh English interpretation by a model. Scoped
+client compile, TS check and script syntax pass. CI41154915000 ondd26920 currently
+has four checks green with dedicated native live; hold this next batch until that
+run terminates. Natural design creation/revision beyond existing action capabilities
+and broader product/Phase2 milestones still remain; do not treat these boundaries
+as completion of the original natural-language engineering objective.
+
+Phase20 extends natural choices to the existing generated-design proposal flow,
+including an undesigned selected project. A design/null choice requires explicit
+one-use act consent and warns that it spends one additional behavior-proposal
+request. Pending stores the original literal player request separately; model
+prose cannot replace requirements or supply behavior/blocks/approval. Native dispatch
+requires PLAN, then GeneratedPlanning independently requires owner/operator,
+PLAN+EDIT, current selection/workspace and safe state; geometry retains its own
+behavior confirmation. Native deterministic generated-confirmation flow now begins
+through natural interpretation, asserts no behavior-dispatch marker before act,
+then proves actual proposal dispatch after act before its existing workspace-change/
+geometry/build/test/restart checks. Java/TS rejection tests cover forged requirements
+and pre-design consent. Focused GPT-6-Luna/high check found no substitution,
+second-call admission or authority bypass. Scoped server/client compile and TS/
+script checks pass; runtime/fresh inference remain pending. Mechanical catalog
+selection and broader natural revisions/engineering remain beyond this addition.
+
+Sourcedd26920 CI41154915000 terminal: four jobs pass, dedicated fails at the new
+status follow-up before construction. Downloaded work/natural-request-failure-
+41154915000 shows the initial typed status succeeds and the following recent-action
+request is rejected. Production HTTP uses LocalFiles.GSON, which omits explicit
+JsonNull members; recentAction therefore loses required componentId:null for a
+project target and the strict companion rejects it. Fix preserves explicit JSON
+nulls only for /v2/interpret through the actual request encoder; all other established
+wire codecs and companion strict-field validation stay unchanged. A required native
+regression exercises that exact HTTP encoder and asserts both required fields and
+explicit null survive roundtrip. No parser membership, source or authority fence is
+weakened. Fresh runtime proof must cover this plus clarification/design additions;
+old failed runs are not evidence that those complete flows work.
+
+Phase20 adds plan/null as a separate explicitly delegated catalog-selection action
+using the original literal request. It covers existing delayed lamp/NOT/OR/shutter
+choices, explains one additional AI request and produces only an untested preview.
+Existing EngineerMod.plan now explicitly checks server-thread/current selection at
+entry and current configured model operator, selected project and dimension at tick
+and callback before accepting late data. One-use action consent still precedes
+request/budget dispatch. Native deterministic catalog flow checks no dispatch or
+blueprint before consent, a canonical shutter preview with no world lease/journal/
+piston ownership/pass, and replay denial. A deliberately late synthetic catalog
+reply after switching projects must abort transport and leave the old project's
+blueprint absent and state paused. Required catalog/cancel/dispatch markers cover
+these paths. Pure Java/TS checks reject model-provided template/geometry/requirements.
+Focused GPT-6-Luna/high check found no input-substitution or late-reply bypass.
+Scoped server/client compile, TS and script checks pass for the route; final native
+cancellation test additions await CI compilation/runtime. CI41155571154 on69395a6
+has four green checks with dedicated native still live. Hold this next batch until
+that run is terminal. No fresh inference/local tests; all broader milestones active.
+
+Source69395a6 CI41155571154 terminal: four jobs pass, dedicated fails when actual
+Alice is deopped. Downloaded work/natural-request-failure-41155571154 confirms
+follow-up, clarification and consent markers passed; the old null-target rejection
+is gone. The native client is then kicked for spamming before its act-denial reply.
+Pinned vanilla bytecode shows command packets increment a TickThrottler even while
+operators are exempt from its kick; deop exposes the suite's accumulated burst.
+The CI-only client fixture now observes that actual command budget read-only and
+waits for normal vanilla decay with room for four commands BEFORE starting pending
+consent/deop. It never resets counters, changes thresholds, skips packet routing or
+modifies production authority. Scoped client compile passes. Fresh CI must prove
+this pacing plus the pending catalog route and all remaining runtime cases. No
+fresh inference or local tests ran. Terminal run permits pushing the waiting batch.
+
+Phase20 signed-in interpretation proof preparation adds natural-acceptance.ts, a
+strict data-only exchange adapted from the established discussion codec. It binds
+one fixed synthetic diagnosis request and canonical owner notes/design to exact
+workflow/source/run/attempt, native owner/connection/project/grant frame, nonce,
+expiry and digests. Its accepted result is only diagnose/root with supplied sources,
+never construction/authority. New CI cases cover altered run/nonce/frame, expired or
+rebound responses, forged output/knowledge and changed fixed owner notes. TS check
+passes; tests await GitHub. No broker, workflow or SDK call is connected yet, so
+this foundation neither invokes inference nor proves a fresh model interpretation.
+Any later one-call proof must wait for deterministic green source and fresh native
+context; all historical receipts remain consumed. Current CI41156238501 on9c7c5a2
+has four checks green and dedicated multiplayer still live. Preserve that run.
+
+Phase20 adds the data-only NaturalSyntheticAcceptanceProvider: exact fixed input,
+canonical grounding, offered action/target map, source IDs and frozen native context
+must match before publishing one request. A consumed flag plus durable request file
+reject acceptance/abort/restart reuse; expired/changed responses cannot create an
+accepted receipt. The bridge has no SDK or credentials and remains disconnected
+from native/workflow modes. CI tests cover successful receipt binding, second use,
+process replacement, cancellation and unavailable capabilities. TS check passes;
+GitHub tests pending. The codec's prior focused review found no frame replay issue;
+new bridge and narrow shutter validation delta are under GPT-6-Luna/high check.
+
+Source9c7c5a2 CI41156238501 terminal: four jobs pass; dedicated now passes natural
+follow-up/clarification/consent/authority/construction/cancellation and catalog late-
+reply cancellation markers, then rejects the canonical shutter preview at acceptance.
+Downloaded work/natural-request-failure-41156238501 shows reviseProposal always
+calling electrical MechanismCatalog.contract(candidate). The fix gives canonical
+ShutterDesign.validate candidates a separate unbuilt-preview accept path, rejecting
+built mechanical changes; electrical contract/repeater revisions stay unchanged.
+Accept still checks workspace/project state and imports no piston ownership or lease.
+Existing real catalog proof requires an untested preview with no writes/ownership.
+Fresh CI must prove this boundary plus design/restart and new bridge tests. No fresh
+inference or local tests ran; all overall milestones remain active.
+
+Focused GPT-6-Luna/high review found no concrete blocker in bridge one-use/frame
+binding or canonical unbuilt shutter acceptance; it confirmed no SDK/credential
+imports, no ownership/lease change and intact electrical contract. Final TS check,
+scoped server/client compile and matched formatting checks pass. Runtime still
+requires the next source-specific GitHub run.
+
+Phase20 manual natural mode is wired through owner-only workflows, exact natural-
+suffixed artifact provenance, data-only CI companion, local responder interpret
+arguments and native flags. Derived capabilities/source sets are stripped from
+wire envelopes; original one-use private started/untrusted/response receipts and
+no-retry rules remain. Native mode makes the one fixed read-only diagnosis request,
+checks actual diagnosis/no world delegation or nonce, denied editor model admission,
+real companion replacement and saved-server recovery with no restored proposals.
+Only manual CI timeouts are extended. GitHub provenance tests include the exact new
+scenario/suffix and existing hostile-source/actor checks. GPT-6-Luna/high review found
+no stage/replay/extra-inference/credential-export blocker. Final TS/server/client
+compile, JS/Bash syntax and formatting pass. No workflow or model call was started.
+
+Verifier integration also found the normal flow now has six explicit typed replies
+(status/status/clarification/unsupported/stop/stop), in addition to three old
+discussion dispatches. SQLite verification now requires those exact reply triples,
+knowledge revision2, not-inspected provenance and exactly9 starts; live discussion
+requires one explanation, live natural exactly one diagnose/root and one start.
+No unknown/denied call can be hidden in a relaxed total. These expectations need
+source-specific CI evidence. Current3702b80 CI41218074458 has four checks green and
+native dedicated still live; preserve its actual runtime proof before the next push.
+All overall milestones remain active; fresh natural inference is still gated on
+full deterministic green for the final source.
+
+Source3702b80 CI41218074458 terminal: four checks pass; dedicated fails at the
+third-boot natural-consent recovery predicate. Downloaded work/natural-request-
+proof-41218074458 and inspected every new marker: all12 existing natural catalog,
+design, authority, construction, cancellation, clarification, consent, follow-up and
+restart-prepared markers say passed. The recovery wait calls session() before the
+asynchronous native project-use packet establishes a selection, triggering the
+correct ambiguous-project refusal. The fixture now waits on the authoritative
+selection map before querying that session. Production selection policy is unchanged.
+Final source must prove recovered consent denial, later boot flows and strict SQLite
+(including the newly corrected exact interpretation dispatch counts). No fresh
+model inference or local tests ran. The terminal handle permits pushing pending
+manual-mode wiring and this causal fixture fix for their own complete CI proof.
+
+Source2469f91 CI41219014537 Companion stopped before tests at format:check due to
+STATE.md paragraph indentation. Native/Fabric/Windows checks remain independent;
+keep the dedicated handle live until terminal. Format only the changed project
+memory file before the next push, and require actual Companion test evidence on
+that new source rather than treating the earlier type check as a test pass.
+
+Source2469f91 CI41219014537 terminal: dedicated multiplayer/Fabric/client/Windows
+pass; Companion stopped at STATE.md formatting before its tests. Downloaded
+work/natural-request-proof-41219014537 and read all13 natural markers: every one
+passed, including actual saved-server consent denial. Native flow BUILD SUCCESSFUL
+8m46s and strict SQLite memory-proof.json exists; the verifier completed its exact
+six typed reply/9 dispatch assertions alongside old functional and shutter replay.
+No fresh inference ran. Local3829d6d fixes only project-memory formatting and passes
+the scoped check; append this actual proof, format that file again, then push for
+all five checks and actual Companion tests on the final source. A native green job
+alone is not permission to claim the whole goal or the fresh signed-in proof done.
+
+Source43bc27b CI41219942803 passed all5 checks. Pinned CLI login-status confirmed
+ChatGPT subscription authentication without exposing credentials or invoking a model.
+Official SDK/auth pages https://learn.chatgpt.com/docs/codex-sdk and
+https://learn.chatgpt.com/docs/auth confirm local SDK integration and forced ChatGPT
+login; they do not resolve general shared-subscription eligibility, which stays gated.
+
+Manual data-only dry41220876264 used one fresh request frame on43bc27b. Response
+workflow41221402756 passed; requestdigestc867eef592f14302f8edfff7c07fe4b03be9ee7e568160f0487b6c18d86e42ba,
+resultdigestf2fdcd14ebfdcea8943a5bd1354312bc45a46d319a21195fd8b54076b521baed.
+Downloaded work/natural-dry-proof-41220876264: native BUILD SUCCESSFUL5m30s,
+live-natural-model/recovery markers passed, strict SQLite proof exists and accepted
+receipt says model synthetic-fixture, input/cached/output tokens0. This is transport
+and native-dispatch evidence ONLY, never a fresh model result or consumed SDK call.
+The parent workflow failed its final wrapper: step-level MCE_ACCEPTANCE_STAGE still
+fell back to catalog for natural. Fix adds the exact natural branch there, retaining
+all other stage choices. No code/permission/parser change or another model call.
+Require new source CI before the one planned signed-in interpretation. No actual
+natural SDK call has run; historical model receipts remain consumed.
+
+Phase20 N1�N4 bounded action flow is proven on8214fbd: all five deterministic
+checks CI41221636372; signed-in acceptance41221809497 and response41222705526
+both pass. Real SDK0.164.0/gpt-6-luna call used11519 input/0 cached/73 output,
+selecting diagnose/root with project and component:root basis and no world claim.
+Requestdigestc5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9,
+resultdigest658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
+Private exclusive started/untrusted/response receipts stay local and consumed.
+Downloaded work/natural-live-proof-41221809497: accepted provenance agrees, both
+live-natural markers passed, native BUILD SUCCESSFUL10m28s and strict SQLite proof
+exists. Inspected actual screenshot: six missing-part corrections/repair proposal,
+READY preview, no construction or false pass. Shared editor model denial, actual
+companion replacement and saved-server recovery with no restored diagnosis/lease
+passed. This is one fresh natural selection, not universal NLP/engineering coverage.
+Archive exact public synthetic request/reply and image, add expired/rebound regression
+coverage and final user docs, then run final-source CI before merge. No more model
+calls are required. All broader engineering/memory/human acceptance, multiplayer
+release/provider eligibility and all six Phase2 milestones remain active.

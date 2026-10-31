@@ -1,3 +1,4 @@
+import { NaturalSyntheticAcceptanceProvider } from "../../dist/companion/src/natural-acceptance-broker.js";
 import { DiscussionSyntheticAcceptanceProvider } from "../../dist/companion/src/discussion-acceptance-broker.js";
 // One synthetic CI provider; no SDK or sign-in is invoked in this process.
 import { join } from "node:path";
@@ -19,11 +20,14 @@ const config = loadConfig(process.argv[2]);
 const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const generated = process.env.MCE_GENERATED_ACCEPTANCE === "true";
 const discussion = process.env.MCE_DISCUSSION_ACCEPTANCE === "true";
-const Provider = discussion
-  ? DiscussionSyntheticAcceptanceProvider
-  : generated
-    ? GeneratedSyntheticAcceptanceProvider
-    : SyntheticAcceptanceProvider;
+const natural = process.env.MCE_NATURAL_ACCEPTANCE === "true";
+const Provider = natural
+  ? NaturalSyntheticAcceptanceProvider
+  : discussion
+    ? DiscussionSyntheticAcceptanceProvider
+    : generated
+      ? GeneratedSyntheticAcceptanceProvider
+      : SyntheticAcceptanceProvider;
 const provider = new Provider({
   directory: process.env.MCE_ACCEPTANCE_EXCHANGE_DIR,
   run: {
@@ -32,15 +36,17 @@ const provider = new Provider({
     sourceSha: process.env.GITHUB_SHA,
     runId: process.env.GITHUB_RUN_ID,
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-    scenario: discussion
-      ? "project-discussion-owner-notes-v1"
-      : process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
-        ? "generated-boolean-owner-confirmation-v1"
-        : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
-          ? "structural-buffer-owner-confirmation-v1"
-          : generated
-            ? "generated-buffer-owner-confirmation-v1"
-            : "signal-lamp-client-handoff-v1",
+    scenario: natural
+      ? "natural-engineering-owner-action-v1"
+      : discussion
+        ? "project-discussion-owner-notes-v1"
+        : process.env.MCE_BOOLEAN_ACCEPTANCE === "true"
+          ? "generated-boolean-owner-confirmation-v1"
+          : process.env.MCE_STRUCTURAL_ACCEPTANCE === "true"
+            ? "structural-buffer-owner-confirmation-v1"
+            : generated
+              ? "generated-buffer-owner-confirmation-v1"
+              : "signal-lamp-client-handoff-v1",
   },
 });
 const server = createCompanionServer({

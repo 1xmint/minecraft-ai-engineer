@@ -1,5 +1,10 @@
 import type { DiscussionRequest, DiscussionReply } from "./discussion.js";
 import type {
+  NaturalRequest,
+  NaturalReply,
+  NaturalCapabilities,
+} from "./natural-request.js";
+import type {
   Behavior,
   BehaviorProposal,
   GeneratedGeometry,
@@ -144,6 +149,14 @@ export interface Plan {
   rotation?: Rotation;
 }
 export interface PlanningProvider {
+  interpret?(
+    input: NaturalRequest,
+    signal: AbortSignal,
+    context: string,
+    capabilities: NaturalCapabilities,
+    availableBasis: ReadonlySet<string>,
+    authority?: Readonly<GatewayContext>,
+  ): Promise<NaturalReply>;
   discuss?(
     input: DiscussionRequest,
     signal: AbortSignal,

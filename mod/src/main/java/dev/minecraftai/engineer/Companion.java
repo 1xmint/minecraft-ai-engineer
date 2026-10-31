@@ -76,17 +76,20 @@ final class Companion {
             session.save();
         }));
     }
+    // Interpretation has required nullable targets: absent and explicit null differ.
+    // Keep other established wire codecs unchanged.
+    static String encodeBody(String route,JsonObject body){return route.equals("/v2/interpret")?body.toString():LocalFiles.GSON.toJson(body);}
     static CompletableFuture<JsonObject> request(String route, JsonObject body) {
         try {
             JsonObject config = JsonParser.parseString(Files.readString(LocalFiles.configDir().resolve("companion.json"))).getAsJsonObject();
             String token = config.get("token").getAsString();
             int port = config.has("port") ? config.get("port").getAsInt() : 43127;
             if (token.length() < 32 || port < 1024 || port > 65535) throw new IllegalStateException("Invalid companion configuration");
-            boolean manualAcceptance=(route.equals("/v2/design") || route.equals("/v2/behavior/propose") || route.equals("/v2/design/generated")) && "true".equals(System.getenv("CI"))
+            boolean manualAcceptance=(route.equals("/v2/design") || route.equals("/v2/behavior/propose") || route.equals("/v2/design/generated") || route.equals("/v2/interpret") && "true".equals(System.getenv("MCE_NATURAL_ACCEPTANCE"))) && "true".equals(System.getenv("CI"))
                     && "true".equals(System.getenv("GITHUB_ACTIONS")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + route))
                     .timeout(Duration.ofSeconds(manualAcceptance?900:90)).header("Authorization", "Bearer " + token).header("Content-Type", "application/json");
-            if (body == null) builder.GET(); else builder.POST(HttpRequest.BodyPublishers.ofString(LocalFiles.GSON.toJson(body)));
+            if (body == null) builder.GET(); else builder.POST(HttpRequest.BodyPublishers.ofString(encodeBody(route,body)));
             CompletableFuture<HttpResponse<String>> exchange=CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString());
             CompletableFuture<JsonObject> parsed=exchange.thenApply(response -> {
                 if (response.body().length() > 2_000_000) throw new IllegalStateException("Companion response too large");

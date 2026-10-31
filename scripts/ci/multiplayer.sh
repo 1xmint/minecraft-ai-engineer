@@ -151,7 +151,9 @@ done
 for pid in "${pids[@]}"; do wait "$pid"; done
 [[ ! -f "$temporary/config-alice/inference-attempted" ]] || { echo "An unauthorized CI request reached inference" >&2; exit 1; }
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
-  if [[ "${MCE_DISCUSSION_ACCEPTANCE:-}" == true ]]; then
+  if [[ "${MCE_NATURAL_ACCEPTANCE:-}" == true ]]; then
+    [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/natural/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Natural interpretation was not accepted exactly once" >&2; exit 1; }
+  elif [[ "${MCE_DISCUSSION_ACCEPTANCE:-}" == true ]]; then
     [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/discussion/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Discussion was not accepted exactly once" >&2; exit 1; }
   elif [[ "${MCE_GENERATED_ACCEPTANCE:-}" == true ]]; then
     [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/behavior/accepted.json" && -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/geometry/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Generated stages were not accepted exactly once" >&2; exit 1; }

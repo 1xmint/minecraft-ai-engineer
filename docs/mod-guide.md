@@ -526,3 +526,43 @@ execution permission. Undo is scoped to the latest recorded operation and preser
 its exact original states. Correct geometry still needs an explicit functional test.
 This branch's complete repair/restart/undo flow is awaiting native acceptance and
 is not a released repair feature.
+
+## Natural requests (development branch)
+
+Use `/engineer request <message>` for the selected project. Known lesson questions
+reuse offline answers. Exact `stop` and `stop building` requests stop immediately
+with BUILD permission. Other interpretation requires the configured account-owning
+operator and project owner; it makes one bounded subscription request.
+
+The interpreter can choose an existing action or ask a clarification. It cannot
+choose an arbitrary project, location, permission or command. Component actions
+use your current lesson component; choose a lesson first for composite projects.
+Inferred plan, design, build, test, repair, resume, undo and stop actions show a server-generated
+summary and a one-use `/engineer act <nonce>` delegation. Changing the connection,
+project, grants, lesson or execution context invalidates that pending action.
+Existing creative, loaded-world, reservation, conflict and repair-preview checks
+still apply when you delegate. Automatic tutorial advancement waits while an AI
+reply or action confirmation is pending; manual lesson changes still invalidate
+that request. Pending consent is not saved across restart.
+
+Follow-ups may use the last dispatched action for up to five minutes within the
+same player connection, project, grants and component. This records the requested
+action, not a claim that it finished or passed. Changing scope or restarting clears
+that context. Use project notes for requirements you want remembered durably.
+
+A design choice delegates one additional AI behavior-proposal request using your
+original words. It supports the existing timed lever/lamp buffer and bounded Boolean
+logic design flow. You separately confirm the proposed behavior before geometry;
+accepting a design choice never approves construction. Unsupported mechanical or
+other design requests must explain their limits rather than substitute a buffer.
+
+Catalog planning is a separate choice for the existing delayed lamp, NOT gate,
+two-input OR gate and one-cell sticky shutter. Confirming it starts one catalog
+selection request from your original words and produces an untested preview. It
+does not delegate construction or expand the selected workspace. Larger doors and
+unsupported mechanisms must be declined rather than silently replaced.
+
+The bounded action path has passed native and signed-in acceptance. The published
+single-player alpha does not include it.
+
+![Native read-only diagnosis after natural interpretation](images/natural-diagnosis.png)

@@ -9,6 +9,37 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void naturalFollowupWirePreservesExplicitProjectTarget(GameTestHelper helper){
+        var body=new com.google.gson.JsonObject();var recent=new com.google.gson.JsonObject();recent.addProperty("action","status");recent.add("componentId",com.google.gson.JsonNull.INSTANCE);body.add("recentAction",recent);
+        var decoded=com.google.gson.JsonParser.parseString(Companion.encodeBody("/v2/interpret",body)).getAsJsonObject().getAsJsonObject("recentAction");
+        helper.assertTrue(decoded.keySet().equals(java.util.Set.of("action","componentId")) && decoded.get("componentId").isJsonNull(),"The actual HTTP encoder must preserve a project action's explicit null target for strict companion validation");
+        helper.assertTrue(decoded.get("action").getAsString().equals("status"),"Encoding preserves the last typed intention without adding authority");helper.succeed();
+    }
+
+    @GameTest public void naturalChoicesCannotInventAuthorityOrTargets(GameTestHelper helper){
+        var value=com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"kind\":\"action\",\"action\":\"build\",\"componentId\":\"entrance\",\"text\":\"Build this part\",\"basis\":[\"component:entrance\"]}").getAsJsonObject();
+        var choice=NaturalActions.read(value,"entrance",true);
+        helper.assertTrue(choice.needsConsent() && choice.action().equals("build"),"Inferred world work requires separate consent");
+        reject(helper,()->NaturalActions.read(value,"other",true),"An uncertain target cannot be silently selected");
+        reject(helper,()->NaturalActions.read(value,"entrance",false),"No design means no build choice");
+        for(String field:java.util.List.of("command","coordinates","permissions","nonce","requiresDelegation","verified")){
+            var forged=value.deepCopy();forged.addProperty(field,"approved");
+            reject(helper,()->NaturalActions.read(forged,"entrance",true),"Model fields cannot add authority: "+field);
+        }
+        var wrong=value.deepCopy();wrong.addProperty("action","run_shell");reject(helper,()->NaturalActions.read(wrong,"entrance",true),"Only known actions dispatch");
+        var mixed=value.deepCopy();mixed.addProperty("kind","clarification");reject(helper,()->NaturalActions.read(mixed,"entrance",true),"Clarification cannot contain an action");
+        var citation=value.deepCopy();citation.add("basis",com.google.gson.JsonParser.parseString("[\"inventory:other\"]"));reject(helper,()->NaturalActions.read(citation,"entrance",true),"Private inventory is not supplied context");
+        helper.succeed();
+    }
+    @GameTest public void naturalAdviceAndStatusCarryNoWorldConsent(GameTestHelper helper){
+        var advice=com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"kind\":\"clarification\",\"action\":null,\"componentId\":null,\"text\":\"Which component?\",\"basis\":[]}").getAsJsonObject();
+        helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"A clarification has no action");
+        advice.addProperty("kind","action");advice.addProperty("action","status");advice.add("basis",com.google.gson.JsonParser.parseString("[\"project\"]"));
+        helper.assertTrue(!NaturalActions.read(advice,null,false).needsConsent(),"Status can be interpreted before a design exists");
+        advice.addProperty("action","design");helper.assertTrue(NaturalActions.read(advice,null,false).needsConsent(),"New AI planning requires separate consent before dispatch");
+        advice.addProperty("action","plan");helper.assertTrue(NaturalActions.read(advice,null,false).needsConsent(),"Catalog selection also requires explicit consent before its extra request");
+        var substituted=advice.deepCopy();substituted.addProperty("request","Build something the player never requested");reject(helper,()->NaturalActions.read(substituted,null,false),"The model cannot replace the original design requirements");helper.succeed();
+    }
     @GameTest public void savedProjectSearchUsesLiteralIntentionWithoutInference(GameTestHelper helper){
         var plan=Blueprint.reference("search-proof","minecraft:overworld",BlockPos.ZERO,0);
         var id=java.util.UUID.randomUUID();

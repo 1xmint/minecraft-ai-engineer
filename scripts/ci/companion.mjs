@@ -48,8 +48,108 @@ const server = createCompanionServer({
   store,
   // Fixed synthetic stages can burst across several projects in this suite.
   // This provider cannot invoke the SDK; production retains its default4/minute.
-  actorPlansPerMinute: 12,
+  actorPlansPerMinute: 24,
+  serverPlansPerHour: 64,
   provider: {
+    async interpret(input, _signal, context, capabilities) {
+      const source = JSON.parse(context);
+      if (source.worldEvidence !== "not-inspected")
+        throw new Error("Invented natural-request world evidence");
+      if (input.message === "Make that other one smaller.")
+        return {
+          schemaVersion: 1,
+          kind: "clarification",
+          action: null,
+          componentId: null,
+          text: "Which component do you mean? Name it or choose its lesson first.",
+          basis: ["project"],
+        };
+      if (input.message === "Gather survival materials for this machine.")
+        return {
+          schemaVersion: 1,
+          kind: "unsupported",
+          action: null,
+          componentId: null,
+          text: "Survival gathering is not available yet; this request has not started world work.",
+          basis: ["project"],
+        };
+      if (input.message === "CI cancel this interpretation.") {
+        const coordination = join(config.directory, "..", "coordination");
+        writeFileSync(
+          join(coordination, "natural-request-dispatched"),
+          "ready",
+        );
+        const deadline = Date.now() + 10_000;
+        while (!_signal.aborted && Date.now() < deadline) await delay(20);
+        if (!_signal.aborted)
+          throw new Error("Exact stop did not cancel interpretation transport");
+        writeFileSync(
+          join(coordination, "natural-request-cancelled.done"),
+          "passed",
+        );
+        return {
+          schemaVersion: 1,
+          kind: "clarification",
+          action: null,
+          componentId: null,
+          text: "CI obsolete interpretation must never display",
+          basis: [],
+        };
+      }
+      if (input.message === "CI follow up on selected project status.") {
+        const recent = source.sources.find(
+          (entry) => entry.id === "recent-action",
+        );
+        if (
+          recent?.kind !== "server-dispatched-intention" ||
+          recent.data.action !== "status" ||
+          recent.data.componentId !== null ||
+          recent.data.result !== "not-supplied" ||
+          recent.data.authority !== "none"
+        )
+          throw new Error(
+            "Follow-up lacks the bounded previous action intention",
+          );
+        return {
+          schemaVersion: 1,
+          kind: "action",
+          action: "status",
+          componentId: null,
+          text: "Synthetic grounded follow-up.",
+          basis: ["recent-action"],
+        };
+      }
+      const action =
+        input.message === "CI choose a one-cell sticky shutter." ||
+        input.message === "CI cancel a pending shutter selection."
+          ? "plan"
+          : input.message ===
+              "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+            ? "design"
+            : input.message === "CI report selected project status."
+              ? "status"
+              : input.message === "CI propose stopping the selected project."
+                ? "stop"
+                : input.message === "CI build selected lamp."
+                  ? "build"
+                  : input.message === "CI test selected lamp."
+                    ? "test"
+                    : input.message === "CI undo selected lamp."
+                      ? "undo"
+                      : null;
+      const componentId =
+        action === "build" || action === "test" ? "root" : null;
+      if (!action || !capabilities.get(action)?.has(componentId))
+        throw new Error("Unexpected natural-request fixture choice");
+      return {
+        schemaVersion: 1,
+        kind: "action",
+        action,
+        componentId,
+        text: "Synthetic typed choice; not model inference.",
+        basis: ["project"],
+      };
+    },
     async discuss(input, _signal, context) {
       const source = JSON.parse(context);
       if (source.worldEvidence !== "not-inspected")
@@ -109,6 +209,19 @@ const server = createCompanionServer({
       };
     },
     async proposeBehavior(input) {
+      if (
+        input.request ===
+        "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+      )
+        writeFileSync(
+          join(
+            config.directory,
+            "..",
+            "coordination",
+            "natural-design-behavior-dispatched.done",
+          ),
+          "passed",
+        );
       if (input.request === truthRequest)
         return structuredClone(truthFixture.proposal);
       if (
@@ -140,7 +253,48 @@ const server = createCompanionServer({
         return structuredClone(structuralFixture.geometry);
       return structuredClone(generatedFixture.geometry);
     },
-    async plan() {
+    async plan(input, signal) {
+      if (input.request === "CI cancel a pending shutter selection.") {
+        const coordination = join(config.directory, "..", "coordination");
+        writeFileSync(
+          join(coordination, "natural-catalog-late-dispatched"),
+          "ready",
+        );
+        const deadline = Date.now() + 10_000;
+        while (!signal.aborted && Date.now() < deadline) await delay(20);
+        if (!signal.aborted)
+          throw new Error(
+            "Changed project selection did not cancel catalog transport",
+          );
+        writeFileSync(
+          join(coordination, "natural-catalog-cancelled.done"),
+          "passed",
+        );
+        return {
+          template: "sticky-shutter",
+          explanation: "CI obsolete catalog selection",
+          parameters: { delay: 1 },
+          rotation: 0,
+        };
+      }
+      if (input.request === "CI choose a one-cell sticky shutter.") {
+        writeFileSync(
+          join(
+            config.directory,
+            "..",
+            "coordination",
+            "natural-catalog-dispatched.done",
+          ),
+          "passed",
+        );
+        return {
+          template: "sticky-shutter",
+          explanation:
+            "Synthetic canonical shutter preview; untested and no construction authorized.",
+          parameters: { delay: 1 },
+          rotation: 0,
+        };
+      }
       writeFileSync(
         join(config.directory, "inference-attempted"),
         "unexpected provider call",

@@ -774,6 +774,7 @@ final class EngineeringSession implements BuildExecutor {
         for(var entry:new ArrayList<>(cursors.entrySet())) {
             UUID actor=entry.getKey();Cursor c=entry.getValue();ServerPlayer p=server.getPlayerList().getPlayer(actor);
             if(!c.teaching || p==null || !dimension.equals(p.level().dimension().identifier().toString()) || !access.allows(actor,ProjectAccess.Permission.VIEW))continue;
+            if(manager.knowledge.holdsLesson(this,actor))continue;
             String current=blueprint.stages().get(c.stage).id();
             boolean complete=blueprint.blocks().stream().filter(b->b.stage().equals(current)).allMatch(b->level().hasChunkAt(b.pos()) && Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(complete){
@@ -943,6 +944,11 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(ShutterDesign.describes(candidate.source())) {
+            ShutterDesign.validate(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built mechanical designs cannot use electrical delay revision; reconcile and release their controlled work first");
+            accept(candidate);return true;
+        }
         MechanismCatalog.contract(candidate);
         if(!hasBuiltStructure()) { accept(candidate);return true; }
         if(blueprint==null || !sameCatalogTemplate(blueprint,candidate)

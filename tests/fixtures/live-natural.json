@@ -1,0 +1,52 @@
+{
+  "description": "Exact successful signed-in natural interpretation exchange. Archival codec evidence only; never authorizes inference, supplies a fresh native reply, or restores authority.",
+  "request": {
+    "schemaVersion": 1,
+    "stage": "natural",
+    "run": {
+      "repository": "1xmint/minecraft-ai-engineer",
+      "workflow": ".github/workflows/live-acceptance.yml",
+      "sourceSha": "8214fbd8d1a97bfc702d0669e85641a4e4c5bcc4",
+      "runId": "41221809497",
+      "runAttempt": 1,
+      "scenario": "natural-engineering-owner-action-v1"
+    },
+    "context": {
+      "serverId": "177212bd-4e79-44df-84d5-a217a29cd40a",
+      "serverEpoch": "3de39897-b97a-40c2-8adf-55476a256ca6",
+      "actorId": "10920508-d5d8-3eed-93d2-92f193afe7d7",
+      "projectId": "3e168065-a103-46d5-bff7-a387df837428",
+      "projectRevision": 2,
+      "authorizationRevision": 1,
+      "requestId": "7efc8387-f45d-43c0-8a73-dbcb9dad5dff",
+      "connectionId": "1a778857-1f16-4e4e-92e9-05edc5113cdc"
+    },
+    "grounding": "{\"schemaVersion\":1,\"projectRevision\":2,\"knowledgeRevision\":2,\"selectedComponent\":\"root\",\"worldEvidence\":\"not-inspected\",\"earlierNotesOmitted\":false,\"sources\":[{\"id\":\"project\",\"kind\":\"intended-design\",\"data\":{\"name\":\"Signal lamp\",\"revision\":2,\"design\":{\"name\":\"Signal lamp\",\"explanation\":\"A lever drives a repeater and lamp. The repeater isolates the output and sets a configurable delay.\",\"behavior\":null,\"componentIds\":[\"root\"],\"hasMoreComponents\":false,\"provenance\":{\"kind\":\"curated\",\"template\":\"signal-lamp\",\"minecraft\":\"26.3\",\"catalogRevision\":1}}}},{\"id\":\"note:090ba354-4403-4758-93f7-fd2215fb8ecc\",\"kind\":\"owner-authored-requirement\",\"data\":{\"schemaVersion\":1,\"kind\":\"goal\",\"text\":\"Keep the entrance within six blocks.\",\"id\":\"090ba354-4403-4758-93f7-fd2215fb8ecc\",\"revision\":1,\"authorId\":\"10920508-d5d8-3eed-93d2-92f193afe7d7\",\"createdAt\":1793465866564,\"source\":\"owner-authored\"}},{\"id\":\"note:dde03f81-9ecd-490a-8a92-ee0cb50dc3c9\",\"kind\":\"owner-authored-requirement\",\"data\":{\"schemaVersion\":1,\"kind\":\"decision\",\"text\":\"Use a visible lamp for the output.\",\"id\":\"dde03f81-9ecd-490a-8a92-ee0cb50dc3c9\",\"revision\":2,\"authorId\":\"10920508-d5d8-3eed-93d2-92f193afe7d7\",\"createdAt\":1793465866740,\"source\":\"owner-authored\"}},{\"id\":\"component:root\",\"kind\":\"intended-component\",\"data\":{\"id\":\"root\",\"definition\":null,\"blocks\":[{\"pos\":{\"x\":0,\"y\":0,\"z\":0},\"state\":\"minecraft:stone\",\"stage\":\"foundation\",\"component\":\"support\",\"prerequisites\":[]},{\"pos\":{\"x\":1,\"y\":0,\"z\":0},\"state\":\"minecraft:stone\",\"stage\":\"foundation\",\"component\":\"support\",\"prerequisites\":[]},{\"pos\":{\"x\":2,\"y\":0,\"z\":0},\"state\":\"minecraft:stone\",\"stage\":\"foundation\",\"component\":\"support\",\"prerequisites\":[]},{\"pos\":{\"x\":0,\"y\":1,\"z\":0},\"state\":\"minecraft:lever[face=floor,facing=east,powered=false]\",\"stage\":\"input\",\"component\":\"input\",\"prerequisites\":[\"foundation\"]},{\"pos\":{\"x\":1,\"y\":1,\"z\":0},\"state\":\"minecraft:repeater[delay=1,facing=west,locked=false,powered=false]\",\"stage\":\"output\",\"component\":\"relay\",\"prerequisites\":[\"foundation\",\"input\"]},{\"pos\":{\"x\":2,\"y\":1,\"z\":0},\"state\":\"minecraft:redstone_lamp[lit=false]\",\"stage\":\"output\",\"component\":\"output\",\"prerequisites\":[\"foundation\",\"input\"]}],\"hasMoreBlocks\":false,\"ports\":[{\"name\":\"enable\",\"pos\":{\"x\":0,\"y\":1,\"z\":0},\"kind\":\"input\"},{\"name\":\"light\",\"pos\":{\"x\":2,\"y\":1,\"z\":0},\"kind\":\"output\"}]}}]}",
+    "nonce": "d6ba6deeea75ef80676c11f5211d05ee40be29ec31dab17657019caa7257ea18",
+    "createdAt": 1793465866932,
+    "expiresAt": 1793466766932,
+    "digest": "c5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9"
+  },
+  "response": {
+    "schemaVersion": 1,
+    "stage": "natural",
+    "requestDigest": "c5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9",
+    "result": {
+      "schemaVersion": 1,
+      "kind": "action",
+      "action": "diagnose",
+      "componentId": "root",
+      "text": "Request native observation and diagnosis of the selected component to identify what needs fixing. No world evidence is supplied, so this does not assert a fault or a repair.",
+      "basis": ["project", "component:root"]
+    },
+    "provenance": {
+      "model": "gpt-6-luna",
+      "sdkVersion": "0.164.0",
+      "inputTokens": 11519,
+      "cachedInputTokens": 0,
+      "outputTokens": 73
+    },
+    "digest": "658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9"
+  },
+  "acceptedAt": 1793466281799
+}

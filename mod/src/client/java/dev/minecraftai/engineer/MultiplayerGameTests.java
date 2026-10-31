@@ -362,6 +362,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
     private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
+    private static final boolean LIVE_NATURAL=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_NATURAL_ACCEPTANCE"));
+    private static final String LIVE_NATURAL_MESSAGE="Why is this part not working? Inspect the selected entrance component and tell me what needs fixing. Do not change blocks.";
     private static final boolean LIVE_DISCUSSION=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_DISCUSSION_ACCEPTANCE"));
     private static final String LIVE_DISCUSSION_MESSAGE="Why did we choose a visible lamp for this entrance, and what size constraint should I preserve? Explain the recorded requirements without claiming that the circuit was built or tested.";
     private static final boolean LIVE_GENERATED=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_GENERATED_ACCEPTANCE"));
@@ -418,9 +420,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("project", projectId);
                 send(context, "engineer select1 0 100 0");
                 send(context, "engineer select2 2 101 0");
-                send(context,(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION)?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
+                send(context,(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION && !LIVE_NATURAL)?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
                 server.waitFor(s -> session(s, "Alice").blueprint != null,LIVE_ACCEPTANCE?900_000:10_000);
-                if(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION){
+                if(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION && !LIVE_NATURAL){
                     server.runOnServer(s->{var accepted=session(s,"Alice").blueprint;
                         check(accepted.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")
                             && accepted.source().getAsJsonObject("parameters").get("delay").getAsInt()==1
@@ -633,7 +635,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION)knowledgeFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL)knowledgeFlow(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
@@ -647,6 +649,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
+            if(!LIVE_ACCEPTANCE)prepareNaturalRestart(context,server);
         }
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
@@ -654,6 +657,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
             TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
+            if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -667,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION)knowledgeRecoveryFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL)knowledgeRecoveryFlow(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthRecovery(context,server);
             if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationRecovery(context,server,connection);
             if(!LIVE_ACCEPTANCE)structuralRevisionRecovery(context,server);
@@ -746,7 +750,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());write("generated-project",id);
         int revision=server.computeOnServer(s->session(s,"Alice").revision());
         String request=LIVE_GENERATED?"engineer design Make a lever-controlled lamp that turns on after 12 game ticks and off after 16 game ticks. Teach me its construction.":"engineer design CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
-        MESSAGES.clear();send(context,request);expectChat(context,"/engineer confirm ",LIVE_GENERATED?900_000:20_000);
+        MESSAGES.clear();
+        if(!LIVE_GENERATED){
+            send(context,"engineer request CI generated buffer: on after 12 game ticks, off after 16 game ticks.");expectChat(context,"/engineer act ");String designNonce=actionNonce();
+            expectChat(context,"one additional AI behavior-proposal request");check(!java.nio.file.Files.exists(directory().resolve("natural-design-behavior-dispatched.done")),"Selecting design cannot spend a second request before explicit delegation");
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && !project.state.equals("PLANNING") && project.delegation==null,"Natural design selection does not dispatch behavior inference or approve geometry before consent");});
+            MESSAGES.clear();send(context,"engineer act "+designNonce);
+        } else send(context,request);
+        expectChat(context,"/engineer confirm ",LIVE_GENERATED?900_000:20_000);
+        if(!LIVE_GENERATED){awaitFile(context,"natural-design-behavior-dispatched.done");write("natural-request-design.done","passed");}
         String first=confirmationNonce();
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.revision()==revision && project.delegation==null,"Behavior proposal changes neither canonical intent nor world authority");});
         String accepted=first;
@@ -1020,12 +1032,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         write("lesson-denied.done","passed");
-        if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION) {
+        if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
             send(context,"engineer project use "+read("knowledge-project"));
             send(context,"engineer notes");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();send(context,"engineer remember decision An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
+            if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
             write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-revoked");
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Engineer:");
@@ -1814,25 +1827,147 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer remember goal Keep the entrance within six blocks.");expectChat(context,"knowledge revision 1");
         MESSAGES.clear();send(context,"engineer remember decision Use a visible lamp for the output.");expectChat(context,"knowledge revision 2");
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Owner-authored requirements");expectChat(context,"Use a visible lamp for the output.");
-        MESSAGES.clear();send(context,"engineer discuss "+(LIVE_DISCUSSION?LIVE_DISCUSSION_MESSAGE:"CI explain entrance decision."));expectChat(context,"AI explanation | design revision",LIVE_DISCUSSION?900_000:20_000);
-        if(!LIVE_DISCUSSION)expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
-        if(LIVE_DISCUSSION){write("live-discussion-model.done","passed");context.takeScreenshot("engineer-grounded-discussion");}
-        else {
-            MESSAGES.clear();send(context,"engineer discuss CI cancelled entrance discussion.");awaitFile(context,"discussion-dispatched");
-            send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
-            check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
+        if(LIVE_NATURAL){
+            MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"Repair ",900_000);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.diagnoses.containsKey(player(s,"Alice").getUUID()),"Fresh natural interpretation must dispatch a native diagnosis for the selected component");check(project.delegation==null && !project.pendingPlacement && !project.undoRequested && project.testTick<0,"Natural diagnosis cannot delegate construction or a functional test");assertKnowledgeHasNoWorldAuthority(project);});
+            check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"A read-only diagnosis never emits world-action consent");write("live-natural-model.done","passed");context.takeScreenshot("engineer-natural-diagnosis");
+        } else {
+            MESSAGES.clear();send(context,"engineer discuss "+(LIVE_DISCUSSION?LIVE_DISCUSSION_MESSAGE:"CI explain entrance decision."));expectChat(context,"AI explanation | design revision",LIVE_DISCUSSION?900_000:20_000);
+            if(!LIVE_DISCUSSION)expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
+            if(LIVE_DISCUSSION){write("live-discussion-model.done","passed");context.takeScreenshot("engineer-grounded-discussion");}
+            else {
+                MESSAGES.clear();send(context,"engineer discuss CI cancelled entrance discussion.");awaitFile(context,"discussion-dispatched");
+                send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
+                check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
+            }
+            if(!LIVE_DISCUSSION && !LIVE_NATURAL)naturalRequestFlow(context,server);
         }
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
-        if(LIVE_DISCUSSION){
+        if(LIVE_DISCUSSION || LIVE_NATURAL){
             write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
             var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Discussion notes survive a real companion process replacement");
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Use a visible lamp for the output.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);}
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
+    private static String actionNonce(){
+        var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");
+        for(String message:MESSAGES){var match=pattern.matcher(message);if(match.find())return match.group(1);}
+        throw new IllegalStateException("No server-generated action nonce");
+    }
+    private static void naturalRequestFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        MESSAGES.clear();send(context,"engineer request what are you working on");expectChat(context,"Assistant task:");
+        MESSAGES.clear();send(context,"engineer request CI report selected project status.");expectChat(context,"Assistant task:");
+        MESSAGES.clear();send(context,"engineer request CI follow up on selected project status.");expectChat(context,"Assistant task:");write("natural-request-followup.done","passed");
+        MESSAGES.clear();send(context,"engineer request Make that other one smaller.");expectChat(context,"AI clarification:");expectChat(context,"Which component do you mean?");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"Ambiguity cannot create pending consent");
+        MESSAGES.clear();send(context,"engineer request Gather survival materials for this machine.");expectChat(context,"AI unsupported:");expectChat(context,"Survival gathering is not available yet");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"Unsupported work cannot silently substitute creative building");
+        server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("natural-request-clarification.done","passed");
+        String before=server.computeOnServer(s->session(s,"Alice").state);
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String first=actionNonce();
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals(before),"Interpretation alone cannot change execution state");assertKnowledgeHasNoWorldAuthority(project);});
+        MESSAGES.clear();send(context,"engineer act "+UUID.randomUUID());expectChat(context,"No matching pending action");
+        MESSAGES.clear();send(context,"engineer act "+first);expectChat(context,"Project stopped by an authorized player");
+        MESSAGES.clear();send(context,"engineer act "+first);expectChat(context,"No matching pending action");
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String stale=actionNonce();
+        send(context,"engineer next");context.waitTicks(5);
+        MESSAGES.clear();send(context,"engineer act "+stale);expectChat(context,"Engineer:");
+        check(MESSAGES.stream().anyMatch(message->message.contains("No matching pending action") || message.contains("Action expired or project context changed")),"Changed lesson denies stale consent explicitly");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Project stopped by an authorized player")),"Stale consent never dispatches even the stop action");
+        server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));
+        write("natural-request-consent.done","passed");
+    }
+
+    private static void delegateNatural(ClientGameTestContext context,TestDedicatedServerContext server,String message) throws Exception {
+        MESSAGES.clear();send(context,"engineer request "+message);expectChat(context,"/engineer act ");String nonce=actionNonce();
+        int lesson=server.computeOnServer(s->session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage);
+        context.waitTicks(12);
+        server.runOnServer(s->check(session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage==lesson,"Automatic tutorial progress cannot invalidate a waiting action preview"));
+        MESSAGES.clear();send(context,"engineer act "+nonce);
+    }
+    private static boolean commandBudgetAvailable(ServerPlayer player) {
+        try {
+            var field=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("commandSpamThrottler");field.setAccessible(true);
+            Object budget=field.get(player.connection);Class<?> type=budget.getClass();
+            var count=type.getDeclaredField("count");var threshold=type.getDeclaredField("threshold");var step=type.getDeclaredField("incrementStep");
+            count.setAccessible(true);threshold.setAccessible(true);step.setAccessible(true);
+            return count.getInt(budget)<=threshold.getInt(budget)-4*step.getInt(budget);
+        }catch(ReflectiveOperationException failure){throw new AssertionError("Cannot observe the pinned vanilla command budget",failure);}
+    }
+    private static void naturalConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 900 100 0");send(context,"engineer select2 905 101 0");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(900,100,0)));
+        server.runCommand("tp Alice 902 108 15 180 25");server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(900,100,0)));
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);});
+        // Read only: allow vanilla's accumulated operator command burst to decay
+        // before deop makes its normal spam protection enforceable. Never reset it.
+        server.waitFor(s->commandBudgetAvailable(player(s,"Alice")),180_000);
+        MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String withdrawn=actionNonce();
+        server.runOnServer(s->{commandAs(s,"Bob","engineer act "+withdrawn);var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"Another connected editor cannot consume the operator's nonce");});
+        server.runCommand("deop Alice");context.waitTicks(5);
+        MESSAGES.clear();send(context,"engineer act "+withdrawn);expectChat(context,"No matching pending action");
+        server.runCommand("op Alice");context.waitTicks(5);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"Restoring operator status never delegates old inferred work");});
+        write("natural-request-authority.done","passed");
+        MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String nonce=actionNonce();
+        server.runOnServer(s->commandAs(s,"Bob","engineer act "+nonce));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred build cannot reserve or place blocks before consent");});
+        send(context,"engineer act "+nonce);server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Confirmed inferred build uses actual production placements");check(!project.verified.startsWith("passed:"),"Construction does not invent functional verification");});
+        delegateNatural(context,server,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        server.runOnServer(s->check(!saved(session(s,"Alice")).getAsJsonArray("functionalEvidence").isEmpty(),"Inferred test records actual game evidence"));
+        delegateNatural(context,server,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred undo restores exact assistant placements and releases authority");});
+        write("natural-request-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        MESSAGES.clear();send(context,"engineer request CI cancel this interpretation.");awaitFile(context,"natural-request-dispatched");
+        send(context,"engineer request stop building");awaitFile(context,"natural-request-cancelled.done");context.waitTicks(10);
+        check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete interpretation")),"Exact stop discards a deliberately late interpretation");
+        write("natural-request-construction.done","passed");
+    }
+
+    private static void naturalCatalogFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 990 98 -4");send(context,"engineer select2 1010 105 4");
+        server.waitFor(s->session(s,"Alice").corner2!=null && session(s,"Alice").corner2.equals(new BlockPos(1010,105,4)));
+        String catalogProject=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        MESSAGES.clear();send(context,"engineer request CI cancel a pending shutter selection.");expectChat(context,"/engineer act ");String cancelled=actionNonce();
+        send(context,"engineer act "+cancelled);awaitFile(context,"natural-catalog-late-dispatched");
+        send(context,"engineer project use "+previous);awaitFile(context,"natural-catalog-cancelled.done");context.waitTicks(10);
+        check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete catalog selection")),"A deliberately late catalog reply is not displayed after project selection changes");
+        server.runOnServer(s->{var old=EngineerMod.managerFor(s).projects.get(UUID.fromString(catalogProject));check(old.blueprint==null && old.delegation==null && old.state.equals("PAUSED"),"Selection changes prevent accepting a late blueprint into the old project");});
+        send(context,"engineer project use "+catalogProject);server.waitFor(s->session(s,"Alice").projectId.toString().equals(catalogProject));
+        MESSAGES.clear();send(context,"engineer request CI choose a one-cell sticky shutter.");expectChat(context,"/engineer act ");String nonce=actionNonce();
+        expectChat(context,"one additional AI catalog-selection request");
+        check(!Files.exists(directory().resolve("natural-catalog-dispatched.done")),"Natural catalog selection cannot dispatch another request before consent");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==null && project.delegation==null && !project.state.equals("PLANNING"),"Interpretation alone cannot accept a catalog blueprint or reserve the world");});
+        send(context,"engineer act "+nonce);awaitFile(context,"natural-catalog-dispatched.done");server.waitFor(s->session(s,"Alice").blueprint!=null);
+        server.runOnServer(s->{var project=session(s,"Alice");check(ShutterDesign.describes(project.blueprint.source()) && project.journal.isEmpty() && project.delegation==null && !project.shutterOwned && !project.verified.startsWith("passed:"),"A confirmed canonical shutter plan is only an untested preview, never construction or piston authority");});
+        MESSAGES.clear();send(context,"engineer act "+nonce);expectChat(context,"No matching pending action");write("natural-request-catalog.done","passed");
+    }
+
+    private static void prepareNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("natural-request-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");
+        write("natural-request-old-nonce",actionNonce());write("natural-request-restart-prepared.done","passed");
+        // No subsequent selection or commands: close the actual server with consent pending.
+    }
+    private static void recoverNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("natural-request-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();send(context,"engineer act "+read("natural-request-old-nonce"));expectChat(context,"No matching pending action");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"Saved facts cannot restore natural-action consent or execution authority");});
+        write("natural-request-restarted.done","passed");
+    }
+
     private static void knowledgeRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("knowledge-project");send(context,"engineer project use "+id);
         server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
@@ -1840,7 +1975,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Keep the entrance within six blocks.");expectChat(context,"Use a visible lamp for the output.");
         MESSAGES.clear();send(context,"engineer remember constraint Preserve the entrance clearance.");expectChat(context,"knowledge revision 3");
-        if(!LIVE_DISCUSSION){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
+        else if(LIVE_NATURAL){server.runOnServer(s->check(session(s,"Alice").diagnoses.isEmpty() && session(s,"Alice").delegation==null,"Restart does not restore diagnosis proposals or execution authority"));write("live-natural-recovery.done","passed");}
         else write("live-discussion-recovery.done","passed");
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }

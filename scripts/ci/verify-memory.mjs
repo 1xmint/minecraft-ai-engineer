@@ -131,17 +131,37 @@ try {
     }
   if (
     process.env.MCE_LIVE_ACCEPTANCE !== "true" ||
-    process.env.MCE_DISCUSSION_ACCEPTANCE === "true"
+    process.env.MCE_DISCUSSION_ACCEPTANCE === "true" ||
+    process.env.MCE_NATURAL_ACCEPTANCE === "true"
   ) {
-    const liveDiscussion = process.env.MCE_DISCUSSION_ACCEPTANCE === "true";
+    const liveNatural = process.env.MCE_NATURAL_ACCEPTANCE === "true";
+    const liveDiscussion =
+      process.env.MCE_DISCUSSION_ACCEPTANCE === "true" || liveNatural;
     for (const marker of [
       "knowledge-no-world-changes.done",
       "knowledge-bob.done",
       "knowledge-bob-denied.done",
       "knowledge-recovery.done",
       ...(liveDiscussion
-        ? ["live-discussion-model.done", "live-discussion-recovery.done"]
-        : ["discussion-cancelled.done"]),
+        ? liveNatural
+          ? ["live-natural-model.done", "live-natural-recovery.done"]
+          : ["live-discussion-model.done", "live-discussion-recovery.done"]
+        : [
+            "discussion-cancelled.done",
+            "natural-request-consent.done",
+            "natural-request-followup.done",
+            "natural-request-clarification.done",
+            "natural-request-design.done",
+            "natural-request-catalog.done",
+            "natural-catalog-dispatched.done",
+            "natural-catalog-cancelled.done",
+            "natural-design-behavior-dispatched.done",
+            "natural-request-construction.done",
+            "natural-request-authority.done",
+            "natural-request-cancelled.done",
+            "natural-request-restart-prepared.done",
+            "natural-request-restarted.done",
+          ]),
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -190,7 +210,7 @@ try {
       .map((row) => JSON.parse(row.document));
     assert.deepEqual(
       discussions.map((reply) => reply.knowledgeRevision),
-      liveDiscussion ? [2] : [2, 3],
+      liveNatural ? [] : liveDiscussion ? [2] : [2, 3],
     );
     assert.equal(
       discussions.every(
@@ -200,6 +220,40 @@ try {
       ),
       true,
     );
+    const interpretations = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='interpretation-reply' ORDER BY rowid",
+      )
+      .all(server.serverId, knowledgeProject)
+      .map((entry) => JSON.parse(entry.document));
+    const expectedInterpretations = liveNatural
+      ? [["action", "diagnose", "root"]]
+      : liveDiscussion
+        ? []
+        : [
+            ["action", "status", null],
+            ["action", "status", null],
+            ["clarification", null, null],
+            ["unsupported", null, null],
+            ["action", "stop", null],
+            ["action", "stop", null],
+          ];
+    assert.deepEqual(
+      interpretations.map((entry) => [
+        entry.reply.kind,
+        entry.reply.action,
+        entry.reply.componentId,
+      ]),
+      expectedInterpretations,
+      "Every accepted natural reply is an exact typed choice; denied requests create no extra reply",
+    );
+    assert.ok(
+      interpretations.every(
+        (entry) =>
+          entry.knowledgeRevision === 2 &&
+          entry.worldEvidence === "not-inspected",
+      ),
+    );
     const starts = db
       .prepare(
         "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
@@ -207,10 +261,10 @@ try {
       .get(server.serverId, knowledgeProject);
     assert.equal(
       starts.count,
-      liveDiscussion ? 1 : 3,
+      liveDiscussion ? 1 : 9,
       liveDiscussion
         ? "The manual proof dispatches exactly one owner question"
-        : "Only explicit owner questions dispatch: two answers and one cancelled request",
+        : "Exactly three explicit discussions and six typed interpretations dispatch; denied requests spend none",
     );
   }
   const row = db

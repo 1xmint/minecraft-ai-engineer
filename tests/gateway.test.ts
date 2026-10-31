@@ -2107,3 +2107,300 @@ test("discussion rejects invented sources and note changes invalidate late model
     await f.close();
   }
 });
+
+test("natural interpretation returns only a typed choice and denies quota access before dispatch", async () => {
+  let calls = 0,
+    captured = "";
+  const f = await fixture({
+    ...plan,
+    async interpret(_input, _signal, shared) {
+      calls++;
+      captured = shared;
+      return {
+        schemaVersion: 1 as const,
+        kind: "action" as const,
+        action: "status" as const,
+        componentId: null,
+        text: "The intended project uses a lamp; no world inspection was performed.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Why does this project use a lamp?",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    for (const c of [
+      context(),
+      context({ actorId: EDITOR, connectionId: generatedConnection }),
+      context({ actorId: EVE, connectionId: generatedConnection }),
+    ])
+      assert.equal(
+        (await f.post("/v2/interpret", { ...input, context: c })).status,
+        403,
+      );
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          isOperator: false,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          componentId: "missing",
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      409,
+    );
+    assert.equal(calls, 0);
+    const c = context({ connectionId: generatedConnection });
+    const response = await f.post("/v2/interpret", { ...input, context: c });
+    assert.equal(response.status, 200);
+    const reply = await json<{
+      worldEvidence: string;
+      knowledgeRevision: number;
+      reply: { kind: string };
+    }>(response);
+    assert.equal(reply.worldEvidence, "not-inspected");
+    assert.equal(reply.knowledgeRevision, 0);
+    assert.equal(JSON.parse(captured).sources[0].kind, "intended-design");
+    assert.equal(
+      (await f.post("/v2/interpret", { ...input, context: c })).status,
+      409,
+    );
+    assert.equal(calls, 1);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});
+
+test("natural interpretation rejects invented sources and discards late replies after note changes", async () => {
+  let release!: () => void, started!: () => void;
+  const ready = new Promise<void>((resolve) => (started = resolve)),
+    gate = new Promise<void>((resolve) => (release = resolve));
+  let calls = 0;
+  const f = await fixture({
+    ...plan,
+    async interpret() {
+      calls++;
+      if (calls === 1)
+        return {
+          schemaVersion: 1 as const,
+          kind: "action" as const,
+          action: "status" as const,
+          componentId: null,
+          text: "An invented private fact.",
+          basis: ["inventory:other-player"],
+        };
+      started();
+      await gate;
+      return {
+        schemaVersion: 1 as const,
+        kind: "action" as const,
+        action: "status" as const,
+        componentId: null,
+        text: "Obsolete project advice.",
+        basis: ["project"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "Explain the project.",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    assert.equal(
+      (
+        await f.post("/v2/interpret", {
+          ...input,
+          context: context({ connectionId: generatedConnection }),
+        })
+      ).status,
+      400,
+    );
+    const pending = f.post("/v2/interpret", {
+      ...input,
+      context: context({ connectionId: generatedConnection }),
+    });
+    await ready;
+    assert.equal(
+      (
+        await f.post("/v2/knowledge/note", {
+          context: context({ connectionId: generatedConnection }),
+          expectedRevision: 0,
+          note: {
+            schemaVersion: 1,
+            kind: "decision",
+            text: "Preserve the entrance.",
+          },
+        })
+      ).status,
+      200,
+    );
+    release();
+    assert.notEqual((await pending).status, 200);
+    assert.equal(calls, 2);
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    release();
+    await f.close();
+  }
+});
+
+for (const invalidate of ["revoke-plan", "restart"] as const) {
+  test(`natural interpretation cancels and discards a late action after ${invalidate}`, async () => {
+    let started!: () => void, release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let calls = 0,
+      inferenceSignal: AbortSignal | undefined;
+    const f = await fixture({
+      ...plan,
+      async interpret(_input, signal) {
+        calls++;
+        inferenceSignal = signal;
+        started();
+        await gate;
+        // Deliberately ignore abort: the gateway must reject even a late valid action.
+        return {
+          schemaVersion: 1,
+          kind: "action",
+          action: "stop",
+          componentId: null,
+          text: "Late action",
+          basis: ["project"],
+        };
+      },
+    });
+    try {
+      await f.open();
+      await f.sync();
+      const input = {
+        message: "Stop after explaining the current task.",
+        modelAuthorized: true,
+        isOperator: true,
+        context: context({ connectionId: generatedConnection }),
+      };
+      const pending = f.post("/v2/interpret", input);
+      await ready;
+      if (invalidate === "restart")
+        assert.equal((await f.open("epoch-two")).status, 200);
+      else
+        assert.equal(
+          (
+            await f.sync(context({ authorizationRevision: 2 }), {
+              members: [{ actorId: OWNER, role: "owner", canPlan: false }],
+            })
+          ).status,
+          200,
+        );
+      assert.equal(inferenceSignal?.aborted, true);
+      release();
+      assert.notEqual((await pending).status, 200);
+      assert.notEqual(
+        (
+          await f.post("/v2/interpret", {
+            ...input,
+            context: context({ connectionId: generatedConnection }),
+          })
+        ).status,
+        200,
+      );
+      assert.equal(calls, 1, "Invalidation never retries inference");
+    } finally {
+      release();
+      await f.close();
+    }
+  });
+}
+
+test("recent action grounding remains a bounded intention and grants no new capability", async () => {
+  let calls = 0,
+    captured = "";
+  const f = await fixture({
+    ...plan,
+    async interpret(_input, _signal, source) {
+      calls++;
+      captured = source;
+      return {
+        schemaVersion: 1,
+        kind: "action",
+        action: "status",
+        componentId: null,
+        text: "Inspect the current task status.",
+        basis: ["recent-action"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "What about that last action?",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    const request = (extra: object = {}) =>
+      f.post("/v2/interpret", {
+        ...input,
+        context: context({ connectionId: generatedConnection }),
+        ...extra,
+      });
+    for (const recentAction of [
+      { action: "status", componentId: null, verified: true },
+      { action: "build", componentId: "foreign" },
+      { action: "status", componentId: null, nonce: "approved" },
+    ])
+      assert.equal((await request({ recentAction })).status, 400);
+    assert.equal(
+      calls,
+      0,
+      "Malformed or unavailable recency is rejected before quota dispatch",
+    );
+    assert.equal(
+      (await request()).status,
+      400,
+      "The model cannot invent an omitted recent source",
+    );
+    assert.equal(
+      (await request({ recentAction: { action: "status", componentId: null } }))
+        .status,
+      200,
+    );
+    const source = JSON.parse(captured).sources.find(
+      (entry: { id: string }) => entry.id === "recent-action",
+    );
+    assert.deepEqual(source, {
+      id: "recent-action",
+      kind: "server-dispatched-intention",
+      data: {
+        action: "status",
+        componentId: null,
+        result: "not-supplied",
+        authority: "none",
+      },
+    });
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});

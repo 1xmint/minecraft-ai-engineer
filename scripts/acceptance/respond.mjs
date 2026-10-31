@@ -220,22 +220,34 @@ async function main() {
   );
   const stage = options["--stage"] ?? "catalog";
   check(
-    ["catalog", "behavior", "geometry", "discussion"].includes(stage),
-    "Stage must be catalog, behavior, geometry or discussion.",
+    ["catalog", "behavior", "geometry", "discussion", "natural"].includes(
+      stage,
+    ),
+    "Stage must be catalog, behavior, geometry, discussion or natural.",
   );
   const scenario =
     options["--scenario"] ?? (stage === "catalog" ? "catalog" : "generated");
   check(
-    ["catalog", "generated", "structural", "boolean", "discussion"].includes(
-      scenario,
-    ) && (stage === "catalog") === (scenario === "catalog"),
-    "Scenario must match its catalog, generated, structural, boolean or discussion stage.",
+    [
+      "catalog",
+      "generated",
+      "structural",
+      "boolean",
+      "discussion",
+      "natural",
+    ].includes(scenario) && (stage === "catalog") === (scenario === "catalog"),
+    "Scenario must match its catalog, generated, structural, boolean, discussion or natural stage.",
   );
   check(
     (stage === "discussion") === (scenario === "discussion"),
     "Discussion stage requires the discussion scenario.",
   );
-  const discussion = stage === "discussion",
+  check(
+    (stage === "natural") === (scenario === "natural"),
+    "Natural stage requires the natural scenario.",
+  );
+  const natural = stage === "natural",
+    discussion = stage === "discussion",
     generated = stage === "behavior" || stage === "geometry",
     suffix = stage !== "catalog" ? `-${stage}` : "";
   const expected = {
@@ -244,15 +256,17 @@ async function main() {
     sourceSha: options["--sha"],
     runId: options["--run"],
     runAttempt: Number(options["--attempt"]),
-    scenario: discussion
-      ? "project-discussion-owner-notes-v1"
-      : scenario === "boolean"
-        ? "generated-boolean-owner-confirmation-v1"
-        : scenario === "structural"
-          ? "structural-buffer-owner-confirmation-v1"
-          : generated
-            ? "generated-buffer-owner-confirmation-v1"
-            : "signal-lamp-client-handoff-v1",
+    scenario: natural
+      ? "natural-engineering-owner-action-v1"
+      : discussion
+        ? "project-discussion-owner-notes-v1"
+        : scenario === "boolean"
+          ? "generated-boolean-owner-confirmation-v1"
+          : scenario === "structural"
+            ? "structural-buffer-owner-confirmation-v1"
+            : generated
+              ? "generated-buffer-owner-confirmation-v1"
+              : "signal-lamp-client-handoff-v1",
   };
   check(
     (
@@ -303,23 +317,31 @@ async function main() {
     await import("../../dist/companion/src/acceptance-exchange.js");
   const generatedExchange =
     await import("../../dist/companion/src/generated-acceptance.js");
+  const naturalExchange =
+    await import("../../dist/companion/src/natural-acceptance.js");
   const discussionExchange =
     await import("../../dist/companion/src/discussion-acceptance.js");
-  const readAcceptanceRequest = discussion
-    ? discussionExchange.readDiscussionAcceptanceRequest
-    : generated
-      ? generatedExchange.readGeneratedAcceptanceRequest
-      : catalogExchange.readAcceptanceRequest;
-  const createAcceptanceResponse = discussion
-    ? discussionExchange.createDiscussionAcceptanceResponse
-    : generated
-      ? generatedExchange.createGeneratedAcceptanceResponse
-      : catalogExchange.createAcceptanceResponse;
-  const readAcceptanceResponse = discussion
-    ? discussionExchange.readDiscussionAcceptanceResponse
-    : generated
-      ? generatedExchange.readGeneratedAcceptanceResponse
-      : catalogExchange.readAcceptanceResponse;
+  const readAcceptanceRequest = natural
+    ? naturalExchange.readNaturalAcceptanceRequest
+    : discussion
+      ? discussionExchange.readDiscussionAcceptanceRequest
+      : generated
+        ? generatedExchange.readGeneratedAcceptanceRequest
+        : catalogExchange.readAcceptanceRequest;
+  const createAcceptanceResponse = natural
+    ? naturalExchange.createNaturalAcceptanceResponse
+    : discussion
+      ? discussionExchange.createDiscussionAcceptanceResponse
+      : generated
+        ? generatedExchange.createGeneratedAcceptanceResponse
+        : catalogExchange.createAcceptanceResponse;
+  const readAcceptanceResponse = natural
+    ? naturalExchange.readNaturalAcceptanceResponse
+    : discussion
+      ? discussionExchange.readDiscussionAcceptanceResponse
+      : generated
+        ? generatedExchange.readGeneratedAcceptanceResponse
+        : catalogExchange.readAcceptanceResponse;
   const { requireAcceptanceRun, requireAcceptanceArtifact } =
     await import("../../dist/companion/src/acceptance-github.js");
   async function liveRun() {
@@ -398,7 +420,7 @@ async function main() {
       await handle.close();
     }
     request = readAcceptanceRequest(
-      await boundedJson(file, discussion ? 16384 : 4096),
+      await boundedJson(file, natural || discussion ? 16384 : 4096),
       expected,
       Date.now(),
     );
@@ -466,18 +488,21 @@ async function main() {
       !generated || request.stage === stage,
       "Request artifact belongs to another generated stage.",
     );
-    const method = discussion
-      ? "discuss"
-      : stage === "behavior"
-        ? "proposeBehavior"
-        : stage === "geometry"
-          ? "generateGeometry"
-          : "plan";
+    const method = natural
+      ? "interpret"
+      : discussion
+        ? "discuss"
+        : stage === "behavior"
+          ? "proposeBehavior"
+          : stage === "geometry"
+            ? "generateGeometry"
+            : "plan";
     try {
       const plan = await provider[method](
         request.input,
         new AbortController().signal,
         request.memory,
+        ...(natural ? [request.capabilities, request.availableBasis] : []),
       );
       const usage = provider.lastUsage;
       check(
@@ -565,7 +590,13 @@ async function main() {
     `Response dispatched for request ${expected.runId} attempt ${expected.runAttempt}. Await GitHub acceptance evidence.`,
   );
 }
-function requestEnvelope({ input: _input, memory: _memory, ...envelope }) {
+function requestEnvelope({
+  input: _input,
+  memory: _memory,
+  capabilities: _capabilities,
+  availableBasis: _availableBasis,
+  ...envelope
+}) {
   return envelope;
 }
 main().catch(() => {
