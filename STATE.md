@@ -802,3 +802,16 @@ consent/deop. It never resets counters, changes thresholds, skips packet routing
 modifies production authority. Scoped client compile passes. Fresh CI must prove
 this pacing plus the pending catalog route and all remaining runtime cases. No
 fresh inference or local tests ran. Terminal run permits pushing the waiting batch.
+
+Phase20 signed-in interpretation proof preparation adds natural-acceptance.ts, a
+strict data-only exchange adapted from the established discussion codec. It binds
+one fixed synthetic diagnosis request and canonical owner notes/design to exact
+workflow/source/run/attempt, native owner/connection/project/grant frame, nonce,
+expiry and digests. Its accepted result is only diagnose/root with supplied sources,
+never construction/authority. New CI cases cover altered run/nonce/frame, expired or
+rebound responses, forged output/knowledge and changed fixed owner notes. TS check
+passes; tests await GitHub. No broker, workflow or SDK call is connected yet, so
+this foundation neither invokes inference nor proves a fresh model interpretation.
+Any later one-call proof must wait for deterministic green source and fresh native
+context; all historical receipts remain consumed. Current CI41156238501 on9c7c5a2
+has four checks green and dedicated multiplayer still live. Preserve that run.
