@@ -44,13 +44,13 @@ public final class PistonGameTests {
         for(var target:corrections){partial.put(target.pos(),target.after());restored.validateObservation(design,partial,Set.of());}
         for(var target:corrections.reversed()){partial.put(target.pos(),target.before());restored.validateObservation(design,partial,Set.of());}
         helper.assertTrue(partial.equals(observed),"Reloaded exact facts support every projected partial repair/undo state without becoming authority");
-        rejects(helper,()->ShutterRepairBasis.read(basis.json(),UUID.randomUUID().toString(),design),"Original states cannot move to another operation");
+        rejectsInvalid(helper,()->ShutterRepairBasis.read(basis.json(),UUID.randomUUID().toString(),design),"Original states cannot move to another operation");
         var changedIdentity=ShutterDesign.create(UUID.randomUUID(),2,design.binding().project(),design.binding().world(),design.binding().dimension(),design.blueprint().anchor(),rotation);
         rejects(helper,()->restored.requireDesign(changedIdentity),"Original states cannot move to another accepted intention");
         var forged=new HashMap<>(observed);forged.put(design.piston(),observed.get(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getClockWise()));
         rejects(helper,()->restored.validateObservation(design,forged,Set.of()),"Same-block variants outside the exact approved originals remain conflicts");
         var duplicate=basis.json();duplicate.getAsJsonArray("originals").add(duplicate.getAsJsonArray("originals").get(0).deepCopy());
-        rejects(helper,()->ShutterRepairBasis.read(duplicate,operation,design),"Duplicate original targets are rejected");
+        rejectsInvalid(helper,()->ShutterRepairBasis.read(duplicate,operation,design),"Duplicate original targets are rejected");
         helper.assertTrue(corrections.size()==3 && corrections.stream().allMatch(target->target.before().equals(observed.get(target.pos()))),"Repair preview records exact missing and wrong-facing states in every rotation");
         helper.assertTrue(corrections.stream().anyMatch(target->target.pos().equals(design.piston()) && target.after().getValue(BlockStateProperties.FACING)==design.facing()),"Actuator correction follows canonical rotation");
         helper.assertTrue(observed.entrySet().stream().allMatch(entry->level.getBlockState(entry.getKey()).equals(entry.getValue())),"Static repair preview never edits its observed world");
@@ -396,6 +396,7 @@ public final class PistonGameTests {
     }
     private static Set<BlockPos> footprint(GameTestHelper helper){return footprint(helper,Rotation.NONE);}
     private static Set<BlockPos> footprint(GameTestHelper helper,Rotation rotation){return Set.of(helper.absolutePos(at(1,1,rotation)),helper.absolutePos(at(2,1,rotation)),helper.absolutePos(at(3,1,rotation)));}
+    private static void rejectsInvalid(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static ShutterJournal.Scope journalScope(GameTestHelper helper){return new ShutterJournal.Scope("native-motion-proof",helper.getLevel().dimension().identifier().toString(),UUID.fromString("11111111-1111-4111-8111-111111111111"),UUID.fromString("22222222-2222-4222-8222-222222222222"),1,"root",UUID.fromString("33333333-3333-4333-8333-333333333333"),helper.absolutePos(at(1,1,Rotation.NONE)),Direction.EAST);}
     private static ShutterJournal reloadJournal(java.nio.file.Path file){try{return ShutterJournal.read(com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject());}catch(java.io.IOException failure){throw new IllegalStateException(failure);}}

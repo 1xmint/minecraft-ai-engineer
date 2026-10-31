@@ -523,3 +523,10 @@ Focused GPT-6-Luna/high integration review found no concrete boundary blocker.
 These runtime paths are not proven yet: next add real repair/interrupt/restart/
 partial-undo command flows, permissions/revocation and post-repair physical tests.
 Do not merge or call R1/R2/R3 complete from compile or pure codec/projection tests.
+
+Sourceb88fcf0 CI41148548099 completed: four jobs pass, Fabric fails four rotation
+tests at the deliberate wrong-operation rejection. Production codec correctly
+throws IllegalArgumentException; the old rejects helper catches only IllegalState.
+Fix uses a separate typed invalid-input assertion for wrong-operation and duplicate
+codec records. No production rule or expected rejection is weakened. Source4af13c8
+CI41149588735 is live/queued; the corrected tests require their own source run.
