@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
 import { validateShutterEvidence } from "../../dist/companion/src/shutter-trace.js";
+import { validatePulseEvidence } from "../../dist/companion/src/pulse-trace.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -398,6 +399,92 @@ try {
       finishes.size >= 2,
       "Distinct actual truth trials before and after saved-server restart reach SQLite",
     );
+  }
+  if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
+    for (const marker of [
+      "observer-functional.done",
+      "observer-interrupted.done",
+      "observer-recovered.done",
+      "observer-undo.done",
+      "observer-viewer.done",
+      "observer-revoked.done",
+      "observer-conflict.done",
+      "observer-composite.done",
+      "observer-text.done",
+    ])
+      assert.equal(
+        readFileSync(`${coordination}/${marker}`, "utf8").trim(),
+        "passed",
+      );
+    const observerProject = readFileSync(
+      `${coordination}/observer-project`,
+      "utf8",
+    ).trim();
+    const reports = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:observer-pulse:%' ORDER BY id",
+      )
+      .all(server.serverId, observerProject);
+    assert.ok(
+      reports.length >= 4,
+      "Actual observer trials for both input states and after restart reach SQLite",
+    );
+    const initialStates = new Set(),
+      epochs = new Set();
+    for (const stored of reports) {
+      const report = JSON.parse(stored.document),
+        observed = report.checkpoint.observed,
+        scope = observed.testScope;
+      const intended = JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, observerProject, report.context.projectRevision)
+          .document,
+      );
+      assert.equal(intended.provenance.template, "observer-pulse");
+      assert.equal(scope.projectId, observerProject);
+      assert.equal(scope.blueprintId, intended.id);
+      assert.equal(scope.blueprintRevision, intended.revision);
+      assert.equal(scope.component, "root");
+      assert.equal(scope.basis, observed.componentBasis);
+      assert.match(scope.basis, /^[a-f0-9]{64}$/u);
+      assert.deepEqual(observed.testInputs, []);
+      const cases = validatePulseEvidence(observed.testEvidence, true);
+      initialStates.add(cases[0].originalInput);
+      epochs.add(report.context.serverEpoch);
+    }
+    assert.deepEqual([...initialStates].sort(), [false, true]);
+    assert.ok(
+      epochs.size >= 2,
+      "Observer results come from actual distinct dedicated-server boots",
+    );
+    const compositeProject = readFileSync(
+      `${coordination}/observer-composite-project`,
+      "utf8",
+    ).trim();
+    const compositeReport = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:observer-pulse:%' ORDER BY id DESC LIMIT 1",
+      )
+      .get(server.serverId, compositeProject);
+    assert.ok(
+      compositeReport,
+      "Selected observer leaf evidence reaches durable memory",
+    );
+    const composite = JSON.parse(compositeReport.document),
+      observed = composite.checkpoint.observed;
+    assert.equal(observed.testScope.component, "pulse");
+    assert.equal(observed.component, "pulse");
+    assert.equal(observed.testScope.projectId, compositeProject);
+    assert.equal(
+      observed.testScope.blueprintRevision,
+      composite.context.projectRevision,
+    );
+    assert.equal(observed.testScope.basis, observed.componentBasis);
+    assert.deepEqual(observed.testInputs, []);
+    validatePulseEvidence(observed.testEvidence, true);
   }
   const catalogEvidence = [];
   for (const template of ["or-gate", "not-gate"]) {

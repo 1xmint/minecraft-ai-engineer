@@ -1,0 +1,1094 @@
+{
+  "sourceRun": 41225064861,
+  "sourceHead": "0f13621924c0bf70811a4ab9e9efb4a0cd7bed55",
+  "edges": [
+    {
+      "rotation": "NONE",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": false,
+        "to": true,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "NONE",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": true,
+        "to": false,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "CLOCKWISE_90",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": false,
+        "to": true,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "CLOCKWISE_90",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": true,
+        "to": false,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "CLOCKWISE_180",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": false,
+        "to": true,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "CLOCKWISE_180",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": true,
+        "to": false,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "COUNTERCLOCKWISE_90",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": false,
+        "to": true,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": true,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": true,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    },
+    {
+      "rotation": "COUNTERCLOCKWISE_90",
+      "trace": {
+        "schemaVersion": 1,
+        "function": "observer-pulse",
+        "from": true,
+        "to": false,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16,
+        "samples": [
+          {
+            "elapsedTicks": 0,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 1,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 2,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 3,
+            "input": false,
+            "observer": true,
+            "receiver": true,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 4,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 5,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 6,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 7,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": true
+          },
+          {
+            "elapsedTicks": 8,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 9,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 10,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 11,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 12,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 13,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 14,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 15,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          },
+          {
+            "elapsedTicks": 16,
+            "input": false,
+            "observer": false,
+            "receiver": false,
+            "lamp": false
+          }
+        ],
+        "verdict": "passed",
+        "failure": ""
+      }
+    }
+  ]
+}

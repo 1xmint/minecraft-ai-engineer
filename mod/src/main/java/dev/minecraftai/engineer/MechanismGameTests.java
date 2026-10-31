@@ -69,9 +69,9 @@ public final class MechanismGameTests {
     @GameTest(maxTicks=65) public void counterRotatedTwoInputOr(GameTestHelper helper){or(helper,Rotation.COUNTERCLOCKWISE_90);}
     @GameTest public void catalogContractsRejectForgery(GameTestHelper helper){
         for(String id:MechanismCatalog.ids())for(int rotation:new int[]{0,90,180,270}){
-            var blueprint=MechanismCatalog.create(id,"test","minecraft:overworld",new BlockPos(4,2,4),rotation,id.equals("not-gate")?1:4);
+            var blueprint=MechanismCatalog.create(id,"test","minecraft:overworld",new BlockPos(4,2,4),rotation,(id.equals("not-gate") || id.equals("observer-pulse"))?1:4);
             var contract=MechanismCatalog.contract(blueprint);
-            helper.assertTrue(!contract.cases().isEmpty() && contract.ports().stream().anyMatch(MechanismCatalog.Port::input),"Each bundled recipe has actual canonical ports and functional vectors");
+            helper.assertTrue((!contract.cases().isEmpty() || contract.pulse()!=null) && contract.ports().stream().anyMatch(MechanismCatalog.Port::input),"Each bundled recipe has canonical ports and a settled or temporal contract");
         }
         var original=Blueprint.reference("test","minecraft:overworld",BlockPos.ZERO,0);
         var wrong=original.source().deepCopy();wrong.getAsJsonArray("blocks").get(4).getAsJsonObject().addProperty("state","minecraft:repeater[facing=east,delay=1,locked=false,powered=false]");

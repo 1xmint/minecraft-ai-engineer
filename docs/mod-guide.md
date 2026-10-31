@@ -566,3 +566,30 @@ The bounded action path has passed native and signed-in acceptance. The publishe
 single-player alpha does not include it.
 
 ![Native read-only diagnosis after natural interpretation](images/natural-diagnosis.png)
+
+## Observer pulse engineering (development)
+
+The observer slice is in development PR #30; it is absent from the downloadable
+alpha. Select a clear floating workspace at least three blocks long and two high,
+then use `/engineer reference observer-pulse`. The preview contains three stone
+supports, a lever, an observer watching that lever, and a lamp on the output side.
+Its delay parameter is fixed at 1 because this design has no configurable repeater.
+
+Use `/engineer ask explain the timing` for the intended behavior. Each on or off
+lever edge should produce a pulse after two game ticks, lasting two game ticks.
+The lamp remains lit for four ticks after the pulse ends. These values describe
+the contract; asking the question does not inspect or test the world.
+
+`/engineer build` delegates creative construction under the ordinary permission,
+loaded-region and conflict guards. `/engineer test` first checks quiet behavior,
+then records the actual lever, observer, receiver signal and lamp every tick for
+both edges. It restores the exact original lever setting, including an initially
+on lever. An off lamp at the end alone cannot pass the test.
+
+Stop, changed permissions, player conflicts and restart invalidate active work.
+Use `/engineer resume` with fresh authority to reconcile any pending input;
+historical samples do not restart the trial or authorize a pass. Test again after
+recovery. `/engineer undo` removes only the selected assistant operation, preserving
+player blocks. Observer leaves can also be added to composed projects with
+`/engineer component add <id> root observer-pulse <x> <y> <z>` and tested explicitly
+with `/engineer component test <id>`; that result proves only the selected leaf.

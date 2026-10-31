@@ -48,7 +48,9 @@ public record Blueprint(String id, String projectId, int revision, String worldI
             if (!seen.add(absolute) || !stageIds.contains(stage)) throw new IllegalArgumentException("Duplicate position or unknown stage");
             BlockState state = state(b.get("state").getAsString()).rotate(rotation);
             if (state.isAir() || state.hasBlockEntity()) throw new IllegalArgumentException("Air and block entities cannot be built");
-            if (!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP,Blocks.REDSTONE_WALL_TORCH).contains(state.getBlock()))
+            if (!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP,Blocks.REDSTONE_WALL_TORCH).contains(state.getBlock())
+                    && !(state.is(Blocks.OBSERVER) && json.has("provenance") && json.getAsJsonObject("provenance").get("kind").getAsString().equals("curated")
+                        && Set.of("observer-pulse","composition").contains(json.getAsJsonObject("provenance").get("template").getAsString())))
                 throw new IllegalArgumentException("Block is outside the supported safe circuit library");
             blocks.add(new PlannedBlock(absolute, state, stage, text(b.get("component"),128)));
         }

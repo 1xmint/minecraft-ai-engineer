@@ -63,6 +63,7 @@ final class LessonAssistant {
             else for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
         } else if(topic==Topic.MATERIALS)materials(s,target,canonical);
         else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
+        else if(contract!=null && contract.pulse()!=null){s.tell("Intended observer timing: both lever edges produce a pulse after 2 game ticks, powered for 2 game ticks; the lamp switches off 4 ticks after the pulse ends. Testing samples detector, receiver and lamp every tick. This is the intended contract, not a new measurement.");}
         else if(generated) {
             s.tell(GeneratedBlueprint.behavior(selected).summary());
         } else {

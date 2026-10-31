@@ -508,6 +508,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 awaitFile(context, "eve-text-connected");
                 send(context, "engineer project share Eve viewer");
                 server.waitFor(s -> session(s, "Alice").access.allows(player(s, "Eve").getUUID(), ProjectAccess.Permission.VIEW));
+                if(!LIVE_ACCEPTANCE)server.runOnServer(s->{
+                    String original=session(s,"Alice").projectId.toString();commandAs(s,"Alice","engineer project new");
+                    commandAs(s,"Alice","engineer select1 1300 100 0");commandAs(s,"Alice","engineer select2 1302 101 0");commandAs(s,"Alice","engineer reference observer-pulse");commandAs(s,"Alice","engineer project share Eve viewer");
+                    write("observer-text-project",session(s,"Alice").projectId.toString());commandAs(s,"Alice","engineer project use "+original);
+                });
                 write("text-viewer", "ready");
                 awaitFile(context, "eve-text.done");
 
@@ -658,6 +663,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
+            if(!LIVE_ACCEPTANCE)observerRecovery(context,server);
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1111,6 +1117,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Project " + project)), "Status over ordinary Minecraft text packets");
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Step ")), "Text tutorial without overlay negotiation");
         check(view(context) == null, "Text-only clients do not acquire visual metadata caches");
+        if(!LIVE_ACCEPTANCE){
+            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));send(context,"engineer ask explain the timing");send(context,"engineer ask explain the materials");
+            expectChat(context,"Intended observer timing");expectChat(context,"observer");
+            send(context,"engineer build");expectChat(context,"does not grant you build permission");
+            check(view(context)==null,"Authorized observer lessons work over ordinary text without installing visual authority or a preview cache");write("observer-text.done","passed");
+        }
         disconnect(context);
     }
 
@@ -1851,8 +1863,72 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Use a visible lamp for the output.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
-        if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);}
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);observerFlow(context,server);}
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+    private static void observerFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1100 100 0");send(context,"engineer select2 1102 101 0");send(context,"engineer reference observer-pulse");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1100,100,0)));
+        server.runCommand("tp Alice 1101 108 12 180 25");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.journal.isEmpty(),"Observer preview has no world authority");project.level().setBlockAndUpdate(new BlockPos(1100,100,0),Blocks.STONE.defaultBlockState());});
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer build");commandAs(s,"Bob","engineer test");commandAs(s,"Bob","engineer undo");check(project.delegation==null && project.journal.isEmpty() && project.testTick<0,"Authorized shared observer lessons do not grant a viewer construction, testing or undo");});
+        write("observer-viewer.done","passed");
+        MESSAGES.clear();send(context,"engineer ask explain the timing");expectChat(context,"Intended observer timing");
+        send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==5 && !project.verified.startsWith("passed:"),"Observer construction preserves the player's support without inventing a functional pass");});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
+        server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(!project.trial.pending() && project.delegation==null,"Complete pulse test restores original input and releases its lease");var pos=new BlockPos(1100,101,0);var state=project.level().getBlockState(pos);((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),pos,player(s,"Alice"));});
+        context.waitTicks(20);
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:") && session(s,"Alice").trial.evidence().get(0).getAsJsonObject().get("originalInput").getAsBoolean());
+        server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.level().getBlockState(new BlockPos(1100,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"An initially on lever is restored exactly after both edges");});
+        write("observer-functional.done","passed");
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").testTick>=25 && session(s,"Alice").trial.evidence().size()==2);
+        send(context,"engineer stop");server.waitFor(s->session(s,"Alice").testTick<0);
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.verified.startsWith("passed:") && project.delegation==null,"Interrupting an observer pulse never verifies a partial trace");check(project.level().getBlockState(new BlockPos(1100,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Interrupted input is restored only through its existing journal");});
+        write("observer-interrupted.done","passed");context.waitTicks(20);
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer test");});
+        server.waitFor(s->session(s,"Alice").testTick>=25 && session(s,"Alice").trial.evidence().size()==2);
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project revoke Bob");check(project.delegation==null && project.trial.pending() && !project.verified.startsWith("passed:"),"Revocation preserves the pending observer input journal without retaining permission to restore it");commandAs(s,"Bob","engineer resume");check(project.delegation==null && project.trial.pending(),"Revoked actor cannot recover observer inputs");});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").trial.pending());
+        server.runOnServer(s->check(session(s,"Alice").level().getBlockState(new BlockPos(1100,101,0)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Fresh owner recovery restores the original on input"));
+        write("observer-revoked.done","passed");context.waitTicks(20);
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").testTick>=25 && session(s,"Alice").trial.evidence().size()==2);
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(new BlockPos(1102,101,0),Blocks.GLASS.defaultBlockState()));
+        server.waitFor(s->session(s,"Alice").testTick<0);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && !project.verified.startsWith("passed:") && project.level().getBlockState(new BlockPos(1102,101,0)).is(Blocks.GLASS),"Player conflict pauses the temporal trial and preserves the replacement");project.level().setBlockAndUpdate(new BlockPos(1102,101,0),Blocks.REDSTONE_LAMP.defaultBlockState());});
+        send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").trial.pending());
+        write("observer-conflict.done","passed");context.waitTicks(20);
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
+        context.waitTicks(3);context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-observer-tested");
+        write("observer-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+    }
+    private static void observerRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        send(context,"engineer project use "+read("observer-project"));
+        server.waitFor(s->read("observer-project").equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runCommand("tp Alice 1101 108 12 180 25");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("stale:") && project.delegation==null && project.testTick<0 && !project.trial.pending(),"Restart imports historical pulse evidence without a pass, callback or lease");PulseEvidence.validate(project.trial.evidence(),true);});
+        send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));write("observer-recovered.done","passed");
+        MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Undo blocked by later edit");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==5 && project.delegation==null,"Observer undo preserves the complete operation when the player changed its lever");var pos=new BlockPos(1100,101,0);var state=project.level().getBlockState(pos);check(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"Blocked undo preserves the player's on setting");((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),pos,player(s,"Alice"));});
+        context.waitTicks(20);send(context,"engineer undo");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.level().getBlockState(new BlockPos(1100,100,0)).is(Blocks.STONE),"Observer undo preserves player construction");for(var block:project.blueprint.blocks())if(!block.pos().equals(new BlockPos(1100,100,0)))check(project.level().getBlockState(block.pos()).isAir(),"Observer undo removes only assistant placements");});
+        write("observer-undo.done","passed");
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1200 100 0");send(context,"engineer select2 1210 101 0");
+        MESSAGES.clear();send(context,"engineer component add pulse root observer-pulse 1200 100 0");expectChat(context,"Added component pulse");
+        MESSAGES.clear();send(context,"engineer component add lamp root signal-lamp 1208 100 0");expectChat(context,"Added component lamp");
+        server.runCommand("tp Alice 1205 108 12 180 25");
+        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
+        send(context,"engineer component build lamp");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        send(context,"engineer component build pulse");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").activeComponent.equals("pulse"));
+        send(context,"engineer component test pulse");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
+        server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.trial.scope().get("component").getAsString().equals("pulse") && project.assignments.task(project.blueprint,"lamp").lastPassedScope==null,"A composed observer trial proves only the explicitly selected leaf");check(project.level().getBlockState(new BlockPos(1210,101,0)).is(Blocks.REDSTONE_LAMP),"Temporal testing preserves the independent electrical component");});
+        write("observer-composite-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("observer-composite.done","passed");
     }
     private static String actionNonce(){
         var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");
