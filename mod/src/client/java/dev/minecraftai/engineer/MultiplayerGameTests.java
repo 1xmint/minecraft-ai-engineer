@@ -1832,6 +1832,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Use a visible lamp for the output.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
+        if(!LIVE_DISCUSSION)naturalConstructionFlow(context,server);
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static String actionNonce(){
@@ -1855,6 +1856,27 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("Project stopped by an authorized player")),"Stale consent never dispatches even the stop action");
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));
         write("natural-request-consent.done","passed");
+    }
+
+    private static void delegateNatural(ClientGameTestContext context,String message) throws Exception {
+        MESSAGES.clear();send(context,"engineer request "+message);expectChat(context,"/engineer act ");String nonce=actionNonce();
+        MESSAGES.clear();send(context,"engineer act "+nonce);
+    }
+    private static void naturalConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 900 100 0");send(context,"engineer select2 905 101 0");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(900,100,0)));
+        server.runCommand("tp Alice 902 108 15 180 25");server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(900,100,0)));
+        MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String nonce=actionNonce();
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred build cannot reserve or place blocks before consent");});
+        send(context,"engineer act "+nonce);server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Confirmed inferred build uses actual production placements");check(!project.verified.startsWith("passed:"),"Construction does not invent functional verification");});
+        delegateNatural(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        server.runOnServer(s->check(!saved(session(s,"Alice")).getAsJsonArray("functionalEvidence").isEmpty(),"Inferred test records actual game evidence"));
+        delegateNatural(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred undo restores exact assistant placements and releases authority");});
+        write("natural-request-construction.done","passed");
     }
 
     private static void knowledgeRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

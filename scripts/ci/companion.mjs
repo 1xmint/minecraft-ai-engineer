@@ -59,14 +59,22 @@ const server = createCompanionServer({
           ? "status"
           : input.message === "CI propose stopping the selected project."
             ? "stop"
-            : null;
-      if (!action || !capabilities.get(action)?.has(null))
+            : input.message === "CI build selected lamp."
+              ? "build"
+              : input.message === "CI test selected lamp."
+                ? "test"
+                : input.message === "CI undo selected lamp."
+                  ? "undo"
+                  : null;
+      const componentId =
+        action === "build" || action === "test" ? "root" : null;
+      if (!action || !capabilities.get(action)?.has(componentId))
         throw new Error("Unexpected natural-request fixture choice");
       return {
         schemaVersion: 1,
         kind: "action",
         action,
-        componentId: null,
+        componentId,
         text: "Synthetic typed choice; not model inference.",
         basis: ["project"],
       };

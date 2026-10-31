@@ -672,3 +672,14 @@ is included in normal deterministic memory verification. Synthetic replies are
 explicit fixtures, not fresh model inference. Script syntax passes; native CI proof
 is still pending. Broader BUILD/test/repair/undo mutation, wrong-actor/revocation,
 interruption/restart/cancellation and fresh signed-in inference still need coverage.
+
+Phase20 acceptance draft adds a separate x900 lamp project: no reservation/write
+before inferred BUILD consent, actual production construction, no pass from geometry,
+separate inferred TEST consent with actual functional evidence, then inferred UNDO
+consent restoring assistant blocks and releasing authority. Required deterministic
+marker natural-request-construction.done joins existing consent proof. No old note
+project/world assertions are relaxed. HTTP cases deliberately return a late valid
+stop action after actual planning-grant withdrawal or a new server epoch, asserting
+transport abort, rejection, one call and no automatic retry. Final scoped client
+compile, TS check and script syntax pass; runtime CI remains pending. No inference
+or local tests ran. These checks do not yet prove all N1–N4 Outcomes.

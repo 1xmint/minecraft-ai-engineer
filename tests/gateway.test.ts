@@ -2261,3 +2261,74 @@ test("natural interpretation rejects invented sources and discards late replies 
     await f.close();
   }
 });
+
+for (const invalidate of ["revoke-plan", "restart"] as const) {
+  test(`natural interpretation cancels and discards a late action after ${invalidate}`, async () => {
+    let started!: () => void, release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let calls = 0,
+      inferenceSignal: AbortSignal | undefined;
+    const f = await fixture({
+      ...plan,
+      async interpret(_input, signal) {
+        calls++;
+        inferenceSignal = signal;
+        started();
+        await gate;
+        // Deliberately ignore abort: the gateway must reject even a late valid action.
+        return {
+          schemaVersion: 1,
+          kind: "action",
+          action: "stop",
+          componentId: null,
+          text: "Late action",
+          basis: ["project"],
+        };
+      },
+    });
+    try {
+      await f.open();
+      await f.sync();
+      const input = {
+        message: "Stop after explaining the current task.",
+        modelAuthorized: true,
+        isOperator: true,
+        context: context({ connectionId: generatedConnection }),
+      };
+      const pending = f.post("/v2/interpret", input);
+      await ready;
+      if (invalidate === "restart")
+        assert.equal((await f.open("epoch-two")).status, 200);
+      else
+        assert.equal(
+          (
+            await f.sync(context({ authorizationRevision: 2 }), {
+              members: [{ actorId: OWNER, role: "owner", canPlan: false }],
+            })
+          ).status,
+          200,
+        );
+      assert.equal(inferenceSignal?.aborted, true);
+      release();
+      assert.notEqual((await pending).status, 200);
+      assert.notEqual(
+        (
+          await f.post("/v2/interpret", {
+            ...input,
+            context: context({ connectionId: generatedConnection }),
+          })
+        ).status,
+        200,
+      );
+      assert.equal(calls, 1, "Invalidation never retries inference");
+    } finally {
+      release();
+      await f.close();
+    }
+  });
+}
