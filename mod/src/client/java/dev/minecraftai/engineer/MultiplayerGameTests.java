@@ -1962,7 +1962,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     private static void recoverNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("natural-request-project");send(context,"engineer project use "+id);
-        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
         MESSAGES.clear();send(context,"engineer act "+read("natural-request-old-nonce"));expectChat(context,"No matching pending action");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"Saved facts cannot restore natural-action consent or execution authority");});
         write("natural-request-restarted.done","passed");

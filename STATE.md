@@ -866,3 +866,16 @@ source-specific CI evidence. Current3702b80 CI41218074458 has four checks green 
 native dedicated still live; preserve its actual runtime proof before the next push.
 All overall milestones remain active; fresh natural inference is still gated on
 full deterministic green for the final source.
+
+Source3702b80 CI41218074458 terminal: four checks pass; dedicated fails at the
+third-boot natural-consent recovery predicate. Downloaded work/natural-request-
+proof-41218074458 and inspected every new marker: all12 existing natural catalog,
+design, authority, construction, cancellation, clarification, consent, follow-up and
+restart-prepared markers say passed. The recovery wait calls session() before the
+asynchronous native project-use packet establishes a selection, triggering the
+correct ambiguous-project refusal. The fixture now waits on the authoritative
+selection map before querying that session. Production selection policy is unchanged.
+Final source must prove recovered consent denial, later boot flows and strict SQLite
+(including the newly corrected exact interpretation dispatch counts). No fresh
+model inference or local tests ran. The terminal handle permits pushing pending
+manual-mode wiring and this causal fixture fix for their own complete CI proof.
