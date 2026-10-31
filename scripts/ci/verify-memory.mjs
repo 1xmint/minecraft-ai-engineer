@@ -67,6 +67,9 @@ try {
       "shutter-diagnosis.done",
       "shutter-repair-preview.done",
       "shutter-repair-authority.done",
+      "shutter-repair-revocation.done",
+      "shutter-repair-bob-denied.done",
+      "shutter-repair-bob-resumed.done",
       "shutter-repair-prepared.done",
       "shutter-repair-recovered.done",
       "shutter-repair-undo-prepared.done",
@@ -95,7 +98,7 @@ try {
         "passed",
       );
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
-    for (const label of ["off", "on", "repair"]) {
+    for (const label of ["off", "on", "repair", "repair-shared"]) {
       const design = JSON.parse(
         readFileSync(`${coordination}/shutter-design-${label}`, "utf8"),
       );

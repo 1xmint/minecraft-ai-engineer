@@ -281,6 +281,32 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");write("shutter-undo.done","passed");
         write("shutter-undo-recovery.done","passed");
     }
+    private static void shutterRepairSharing(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runOnServer(s->{for(String name:List.of("Alice","Bob")){var actor=player(s,name);actor.getAbilities().flying=true;actor.onUpdateAbilities();}});
+        server.runCommand("tp Alice 801 103 6 180 25");server.runCommand("tp Bob 801 103 6 180 25");
+        context.waitTicks(25);send(context,"engineer project new");send(context,"engineer select1 800 100 0");send(context,"engineer select2 803 101 0");send(context,"engineer reference sticky-shutter");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(800,100,0)));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());for(var block:design.worldBlocks())project.level().setBlock(block.pos(),block.state(),2);
+            project.level().setBlock(design.piston(),project.level().getBlockState(design.piston()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING,design.facing().getOpposite()),2);
+            project.level().setBlock(design.input(),project.level().getBlockState(design.input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,design.facing().getOpposite()),2);project.level().setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);
+            project.nextPlacement=Long.MAX_VALUE;
+        });
+        context.waitTicks(25);send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        write("shutter-repair-shared-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"shutter-repair-bob-started");
+        var stale=server.computeOnServer(s->{var project=session(s,"Alice");check(project.controller.equals(player(s,"Bob").getUUID()) && project.state.equals("EXECUTING") && project.journal.isEmpty(),"Real shared editor delegates repair before any placement");project.manager.validate(project);var fence=project.delegation;write("shutter-repair-shared-operation",project.activeOperation);
+            project.nextPlacement=0;project.tick();check(project.journal.size()==1,"Execute exactly one production shared repair write before revocation");project.nextPlacement=Long.MAX_VALUE;return fence;});
+        context.waitTicks(25);send(context,"engineer project permission Bob build false");server.waitFor(s->!session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        server.runOnServer(s->{var project=session(s,"Alice");project.nextPlacement=0;project.tick();boolean fenced=false;try{project.manager.reservations.validate(project.manager.scope(project),stale,player(s,"Bob").getUUID(),project.revision(),project.access.revision(),s.getTickCount());}catch(IllegalStateException expected){fenced=true;}
+            check(fenced && project.state.equals("PAUSED") && project.delegation==null && project.journal.size()==1 && project.access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW),"BUILD revocation retires the old fence and prevents another repair write while VIEW remains");
+        });write("shutter-repair-bob-revoked","ready");awaitFile(context,"shutter-repair-bob-denied.done");
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==1 && session(s,"Alice").delegation==null,"Denied repair/resume requests never renew execution authority"));
+        context.waitTicks(25);send(context,"engineer project permission Bob build true");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        server.runOnServer(s->check(session(s,"Alice").delegation==null && session(s,"Alice").state.equals("PAUSED"),"Restoring a grant does not silently resume execution"));write("shutter-repair-bob-regranted","ready");
+        awaitFile(context,"shutter-repair-bob-resumed.done");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==3 && session(s,"Alice").activeOperation.equals(read("shutter-repair-shared-operation")) && session(s,"Alice").delegation==null && !session(s,"Alice").verified.startsWith("passed:"),"Fresh shared-editor resume finishes only the reviewed corrections, without a functional pass"));
+        context.waitTicks(25);runShutterTrial(context,server,false,"repair-shared");assertPersisted(server);write("shutter-repair-revocation.done","passed");write("shutter-repair-bob-finished","ready");
+    }
     private static void shutterRepairPrepare(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection){
         server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
         server.runCommand("tp Alice 701 103 6 180 25");connection.waitForClientboundPackets();
@@ -611,7 +637,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE)shutterSharingFlow(context,server,projectId);
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1022,6 +1048,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             for(String action:List.of("test","component test root","component build root","release","undo")){MESSAGES.clear();send(context,"engineer "+action);expectChat(context,"permission");context.waitTicks(25);}
             write("shutter-bob-view.done","passed");awaitFile(context,"shutter-bob-revoked");await(context,()->view(context)==null,"Revocation clears mechanical preview metadata");
             MESSAGES.clear();send(context,"engineer project use "+shutter);expectChat(context,"unavailable or not shared");send(context,"engineer component info root");expectChat(context,"Engineer:");check(MESSAGES.stream().noneMatch(message->message.contains("mechanical output")),"Revoked viewer cannot retrieve shutter component facts");write("shutter-bob-denied.done","passed");
+            awaitFile(context,"shutter-repair-shared-project");String repair=read("shutter-repair-shared-project");context.waitTicks(25);MESSAGES.clear();send(context,"engineer project use "+repair);
+            await(context,()->view(context)!=null && view(context).projectId().equals(repair),"Shared editor receives the repair project's approved intention");
+            context.waitTicks(25);MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");context.waitTicks(25);MESSAGES.clear();send(context,"engineer repair");expectChat(context,"Applying reviewed shutter corrections");write("shutter-repair-bob-started","ready");
+            awaitFile(context,"shutter-repair-bob-revoked");context.waitTicks(25);MESSAGES.clear();send(context,"engineer repair");expectChat(context,"does not grant you build permission");
+            context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"does not grant you build permission");write("shutter-repair-bob-denied.done","passed");
+            awaitFile(context,"shutter-repair-bob-regranted");context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Reconciled; resuming the same bounded assignment");write("shutter-repair-bob-resumed.done","passed");awaitFile(context,"shutter-repair-bob-finished");
         }
         awaitFile(context, "finish");
         disconnect(context);

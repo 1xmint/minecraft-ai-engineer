@@ -551,3 +551,17 @@ for legacy identity rebinding. Regression checks cover both cases. Immutable v4
 history stays non-adoptable. No production mutation fence or old runtime proof is
 removed. Actual shared BUILD-grant revocation during this new repair path still
 needs explicit coverage; creative withdrawal is not labelled as grant revocation.
+
+Phase19 adds a real shared-editor repair flow while Alice and Bob are connected
+in the second boot: Alice creates a separate x800 fixture and explicitly grants
+Bob editor rights; Bob diagnoses/delegates via native commands. A test-only timing
+gate holds the first write until acknowledged; the production tick executes one
+write, then Alice's native command revokes BUILD while preserving VIEW. The timing
+gate is removed, an actual tick must not write, and the old reservation fence
+must reject. Bob's repair and resume require exact BUILD-denial replies. Regrant
+alone must leave the job paused; Bob explicitly resumes the same operation and
+only its remaining corrections finish. Alice then runs an actual measured trial.
+Three required markers and a fourth strict SQLite shutter-trial replay (repair-shared)
+cover this flow. No production timing or permission rule is changed. Scoped client
+compilation passes; source/runtime proof remains pending. This is written coverage,
+not yet evidence that grant revocation or the full R1/R2/R3 slice has passed.
