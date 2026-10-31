@@ -758,3 +758,16 @@ and pre-design consent. Focused GPT-6-Luna/high check found no substitution,
 second-call admission or authority bypass. Scoped server/client compile and TS/
 script checks pass; runtime/fresh inference remain pending. Mechanical catalog
 selection and broader natural revisions/engineering remain beyond this addition.
+
+Sourcedd26920 CI41154915000 terminal: four jobs pass, dedicated fails at the new
+status follow-up before construction. Downloaded work/natural-request-failure-
+41154915000 shows the initial typed status succeeds and the following recent-action
+request is rejected. Production HTTP uses LocalFiles.GSON, which omits explicit
+JsonNull members; recentAction therefore loses required componentId:null for a
+project target and the strict companion rejects it. Fix preserves explicit JSON
+nulls only for /v2/interpret through the actual request encoder; all other established
+wire codecs and companion strict-field validation stay unchanged. A required native
+regression exercises that exact HTTP encoder and asserts both required fields and
+explicit null survive roundtrip. No parser membership, source or authority fence is
+weakened. Fresh runtime proof must cover this plus clarification/design additions;
+old failed runs are not evidence that those complete flows work.

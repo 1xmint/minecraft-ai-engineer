@@ -9,6 +9,13 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void naturalFollowupWirePreservesExplicitProjectTarget(GameTestHelper helper){
+        var body=new com.google.gson.JsonObject();var recent=new com.google.gson.JsonObject();recent.addProperty("action","status");recent.add("componentId",com.google.gson.JsonNull.INSTANCE);body.add("recentAction",recent);
+        var decoded=com.google.gson.JsonParser.parseString(Companion.encodeBody("/v2/interpret",body)).getAsJsonObject().getAsJsonObject("recentAction");
+        helper.assertTrue(decoded.keySet().equals(java.util.Set.of("action","componentId")) && decoded.get("componentId").isJsonNull(),"The actual HTTP encoder must preserve a project action's explicit null target for strict companion validation");
+        helper.assertTrue(decoded.get("action").getAsString().equals("status"),"Encoding preserves the last typed intention without adding authority");helper.succeed();
+    }
+
     @GameTest public void naturalChoicesCannotInventAuthorityOrTargets(GameTestHelper helper){
         var value=com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"kind\":\"action\",\"action\":\"build\",\"componentId\":\"entrance\",\"text\":\"Build this part\",\"basis\":[\"component:entrance\"]}").getAsJsonObject();
         var choice=NaturalActions.read(value,"entrance",true);
