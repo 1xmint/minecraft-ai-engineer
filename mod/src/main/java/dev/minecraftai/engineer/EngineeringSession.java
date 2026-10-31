@@ -1516,7 +1516,7 @@ final class EngineeringSession implements BuildExecutor {
             if(!journal.isEmpty() && (corner1==null || corner2==null))throw new IllegalStateException("Journal has no bounded workspace");
             if(journalVersion==4)operationScopes=OperationScopes.read(json.getAsJsonObject("operationScopes"),worldId,dimension,projectId);
             if(json.has("shutterRepairs")){
-                var records=json.getAsJsonArray("shutterRepairs");if(journalVersion!=4 || records.size()>4097)throw new IllegalStateException("Invalid mechanical repair history");
+                var records=json.getAsJsonArray("shutterRepairs");if((journalVersion!=4 && !records.isEmpty()) || records.size()>4097)throw new IllegalStateException("Invalid mechanical repair history");
                 for(var value:records){var record=value.getAsJsonObject();String operation=record.getAsJsonObject("scope").get("operation").getAsString();
                     if(!operationScopes.contains(operation))throw new IllegalStateException("Mechanical repair history has no retained operation");
                     var repair=ShutterRepairBasis.read(record,operation,ShutterDesign.read(operationScopes.blueprint(operation).source()));

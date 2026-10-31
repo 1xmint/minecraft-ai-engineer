@@ -530,3 +530,24 @@ throws IllegalArgumentException; the old rejects helper catches only IllegalStat
 Fix uses a separate typed invalid-input assertion for wrong-operation and duplicate
 codec records. No production rule or expected rejection is weakened. Source4af13c8
 CI41149588735 is live/queued; the corrected tests require their own source run.
+
+Phase19 real-player acceptance source now spans fourth-boot repair preview and
+one production placement, fifth-boot resume plus actual off/on/off trial and one
+production inverse entry, then actual sixth-boot partial undo recovery. It asserts
+stale-preview aperture preservation, no preview authority, creative-mode withdrawal
+pausing before another write, post-restart conflict rejection, same operation facts,
+no fabricated functional pass, and exact original orientations/missing payload on
+undo with player support preserved. A clean native repair-preview screenshot is
+requested. Six new markers are required. SQLite replay now independently checks
+the repaired shutter trial alongside old off/on-origin trials, and a separate
+sixth-boot receipt updates latest synchronization checks while preserving existing
+fourth/fifth boot proofs. These are written checks, not passing evidence yet.
+
+CI41149696883 on882614c: Fabric/Companion/client/Windows pass; dedicated fails
+legacy adoption because synthetic older journals retained the new empty optional
+shutterRepairs field. Empty history conveys no scope and is now accepted on older
+journals/removed during adoption; nonempty mechanical originals remain forbidden
+for legacy identity rebinding. Regression checks cover both cases. Immutable v4
+history stays non-adoptable. No production mutation fence or old runtime proof is
+removed. Actual shared BUILD-grant revocation during this new repair path still
+needs explicit coverage; creative withdrawal is not labelled as grant revocation.
