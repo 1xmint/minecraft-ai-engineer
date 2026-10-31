@@ -789,3 +789,16 @@ Scoped server/client compile, TS and script checks pass for the route; final nat
 cancellation test additions await CI compilation/runtime. CI41155571154 on69395a6
 has four green checks with dedicated native still live. Hold this next batch until
 that run is terminal. No fresh inference/local tests; all broader milestones active.
+
+Source69395a6 CI41155571154 terminal: four jobs pass, dedicated fails when actual
+Alice is deopped. Downloaded work/natural-request-failure-41155571154 confirms
+follow-up, clarification and consent markers passed; the old null-target rejection
+is gone. The native client is then kicked for spamming before its act-denial reply.
+Pinned vanilla bytecode shows command packets increment a TickThrottler even while
+operators are exempt from its kick; deop exposes the suite's accumulated burst.
+The CI-only client fixture now observes that actual command budget read-only and
+waits for normal vanilla decay with room for four commands BEFORE starting pending
+consent/deop. It never resets counters, changes thresholds, skips packet routing or
+modifies production authority. Scoped client compile passes. Fresh CI must prove
+this pacing plus the pending catalog route and all remaining runtime cases. No
+fresh inference or local tests ran. Terminal run permits pushing the waiting batch.

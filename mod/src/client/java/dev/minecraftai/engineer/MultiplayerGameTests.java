@@ -1881,6 +1881,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage==lesson,"Automatic tutorial progress cannot invalidate a waiting action preview"));
         MESSAGES.clear();send(context,"engineer act "+nonce);
     }
+    private static boolean commandBudgetAvailable(ServerPlayer player) {
+        try {
+            var field=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("commandSpamThrottler");field.setAccessible(true);
+            Object budget=field.get(player.connection);Class<?> type=budget.getClass();
+            var count=type.getDeclaredField("count");var threshold=type.getDeclaredField("threshold");var step=type.getDeclaredField("incrementStep");
+            count.setAccessible(true);threshold.setAccessible(true);step.setAccessible(true);
+            return count.getInt(budget)<=threshold.getInt(budget)-4*step.getInt(budget);
+        }catch(ReflectiveOperationException failure){throw new AssertionError("Cannot observe the pinned vanilla command budget",failure);}
+    }
     private static void naturalConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
@@ -1888,6 +1897,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(900,100,0)));
         server.runCommand("tp Alice 902 108 15 180 25");server.waitFor(s->session(s,"Alice").level().hasChunkAt(new BlockPos(900,100,0)));
         server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);});
+        // Read only: allow vanilla's accumulated operator command burst to decay
+        // before deop makes its normal spam protection enforceable. Never reset it.
+        server.waitFor(s->commandBudgetAvailable(player(s,"Alice")),180_000);
         MESSAGES.clear();send(context,"engineer request CI build selected lamp.");expectChat(context,"/engineer act ");String withdrawn=actionNonce();
         server.runOnServer(s->{commandAs(s,"Bob","engineer act "+withdrawn);var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"Another connected editor cannot consume the operator's nonce");});
         server.runCommand("deop Alice");context.waitTicks(5);
