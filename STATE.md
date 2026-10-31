@@ -502,3 +502,24 @@ projection/codec proofs, not actual execution, saved-server recovery or delegate
 authority. Session checkpoint persistence and public preview/apply are still unwired.
 Scoped core compilation passes. Initial010de79 CI41148102797 Fabric/Companion/client/
 Windows pass; dedicated remains live. Final new-source runtime proof is pending.
+
+Phase19 integration now wires mechanical diagnosis to exact static target previews
+and explicit repair delegation. Existing electrical corrected/allowlists stay closed.
+Fresh BUILD/creative claims use a dedicated mechanical purpose, full reservations,
+complete observed before/after frames, exact progress/dependency checks, durable
+idle denial before writes, and repeated checks after placement WAL persistence.
+Resume reacquires authority and validates the same repair frame before executing.
+
+Operation-bound shutterRepairs records now persist/load/prune with OperationScopes.
+Validation binds every replacement journal before/after to its exact originals and
+rejects retained mechanical replacement journals missing that record. Undo allows
+canonical or exact original states only; its original-state record survives popped
+entries until the selected undo finishes. Descriptive undo rollback also preserves
+operation scopes/repair facts, never leases. Bounded production undo steps allow
+real acceptance interruption after one persisted inverse write. A new native
+checkpoint test covers an empty-journal pending undo retaining originals with no
+lease and mismatched-journal rejection. Scoped server/client compile passes.
+Focused GPT-6-Luna/high integration review found no concrete boundary blocker.
+These runtime paths are not proven yet: next add real repair/interrupt/restart/
+partial-undo command flows, permissions/revocation and post-repair physical tests.
+Do not merge or call R1/R2/R3 complete from compile or pure codec/projection tests.

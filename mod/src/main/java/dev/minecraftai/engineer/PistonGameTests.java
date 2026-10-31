@@ -13,6 +13,19 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics, transaction and canonical shutter contract proofs. */
 public final class PistonGameTests {
+    @GameTest public void mechanicalRepairCheckpointRetainsOriginalAfterJournalPop(GameTestHelper helper){
+        var level=helper.getLevel();var manager=EngineerMod.managerFor(level.getServer());var id=UUID.randomUUID();var owner=UUID.randomUUID();
+        var design=ShutterDesign.create(UUID.randomUUID(),1,id,manager.worldId,level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        var intended=design.pose(false).get("base");var original=intended.setValue(BlockStateProperties.FACING,Direction.WEST);String operation=UUID.randomUUID().toString();
+        var record=ShutterRepairBasis.capture(operation,design,List.of(new Diagnosis.Target(design.piston(),original,intended,"root","Recorded repair fact")));
+        var session=new EngineeringSession(manager,id,owner,design.binding().dimension());session.blueprint=design.blueprint();session.corner1=design.blueprint().anchor();session.corner2=design.blueprint().anchor().offset(3,1,0);
+        session.operationScopes.capture(operation,"root",session.blueprint,false);session.activeOperation=operation;session.operationKind="BUILD";session.undoRequested=true;session.undoOperation=operation;session.shutterOwned=true;session.state="PAUSED";session.shutterRepairs.put(operation,record);
+        session.save();var restored=new EngineeringSession(manager,id,owner,session.dimension);
+        helper.assertTrue(restored.journal.isEmpty() && restored.undoRequested && restored.delegation==null && restored.shutterOwned,"Last-entry interruption retains undo intention and denial facts, never a lease");
+        helper.assertTrue(restored.shutterRepairs.get(operation).originals().get(design.piston()).equals(original),"The original state survives after its journal entry has been popped");
+        restored.journal.add(new EngineeringSession.Change(design.piston(),intended.setValue(BlockStateProperties.FACING,Direction.SOUTH),intended,operation,"root"));
+        rejects(helper,restored::save,"A mismatched replacement journal cannot reuse the exact original-state record");helper.succeed();
+    }
     @GameTest public void staticShutterRepairEast(GameTestHelper helper){staticRepair(helper,0);}
     @GameTest public void staticShutterRepairSouth(GameTestHelper helper){staticRepair(helper,90);}
     @GameTest public void staticShutterRepairWest(GameTestHelper helper){staticRepair(helper,180);}

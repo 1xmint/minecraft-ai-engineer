@@ -103,8 +103,15 @@ final class Diagnosis {
             if(!componentId.equals("root") || !design.binding().project().equals(s.projectId))throw new IllegalStateException("Mechanical diagnosis requires the accepted standalone component");
             for(var pos:design.writeCells())if(!s.contains(pos))throw new IllegalStateException("Mechanical component is outside the selected workspace at "+pos.toShortString());
             var report=ShutterDiagnosis.inspect(s.level(),design);var assignment=s.assignments.task(s.blueprint,componentId);
+            var messages=new ArrayList<>(report.messages());messages.removeIf(message->message.startsWith("No automatic mechanical repair"));
+            List<Target> targets=List.of();
+            try{
+                if(s.shutterMotion!=null || s.hasPendingTest() || s.state.equals("EXECUTING") || s.state.equals("VERIFYING") || s.pendingPlacement || s.undoRequested)throw new IllegalStateException("Reconcile active or interrupted work before static repair");
+                PistonMotionGate.requireQuiescent(s.level(),design);targets=ShutterRepair.corrections(design,report.observed(),report.blockEntities());
+                messages.add(targets.isEmpty()?"No supported static corrections are needed in this snapshot.":"Review each exact before/after correction. /engineer repair explicitly delegates only this fresh proposal; function still needs a separate test.");
+            }catch(RuntimeException blocked){messages.add("Static repair blocked: "+blocked.getMessage());}
             return new Proposal(UUID.randomUUID(),actor,player.connection,s.manager.epoch,s.projectId,s.revision(),s.access.revision(),componentId,
-                assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,s.server.getTickCount()+MAX_TTL_TICKS,report.observed(),List.of(),report.messages(),false);
+                assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,s.server.getTickCount()+MAX_TTL_TICKS,report.observed(),targets,messages,!targets.isEmpty());
         }
         MechanismCatalog.contract(selected);
         var level = s.level();
