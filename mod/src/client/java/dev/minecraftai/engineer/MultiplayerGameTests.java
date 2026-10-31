@@ -1861,8 +1861,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("natural-request-consent.done","passed");
     }
 
-    private static void delegateNatural(ClientGameTestContext context,String message) throws Exception {
+    private static void delegateNatural(ClientGameTestContext context,TestDedicatedServerContext server,String message) throws Exception {
         MESSAGES.clear();send(context,"engineer request "+message);expectChat(context,"/engineer act ");String nonce=actionNonce();
+        int lesson=server.computeOnServer(s->session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage);
+        context.waitTicks(12);
+        server.runOnServer(s->check(session(s,"Alice").cursor(player(s,"Alice").getUUID()).stage==lesson,"Automatic tutorial progress cannot invalidate a waiting action preview"));
         MESSAGES.clear();send(context,"engineer act "+nonce);
     }
     private static void naturalConstructionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
@@ -1884,9 +1887,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred build cannot reserve or place blocks before consent");});
         send(context,"engineer act "+nonce);server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Confirmed inferred build uses actual production placements");check(!project.verified.startsWith("passed:"),"Construction does not invent functional verification");});
-        delegateNatural(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
+        delegateNatural(context,server,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:"));
         server.runOnServer(s->check(!saved(session(s,"Alice")).getAsJsonArray("functionalEvidence").isEmpty(),"Inferred test records actual game evidence"));
-        delegateNatural(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        delegateNatural(context,server,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
         server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Inferred undo restores exact assistant placements and releases authority");});
         write("natural-request-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
         MESSAGES.clear();send(context,"engineer request CI cancel this interpretation.");awaitFile(context,"natural-request-dispatched");

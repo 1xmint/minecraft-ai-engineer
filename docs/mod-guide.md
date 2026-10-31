@@ -541,7 +541,14 @@ Inferred build, test, repair, resume, undo and stop actions show a server-genera
 summary and a one-use `/engineer act <nonce>` delegation. Changing the connection,
 project, grants, lesson or execution context invalidates that pending action.
 Existing creative, loaded-world, reservation, conflict and repair-preview checks
-still apply when you delegate. Pending consent is not saved across restart.
+still apply when you delegate. Automatic tutorial advancement waits while an AI
+reply or action confirmation is pending; manual lesson changes still invalidate
+that request. Pending consent is not saved across restart.
+
+Follow-ups may use the last dispatched action for up to five minutes within the
+same player connection, project, grants and component. This records the requested
+action, not a claim that it finished or passed. Changing scope or restarting clears
+that context. Use project notes for requirements you want remembered durably.
 
 This path is under construction; native acceptance and fresh model proof remain
 pending. The published alpha does not include it.

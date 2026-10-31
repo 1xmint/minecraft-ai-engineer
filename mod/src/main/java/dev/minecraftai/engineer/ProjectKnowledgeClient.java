@@ -113,8 +113,10 @@ final class ProjectKnowledgeClient {
             }catch(RuntimeException invalid){tell(f,"Project-note write not confirmed. Read notes before retrying.");finish(f);}
         }));
     }
+    boolean holdsLesson(EngineeringSession s,UUID actor){var f=active.get(actor);return f!=null && f.session==s && f.discussion && current(f);}
     void cancelDiscussion(EngineeringSession s) {for(var f:new ArrayList<>(active.values()))if(f.session==s && f.discussion)finish(f);}
     void interpret(EngineeringSession s,String message) {
+        if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
         String normalized=message==null?"":message.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();
         if(Set.of("stop","stop building","stopbuilding").contains(normalized)) {
             s.access.require(s.actor(),ProjectAccess.Permission.BUILD);EngineerMod.cancelPlan(s);s.pause("Project stopped by an authorized player");return;
@@ -124,7 +126,6 @@ final class ProjectKnowledgeClient {
         }
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Interpretation requires the single configured account-owning operator");
         s.access.require(s.actor(),ProjectAccess.Permission.PLAN);
-        if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
         var f=start(s,true);String capturedState=executionState(s);
         String selected=f.component!=null?f.component:s.blueprint!=null && !ComponentTree.composite(s.blueprint)?"root":null;
         var body=new JsonObject();body.addProperty("message",message);body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);

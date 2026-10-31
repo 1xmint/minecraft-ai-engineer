@@ -28,7 +28,7 @@ public final class EngineerMod implements ModInitializer {
     private static final Map<MinecraftServer,ProjectManager> MANAGERS = new IdentityHashMap<>();
     private static final Map<EngineeringSession,PlanRequest> PLANS = new IdentityHashMap<>();
     private record PlanRequest(UUID actor, UUID epoch, int revision, long authorization, net.minecraft.server.network.ServerGamePacketListenerImpl connection, CompletableFuture<JsonObject> future, String previousState) { }
-    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], expand <x1 y1 z1> <x2 y2 z2>, component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, next, previous, repeat, skip, pause, build, stop, resume, release, undo, test, status";
+    private static final String HELP = "project new/list/use/share/revoke/permission, select1/select2 [x y z], expand <x1 y1 z1> <x2 y2 z2>, component add/group/depend/list/info/claim/build/diagnose/repair/revise/test, inspect [block <x y z>|view|inventory|container], materials [component], diagnose, repair, revise <delay>, reference, plan <request>, design <request>, confirm <nonce>, rotate, anchor, teach [component], ask <lesson question>, request <message>, act <nonce>, next, previous, repeat, skip, pause, build, stop, resume, release, undo, test, status";
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();

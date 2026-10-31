@@ -713,3 +713,17 @@ final added native follow-up awaits CI. The deterministic fixture now allows24
 requests/minute and64/hour for expanded scenarios; it cannot invoke inference and
 production defaults remain4/minute and24/hour. Native proof still pending; no model
 call or local test ran. Held new commits while CI41154172044 dedicated run is live.
+
+Source982480f CI41154172044 terminal: Companion/Fabric/Windows/client pass;
+dedicated fails waiting for inferred undo. Downloaded work/natural-request-failure-
+41154172044 shows natural-request-consent.done passed, actual inferred lamp build,
+and actual functional pass (3 vectors/32 ticks). Undo preview was correctly rejected
+because automatic tutorial advancement changed the exact lesson before delegation.
+The failed timeout was acceptance waiting on undo that never started, not a native
+placement or test failure. Production now holds only automatic personal lesson
+advancement while a current discussion/interpretation or its pending consent exists;
+manual lesson changes still invalidate it and world execution is never paused by
+that hold. Native test/undo previews wait12 actual ticks and assert the displayed
+lesson remains stable before delegation. No context fence is weakened. Also bound
+request text before normalization/offline shortcuts and expose request/act in help.
+New source must prove this fix plus the unpushed follow-up/cancel/restart additions.
