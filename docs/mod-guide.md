@@ -511,3 +511,18 @@ a timing fault; a matching pose does not prove function. Input state describes t
 lever request, not a measurement of actuator power. Diagnosis changes no blocks
 or motion guards and proposes no generic piston repair. Existing controlled tests
 and guarded recovery remain separate. Current project view permission is required.
+
+### Static shutter repair (development source)
+
+The development repair flow uses /engineer diagnose to show exact original and
+proposed block states, followed by an explicit /engineer repair request. It supports
+missing canonical parts, a retracted sticky piston's orientation and an off floor
+lever's orientation. Powered, extended, moving, foreign-block and protected-entity
+frames require reconciliation or manual correction. Current build permission and
+creative mode are required. Changes after diagnosis invalidate its proposal.
+
+Stopping or restarting requires a fresh /engineer resume request; it does not renew
+execution permission. Undo is scoped to the latest recorded operation and preserves
+its exact original states. Correct geometry still needs an explicit functional test.
+This branch's complete repair/restart/undo flow is awaiting native acceptance and
+is not a released repair feature.

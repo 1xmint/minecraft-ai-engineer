@@ -21,8 +21,25 @@ const undoBoot =
   process.env.MCE_LIVE_ACCEPTANCE !== "true"
     ? JSON.parse(readFileSync(`${coordination}/shutter-undo-server`, "utf8"))
     : undefined;
+const repairBoot =
+  process.env.MCE_LIVE_ACCEPTANCE !== "true"
+    ? JSON.parse(readFileSync(`${coordination}/shutter-repair-server`, "utf8"))
+    : undefined;
+if (repairBoot) {
+  assert.equal(repairBoot.serverId, server.serverId);
+  assert.equal(repairBoot.worldId, server.worldId);
+  assert.notEqual(
+    repairBoot.serverEpoch,
+    undoBoot.serverEpoch,
+    "Repair undo recovery is a real sixth boot after the fifth construction-undo boot",
+  );
+  assert.notEqual(repairBoot.serverEpoch, restoredBoot.serverEpoch);
+}
 const currentEpoch =
-  undoBoot?.serverEpoch ?? restoredBoot?.serverEpoch ?? server.serverEpoch;
+  repairBoot?.serverEpoch ??
+  undoBoot?.serverEpoch ??
+  restoredBoot?.serverEpoch ??
+  server.serverEpoch;
 if (undoBoot) {
   assert.equal(undoBoot.serverId, server.serverId);
   assert.equal(undoBoot.worldId, server.worldId);
@@ -48,6 +65,15 @@ try {
       "project-find-denied.done",
       "project-find-text.done",
       "shutter-diagnosis.done",
+      "shutter-repair-preview.done",
+      "shutter-repair-authority.done",
+      "shutter-repair-revocation.done",
+      "shutter-repair-bob-denied.done",
+      "shutter-repair-bob-resumed.done",
+      "shutter-repair-prepared.done",
+      "shutter-repair-recovered.done",
+      "shutter-repair-undo-prepared.done",
+      "shutter-repair-undo-recovered.done",
       "textured-bob-preview.done",
       "textured-revocation.done",
       "shutter-input-recovery.done",
@@ -72,7 +98,7 @@ try {
         "passed",
       );
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true")
-    for (const label of ["off", "on"]) {
+    for (const label of ["off", "on", "repair", "repair-shared"]) {
       const design = JSON.parse(
         readFileSync(`${coordination}/shutter-design-${label}`, "utf8"),
       );

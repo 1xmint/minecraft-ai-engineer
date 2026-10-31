@@ -46,7 +46,9 @@ final class LegacyAdoption {
             throw new IllegalArgumentException("Legacy checkpoint identity does not match this operator, world and dimension");
         if(source.has("operationScopes") || (source.has("journalVersion") && source.get("journalVersion").getAsBigDecimal().intValueExact()>=4))
             throw new IllegalArgumentException("Immutable operation history must stay with its original identity; legacy adoption accepts only pre-v4 saves");
+        if(source.has("shutterRepairs") && !source.getAsJsonArray("shutterRepairs").isEmpty())throw new IllegalArgumentException("Mechanical repair originals must stay with their original operation identity");
         JsonObject out=source.deepCopy();out.addProperty("schemaVersion",2);out.addProperty("worldId",world);out.addProperty("projectId",project.toString());
+        out.remove("shutterRepairs"); // Empty optional history conveys no immutable operation facts.
         int revision=1;
         if(out.has("blueprint")) {
             var blueprint=out.getAsJsonObject("blueprint");

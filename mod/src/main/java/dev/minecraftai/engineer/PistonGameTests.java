@@ -13,6 +13,58 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native physics, transaction and canonical shutter contract proofs. */
 public final class PistonGameTests {
+    @GameTest public void mechanicalRepairCheckpointRetainsOriginalAfterJournalPop(GameTestHelper helper){
+        var level=helper.getLevel();var manager=EngineerMod.managerFor(level.getServer());var id=UUID.randomUUID();var owner=UUID.randomUUID();
+        var design=ShutterDesign.create(UUID.randomUUID(),1,id,manager.worldId,level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),0);
+        var intended=design.pose(false).get("base");var original=intended.setValue(BlockStateProperties.FACING,Direction.WEST);String operation=UUID.randomUUID().toString();
+        var record=ShutterRepairBasis.capture(operation,design,List.of(new Diagnosis.Target(design.piston(),original,intended,"root","Recorded repair fact")));
+        var session=new EngineeringSession(manager,id,owner,design.binding().dimension());session.blueprint=design.blueprint();session.corner1=design.blueprint().anchor();session.corner2=design.blueprint().anchor().offset(3,1,0);
+        session.operationScopes.capture(operation,"root",session.blueprint,false);session.activeOperation=operation;session.operationKind="BUILD";session.undoRequested=true;session.undoOperation=operation;session.shutterOwned=true;session.state="PAUSED";session.shutterRepairs.put(operation,record);
+        session.save();var restored=new EngineeringSession(manager,id,owner,session.dimension);
+        helper.assertTrue(restored.journal.isEmpty() && restored.undoRequested && restored.delegation==null && restored.shutterOwned,"Last-entry interruption retains undo intention and denial facts, never a lease");
+        helper.assertTrue(restored.shutterRepairs.get(operation).originals().get(design.piston()).equals(original),"The original state survives after its journal entry has been popped");
+        restored.journal.add(new EngineeringSession.Change(design.piston(),intended.setValue(BlockStateProperties.FACING,Direction.SOUTH),intended,operation,"root"));
+        rejects(helper,restored::save,"A mismatched replacement journal cannot reuse the exact original-state record");helper.succeed();
+    }
+    @GameTest public void staticShutterRepairEast(GameTestHelper helper){staticRepair(helper,0);}
+    @GameTest public void staticShutterRepairSouth(GameTestHelper helper){staticRepair(helper,90);}
+    @GameTest public void staticShutterRepairWest(GameTestHelper helper){staticRepair(helper,180);}
+    @GameTest public void staticShutterRepairNorth(GameTestHelper helper){staticRepair(helper,270);}
+    private static void staticRepair(GameTestHelper helper,int rotation){
+        var level=helper.getLevel();var design=ShutterDesign.create(UUID.randomUUID(),1,UUID.randomUUID(),"native-static-repair",level.dimension().identifier().toString(),helper.absolutePos(new BlockPos(2,3,2)),rotation);
+        for(var block:design.worldBlocks())level.setBlock(block.pos(),block.state(),2);
+        level.setBlock(design.piston(),level.getBlockState(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getOpposite()),2);
+        level.setBlock(design.input(),level.getBlockState(design.input()).setValue(BlockStateProperties.HORIZONTAL_FACING,design.facing().getOpposite()),2);
+        level.setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);
+        var report=ShutterDiagnosis.inspect(level,design);var observed=report.observed();
+        var corrections=ShutterRepair.corrections(design,observed,report.blockEntities());
+        String operation=UUID.randomUUID().toString();var basis=ShutterRepairBasis.capture(operation,design,corrections);
+        var restored=ShutterRepairBasis.read(basis.json(),operation,design);restored.validateObservation(design,observed,report.blockEntities());
+        var partial=new HashMap<>(observed);
+        for(var target:corrections){partial.put(target.pos(),target.after());restored.validateObservation(design,partial,Set.of());}
+        for(var target:corrections.reversed()){partial.put(target.pos(),target.before());restored.validateObservation(design,partial,Set.of());}
+        helper.assertTrue(partial.equals(observed),"Reloaded exact facts support every projected partial repair/undo state without becoming authority");
+        rejectsInvalid(helper,()->ShutterRepairBasis.read(basis.json(),UUID.randomUUID().toString(),design),"Original states cannot move to another operation");
+        var changedIdentity=ShutterDesign.create(UUID.randomUUID(),2,design.binding().project(),design.binding().world(),design.binding().dimension(),design.blueprint().anchor(),rotation);
+        rejects(helper,()->restored.requireDesign(changedIdentity),"Original states cannot move to another accepted intention");
+        var forged=new HashMap<>(observed);forged.put(design.piston(),observed.get(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getClockWise()));
+        rejects(helper,()->restored.validateObservation(design,forged,Set.of()),"Same-block variants outside the exact approved originals remain conflicts");
+        var duplicate=basis.json();duplicate.getAsJsonArray("originals").add(duplicate.getAsJsonArray("originals").get(0).deepCopy());
+        rejectsInvalid(helper,()->ShutterRepairBasis.read(duplicate,operation,design),"Duplicate original targets are rejected");
+        helper.assertTrue(corrections.size()==3 && corrections.stream().allMatch(target->target.before().equals(observed.get(target.pos()))),"Repair preview records exact missing and wrong-facing states in every rotation");
+        helper.assertTrue(corrections.stream().anyMatch(target->target.pos().equals(design.piston()) && target.after().getValue(BlockStateProperties.FACING)==design.facing()),"Actuator correction follows canonical rotation");
+        helper.assertTrue(observed.entrySet().stream().allMatch(entry->level.getBlockState(entry.getKey()).equals(entry.getValue())),"Static repair preview never edits its observed world");
+        var incomplete=new HashMap<>(observed);incomplete.remove(design.input());
+        rejects(helper,()->ShutterRepair.corrections(design,incomplete,Set.of()),"Partial observation cannot authorize corrections");
+        var powered=new HashMap<>(observed);powered.put(design.input(),observed.get(design.input()).setValue(BlockStateProperties.POWERED,true));
+        rejects(helper,()->ShutterRepair.corrections(design,powered,Set.of()),"Powered input must be reconciled before static repair");
+        var extended=new HashMap<>(observed);extended.put(design.piston(),observed.get(design.piston()).setValue(BlockStateProperties.EXTENDED,true));
+        rejects(helper,()->ShutterRepair.corrections(design,extended,Set.of()),"Extended actuator is a motion recovery problem");
+        var obstructed=new HashMap<>(observed);obstructed.put(design.aperture(),Blocks.GLASS.defaultBlockState());
+        rejects(helper,()->ShutterRepair.corrections(design,obstructed,Set.of()),"Player obstruction is preserved, never a replacement target");
+        rejects(helper,()->ShutterRepair.corrections(design,observed,Set.of(design.input())),"Protected entities cannot become repair targets");
+        rejects(helper,()->ShutterRepair.corrected(Blocks.GLASS.defaultBlockState(),Blocks.AIR.defaultBlockState()),"Even an empty cell cannot broaden mechanical target kinds");helper.succeed();
+    }
     @GameTest public void shutterDiagnosisEast(GameTestHelper helper){diagnosis(helper,0);}
     @GameTest public void shutterDiagnosisSouth(GameTestHelper helper){diagnosis(helper,90);}
     @GameTest public void shutterDiagnosisWest(GameTestHelper helper){diagnosis(helper,180);}
@@ -344,6 +396,7 @@ public final class PistonGameTests {
     }
     private static Set<BlockPos> footprint(GameTestHelper helper){return footprint(helper,Rotation.NONE);}
     private static Set<BlockPos> footprint(GameTestHelper helper,Rotation rotation){return Set.of(helper.absolutePos(at(1,1,rotation)),helper.absolutePos(at(2,1,rotation)),helper.absolutePos(at(3,1,rotation)));}
+    private static void rejectsInvalid(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,message);}
     private static ShutterJournal.Scope journalScope(GameTestHelper helper){return new ShutterJournal.Scope("native-motion-proof",helper.getLevel().dimension().identifier().toString(),UUID.fromString("11111111-1111-4111-8111-111111111111"),UUID.fromString("22222222-2222-4222-8222-222222222222"),1,"root",UUID.fromString("33333333-3333-4333-8333-333333333333"),helper.absolutePos(at(1,1,Rotation.NONE)),Direction.EAST);}
     private static ShutterJournal reloadJournal(java.nio.file.Path file){try{return ShutterJournal.read(com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject());}catch(java.io.IOException failure){throw new IllegalStateException(failure);}}

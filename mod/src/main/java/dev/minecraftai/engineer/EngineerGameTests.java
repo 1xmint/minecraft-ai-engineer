@@ -41,7 +41,12 @@ public final class EngineerGameTests {
         source.add("blueprint",Blueprint.reference("old","minecraft:overworld",BlockPos.ZERO,0).source());
         var journal=new com.google.gson.JsonArray();var change=new com.google.gson.JsonObject();change.add("pos",Blueprint.jsonPos(BlockPos.ZERO));change.addProperty("before","minecraft:air");change.addProperty("after","minecraft:stone");journal.add(change);source.add("journal",journal);
         source.add("functionalScope",new com.google.gson.JsonObject());
+        source.add("shutterRepairs",new com.google.gson.JsonArray());
         var adopted=LegacyAdoption.convert(source,"old","new","minecraft:overworld",owner,id);
+        helper.assertTrue(!adopted.has("shutterRepairs"),"Empty optional repair history carries no immutable facts into legacy adoption");
+        var withRepair=source.deepCopy();var repairFacts=new com.google.gson.JsonArray();repairFacts.add(new com.google.gson.JsonObject());withRepair.add("shutterRepairs",repairFacts);
+        boolean repairRejected=false;try{LegacyAdoption.convert(withRepair,"old","new","minecraft:overworld",owner,id);}catch(IllegalArgumentException expected){repairRejected=true;}
+        helper.assertTrue(repairRejected,"Nonempty mechanical repair history cannot be relabelled under an adopted identity");
         helper.assertTrue(adopted.get("status").getAsString().equals("PAUSED") && adopted.get("controller").getAsString().equals(owner.toString()),"Historical execution never becomes an active delegation");
         helper.assertTrue(!adopted.get("verified").getAsString().startsWith("passed:") && adopted.getAsJsonArray("journal").equals(journal),"Preserve undo journal while invalidating old evidence");
         helper.assertTrue(ProjectAccess.read(owner,adopted.getAsJsonObject("access")).members().size()==1,"No legacy file grants friends access");

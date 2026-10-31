@@ -4,7 +4,7 @@
 partner and all six Phase2 features. Full requirements: docs/product-brief.md.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall completion.
 
-Current branch **phase/18-mechanical-diagnosis**, based on merged main **e8b767701ded649314a8cd4c313a4c63ef997b6c**.
+Current branch **phase/19-mechanical-repair**, based on merged main **e824fdef283c846d56aa7cc512accb3401774678**.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -439,3 +439,129 @@ ownership, test history and absent execution authority. Core compile passes; fin
 client compile and GitHub runtime proof remain pending. No local test suite ran.
 Final scoped server/client compilation and verifier syntax pass. No runtime test
 has run locally. Phase18 is ready for its first GitHub native proof.
+
+Phase18 PR27 merged2026-10-30T18:42:50Z as e824fdef283c846d56aa7cc512accb3401774678.
+Finalec114a6/all5 CI41108059456/all98 required native tests passed. Dedicated native
+flow6m1s, shutter-diagnosis.done and memory proof inspected in
+work/shutter-diagnosis-proof-41108059456. Focused GPT-6-Luna/high review found no
+VIEW, mutation, repair-authority or false-pass blocker. Diagnosis is observational;
+full repair/connection/timing work and all other roadmap milestones remain active.
+
+## Phase19: explicit mechanical repair previews and execution (E3)
+
+Outcomes:
+
+- R1: review exact supported corrections, original/target blocks and coordinates
+  before delegating work. Preview preserves the world and rejects stale observation,
+  wrong project/actor, motion and unsupported foreign blocks. Native proof includes
+  missing parts and orientation cases plus altered-after-preview rejection.
+- R2: explicitly approved static corrections execute only with fresh BUILD/creative
+  authority, complete canonical read scope and durable idle piston control. Preserve
+  player edits, pause on conflicts/revocation and require real controlled testing
+  before recording function. Prove per-write fences and actual post-repair trials.
+- R3: interruption, restart and undo preserve original work and recover safely under
+  new authority. Prove stored operation scope, exact inverse journal, no restored
+  lease, and refusals for powered/closed/moving/inconclusive frames.
+
+Decision: mechanical repairs need their own bounded preflight/transaction path,
+using the existing motion gate, operation snapshots and placement journal. Do not
+widen the generic electrical repair/piston allowlist or pretend a position mismatch
+is a missing construction block. Closed/animated payload recovery stays with the
+existing journaled motion recovery. Static orientation/attachment corrections need
+explicit before/after review and inverse-undo checks; existing foreign blocks remain
+preserved. Plan and implement the complete preview/apply/recovery/undo flow, then
+prove it on GitHub before calling this slice complete. No new model call required.
+
+Phase19 foundation now contains ShutterRepair.corrections: exact complete240-cell
+observations, no entities/foreign aperture or margin blocks, and only canonical
+missing parts, retracted actuator facing, or off floor-lever facing corrections.
+Generic Diagnosis.corrected is unchanged. ShutterDiagnosis.Report carries only
+protected entity positions, never contents. Four native rotation tests are written
+for exact before/after preview, preserved world, incomplete snapshot, power/extension,
+foreign obstruction, protected entity and unsupported target rejection. No public
+repair preview/apply path is wired yet, and this slice is not shippable.
+
+Focused GPT-6-Luna/high undo check confirms current construction validation rejects
+legitimate restored wrong-facing states. Undo clears baseline/repairTargets and pops
+journal entries, so original-state facts must be retained durably, bound to the
+selected repair operation and its accepted design scope, throughout partial undo.
+Permit only canonical states or those exact approved original states at their
+recorded targets; retain fresh UNDO, complete reads, idle/quiescent denial and
+per-write checks. Never broaden same-block variants or restore a lease from memory.
+Next: wire preview and specialized execution; persist operation-bound repair basis;
+prove conflict/revocation, interruption/restart, exact undo and actual function.
+
+Phase19 adds ShutterRepairBasis, a bounded strict codec for exact approved original
+states bound to full world/dimension/project/blueprint/revision/component/operation/
+piston/facing identity. It contains no actor/grant/lease. Observation comparison
+accepts canonical states or those exact originals only, with a complete entity-free
+read frame; empty isolation cells remain air. Four native rotation tests now include
+serialization/reload, projected partial repair and undo, changed-operation/design,
+foreign same-block orientation and duplicate-record rejection. These are pure
+projection/codec proofs, not actual execution, saved-server recovery or delegated
+authority. Session checkpoint persistence and public preview/apply are still unwired.
+Scoped core compilation passes. Initial010de79 CI41148102797 Fabric/Companion/client/
+Windows pass; dedicated remains live. Final new-source runtime proof is pending.
+
+Phase19 integration now wires mechanical diagnosis to exact static target previews
+and explicit repair delegation. Existing electrical corrected/allowlists stay closed.
+Fresh BUILD/creative claims use a dedicated mechanical purpose, full reservations,
+complete observed before/after frames, exact progress/dependency checks, durable
+idle denial before writes, and repeated checks after placement WAL persistence.
+Resume reacquires authority and validates the same repair frame before executing.
+
+Operation-bound shutterRepairs records now persist/load/prune with OperationScopes.
+Validation binds every replacement journal before/after to its exact originals and
+rejects retained mechanical replacement journals missing that record. Undo allows
+canonical or exact original states only; its original-state record survives popped
+entries until the selected undo finishes. Descriptive undo rollback also preserves
+operation scopes/repair facts, never leases. Bounded production undo steps allow
+real acceptance interruption after one persisted inverse write. A new native
+checkpoint test covers an empty-journal pending undo retaining originals with no
+lease and mismatched-journal rejection. Scoped server/client compile passes.
+Focused GPT-6-Luna/high integration review found no concrete boundary blocker.
+These runtime paths are not proven yet: next add real repair/interrupt/restart/
+partial-undo command flows, permissions/revocation and post-repair physical tests.
+Do not merge or call R1/R2/R3 complete from compile or pure codec/projection tests.
+
+Sourceb88fcf0 CI41148548099 completed: four jobs pass, Fabric fails four rotation
+tests at the deliberate wrong-operation rejection. Production codec correctly
+throws IllegalArgumentException; the old rejects helper catches only IllegalState.
+Fix uses a separate typed invalid-input assertion for wrong-operation and duplicate
+codec records. No production rule or expected rejection is weakened. Source4af13c8
+CI41149588735 is live/queued; the corrected tests require their own source run.
+
+Phase19 real-player acceptance source now spans fourth-boot repair preview and
+one production placement, fifth-boot resume plus actual off/on/off trial and one
+production inverse entry, then actual sixth-boot partial undo recovery. It asserts
+stale-preview aperture preservation, no preview authority, creative-mode withdrawal
+pausing before another write, post-restart conflict rejection, same operation facts,
+no fabricated functional pass, and exact original orientations/missing payload on
+undo with player support preserved. A clean native repair-preview screenshot is
+requested. Six new markers are required. SQLite replay now independently checks
+the repaired shutter trial alongside old off/on-origin trials, and a separate
+sixth-boot receipt updates latest synchronization checks while preserving existing
+fourth/fifth boot proofs. These are written checks, not passing evidence yet.
+
+CI41149696883 on882614c: Fabric/Companion/client/Windows pass; dedicated fails
+legacy adoption because synthetic older journals retained the new empty optional
+shutterRepairs field. Empty history conveys no scope and is now accepted on older
+journals/removed during adoption; nonempty mechanical originals remain forbidden
+for legacy identity rebinding. Regression checks cover both cases. Immutable v4
+history stays non-adoptable. No production mutation fence or old runtime proof is
+removed. Actual shared BUILD-grant revocation during this new repair path still
+needs explicit coverage; creative withdrawal is not labelled as grant revocation.
+
+Phase19 adds a real shared-editor repair flow while Alice and Bob are connected
+in the second boot: Alice creates a separate x800 fixture and explicitly grants
+Bob editor rights; Bob diagnoses/delegates via native commands. A test-only timing
+gate holds the first write until acknowledged; the production tick executes one
+write, then Alice's native command revokes BUILD while preserving VIEW. The timing
+gate is removed, an actual tick must not write, and the old reservation fence
+must reject. Bob's repair and resume require exact BUILD-denial replies. Regrant
+alone must leave the job paused; Bob explicitly resumes the same operation and
+only its remaining corrections finish. Alice then runs an actual measured trial.
+Three required markers and a fourth strict SQLite shutter-trial replay (repair-shared)
+cover this flow. No production timing or permission rule is changed. Scoped client
+compilation passes; source/runtime proof remains pending. This is written coverage,
+not yet evidence that grant revocation or the full R1/R2/R3 slice has passed.

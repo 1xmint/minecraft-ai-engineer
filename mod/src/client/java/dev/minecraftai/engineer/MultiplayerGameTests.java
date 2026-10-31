@@ -237,7 +237,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("forceload add 598 -2 605 2");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(598,100,-2)) && s.overworld().hasChunkAt(new BlockPos(605,100,2)));
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
         send(context,"engineer select1 600 100 0");send(context,"engineer select2 603 101 0");server.waitFor(s->new BlockPos(603,101,0).equals(session(s,"Alice").corner2));
-        send(context,"engineer reference sticky-shutter");server.waitFor(s->session(s,"Alice").blueprint!=null && ShutterDesign.describes(session(s,"Alice").blueprint.source()));
+        send(context,"engineer reference sticky-shutter");server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(600,100,0)) && ShutterDesign.describes(session(s,"Alice").blueprint.source()));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{
             var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());write("shutter-construction-project",project.projectId.toString());
             check(!project.shutterOwned && design.writeCells().stream().allMatch(pos->project.level().getBlockState(pos).isAir()),"Public reference preview changes neither blocks nor mechanical ownership");
@@ -272,12 +273,88 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void shutterUndoRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var previous=JsonParser.parseString(read("restored-layout-server")).getAsJsonObject();check(!manager.epoch.toString().equals(previous.get("serverEpoch").getAsString()),"Mechanical undo recovery uses an actual fifth server epoch");var boot=new JsonObject();boot.addProperty("serverId",manager.serverId);boot.addProperty("serverEpoch",manager.epoch.toString());boot.addProperty("worldId",manager.worldId);write("shutter-undo-server",boot.toString());});
         String id=read("shutter-construction-project");send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.runCommand("tp Alice 601 103 6 180 25");
         server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(600,100,0)));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.undoRequested && project.shutterOwned && project.delegation==null && project.journal.size()==3 && project.level().getBlockState(new BlockPos(601,100,0)).is(Blocks.STICKY_PISTON),"Actual saved-server restart retains mechanical undo target and geometry, never execution authority");});
         MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Latest assistant operation undone");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && !project.undoRequested && project.shutterOwned && project.delegation==null && project.level().getBlockState(new BlockPos(600,100,0)).is(Blocks.STONE),"Fresh undo takes denial control, removes only its operation and preserves the player support");for(var pos:List.of(new BlockPos(601,100,0),new BlockPos(602,100,0),new BlockPos(600,101,0),new BlockPos(603,100,0)))check(project.level().getBlockState(pos).isAir(),"Only assistant mechanism cells are removed, without moving payload into the aperture");});
         MESSAGES.clear();send(context,"engineer release");expectChat(context,"Mechanical control released to players");write("shutter-undo.done","passed");
         write("shutter-undo-recovery.done","passed");
+    }
+    private static void shutterRepairSharing(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runOnServer(s->{for(String name:List.of("Alice","Bob")){var actor=player(s,name);actor.getAbilities().flying=true;actor.onUpdateAbilities();}});
+        server.runCommand("tp Alice 801 103 6 180 25");server.runCommand("tp Bob 801 103 6 180 25");
+        context.waitTicks(25);send(context,"engineer project new");send(context,"engineer select1 800 100 0");send(context,"engineer select2 803 101 0");send(context,"engineer reference sticky-shutter");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(800,100,0)));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());for(var block:design.worldBlocks())project.level().setBlock(block.pos(),block.state(),2);
+            project.level().setBlock(design.piston(),project.level().getBlockState(design.piston()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING,design.facing().getOpposite()),2);
+            project.level().setBlock(design.input(),project.level().getBlockState(design.input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,design.facing().getOpposite()),2);project.level().setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);
+            project.nextPlacement=Long.MAX_VALUE;
+        });
+        context.waitTicks(25);send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        write("shutter-repair-shared-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"shutter-repair-bob-started");
+        var stale=server.computeOnServer(s->{var project=session(s,"Alice");check(project.controller.equals(player(s,"Bob").getUUID()) && project.state.equals("EXECUTING") && project.journal.isEmpty(),"Real shared editor delegates repair before any placement");project.manager.validate(project);var fence=project.delegation;write("shutter-repair-shared-operation",project.activeOperation);
+            project.nextPlacement=0;project.tick();check(project.journal.size()==1,"Execute exactly one production shared repair write before revocation");project.nextPlacement=Long.MAX_VALUE;return fence;});
+        context.waitTicks(25);send(context,"engineer project permission Bob build false");server.waitFor(s->!session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        server.runOnServer(s->{var project=session(s,"Alice");project.nextPlacement=0;project.tick();boolean fenced=false;try{project.manager.reservations.validate(project.manager.scope(project),stale,player(s,"Bob").getUUID(),project.revision(),project.access.revision(),s.getTickCount());}catch(IllegalStateException expected){fenced=true;}
+            check(fenced && project.state.equals("PAUSED") && project.delegation==null && project.journal.size()==1 && project.access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.VIEW),"BUILD revocation retires the old fence and prevents another repair write while VIEW remains");
+        });write("shutter-repair-bob-revoked","ready");awaitFile(context,"shutter-repair-bob-denied.done");
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==1 && session(s,"Alice").delegation==null,"Denied repair/resume requests never renew execution authority"));
+        context.waitTicks(25);send(context,"engineer project permission Bob build true");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
+        server.runOnServer(s->check(session(s,"Alice").delegation==null && session(s,"Alice").state.equals("PAUSED"),"Restoring a grant does not silently resume execution"));write("shutter-repair-bob-regranted","ready");
+        awaitFile(context,"shutter-repair-bob-resumed.done");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==3 && session(s,"Alice").activeOperation.equals(read("shutter-repair-shared-operation")) && session(s,"Alice").delegation==null && !session(s,"Alice").verified.startsWith("passed:"),"Fresh shared-editor resume finishes only the reviewed corrections, without a functional pass"));
+        context.waitTicks(25);runShutterTrial(context,server,false,"repair-shared");assertPersisted(server);write("shutter-repair-revocation.done","passed");write("shutter-repair-bob-finished","ready");
+    }
+    private static void shutterRepairPrepare(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection){
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
+        server.runCommand("tp Alice 701 103 6 180 25");connection.waitForClientboundPackets();
+        server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(703,100,0)));
+        context.waitTicks(25);send(context,"engineer project new");send(context,"engineer select1 700 100 0");send(context,"engineer select2 703 101 0");send(context,"engineer reference sticky-shutter");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(700,100,0)) && ShutterDesign.describes(session(s,"Alice").blueprint.source()));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());
+            for(var block:design.worldBlocks())project.level().setBlock(block.pos(),block.state(),2);
+            project.level().setBlock(design.piston(),project.level().getBlockState(design.piston()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING,design.facing().getOpposite()),2);
+            project.level().setBlock(design.input(),project.level().getBlockState(design.input()).setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,design.facing().getOpposite()),2);
+            project.level().setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);write("shutter-repair-project",project.projectId.toString());
+            check(project.manager.epoch.toString().equals(JsonParser.parseString(read("restored-layout-server")).getAsJsonObject().get("serverEpoch").getAsString()),"Repair preparation uses the actual fourth boot");
+        });
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.diagnoses.get(player(s,"Alice").getUUID()).targets().size()==3 && project.journal.isEmpty() && project.delegation==null && !project.shutterOwned,"Exact repair preview grants no construction or piston control");project.level().setBlockAndUpdate(new BlockPos(703,100,0),Blocks.GLASS.defaultBlockState());});
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer repair");expectChat(context,"World changed at");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.shutterOwned && project.level().getBlockState(new BlockPos(703,100,0)).is(Blocks.GLASS),"Stale repair preserves the intervening aperture edit and grants no authority");project.level().setBlockAndUpdate(new BlockPos(703,100,0),Blocks.AIR.defaultBlockState());});
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");
+        connection.waitForClientboundPackets();context.waitTicks(5);context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-shutter-repair-preview");write("shutter-repair-preview.done","passed");
+        server.runOnServer(s->{commandAs(s,"Alice","engineer repair");var project=session(s,"Alice");check(project.state.equals("EXECUTING") && project.shutterOwned,"Explicit repair takes durable idle control before writing");project.tick();check(project.journal.size()==1,"Interrupt after exactly one production repair placement");
+            player(s,"Alice").setGameMode(GameType.SURVIVAL);project.tick();check(project.state.equals("PAUSED") && project.delegation==null && project.journal.size()==1,"Creative-authority withdrawal pauses repair before its next write");
+            player(s,"Alice").setGameMode(GameType.CREATIVE);player(s,"Alice").getAbilities().flying=true;player(s,"Alice").onUpdateAbilities();write("shutter-repair-operation",project.activeOperation);check(project.shutterRepairs.get(project.activeOperation).originals().size()==3,"All exact originals persist through interruption");
+        });write("shutter-repair-authority.done","passed");write("shutter-repair-prepared.done","passed");
+    }
+    private static void shutterRepairRecover(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
+        server.runCommand("tp Alice 701 103 6 180 25");connection.waitForClientboundPackets();String id=read("shutter-repair-project");
+        send(context,"engineer project use "+id);server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.shutterOwned && project.journal.size()==1 && project.activeOperation.equals(read("shutter-repair-operation")),"Actual fifth boot retains repair facts and no execution lease");project.level().setBlockAndUpdate(new BlockPos(703,100,0),Blocks.GLASS.defaultBlockState());});
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"dependency changed");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==1 && project.delegation==null && project.level().getBlockState(new BlockPos(703,100,0)).is(Blocks.GLASS),"Repair resume preserves a new conflict after restart");project.level().setBlockAndUpdate(new BlockPos(703,100,0),Blocks.AIR.defaultBlockState());});
+        context.waitTicks(25);send(context,"engineer resume");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==3 && project.delegation==null && !project.verified.startsWith("passed:") && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).equals(block.state())),"Fresh repair completes the same three corrections and does not invent a functional pass");});
+        context.waitTicks(25);runShutterTrial(context,server,false,"repair");assertPersisted(server);write("shutter-repair-recovered.done","passed");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.beginUndo(),"Reviewed repair has a real undo operation");check(!project.applyUndoEntriesReserved(1),"Interrupt the actual inverse path after one durable entry");project.manager.release(project);
+            var design=ShutterDesign.read(project.blueprint.source());check(project.undoRequested && project.journal.size()==2 && project.delegation==null && project.shutterRepairs.get(project.activeOperation).originals().get(design.input()).equals(project.level().getBlockState(design.input())),"Popped inverse entry retains its exact original through the operation record");
+        });write("shutter-repair-undo-prepared.done","passed");
+    }
+    private static void shutterRepairUndoRecover(ClientGameTestContext context,TestDedicatedServerContext server,TestDedicatedServerConnection connection) throws Exception {
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var previous=JsonParser.parseString(read("shutter-undo-server")).getAsJsonObject();check(!manager.epoch.toString().equals(previous.get("serverEpoch").getAsString()),"Partial repair undo uses an actual sixth boot");var boot=new JsonObject();boot.addProperty("serverId",manager.serverId);boot.addProperty("serverEpoch",manager.epoch.toString());boot.addProperty("worldId",manager.worldId);write("shutter-repair-server",boot.toString());});
+        server.runCommand("tp Alice 701 103 6 180 25");connection.waitForClientboundPackets();String id=read("shutter-repair-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.undoRequested && project.journal.size()==2 && project.delegation==null && project.shutterOwned && project.shutterRepairs.get(project.activeOperation).originals().size()==3,"Restart preserves partial inverse facts without restoring execution authority");});
+        context.waitTicks(25);MESSAGES.clear();send(context,"engineer undo");expectChat(context,"Latest assistant operation undone");
+        server.runOnServer(s->{var project=session(s,"Alice");var design=ShutterDesign.read(project.blueprint.source());check(project.journal.isEmpty() && project.shutterRepairs.isEmpty() && !project.undoRequested && project.delegation==null && project.shutterOwned,"Fresh undo retires the finished operation facts while keeping idle denial");
+            check(project.level().getBlockState(design.piston()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING)==design.facing().getOpposite() && project.level().getBlockState(design.input()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==design.facing().getOpposite() && project.level().getBlockState(design.payload()).isAir() && project.level().getBlockState(design.aperture()).isAir() && project.level().getBlockState(design.blueprint().anchor()).is(Blocks.STONE),"Undo restores exact original orientations/missing payload and preserves the player's support");
+        });assertPersisted(server);write("shutter-repair-undo-recovered.done","passed");
     }
     private static final BlockPos ANCHOR = new BlockPos(0, 100, 0);
     private static final BlockPos LEVER = ANCHOR.above();
@@ -560,7 +637,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE)shutterSharingFlow(context,server,projectId);
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -610,10 +687,16 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
                 shutterConstructionFlow(context,server,connection);
+                shutterRepairPrepare(context,server,connection);
             }
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()){
                 shutterUndoRecoveryFlow(context,server);
+                shutterRepairRecover(context,server,connection);
+            }
+            try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
+                TestDedicatedServerConnection connection=server.connect()){
+                shutterRepairUndoRecover(context,server,connection);
             }
         }
     }
@@ -965,6 +1048,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             for(String action:List.of("test","component test root","component build root","release","undo")){MESSAGES.clear();send(context,"engineer "+action);expectChat(context,"permission");context.waitTicks(25);}
             write("shutter-bob-view.done","passed");awaitFile(context,"shutter-bob-revoked");await(context,()->view(context)==null,"Revocation clears mechanical preview metadata");
             MESSAGES.clear();send(context,"engineer project use "+shutter);expectChat(context,"unavailable or not shared");send(context,"engineer component info root");expectChat(context,"Engineer:");check(MESSAGES.stream().noneMatch(message->message.contains("mechanical output")),"Revoked viewer cannot retrieve shutter component facts");write("shutter-bob-denied.done","passed");
+            awaitFile(context,"shutter-repair-shared-project");String repair=read("shutter-repair-shared-project");context.waitTicks(25);MESSAGES.clear();send(context,"engineer project use "+repair);
+            await(context,()->view(context)!=null && view(context).projectId().equals(repair),"Shared editor receives the repair project's approved intention");
+            context.waitTicks(25);MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");context.waitTicks(25);MESSAGES.clear();send(context,"engineer repair");expectChat(context,"Applying reviewed shutter corrections");write("shutter-repair-bob-started","ready");
+            awaitFile(context,"shutter-repair-bob-revoked");context.waitTicks(25);MESSAGES.clear();send(context,"engineer repair");expectChat(context,"does not grant you build permission");
+            context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"does not grant you build permission");write("shutter-repair-bob-denied.done","passed");
+            awaitFile(context,"shutter-repair-bob-regranted");context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Reconciled; resuming the same bounded assignment");write("shutter-repair-bob-resumed.done","passed");awaitFile(context,"shutter-repair-bob-finished");
         }
         awaitFile(context, "finish");
         disconnect(context);

@@ -40,6 +40,7 @@ final class EngineeringSession implements BuildExecutor {
     final Map<BlockPos, BlockState> dependencies = new LinkedHashMap<>();
     final Set<BlockPos> repairTargets = new LinkedHashSet<>();
     final Map<UUID, Diagnosis.Proposal> diagnoses = new LinkedHashMap<>();
+    final Map<String,ShutterRepairBasis> shutterRepairs = new LinkedHashMap<>();
     String activeOperation = "legacy";
     String activeComponent = "root";
     final ComponentAssignments assignments = new ComponentAssignments();
@@ -143,15 +144,16 @@ final class EngineeringSession implements BuildExecutor {
     void claim(ProjectAccess.Permission action, boolean test) {
         claim(action,test,MechanicalPurpose.ORDINARY);
     }
-    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,UNDO }
+    private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,REPAIR,UNDO }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
         boolean handoff=purpose==MechanicalPurpose.HANDOFF && shutterOwned && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !pendingPlacement && !undoRequested;
         boolean construction=purpose==MechanicalPurpose.CONSTRUCTION && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !undoRequested;
+        boolean repair=purpose==MechanicalPurpose.REPAIR && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !pendingPlacement && !undoRequested;
         boolean mechanicalUndo=purpose==MechanicalPurpose.UNDO && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running();
-        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && (action==ProjectAccess.Permission.BUILD && (recovery || trial || handoff || construction) || action==ProjectAccess.Permission.UNDO && mechanicalUndo)))throw new IllegalStateException("Reconcile mechanical work before requesting this operation");
+        if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && !(test && (action==ProjectAccess.Permission.BUILD && (recovery || trial || handoff || construction || repair) || action==ProjectAccess.Permission.UNDO && mechanicalUndo)))throw new IllegalStateException("Reconcile mechanical work before requesting this operation");
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; world actions are blocked until it finishes");
         requireCreative();
         var task=assignments.task(blueprint,activeComponent);
@@ -673,8 +675,8 @@ final class EngineeringSession implements BuildExecutor {
         ComponentTree.validate(blueprint);validateOperationIntention();
         reconcile(); var refreshedDependencies=dependencies.isEmpty()?captureDependencies():dependencies;
         if(ShutterDesign.describes(blueprint.source())){
-            claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.CONSTRUCTION);
-            try{takeShutterConstructionOwnership();}catch(RuntimeException failed){manager.release(this);throw failed;}
+            boolean repair=operationKind.equals("REPAIR");claim(ProjectAccess.Permission.BUILD,true,repair?MechanicalPurpose.REPAIR:MechanicalPurpose.CONSTRUCTION);
+            try{if(repair){validateShutterRepairFrame(false);persistShutterOwnership(ShutterDesign.read(blueprint.source()));validateShutterRepairFrame(true);}else takeShutterConstructionOwnership();}catch(RuntimeException failed){manager.release(this);throw failed;}
         }else claim(ProjectAccess.Permission.BUILD,operationKind.equals("REPAIR"));
         dependencies.putAll(refreshedDependencies);state="EXECUTING"; detail="Reconciled; resuming the same bounded assignment"; save(); checkpoint(); tell(detail);
     }
@@ -730,7 +732,8 @@ final class EngineeringSession implements BuildExecutor {
                 if(ShutterDesign.describes(blueprint.source())){
                     if(!shutterOwned)throw new IllegalStateException("Mechanical construction lost its persisted control ownership");
                     var design=ShutterDesign.read(blueprint.source());PistonMotionGate.guard(level(),design);
-                    ShutterEnvironment.validateConstructionReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
+                    if(operationKind.equals("REPAIR"))validateShutterRepairFrame(true);
+                    else ShutterEnvironment.validateConstructionReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
                 }
                 reconcile();
                 if (server.getTickCount() < nextPlacement) return;
@@ -743,7 +746,7 @@ final class EngineeringSession implements BuildExecutor {
                     BlockState after;
                     if(operationKind.equals("REPAIR")) {
                         if(!actual.isAir() && !actual.is(b.state().getBlock()))throw new IllegalStateException("Repair target changed to an unsupported block at "+b.pos().toShortString());
-                        after=Diagnosis.corrected(b.state(),actual);
+                        after=ShutterDesign.describes(blueprint.source())?ShutterRepair.corrected(b.state(),actual):Diagnosis.corrected(b.state(),actual);
                         if(!after.canSurvive(level(),b.pos()))throw new IllegalStateException("Corrected component cannot survive at "+b.pos().toShortString());
                     } else {
                         if (!actual.isAir() || !b.state().canSurvive(level(), b.pos())) throw new IllegalStateException("Placement blocked at " + b.pos().toShortString());
@@ -751,6 +754,7 @@ final class EngineeringSession implements BuildExecutor {
                     }
                     journal.add(new Change(b.pos(),actual,after,activeOperation,activeComponent)); pendingPlacement=true;save();
                     validateMutation(ProjectAccess.Permission.BUILD,b.pos());
+                    if(operationKind.equals("REPAIR") && ShutterDesign.describes(blueprint.source()))validateShutterRepairFrame(true);
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save(); return;
@@ -815,7 +819,8 @@ final class EngineeringSession implements BuildExecutor {
         if(blueprint==null)throw new IllegalStateException("Choose a canonical mechanism before repair");
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);
-        MechanismCatalog.contract(selected);
+        boolean mechanical=ShutterDesign.describes(selected.source());
+        if(!mechanical)MechanismCatalog.contract(selected);
         Diagnosis.Proposal proposal=diagnoses.get(actor());
         if(proposal==null || !proposal.actor().equals(actor()) || proposal.expiresAtTick()<=server.getTickCount()
                 || !proposal.epoch().equals(manager.epoch) || !proposal.projectId().equals(projectId)
@@ -825,6 +830,7 @@ final class EngineeringSession implements BuildExecutor {
         }
         if(!proposal.repairable() || proposal.targets().isEmpty())throw new IllegalStateException("Repair blocked");
         proposal.validate(this);
+        if(mechanical){beginShutterRepair(id,proposal);return;}
 
         var planned=new LinkedHashMap<BlockPos,Blueprint.PlannedBlock>();
         for(var block:selected.blocks())planned.put(block.pos(),block);
@@ -872,6 +878,43 @@ final class EngineeringSession implements BuildExecutor {
         activeOperation=nextOperation;operationKind="REPAIR";originDiagnosis=proposal.snapshotId();
         state="EXECUTING";detail="Applying the explicitly approved, bounded diagnosis corrections";verified="untested";
         save();checkpoint();tell(detail);
+    }
+    private void beginShutterRepair(String id,Diagnosis.Proposal proposal){
+        if(!id.equals("root") || shutterMotion!=null || hasPendingTest() || shutterTrial.running() || shutterRecovery.running())throw new IllegalStateException("Reconcile mechanical work before static repair");
+        var design=ShutterDesign.read(blueprint.source());var report=ShutterDiagnosis.inspect(level(),design);
+        var targets=ShutterRepair.corrections(design,report.observed(),report.blockEntities());
+        if(!targets.equals(proposal.targets()))throw new IllegalStateException("Mechanical correction changed; diagnose again");
+        PistonMotionGate.requireQuiescent(level(),design);proposal.validate(this);ensureJournalCapacity(targets.size());
+        String operation=UUID.randomUUID().toString();var basis=ShutterRepairBasis.capture(operation,design,targets);
+        var task=assignments.task(blueprint,id);var previousActor=task.actor;String previousExecutor=task.executor,previousStatus=task.status;long previousGeneration=task.generation;
+        String previousComponent=activeComponent;pruneOperationScopes();operationScopes.capture(operation,id,blueprint,false);activeComponent=id;
+        try{task.assign(actor(),"assistant");claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.REPAIR);}
+        catch(RuntimeException failed){task.actor=previousActor;task.executor=previousExecutor;task.status=previousStatus;task.generation=previousGeneration;activeComponent=previousComponent;pruneOperationScopes();throw failed;}
+        baseline.clear();dependencies.clear();repairTargets.clear();
+        for(var block:design.worldBlocks())baseline.put(block.pos(),report.observed().get(block.pos()));
+        report.observed().forEach((pos,state)->{if(!baseline.containsKey(pos))dependencies.put(pos,state);});
+        targets.forEach(target->repairTargets.add(target.pos()));shutterRepairs.put(operation,basis);
+        activeOperation=operation;operationKind="REPAIR";originDiagnosis=proposal.snapshotId();verified="untested";state="PAUSED";clearDiagnoses();
+        detail="Preparing explicitly approved static shutter corrections";
+        try{
+            validateShutterRepairFrame(false);persistShutterOwnership(design);validateShutterRepairFrame(true);
+            state="EXECUTING";detail="Applying reviewed shutter corrections; the mechanism stays off and retracted";save();checkpoint();tell(detail);
+        }catch(RuntimeException failed){manager.release(this);state="PAUSED";detail="Mechanical repair preparation paused: "+failed.getMessage();save();throw failed;}
+    }
+    private void validateShutterRepairFrame(boolean guarded){
+        validateMutation();requireCreative();var design=ShutterDesign.read(blueprint.source());var basis=shutterRepairs.get(activeOperation);
+        if(basis==null)throw new IllegalStateException("Mechanical repair lost its exact original-state record");
+        manager.reservations.validateFootprint(manager.scope(this),delegation,controller,revision(),access.revision(),design.writeCells(),design.readCells(),server.getTickCount());
+        for(var pos:design.writeCells())validateTarget(pos);
+        var report=ShutterDiagnosis.inspect(level(),design);basis.validateObservation(design,report.observed(),report.blockEntities());
+        for(var entry:expectedNow().entrySet()){
+            var actual=report.observed().get(entry.getKey());
+            var pending=journal.isEmpty()?null:journal.getLast();
+            if(!entry.getValue().equals(actual) && !(pendingPlacement && pending!=null && pending.operation().equals(activeOperation) && pending.pos().equals(entry.getKey()) && pending.before().equals(actual)))throw new IllegalStateException("Mechanical repair progress changed at "+entry.getKey().toShortString());
+        }
+        for(var entry:dependencies.entrySet())if(!entry.getValue().equals(report.observed().get(entry.getKey())))throw new IllegalStateException("Mechanical repair dependency changed at "+entry.getKey().toShortString());
+        if(guarded){if(!shutterOwned)throw new IllegalStateException("Mechanical repair lost persisted control");PistonMotionGate.requireIdleQuiescent(level(),design);}
+        else PistonMotionGate.requireQuiescent(level(),design);
     }
     boolean hasBuiltStructure() {
         if(!journal.isEmpty()) {
@@ -1117,12 +1160,15 @@ final class EngineeringSession implements BuildExecutor {
         final String component,state,detail,verified,operation,kind,undo;
         final UUID controller,origin;final boolean placement,requested;
         final Map<BlockPos,BlockState> baseline,dependencies;final Set<BlockPos> targets;
+        final JsonObject scopes;
+        final Map<String,ShutterRepairBasis> repairs;
         final JsonObject trial=new JsonObject();
         UndoContext(EngineeringSession s) {
             component=s.activeComponent;state=s.state;detail=s.detail;verified=s.verified;controller=s.controller;
             operation=s.activeOperation;kind=s.operationKind;undo=s.undoOperation;origin=s.originDiagnosis;
             placement=s.pendingPlacement;requested=s.undoRequested;
             baseline=new LinkedHashMap<>(s.baseline);dependencies=new LinkedHashMap<>(s.dependencies);targets=new LinkedHashSet<>(s.repairTargets);
+            scopes=s.operationScopes.json();repairs=new LinkedHashMap<>(s.shutterRepairs);
             s.trial.write(trial);
         }
         void restore(EngineeringSession s) {
@@ -1131,6 +1177,7 @@ final class EngineeringSession implements BuildExecutor {
             s.pendingPlacement=placement;s.undoRequested=requested;
             s.baseline.clear();s.baseline.putAll(baseline);s.dependencies.clear();s.dependencies.putAll(dependencies);
             s.repairTargets.clear();s.repairTargets.addAll(targets);s.trial.load(trial);
+            s.operationScopes=OperationScopes.read(scopes,s.worldId,s.dimension,s.projectId);s.shutterRepairs.clear();s.shutterRepairs.putAll(repairs);
             s.delegationComponent=null;s.delegationBasis=null;s.delegationGeneration=-1;s.isolationLease=false;
         }
     }
@@ -1154,6 +1201,7 @@ final class EngineeringSession implements BuildExecutor {
             assignments.task(blueprint,activeComponent);
             activeOperation=selectedOperation;
             boolean mechanical=ShutterDesign.describes(blueprint.source());
+            if(mechanical){baseline.clear();dependencies.clear();repairTargets.clear();originDiagnosis=null;operationKind="BUILD";}
             if(mechanical){
                 claim(ProjectAccess.Permission.UNDO,true,MechanicalPurpose.UNDO);validateShutterUndo(false);
                 persistShutterOwnership(ShutterDesign.read(blueprint.source()));validateShutterUndo(true);
@@ -1178,7 +1226,9 @@ final class EngineeringSession implements BuildExecutor {
         validateMutation(ProjectAccess.Permission.UNDO);requireCreative();var design=ShutterDesign.read(blueprint.source());
         manager.reservations.validateFootprint(manager.scope(this),delegation,controller,revision(),access.revision(),reservationWrites(ProjectAccess.Permission.UNDO,true),design.readCells(),server.getTickCount());
         for(var pos:design.writeCells())validateTarget(pos);
-        ShutterEnvironment.validateConstruction(level(),design,design.readCells());
+        var repair=shutterRepairs.get(activeOperation);
+        if(repair!=null){var report=ShutterDiagnosis.inspect(level(),design);repair.validateObservation(design,report.observed(),report.blockEntities());}
+        else ShutterEnvironment.validateConstruction(level(),design,design.readCells());
         if(guarded){if(!shutterOwned)throw new IllegalStateException("Mechanical undo lost persisted control ownership");PistonMotionGate.requireIdleQuiescent(level(),design);}
         else PistonMotionGate.requireQuiescent(level(),design);
     }
@@ -1203,6 +1253,11 @@ final class EngineeringSession implements BuildExecutor {
     }
     /** Production WAL phase: completion is separate so a last-entry interruption stays recoverable. */
     boolean applyUndoEntriesReserved() {
+        return applyUndoEntriesReserved(Integer.MAX_VALUE);
+    }
+    /** Bounded production steps also allow a native acceptance interruption after a durable entry. */
+    boolean applyUndoEntriesReserved(int maxEntries) {
+        if(maxEntries<1)throw new IllegalArgumentException("Undo needs a positive step budget");
         if (hasPendingTest()) restoreTest();
         if(hasPendingTest())throw new IllegalStateException("Reconcile the interrupted test input before undo; the circuit and recovery checkpoint were preserved");
         String targetOperation=undoRequested?undoOperation:(journal.isEmpty()?null:journal.getLast().operation());
@@ -1212,7 +1267,8 @@ final class EngineeringSession implements BuildExecutor {
         // Repeat preflight after the durable target intent, then validate every actual mutation.
         Set<BlockPos> assistantPositions=journalPositions(batch),plannedPositions=plannedPositions();
         preflightUndo(batch,assistantPositions,plannedPositions);
-        while (!journal.isEmpty() && journal.getLast().operation().equals(targetOperation)) {
+        int remaining=maxEntries;
+        while (!journal.isEmpty() && journal.getLast().operation().equals(targetOperation) && remaining-->0) {
             if(ShutterDesign.describes(blueprint.source()))validateShutterUndo(true);
             Change c = journal.getLast();
             if(!level().hasChunkAt(c.pos()))throw new IllegalStateException("Undo target chunk unloaded; journal retained");
@@ -1222,6 +1278,7 @@ final class EngineeringSession implements BuildExecutor {
             validateUndoNeighbors(c,assistantPositions,plannedPositions);
             if(!c.before().isAir() && (c.before().hasBlockEntity() || !c.before().canSurvive(level(),c.pos())))throw new IllegalStateException("Undo cannot safely restore the recorded block at "+c.pos().toShortString());
             validateMutation(ProjectAccess.Permission.UNDO,c.pos());
+            if(ShutterDesign.describes(blueprint.source()))validateShutterUndo(true);
             if(!undoAfterMatches(c,level().getBlockState(c.pos())))throw new IllegalStateException("World changed immediately before undo at "+c.pos().toShortString());
             BlockState restore=restoreDynamic(c.before(),actual);
             if(!level().setBlockAndUpdate(c.pos(),restore))throw new IllegalStateException("Minecraft rejected undo; journal retained for recovery");
@@ -1230,6 +1287,7 @@ final class EngineeringSession implements BuildExecutor {
                 throw new IllegalStateException("Minecraft rejected undo; journal retained for recovery");
             journal.removeLast();pendingPlacement=false;save();
         }
+        if(!journal.isEmpty() && journal.getLast().operation().equals(targetOperation))return false;
         if(!journal.isEmpty() && journal.stream().anyMatch(c->c.operation().equals(targetOperation)))throw new IllegalStateException("Undo target is not the latest contiguous operation; journal retained");
         return true;
     }
@@ -1332,12 +1390,30 @@ final class EngineeringSession implements BuildExecutor {
         if(!baseline.isEmpty() || pendingPlacement || undoRequested)ids.add(activeOperation);
         return ids;
     }
-    private void pruneOperationScopes(){operationScopes.retain(retainedOperationIds());}
+    private void pruneOperationScopes(){var retained=retainedOperationIds();operationScopes.retain(retained);shutterRepairs.keySet().retainAll(retained);}
     private void validateOperationScopes() {
         Set<String> required=retainedOperationIds();
         if(!required.equals(operationScopes.operationIds()))throw new IllegalStateException("Operation history does not match its retained journal/frame");
         if(!baseline.isEmpty() || pendingPlacement || undoRequested)operationScopes.validateComponent(activeOperation,activeComponent);
         for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
+        if(shutterRepairs.size()>4097)throw new IllegalStateException("Too many mechanical repair records");
+        for(var entry:shutterRepairs.entrySet()){
+            if(!operationScopes.contains(entry.getKey()) || !entry.getKey().equals(entry.getValue().operation()))throw new IllegalStateException("Mechanical repair record escaped its retained operation");
+            operationScopes.validateComponent(entry.getKey(),"root");entry.getValue().requireDesign(ShutterDesign.read(operationScopes.blueprint(entry.getKey()).source()));
+        }
+        var repairedPositions=new HashSet<String>();
+        for(Change change:journal){var repair=shutterRepairs.get(change.operation());
+            if(repair==null){if(!change.before().isAir() && ShutterDesign.describes(operationScopes.blueprint(change.operation()).source()))throw new IllegalStateException("Mechanical replacement journal lost its exact repair originals");continue;}
+            var source=operationScopes.blueprint(change.operation());var intended=source.blocks().stream().filter(block->block.pos().equals(change.pos())).findFirst().orElseThrow().state();
+            if(!change.component().equals("root") || !change.before().equals(repair.originals().get(change.pos())) || !change.after().equals(ShutterRepair.corrected(intended,change.before())) || !repairedPositions.add(change.operation()+"/"+change.pos().asLong()))throw new IllegalStateException("Mechanical repair journal differs from its exact originals");
+        }
+        if(operationKind.equals("REPAIR") && blueprint!=null && ShutterDesign.describes(blueprint.source())){
+            var repair=shutterRepairs.get(activeOperation);if(repair==null || originDiagnosis==null || !repair.originals().keySet().equals(repairTargets))throw new IllegalStateException("Mechanical repair lost its operation-bound originals");
+            repair.requireDesign(ShutterDesign.read(blueprint.source()));
+            var planned=new HashMap<BlockPos,BlockState>();for(var block:blueprint.blocks())planned.put(block.pos(),block.state());
+            if(!baseline.keySet().equals(planned.keySet()))throw new IllegalStateException("Mechanical repair baseline is incomplete");
+            for(var entry:planned.entrySet())if(!Objects.equals(baseline.get(entry.getKey()),repair.originals().getOrDefault(entry.getKey(),entry.getValue())))throw new IllegalStateException("Mechanical repair baseline differs from approved originals");
+        }
     }
     void save() {
         if(shutterMotion!=null){shutterMotion.requireScope(level(),acceptedMotionScope());shutterOwned=true;}
@@ -1352,6 +1428,7 @@ final class EngineeringSession implements BuildExecutor {
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
         json.addProperty("journalVersion",4);json.add("operationScopes",operationScopes.json());json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
+        var mechanicalRepairs=new JsonArray();shutterRepairs.values().forEach(repair->mechanicalRepairs.add(repair.json()));json.add("shutterRepairs",mechanicalRepairs);
         if(restoredLayout!=null)json.add("restoredLayout",restoredLayout.json());
         if(shutterMotion!=null)json.add("shutterMotion",shutterMotion.json());
         json.addProperty("shutterOwned",shutterOwned);
@@ -1438,6 +1515,14 @@ final class EngineeringSession implements BuildExecutor {
             if(journal.size()>4096 || baseline.size()>4096 || dependencies.size()>65536 || cursors.size()>128)throw new IllegalStateException("Checkpoint exceeds project limits");
             if(!journal.isEmpty() && (corner1==null || corner2==null))throw new IllegalStateException("Journal has no bounded workspace");
             if(journalVersion==4)operationScopes=OperationScopes.read(json.getAsJsonObject("operationScopes"),worldId,dimension,projectId);
+            if(json.has("shutterRepairs")){
+                var records=json.getAsJsonArray("shutterRepairs");if((journalVersion!=4 && !records.isEmpty()) || records.size()>4097)throw new IllegalStateException("Invalid mechanical repair history");
+                for(var value:records){var record=value.getAsJsonObject();String operation=record.getAsJsonObject("scope").get("operation").getAsString();
+                    if(!operationScopes.contains(operation))throw new IllegalStateException("Mechanical repair history has no retained operation");
+                    var repair=ShutterRepairBasis.read(record,operation,ShutterDesign.read(operationScopes.blueprint(operation).source()));
+                    if(shutterRepairs.putIfAbsent(operation,repair)!=null)throw new IllegalStateException("Duplicate mechanical repair history");
+                }
+            }
             if(operationKind.equals("STRUCTURAL")) {
                 if(journalVersion!=4 || !operationScopes.isTransition(activeOperation))throw new IllegalStateException("Structural operation has no paired source");
                 var transition=operationScopes.transition(activeOperation);
