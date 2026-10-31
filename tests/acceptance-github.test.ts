@@ -128,6 +128,7 @@ for (const scenario of [
   "structural-buffer-owner-confirmation-v1",
   "generated-boolean-owner-confirmation-v1",
   "project-discussion-owner-notes-v1",
+  "natural-engineering-owner-action-v1",
 ]) {
   test(`generated stage artifacts retain exact owner/run/source provenance: ${scenario}`, () => {
     const generated = {
@@ -154,9 +155,11 @@ for (const scenario of [
       ),
     );
 
-    for (const stage of scenario === "project-discussion-owner-notes-v1"
-      ? ["discussion"]
-      : ["behavior", "geometry"]) {
+    for (const stage of scenario === "natural-engineering-owner-action-v1"
+      ? ["natural"]
+      : scenario === "project-discussion-owner-notes-v1"
+        ? ["discussion"]
+        : ["behavior", "geometry"]) {
       const name = `mce-live-request-123-2-${stage}`,
         artifact = {
           id: 789,

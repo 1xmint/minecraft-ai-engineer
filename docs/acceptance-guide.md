@@ -312,3 +312,22 @@ This bounded proof does not establish full natural action interpretation, genera
 engineering, Mojang authentication or shared multi-user subscription eligibility.
 The single discussion call is consumed; no further SDK calls are needed for this
 slice. Private started/untrusted/response receipts remain on the operator PC.
+
+## Natural interpretation proof (development branch)
+
+The manual workflow's `natural` scenario uses the `natural` stage and exactly one
+fixed diagnosis question for the connected synthetic owner. The local responder
+accepts `--scenario natural --stage natural` with the explicit run, attempt,
+reviewed source SHA and model. Run it only after that source's deterministic checks
+are green. CI carries bounded canonical project data; credentials and SDK execution
+stay on the operator's PC. A started receipt remains consumed after failure or
+cancellation; publish an already saved valid response rather than invoking again.
+
+The accepted typed reply must choose diagnosis of the selected root component.
+Native acceptance checks actual diagnosis, no world-action consent or execution
+lease, denied editor model access, literal notes, a real companion replacement and
+saved-server recovery without restoring a diagnosis proposal. Inspect
+`live-natural-model.done`, `live-natural-recovery.done`, the SQLite proof and the
+`engineer-natural-diagnosis` screenshot. This proves one fresh interpretation and
+its native dispatch; synthetic routing tests are separate evidence. No fresh natural
+model receipt has been recorded yet, and older discussion receipts cannot be reused.

@@ -8,7 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /** Explicit literal shared-project notes; never world state, inventory capture or model authority. */
 final class ProjectKnowledgeClient {
-    private static final long DISCUSSION_TIMEOUT_NANOS="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE")) && "true".equals(System.getenv("MCE_DISCUSSION_ACCEPTANCE"))?900_000_000_000L:100_000_000_000L;
+    private static final long DISCUSSION_TIMEOUT_NANOS="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE")) && ("true".equals(System.getenv("MCE_DISCUSSION_ACCEPTANCE")) || "true".equals(System.getenv("MCE_NATURAL_ACCEPTANCE")))?900_000_000_000L:100_000_000_000L;
     private static final Set<String> KINDS=Set.of("goal","constraint","preference","decision");
     private final ProjectManager manager;
     private final Map<UUID,Frame> active=new HashMap<>();

@@ -362,6 +362,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static final BlockPos LAMP = REPEATER.east();
     private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
     private static final boolean LIVE_ACCEPTANCE="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE"));
+    private static final boolean LIVE_NATURAL=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_NATURAL_ACCEPTANCE"));
+    private static final String LIVE_NATURAL_MESSAGE="Why is this part not working? Inspect the selected entrance component and tell me what needs fixing. Do not change blocks.";
     private static final boolean LIVE_DISCUSSION=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_DISCUSSION_ACCEPTANCE"));
     private static final String LIVE_DISCUSSION_MESSAGE="Why did we choose a visible lamp for this entrance, and what size constraint should I preserve? Explain the recorded requirements without claiming that the circuit was built or tested.";
     private static final boolean LIVE_GENERATED=LIVE_ACCEPTANCE && "true".equals(System.getenv("MCE_GENERATED_ACCEPTANCE"));
@@ -418,9 +420,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("project", projectId);
                 send(context, "engineer select1 0 100 0");
                 send(context, "engineer select2 2 101 0");
-                send(context,(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION)?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
+                send(context,(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION && !LIVE_NATURAL)?"engineer plan Build a delayed lamp with a lever and a one-tick repeater. Teach me its construction.":"engineer reference");
                 server.waitFor(s -> session(s, "Alice").blueprint != null,LIVE_ACCEPTANCE?900_000:10_000);
-                if(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION){
+                if(LIVE_ACCEPTANCE && !LIVE_GENERATED && !LIVE_DISCUSSION && !LIVE_NATURAL){
                     server.runOnServer(s->{var accepted=session(s,"Alice").blueprint;
                         check(accepted.source().getAsJsonObject("provenance").get("template").getAsString().equals("signal-lamp")
                             && accepted.source().getAsJsonObject("parameters").get("delay").getAsInt()==1
@@ -633,7 +635,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             inventoryFlow(context,server);
             lessonFollowupFlow(context,server);
             undoContextFailureFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION)knowledgeFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL)knowledgeFlow(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
@@ -669,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             componentRecoveryFlow(context,server);
             undoContextRecoveryFlow(context,server);
             lessonRecoveryFlow(context,server);
-            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION)knowledgeRecoveryFlow(context,server);
+            if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL)knowledgeRecoveryFlow(context,server);
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthRecovery(context,server);
             if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationRecovery(context,server,connection);
             if(!LIVE_ACCEPTANCE)structuralRevisionRecovery(context,server);
@@ -1030,12 +1032,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         write("lesson-denied.done","passed");
-        if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION) {
+        if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
             send(context,"engineer project use "+read("knowledge-project"));
             send(context,"engineer notes");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();send(context,"engineer remember decision An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
+            if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
             write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-revoked");
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Engineer:");
@@ -1824,25 +1827,31 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer remember goal Keep the entrance within six blocks.");expectChat(context,"knowledge revision 1");
         MESSAGES.clear();send(context,"engineer remember decision Use a visible lamp for the output.");expectChat(context,"knowledge revision 2");
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Owner-authored requirements");expectChat(context,"Use a visible lamp for the output.");
-        MESSAGES.clear();send(context,"engineer discuss "+(LIVE_DISCUSSION?LIVE_DISCUSSION_MESSAGE:"CI explain entrance decision."));expectChat(context,"AI explanation | design revision",LIVE_DISCUSSION?900_000:20_000);
-        if(!LIVE_DISCUSSION)expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
-        if(LIVE_DISCUSSION){write("live-discussion-model.done","passed");context.takeScreenshot("engineer-grounded-discussion");}
-        else {
-            MESSAGES.clear();send(context,"engineer discuss CI cancelled entrance discussion.");awaitFile(context,"discussion-dispatched");
-            send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
-            check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
+        if(LIVE_NATURAL){
+            MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"Repair ",900_000);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.diagnoses.containsKey(player(s,"Alice").getUUID()),"Fresh natural interpretation must dispatch a native diagnosis for the selected component");check(project.delegation==null && !project.pendingPlacement && !project.undoRequested && project.testTick<0,"Natural diagnosis cannot delegate construction or a functional test");assertKnowledgeHasNoWorldAuthority(project);});
+            check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ")),"A read-only diagnosis never emits world-action consent");write("live-natural-model.done","passed");context.takeScreenshot("engineer-natural-diagnosis");
+        } else {
+            MESSAGES.clear();send(context,"engineer discuss "+(LIVE_DISCUSSION?LIVE_DISCUSSION_MESSAGE:"CI explain entrance decision."));expectChat(context,"AI explanation | design revision",LIVE_DISCUSSION?900_000:20_000);
+            if(!LIVE_DISCUSSION)expectChat(context,"Owner-authored decision: Use a visible lamp for the output.");expectChat(context,"Project sources:");
+            if(LIVE_DISCUSSION){write("live-discussion-model.done","passed");context.takeScreenshot("engineer-grounded-discussion");}
+            else {
+                MESSAGES.clear();send(context,"engineer discuss CI cancelled entrance discussion.");awaitFile(context,"discussion-dispatched");
+                send(context,"engineer stop");awaitFile(context,"discussion-cancelled.done");context.waitTicks(10);
+                check(MESSAGES.stream().noneMatch(message->message.contains("CI obsolete discussion reply")),"Stop discards even a provider's deliberately late answer");
+            }
+            if(!LIVE_DISCUSSION && !LIVE_NATURAL)naturalRequestFlow(context,server);
         }
-        if(!LIVE_DISCUSSION)naturalRequestFlow(context,server);
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
         server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
-        if(LIVE_DISCUSSION){
+        if(LIVE_DISCUSSION || LIVE_NATURAL){
             write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
             var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Discussion notes survive a real companion process replacement");
             MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Use a visible lamp for the output.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
-        if(!LIVE_DISCUSSION){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);}
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);}
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static String actionNonce(){
@@ -1966,7 +1975,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
         MESSAGES.clear();send(context,"engineer notes");expectChat(context,"Shared project notes, revision 2");expectChat(context,"Keep the entrance within six blocks.");expectChat(context,"Use a visible lamp for the output.");
         MESSAGES.clear();send(context,"engineer remember constraint Preserve the entrance clearance.");expectChat(context,"knowledge revision 3");
-        if(!LIVE_DISCUSSION){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
+        else if(LIVE_NATURAL){server.runOnServer(s->check(session(s,"Alice").diagnoses.isEmpty() && session(s,"Alice").delegation==null,"Restart does not restore diagnosis proposals or execution authority"));write("live-natural-recovery.done","passed");}
         else write("live-discussion-recovery.done","passed");
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }

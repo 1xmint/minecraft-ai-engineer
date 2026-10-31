@@ -5,7 +5,7 @@ on:
       scenario:
         description: Synthetic game flow
         type: choice
-        options: [catalog, generated, structural, boolean, discussion]
+        options: [catalog, generated, structural, boolean, discussion, natural]
         default: catalog
 permissions:
   contents: read
@@ -19,10 +19,11 @@ jobs:
       LIBGL_ALWAYS_SOFTWARE: "1"
       MCE_LIVE_ACCEPTANCE: "true"
       MCE_DISCUSSION_ACCEPTANCE: ${{ inputs.scenario == 'discussion' && 'true' || 'false' }}
+      MCE_NATURAL_ACCEPTANCE: ${{ inputs.scenario == 'natural' && 'true' || 'false' }}
       MCE_STRUCTURAL_ACCEPTANCE: ${{ inputs.scenario == 'structural' && 'true' || 'false' }}
       MCE_BOOLEAN_ACCEPTANCE: ${{ inputs.scenario == 'boolean' && 'true' || 'false' }}
       MCE_GENERATED_ACCEPTANCE: ${{ (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'true' || 'false' }}
-      MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'discussion' && 'discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'behavior' || 'catalog' }}
+      MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'natural' && 'natural' || inputs.scenario == 'discussion' && 'discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'behavior' || 'catalog' }}
       MCE_ACCEPTANCE_EXCHANGE_DIR: ${{ github.workspace }}/mod/build/live-exchange
       MCE_CODEX_OPERATOR_UUID: 10920508-d5d8-3eed-93d2-92f193afe7d7
     steps:
@@ -49,8 +50,8 @@ jobs:
       - run: node scripts/ci/live-transport.mjs wait-request
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}${{ inputs.scenario == 'discussion' && '-discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && '-behavior' || '' }}
-          path: ${{ inputs.scenario == 'discussion' && 'mod/build/live-exchange/discussion/request.json' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'mod/build/live-exchange/behavior/request.json' || 'mod/build/live-exchange/request.json' }}
+          name: mce-live-request-${{ github.run_id }}-${{ github.run_attempt }}${{ inputs.scenario == 'natural' && '-natural' || inputs.scenario == 'discussion' && '-discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && '-behavior' || '' }}
+          path: ${{ inputs.scenario == 'natural' && 'mod/build/live-exchange/natural/request.json' || inputs.scenario == 'discussion' && 'mod/build/live-exchange/discussion/request.json' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'mod/build/live-exchange/behavior/request.json' || 'mod/build/live-exchange/request.json' }}
           if-no-files-found: error
           retention-days: 1
       - name: Receive the manually produced bounded answer

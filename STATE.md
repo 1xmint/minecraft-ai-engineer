@@ -843,3 +843,26 @@ binding or canonical unbuilt shutter acceptance; it confirmed no SDK/credential
 imports, no ownership/lease change and intact electrical contract. Final TS check,
 scoped server/client compile and matched formatting checks pass. Runtime still
 requires the next source-specific GitHub run.
+
+Phase20 manual natural mode is wired through owner-only workflows, exact natural-
+suffixed artifact provenance, data-only CI companion, local responder interpret
+arguments and native flags. Derived capabilities/source sets are stripped from
+wire envelopes; original one-use private started/untrusted/response receipts and
+no-retry rules remain. Native mode makes the one fixed read-only diagnosis request,
+checks actual diagnosis/no world delegation or nonce, denied editor model admission,
+real companion replacement and saved-server recovery with no restored proposals.
+Only manual CI timeouts are extended. GitHub provenance tests include the exact new
+scenario/suffix and existing hostile-source/actor checks. GPT-6-Luna/high review found
+no stage/replay/extra-inference/credential-export blocker. Final TS/server/client
+compile, JS/Bash syntax and formatting pass. No workflow or model call was started.
+
+Verifier integration also found the normal flow now has six explicit typed replies
+(status/status/clarification/unsupported/stop/stop), in addition to three old
+ discussion dispatches. SQLite verification now requires those exact reply triples,
+knowledge revision2, not-inspected provenance and exactly9 starts; live discussion
+requires one explanation, live natural exactly one diagnose/root and one start.
+No unknown/denied call can be hidden in a relaxed total. These expectations need
+source-specific CI evidence. Current3702b80 CI41218074458 has four checks green and
+native dedicated still live; preserve its actual runtime proof before the next push.
+All overall milestones remain active; fresh natural inference is still gated on
+full deterministic green for the final source.
