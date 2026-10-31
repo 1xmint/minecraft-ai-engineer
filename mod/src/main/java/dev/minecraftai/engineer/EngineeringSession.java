@@ -944,6 +944,11 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(ShutterDesign.describes(candidate.source())) {
+            ShutterDesign.validate(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built mechanical designs cannot use electrical delay revision; reconcile and release their controlled work first");
+            accept(candidate);return true;
+        }
         MechanismCatalog.contract(candidate);
         if(!hasBuiltStructure()) { accept(candidate);return true; }
         if(blueprint==null || !sameCatalogTemplate(blueprint,candidate)

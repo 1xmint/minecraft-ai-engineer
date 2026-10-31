@@ -815,3 +815,31 @@ this foundation neither invokes inference nor proves a fresh model interpretatio
 Any later one-call proof must wait for deterministic green source and fresh native
 context; all historical receipts remain consumed. Current CI41156238501 on9c7c5a2
 has four checks green and dedicated multiplayer still live. Preserve that run.
+
+Phase20 adds the data-only NaturalSyntheticAcceptanceProvider: exact fixed input,
+canonical grounding, offered action/target map, source IDs and frozen native context
+must match before publishing one request. A consumed flag plus durable request file
+reject acceptance/abort/restart reuse; expired/changed responses cannot create an
+accepted receipt. The bridge has no SDK or credentials and remains disconnected
+from native/workflow modes. CI tests cover successful receipt binding, second use,
+process replacement, cancellation and unavailable capabilities. TS check passes;
+GitHub tests pending. The codec's prior focused review found no frame replay issue;
+new bridge and narrow shutter validation delta are under GPT-6-Luna/high check.
+
+Source9c7c5a2 CI41156238501 terminal: four jobs pass; dedicated now passes natural
+follow-up/clarification/consent/authority/construction/cancellation and catalog late-
+reply cancellation markers, then rejects the canonical shutter preview at acceptance.
+Downloaded work/natural-request-failure-41156238501 shows reviseProposal always
+calling electrical MechanismCatalog.contract(candidate). The fix gives canonical
+ShutterDesign.validate candidates a separate unbuilt-preview accept path, rejecting
+built mechanical changes; electrical contract/repeater revisions stay unchanged.
+Accept still checks workspace/project state and imports no piston ownership or lease.
+Existing real catalog proof requires an untested preview with no writes/ownership.
+Fresh CI must prove this boundary plus design/restart and new bridge tests. No fresh
+inference or local tests ran; all overall milestones remain active.
+
+Focused GPT-6-Luna/high review found no concrete blocker in bridge one-use/frame
+binding or canonical unbuilt shutter acceptance; it confirmed no SDK/credential
+imports, no ownership/lease change and intact electrical contract. Final TS check,
+scoped server/client compile and matched formatting checks pass. Runtime still
+requires the next source-specific GitHub run.

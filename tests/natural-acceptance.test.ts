@@ -1,3 +1,13 @@
+import { NaturalSyntheticAcceptanceProvider } from "../companion/src/natural-acceptance-broker.js";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  rmSync,
+} from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { discussionGrounding } from "../companion/src/discussion.js";
@@ -168,4 +178,103 @@ test("natural acceptance cannot replay another run, actor, epoch, connection or 
       1001,
     ),
   );
+});
+
+test("manual natural broker consumes one exact exchange even across abort and provider restart", async () => {
+  const keys = [
+    "CI",
+    "GITHUB_ACTIONS",
+    "MCE_LIVE_ACCEPTANCE",
+    "MCE_NATURAL_ACCEPTANCE",
+  ];
+  const old = keys.map((key) => process.env[key]);
+  const directory = mkdtempSync(join(tmpdir(), "mce-natural-broker-"));
+  for (const key of keys) process.env[key] = "true";
+  try {
+    const decoded = readNaturalAcceptanceRequest(
+      createNaturalAcceptanceRequest(fixture()),
+      run,
+      1001,
+    );
+    const provider = new NaturalSyntheticAcceptanceProvider({ directory, run });
+    const controller = new AbortController();
+    const args = [
+      { message: NATURAL_ACCEPTANCE_MESSAGE },
+      controller.signal,
+      fixture().grounding,
+      decoded.capabilities,
+      decoded.availableBasis,
+      Object.freeze({ ...context }),
+    ] as const;
+    const pending = provider.interpret(...args);
+    const request = JSON.parse(
+      readFileSync(join(directory, "natural", "request.json"), "utf8"),
+    );
+    const response = createNaturalAcceptanceResponse(
+      request,
+      reply,
+      provenance,
+    );
+    writeFileSync(
+      join(directory, "natural", "response.json"),
+      JSON.stringify(response),
+    );
+    assert.deepEqual(await pending, response.result);
+    const accepted = JSON.parse(
+      readFileSync(join(directory, "natural", "accepted.json"), "utf8"),
+    );
+    assert.equal(accepted.requestDigest, request.digest);
+    assert.equal(accepted.resultDigest, response.digest);
+    await assert.rejects(() => provider.interpret(...args));
+    await assert.rejects(() =>
+      new NaturalSyntheticAcceptanceProvider({ directory, run }).interpret(
+        ...args,
+      ),
+    );
+    const abortedDirectory = join(directory, "aborted");
+    const aborted = new NaturalSyntheticAcceptanceProvider({
+      directory: abortedDirectory,
+      run,
+    });
+    const cancel = new AbortController();
+    const abortedArgs = [
+      args[0],
+      cancel.signal,
+      args[2],
+      args[3],
+      args[4],
+      args[5],
+    ] as const;
+    const flight = aborted.interpret(...abortedArgs);
+    cancel.abort();
+    await assert.rejects(flight);
+    assert.equal(
+      existsSync(join(abortedDirectory, "natural", "accepted.json")),
+      false,
+    );
+    await assert.rejects(() =>
+      new NaturalSyntheticAcceptanceProvider({
+        directory: abortedDirectory,
+        run,
+      }).interpret(...args),
+    );
+    const deniedDirectory = join(directory, "denied");
+    const denied = new NaturalSyntheticAcceptanceProvider({
+      directory: deniedDirectory,
+      run,
+    });
+    await assert.rejects(() =>
+      denied.interpret(args[0], args[1], args[2], new Map(), args[4], args[5]),
+    );
+    assert.equal(
+      existsSync(join(deniedDirectory, "natural", "request.json")),
+      false,
+    );
+  } finally {
+    keys.forEach((key, index) => {
+      if (old[index] === undefined) delete process.env[key];
+      else process.env[key] = old[index];
+    });
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
