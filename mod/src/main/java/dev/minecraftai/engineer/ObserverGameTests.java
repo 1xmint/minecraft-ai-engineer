@@ -1,0 +1,61 @@
+package dev.minecraftai.engineer;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+
+/** Native temporal feasibility, independent of catalog support or model output. */
+public final class ObserverGameTests {
+    @GameTest(maxTicks=110) public void observerEast(GameTestHelper helper){pulse(helper,Rotation.NONE,false);}
+    @GameTest(maxTicks=110) public void observerSouth(GameTestHelper helper){pulse(helper,Rotation.CLOCKWISE_90,false);}
+    @GameTest(maxTicks=110) public void observerWest(GameTestHelper helper){pulse(helper,Rotation.CLOCKWISE_180,false);}
+    @GameTest(maxTicks=110) public void observerNorth(GameTestHelper helper){pulse(helper,Rotation.COUNTERCLOCKWISE_90,false);}
+    @GameTest(maxTicks=110) public void wrongFacingObserverStaysQuiet(GameTestHelper helper){pulse(helper,Rotation.NONE,true);}
+
+    private static BlockPos at(int x,int y,int z,Rotation rotation){return new BlockPos(x,y,z).rotate(rotation).offset(4,2,4);}
+    private static void block(GameTestHelper helper,int x,int y,int z,String state,Rotation rotation){
+        helper.setBlock(at(x,y,z,rotation),Blueprint.state(state).rotate(rotation));
+    }
+    private static void pulse(GameTestHelper helper,Rotation rotation,boolean wrongFacing){
+        for(int x=0;x<=2;x++)block(helper,x,0,0,"minecraft:stone",rotation);
+        block(helper,0,1,0,"minecraft:lever[face=floor,facing=east,powered=false]",rotation);
+        block(helper,1,1,0,"minecraft:observer[facing="+(wrongFacing?"north":"west")+",powered=false]",rotation);
+        block(helper,2,1,0,"minecraft:redstone_lamp[lit=false]",rotation);
+        var input=at(0,1,0,rotation);var observer=at(1,1,0,rotation);var receiver=at(2,1,0,rotation);
+        var samples=new JsonArray();long[] origin={0};
+        // Placement updates settle first. Each edge is followed by a full quiet interval.
+        helper.runAtTickTime(20,()->origin[0]=helper.getLevel().getGameTime());
+        helper.runAtTickTime(24,()->helper.pullLever(input));
+        helper.runAtTickTime(48,()->helper.pullLever(input));
+        // A side-neighbor block update must not trigger the front-facing detector.
+        helper.runAtTickTime(72,()->block(helper,1,1,1,"minecraft:glass",rotation));
+        for(int tick=20;tick<=96;tick++){
+            final int expectedElapsed=tick-20;
+            helper.runAtTickTime(tick,()->{
+                var level=helper.getLevel();long elapsed=level.getGameTime()-origin[0];
+                boolean powered=level.getBlockState(helper.absolutePos(observer)).getValue(BlockStateProperties.POWERED);
+                boolean signal=level.hasNeighborSignal(helper.absolutePos(receiver));
+                boolean lit=level.getBlockState(helper.absolutePos(receiver)).getValue(BlockStateProperties.LIT);
+                boolean inputOn=level.getBlockState(helper.absolutePos(input)).getValue(BlockStateProperties.POWERED);
+                var row=new JsonObject();row.addProperty("tick",level.getGameTime());row.addProperty("elapsed",elapsed);
+                row.addProperty("input",inputOn);row.addProperty("observer",powered);row.addProperty("receiver",signal);row.addProperty("lamp",lit);samples.add(row);
+                String evidence="rotation="+rotation+", wrongFacing="+wrongFacing+", trace="+samples;
+                helper.assertTrue(elapsed==expectedElapsed,"Samples must cover consecutive actual game ticks: "+evidence);
+                helper.assertTrue(inputOn==(elapsed>=4 && elapsed<28),"Observe both real input edges: "+evidence);
+                boolean pulse=!wrongFacing && ((elapsed>=6 && elapsed<8)||(elapsed>=30 && elapsed<32));
+                boolean lamp=!wrongFacing && ((elapsed>=6 && elapsed<12)||(elapsed>=30 && elapsed<36));
+                helper.assertTrue(powered==pulse,"Observer must emit exactly two game ticks after a two-tick delay: "+evidence);
+                helper.assertTrue(signal==pulse,"The intended receiver must actually receive the pulse: "+evidence);
+                helper.assertTrue(lit==lamp,"Lamp response must include its measured four-tick shutoff delay: "+evidence);
+                if(expectedElapsed==76){
+                    System.out.println("ENGINEER_OBSERVER_TRACE "+evidence);
+                    helper.succeed();
+                }
+            });
+        }
+    }
+}
