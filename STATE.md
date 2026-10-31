@@ -490,3 +490,15 @@ recorded targets; retain fresh UNDO, complete reads, idle/quiescent denial and
 per-write checks. Never broaden same-block variants or restore a lease from memory.
 Next: wire preview and specialized execution; persist operation-bound repair basis;
 prove conflict/revocation, interruption/restart, exact undo and actual function.
+
+Phase19 adds ShutterRepairBasis, a bounded strict codec for exact approved original
+states bound to full world/dimension/project/blueprint/revision/component/operation/
+piston/facing identity. It contains no actor/grant/lease. Observation comparison
+accepts canonical states or those exact originals only, with a complete entity-free
+read frame; empty isolation cells remain air. Four native rotation tests now include
+serialization/reload, projected partial repair and undo, changed-operation/design,
+foreign same-block orientation and duplicate-record rejection. These are pure
+projection/codec proofs, not actual execution, saved-server recovery or delegated
+authority. Session checkpoint persistence and public preview/apply are still unwired.
+Scoped core compilation passes. Initial010de79 CI41148102797 Fabric/Companion/client/
+Windows pass; dedicated remains live. Final new-source runtime proof is pending.

@@ -25,6 +25,19 @@ public final class PistonGameTests {
         level.setBlock(design.payload(),Blocks.AIR.defaultBlockState(),2);
         var report=ShutterDiagnosis.inspect(level,design);var observed=report.observed();
         var corrections=ShutterRepair.corrections(design,observed,report.blockEntities());
+        String operation=UUID.randomUUID().toString();var basis=ShutterRepairBasis.capture(operation,design,corrections);
+        var restored=ShutterRepairBasis.read(basis.json(),operation,design);restored.validateObservation(design,observed,report.blockEntities());
+        var partial=new HashMap<>(observed);
+        for(var target:corrections){partial.put(target.pos(),target.after());restored.validateObservation(design,partial,Set.of());}
+        for(var target:corrections.reversed()){partial.put(target.pos(),target.before());restored.validateObservation(design,partial,Set.of());}
+        helper.assertTrue(partial.equals(observed),"Reloaded exact facts support every projected partial repair/undo state without becoming authority");
+        rejects(helper,()->ShutterRepairBasis.read(basis.json(),UUID.randomUUID().toString(),design),"Original states cannot move to another operation");
+        var changedIdentity=ShutterDesign.create(UUID.randomUUID(),2,design.binding().project(),design.binding().world(),design.binding().dimension(),design.blueprint().anchor(),rotation);
+        rejects(helper,()->restored.requireDesign(changedIdentity),"Original states cannot move to another accepted intention");
+        var forged=new HashMap<>(observed);forged.put(design.piston(),observed.get(design.piston()).setValue(BlockStateProperties.FACING,design.facing().getClockWise()));
+        rejects(helper,()->restored.validateObservation(design,forged,Set.of()),"Same-block variants outside the exact approved originals remain conflicts");
+        var duplicate=basis.json();duplicate.getAsJsonArray("originals").add(duplicate.getAsJsonArray("originals").get(0).deepCopy());
+        rejects(helper,()->ShutterRepairBasis.read(duplicate,operation,design),"Duplicate original targets are rejected");
         helper.assertTrue(corrections.size()==3 && corrections.stream().allMatch(target->target.before().equals(observed.get(target.pos()))),"Repair preview records exact missing and wrong-facing states in every rotation");
         helper.assertTrue(corrections.stream().anyMatch(target->target.pos().equals(design.piston()) && target.after().getValue(BlockStateProperties.FACING)==design.facing()),"Actuator correction follows canonical rotation");
         helper.assertTrue(observed.entrySet().stream().allMatch(entry->level.getBlockState(entry.getKey()).equals(entry.getValue())),"Static repair preview never edits its observed world");
