@@ -15,6 +15,13 @@ final class ProjectKnowledgeClient {
     private boolean closed;
     private record Pending(Frame frame,NaturalActions.Choice choice,UUID nonce,String executionState) {}
     private final Map<UUID,Pending> pendingActions=new HashMap<>();
+    private record Recent(Frame frame,NaturalActions.Choice choice) {}
+    private final Map<UUID,Recent> recentActions=new HashMap<>();
+    private void rememberAction(EngineeringSession s,NaturalActions.Choice choice){
+        var player=s.player();if(player==null)return;
+        if(!recentActions.containsKey(s.actor()) && recentActions.size()>=128)recentActions.remove(recentActions.keySet().iterator().next());
+        recentActions.put(s.actor(),new Recent(new Frame(s,player,manager.connectionId(player),true),choice));
+    }
     private static String executionState(EngineeringSession s){return s.state+"|"+s.activeComponent+"|"+s.corner1+"|"+s.corner2+"|"+s.activeOperation+"|"+s.stage+"|"+s.journal.size()+"|"+s.pendingPlacement+"|"+s.undoRequested+"|"+s.testTick;}
 
     private static final class Frame {
@@ -36,16 +43,18 @@ final class ProjectKnowledgeClient {
         if(active.size()>=128)throw new IllegalStateException("Too many pending note requests");
         var frame=new Frame(s,player,manager.connectionId(player),discussion);active.put(frame.actor,frame);return frame;
     }
-    private boolean sameScope(Frame f) {
+    private boolean sameScope(Frame f) {return active.get(f.actor)==f && sameIdentity(f);}
+    private boolean sameIdentity(Frame f) {return sameIdentity(f,true);}
+    private boolean sameIdentity(Frame f,boolean exactLesson) {
         var s=f.session;
-        return !closed && EngineerMod.current(manager) && active.get(f.actor)==f && manager.epoch.equals(f.epoch)
+        return !closed && EngineerMod.current(manager) && manager.epoch.equals(f.epoch)
                 && manager.server.getPlayerList().getPlayer(f.actor)==f.player && f.player.connection==f.connection && !f.player.hasDisconnected()
                 && manager.connectionId(f.player).equals(f.connectionId) && Objects.equals(manager.selections.get(f.actor),s.projectId)
                 && s.revision()==f.revision && s.access.revision()==f.authorization && s.access.allows(f.actor,ProjectAccess.Permission.VIEW)
                 && s.dimension.equals(f.player.level().dimension().identifier().toString())
                 && (!f.discussion || (manager.modelOperator(f.player) && s.owner.equals(f.actor)
                     && Objects.equals(f.component,LessonAssistant.currentComponent(s,f.actor,false))
-                    && (s.cursors.get(f.actor)==null?-1:s.cursors.get(f.actor).stage)==f.lessonStage));
+                    && (!exactLesson || (s.cursors.get(f.actor)==null?-1:s.cursors.get(f.actor).stage)==f.lessonStage)));
     }
     private boolean current(Frame f){return sameScope(f) && System.nanoTime()-f.startedNanos<=(f.discussion?DISCUSSION_TIMEOUT_NANOS:30_000_000_000L);}
     private CompletableFuture<JsonObject> request(Frame f,String route,JsonObject body) {
@@ -54,7 +63,7 @@ final class ProjectKnowledgeClient {
     private void tell(Frame f,String message){if(current(f))f.player.sendSystemMessage(Component.literal("Engineer: "+message));}
     private void finish(Frame f){var pending=pendingActions.get(f.actor);if(pending!=null && pending.frame()==f)pendingActions.remove(f.actor);active.remove(f.actor,f);if(f.future!=null && !f.future.isDone())f.future.cancel(true);}
     void tick(){for(var f:new ArrayList<>(active.values()))if(!current(f)){if(sameScope(f))f.player.sendSystemMessage(Component.literal(f.discussion?"Engineer: Discussion timed out; ask again explicitly. No automatic retry.":"Engineer: Project-note result not confirmed. Read notes before retrying a write."));finish(f);}}
-    void close(){closed=true;for(var f:new ArrayList<>(active.values()))finish(f);}
+    void close(){closed=true;recentActions.clear();for(var f:new ArrayList<>(active.values()))finish(f);}
 
     void read(EngineeringSession s) {
         var f=start(s);tell(f,"Reading shared project notes; no model request or world inspection.");
@@ -120,6 +129,12 @@ final class ProjectKnowledgeClient {
         String selected=f.component!=null?f.component:s.blueprint!=null && !ComponentTree.composite(s.blueprint)?"root":null;
         var body=new JsonObject();body.addProperty("message",message);body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
         if(selected!=null)body.addProperty("componentId",selected);
+        var recent=recentActions.get(f.actor);
+        if(recent!=null && recent.frame().session==s && sameIdentity(recent.frame(),false) && System.nanoTime()-recent.frame().startedNanos<=300_000_000_000L){
+            var previous=new JsonObject();previous.addProperty("action",recent.choice().action());
+            if(recent.choice().component()==null)previous.add("componentId",JsonNull.INSTANCE);else previous.addProperty("componentId",recent.choice().component());
+            body.add("recentAction",previous);
+        } else recentActions.remove(f.actor);
         tell(f,"Interpreting one engineering request. World work requires a separately reviewed action.");
         f.future=request(f,"/v2/interpret",body);
         f.future.whenComplete((reply,error)->manager.server.execute(()->{
@@ -138,7 +153,7 @@ final class ProjectKnowledgeClient {
                     tell(f,"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
                 } else {
                     s.commandActor=f.actor;
-                    try{NaturalActions.dispatch(s,choice);}finally{s.commandActor=null;}
+                    try{NaturalActions.dispatch(s,choice);rememberAction(s,choice);}finally{s.commandActor=null;}
                 }
             }catch(RuntimeException invalid){tell(f,"Request result not confirmed. Check the selected project and ask again explicitly; no automatic retry.");}
             finally{if(!retained)finish(f);}
@@ -151,7 +166,7 @@ final class ProjectKnowledgeClient {
         boolean valid=current(f) && pending.executionState().equals(executionState(s));
         finish(f); // One-use consent, consumed before any dispatch or failed live check.
         if(!valid)throw new IllegalStateException("Action expired or project context changed; request it again");
-        NaturalActions.dispatch(s,pending.choice());
+        NaturalActions.dispatch(s,pending.choice());rememberAction(s,pending.choice());
     }
     void discuss(EngineeringSession s,String message) {
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Discussion requires the single configured account-owning operator");

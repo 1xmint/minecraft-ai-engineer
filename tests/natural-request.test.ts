@@ -5,6 +5,7 @@ import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
   validateNaturalReply,
   naturalRequestPrompt,
+  readRecentAction,
   naturalCapabilities,
   type NaturalCapabilities,
 } from "../companion/src/natural-request.js";
@@ -152,4 +153,20 @@ test("ambiguous and unsupported requests may return only bounded read-only prose
     sources,
   );
   assert.equal(status.action, "status");
+});
+
+test("recent intentions cannot add targets, commands, verification, or consent", () => {
+  const accepted = readRecentAction(
+    { action: "diagnose", componentId: "entrance" },
+    capabilities,
+  );
+  assert.ok(Object.isFrozen(accepted));
+  for (const value of [
+    { action: "build", componentId: "entrance" },
+    { action: "diagnose", componentId: "other" },
+    { action: "diagnose", componentId: "entrance", verified: true },
+    { action: "diagnose", componentId: "entrance", nonce: "consent" },
+    { action: "run_shell", componentId: null },
+  ])
+    assert.throws(() => readRecentAction(value, capabilities));
 });

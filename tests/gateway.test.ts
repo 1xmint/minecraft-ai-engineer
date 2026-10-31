@@ -2332,3 +2332,75 @@ for (const invalidate of ["revoke-plan", "restart"] as const) {
     }
   });
 }
+
+test("recent action grounding remains a bounded intention and grants no new capability", async () => {
+  let calls = 0,
+    captured = "";
+  const f = await fixture({
+    ...plan,
+    async interpret(_input, _signal, source) {
+      calls++;
+      captured = source;
+      return {
+        schemaVersion: 1,
+        kind: "action",
+        action: "status",
+        componentId: null,
+        text: "Inspect the current task status.",
+        basis: ["recent-action"],
+      };
+    },
+  });
+  try {
+    await f.open();
+    await f.sync();
+    const input = {
+      message: "What about that last action?",
+      modelAuthorized: true,
+      isOperator: true,
+    };
+    const request = (extra: object = {}) =>
+      f.post("/v2/interpret", {
+        ...input,
+        context: context({ connectionId: generatedConnection }),
+        ...extra,
+      });
+    for (const recentAction of [
+      { action: "status", componentId: null, verified: true },
+      { action: "build", componentId: "foreign" },
+      { action: "status", componentId: null, nonce: "approved" },
+    ])
+      assert.equal((await request({ recentAction })).status, 400);
+    assert.equal(
+      calls,
+      0,
+      "Malformed or unavailable recency is rejected before quota dispatch",
+    );
+    assert.equal(
+      (await request()).status,
+      400,
+      "The model cannot invent an omitted recent source",
+    );
+    assert.equal(
+      (await request({ recentAction: { action: "status", componentId: null } }))
+        .status,
+      200,
+    );
+    const source = JSON.parse(captured).sources.find(
+      (entry: { id: string }) => entry.id === "recent-action",
+    );
+    assert.deepEqual(source, {
+      id: "recent-action",
+      kind: "server-dispatched-intention",
+      data: {
+        action: "status",
+        componentId: null,
+        result: "not-supplied",
+        authority: "none",
+      },
+    });
+    assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
+  } finally {
+    await f.close();
+  }
+});

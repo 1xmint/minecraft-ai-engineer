@@ -1845,6 +1845,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void naturalRequestFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         MESSAGES.clear();send(context,"engineer request what are you working on");expectChat(context,"Assistant task:");
         MESSAGES.clear();send(context,"engineer request CI report selected project status.");expectChat(context,"Assistant task:");
+        MESSAGES.clear();send(context,"engineer request CI follow up on selected project status.");expectChat(context,"Assistant task:");write("natural-request-followup.done","passed");
         String before=server.computeOnServer(s->session(s,"Alice").state);
         MESSAGES.clear();send(context,"engineer request CI propose stopping the selected project.");expectChat(context,"/engineer act ");String first=actionNonce();
         server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals(before),"Interpretation alone cannot change execution state");assertKnowledgeHasNoWorldAuthority(project);});

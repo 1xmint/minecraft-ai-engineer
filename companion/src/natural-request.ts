@@ -29,6 +29,32 @@ export interface NaturalRequest {
   readonly message: string;
 }
 
+/** A recent server-dispatched intention, never evidence that an operation finished. */
+export function readRecentAction(
+  value: unknown,
+  capabilities: NaturalCapabilities,
+) {
+  const v = object(value);
+  if (
+    Object.keys(v).length !== 2 ||
+    !Object.hasOwn(v, "action") ||
+    !Object.hasOwn(v, "componentId") ||
+    typeof v.action !== "string" ||
+    !NATURAL_ACTIONS.includes(v.action as NaturalAction) ||
+    (v.componentId !== null && typeof v.componentId !== "string") ||
+    !capabilities
+      .get(v.action as NaturalAction)
+      ?.has(v.componentId as string | null)
+  )
+    throw new RequestError(
+      "Recent action is unavailable in the selected context.",
+    );
+  return Object.freeze({
+    action: v.action as NaturalAction,
+    componentId: v.componentId as string | null,
+  });
+}
+
 /** Only the explicitly selected physical component is eligible for interpretation. */
 export function naturalCapabilities(
   blueprint: Blueprint | undefined,

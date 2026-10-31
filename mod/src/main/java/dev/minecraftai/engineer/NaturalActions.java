@@ -22,7 +22,7 @@ final class NaturalActions {
         var basis=value.getAsJsonArray("basis");if(basis==null || basis.size()>12)throw new IllegalArgumentException("Invalid interpretation references");
         var seen=new HashSet<String>();
         for(var entry:basis){String id=text(entry,128);if(!seen.add(id))throw new IllegalArgumentException("Duplicate source");
-            if(id.equals("project") || (selected!=null && id.equals("component:"+selected)))continue;
+            if(id.equals("project") || id.equals("recent-action") || (selected!=null && id.equals("component:"+selected)))continue;
             if(!id.startsWith("note:") || !UUID.fromString(id.substring(5)).toString().equals(id.substring(5)))throw new IllegalArgumentException("Invalid source");
         }
         if(!kind.equals("action")) {

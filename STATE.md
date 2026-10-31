@@ -696,3 +696,20 @@ restart-prepared/restarted markers extend strict verification. Scoped client com
 and script syntax pass for this draft; runtime proof is pending. Current source
 982480f CI41154172044 Companion/Fabric/Windows pass, client/dedicated were live.
 These additions are not yet pushed, allowing that actual native run to finish.
+
+Phase20 N3 now includes a bounded ephemeral recent-action cache: last successfully
+dispatched typed intention only, actor/session/connection/epoch/revision/grant/
+dimension/operator/component-bound, max128 players, five-minute expiry, no success
+claim or authority. Same-component lesson progression may retain that intention;
+in-flight interpretation/consent still requires the exact personal lesson stage.
+Gateway validates the two-field action/target against current capabilities before
+quota, adds a recent-action source labelled result-not-supplied/authority-none, and
+still requires fresh server action checks. HTTP/codec negatives cover invented
+source, commands, nonce, verification and foreign target; a native synthetic
+follow-up must consume the actual preceding status intention. No conversation or
+private inventories are stored. Focused GPT-6-Luna/high check found no concrete
+context leak or authority bypass. TS/server/client compile and script syntax pass;
+final added native follow-up awaits CI. The deterministic fixture now allows24
+requests/minute and64/hour for expanded scenarios; it cannot invoke inference and
+production defaults remain4/minute and24/hour. Native proof still pending; no model
+call or local test ran. Held new commits while CI41154172044 dedicated run is live.

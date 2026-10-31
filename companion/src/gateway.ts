@@ -1,5 +1,6 @@
 import {
   naturalCapabilities,
+  readRecentAction,
   validateNaturalReply,
 } from "./natural-request.js";
 import { discussionGrounding, validateDiscussionReply } from "./discussion.js";
@@ -388,6 +389,7 @@ export class ServerGateway {
       "context",
       "message",
       "componentId",
+      "recentAction",
       "modelAuthorized",
       "isOperator",
     ];
@@ -411,13 +413,27 @@ export class ServerGateway {
     const selected =
       componentId ?? (blueprint && !blueprint.components ? "root" : undefined);
     const capabilities = naturalCapabilities(blueprint, selected);
-    const grounding = discussionGrounding(
+    let grounding = discussionGrounding(
       project.name,
       context.projectRevision,
       blueprint,
       memory.knowledge(context),
       selected,
     );
+    if (v.recentAction !== undefined) {
+      const action = readRecentAction(v.recentAction, capabilities);
+      const sources = JSON.parse(grounding.text);
+      sources.sources.push({
+        id: "recent-action",
+        kind: "server-dispatched-intention",
+        data: { ...action, result: "not-supplied", authority: "none" },
+      });
+      grounding = {
+        ...grounding,
+        text: JSON.stringify(sources),
+        availableBasis: new Set([...grounding.availableBasis, "recent-action"]),
+      };
+    }
     const interpret = this.options.provider.interpret?.bind(
       this.options.provider,
     );

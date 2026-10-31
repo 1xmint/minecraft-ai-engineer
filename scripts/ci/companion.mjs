@@ -48,7 +48,8 @@ const server = createCompanionServer({
   store,
   // Fixed synthetic stages can burst across several projects in this suite.
   // This provider cannot invoke the SDK; production retains its default4/minute.
-  actorPlansPerMinute: 12,
+  actorPlansPerMinute: 24,
+  serverPlansPerHour: 64,
   provider: {
     async interpret(input, _signal, context, capabilities) {
       const source = JSON.parse(context);
@@ -75,6 +76,29 @@ const server = createCompanionServer({
           componentId: null,
           text: "CI obsolete interpretation must never display",
           basis: [],
+        };
+      }
+      if (input.message === "CI follow up on selected project status.") {
+        const recent = source.sources.find(
+          (entry) => entry.id === "recent-action",
+        );
+        if (
+          recent?.kind !== "server-dispatched-intention" ||
+          recent.data.action !== "status" ||
+          recent.data.componentId !== null ||
+          recent.data.result !== "not-supplied" ||
+          recent.data.authority !== "none"
+        )
+          throw new Error(
+            "Follow-up lacks the bounded previous action intention",
+          );
+        return {
+          schemaVersion: 1,
+          kind: "action",
+          action: "status",
+          componentId: null,
+          text: "Synthetic grounded follow-up.",
+          basis: ["recent-action"],
         };
       }
       const action =
