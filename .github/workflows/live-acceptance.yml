@@ -75,7 +75,7 @@ jobs:
         run: node scripts/ci/live-transport.mjs wait-response geometry
       - name: Verify the complete game flow
         env:
-          MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'discussion' && 'discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'geometry' || 'catalog' }}
+          MCE_ACCEPTANCE_STAGE: ${{ inputs.scenario == 'natural' && 'natural' || inputs.scenario == 'discussion' && 'discussion' || (inputs.scenario == 'generated' || inputs.scenario == 'structural' || inputs.scenario == 'boolean') && 'geometry' || 'catalog' }}
         run: node scripts/ci/live-transport.mjs wait-finish
       - name: Stop any remaining native processes
         if: always()

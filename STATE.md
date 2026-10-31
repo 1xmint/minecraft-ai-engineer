@@ -6,7 +6,12 @@ Public repo: https://github.com/1xmint/minecraft-ai-engineer. No overall complet
 
 Current branch **phase/20-natural-requests**, based on merged main **5b29a9cac013aecf92c03aba4137939ae6178184**.
 Latest shipped: Phase19 PR28, finale881d73/all5 CI41151376521/all103 native tests.
-Next: bounded natural request interpretation through existing server actions.
+Phase20 source43bc27b passed all5 CI41219942803, including all106 native tests
+and all13 natural markers. Manual dry41220876264 proved typed diagnosis/recovery
+and strict SQLite with synthetic-fixture provenance/zero tokens; its final workflow
+stage override misrouted verification to catalog and is being corrected. No fresh
+natural SDK call has run. Next: green final source, then one fresh signed-in natural
+request and native proof, before merging PR29. All broader milestones remain active.
 Phase16 PR25 merged2026-10-30T18:14:13Z as **03d88c995836d64b5e017b5be053629ea926df20**.
 Final source6135aff passed all5 CI41103559604, native dedicated flow6m34s,
 texture/revocation markers and memory proof. Fresh screenshots in
@@ -896,3 +901,22 @@ No fresh inference ran. Local3829d6d fixes only project-memory formatting and pa
 the scoped check; append this actual proof, format that file again, then push for
 all five checks and actual Companion tests on the final source. A native green job
 alone is not permission to claim the whole goal or the fresh signed-in proof done.
+
+Source43bc27b CI41219942803 passed all5 checks. Pinned CLI login-status confirmed
+ChatGPT subscription authentication without exposing credentials or invoking a model.
+Official SDK/auth pages https://learn.chatgpt.com/docs/codex-sdk and
+https://learn.chatgpt.com/docs/auth confirm local SDK integration and forced ChatGPT
+login; they do not resolve general shared-subscription eligibility, which stays gated.
+
+Manual data-only dry41220876264 used one fresh request frame on43bc27b. Response
+workflow41221402756 passed; requestdigestc867eef592f14302f8edfff7c07fe4b03be9ee7e568160f0487b6c18d86e42ba,
+resultdigestf2fdcd14ebfdcea8943a5bd1354312bc45a46d319a21195fd8b54076b521baed.
+Downloaded work/natural-dry-proof-41220876264: native BUILD SUCCESSFUL5m30s,
+live-natural-model/recovery markers passed, strict SQLite proof exists and accepted
+receipt says model synthetic-fixture, input/cached/output tokens0. This is transport
+and native-dispatch evidence ONLY, never a fresh model result or consumed SDK call.
+The parent workflow failed its final wrapper: step-level MCE_ACCEPTANCE_STAGE still
+fell back to catalog for natural. Fix adds the exact natural branch there, retaining
+all other stage choices. No code/permission/parser change or another model call.
+Require new source CI before the one planned signed-in interpretation. No actual
+natural SDK call has run; historical model receipts remain consumed.
