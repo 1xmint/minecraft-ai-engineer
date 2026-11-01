@@ -420,6 +420,8 @@ try {
       "conversation-bob-denied.done",
       "conversation-bob-revoked.done",
       "conversation-grants.done",
+      "conversation-expiry.done",
+      "conversation-reconnect.done",
       "conversation-restart-prepared.done",
       "conversation-restart.done",
     ])
@@ -499,7 +501,7 @@ try {
     const conversations = [
       {
         file: "conversation-actions-project",
-        starts: 8,
+        starts: 10,
         actions: [
           "build",
           "build",
@@ -508,6 +510,8 @@ try {
           "test",
           "undo",
           "undo",
+          "stop",
+          "stop",
           "stop",
         ],
         template: "signal-lamp",

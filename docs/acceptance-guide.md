@@ -373,5 +373,10 @@ verifier requires exact scoped interpretation/start counts and recomputes actual
 functional traces. A screenshot alone proves neither those traces nor authority.
 Setup commands in these fixtures create/select projects and workspaces; the
 fixtures do not prove a complete conversational setup or a human-driven session.
-Chat-specific expiry, disconnect and restart coverage remains unfinished until
-its own actual flows pass; existing command-path recovery is separate evidence.
+The lifecycle fixture waits101 real seconds for the production100-second action
+deadline (`conversation-expiry.done`), then leaves a fresh conversation proposal
+pending across an actual saved-server reboot (`conversation-restart-prepared.done`
+and `conversation-restart.done`). These require their own passing CI evidence;
+existing command-path recovery is separate evidence. `conversation-reconnect.done` additionally requires an actual disconnect and
+reconnect with the same server epoch and a different connection stamp; the old
+approval must remain unavailable.

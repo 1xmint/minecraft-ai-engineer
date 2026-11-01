@@ -276,3 +276,17 @@ the existing supported role change `project share Bob viewer` removes all three
 mutation rights while preserving VIEW and the previous controller. This corrects
 the fixture without changing permissions or assertions. Evidence: task work/
 `conversation-shared-41271943307`. The added restart proof and role fix need CI.
+
+The next lifecycle proof also waits101 real seconds for the production100-second
+conversation-action deadline, rejects yes without work, then requests a fresh
+proposal for the existing restart proof. No clocks, deadlines or production
+limits change. This adds one fixed interpretation: exact starts9/17. CI-only
+client/harness allowances increase by two minutes for the explicit wall wait;
+all functional assertions remain. Compilation/syntax checks precede push.
+
+The same lifecycle fixture now closes the native connection, reconnects to the
+still-running third server, verifies the epoch is unchanged and connection stamp
+is new, and rejects the previous pending approval. It then requests a fresh
+proposal for the fourth-boot restart proof. The Fabric connection close API was
+checked locally; nested connection resources avoid an invalid double close.
+No extra server boot is added. Exact starts10/17; reconnect proof is unrun.

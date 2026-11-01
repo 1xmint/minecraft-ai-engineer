@@ -665,8 +665,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
         LocalFiles.write(recovery.file(),recovery.checkpoint());
-        try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
-            TestDedicatedServerConnection connection=server.connect()){
+        try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties))){
+          try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
             if(!LIVE_ACCEPTANCE)observerRecovery(context,server);
@@ -696,7 +696,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
-            if(!LIVE_ACCEPTANCE)prepareConversationRestart(context,server);
+            if(!LIVE_ACCEPTANCE)prepareConversationDisconnect(context,server);
+          }
+          if(!LIVE_ACCEPTANCE){
+            server.waitFor(s->s.getPlayerList().getPlayerCount()==0);
+            try(TestDedicatedServerConnection reconnected=server.connect()){
+                recoverConversationReconnect(context,server);
+                prepareConversationRestart(context,server);
+            }
+          }
         }
         if(!LIVE_ACCEPTANCE) {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
@@ -2153,9 +2161,27 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer act "+nonce);expectChat(context,"No matching pending action");write("natural-request-catalog.done","passed");
     }
 
-    private static void prepareConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+    private static void prepareConversationDisconnect(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("conversation-actions-project");send(context,"engineer project use "+id);
         server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        conversationProposal(context,"CI propose stopping the selected project.");
+        // Exercise the production monotonic deadline, without changing clocks or TTLs.
+        long expiry=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(101);
+        while(System.nanoTime()-expiry<0)context.waitTicks(2);
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"An expired chat approval cannot revive execution or mutate the world");});
+        write("conversation-expiry.done","passed");
+        conversationProposal(context,"CI propose stopping the selected project.");
+        server.runOnServer(s->{var project=session(s,"Alice");write("conversation-disconnect-stamp",project.manager.connectionId(player(s,"Alice")));write("conversation-disconnect-epoch",project.manager.epoch.toString());});
+    }
+    private static void recoverConversationReconnect(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.manager.epoch.toString().equals(read("conversation-disconnect-epoch")) && !project.manager.connectionId(player(s,"Alice")).equals(read("conversation-disconnect-stamp")) && project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"A real reconnect in the same server epoch cannot revive the previous connection's chat approval");});
+        write("conversation-reconnect.done","passed");
+    }
+    private static void prepareConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         conversationProposal(context,"CI propose stopping the selected project.");
         server.runOnServer(s->{var project=session(s,"Alice");var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();
             try{check(project.manager.knowledge.hasConversationReview(project) && project.journal.isEmpty() && project.delegation==null,"The actual server closes with an unconsumed conversation proposal, no world work or lease");write("conversation-restart-epoch",project.manager.epoch.toString());}
