@@ -168,7 +168,7 @@ export function compareGeometries(
 
   // Walk A: each cell is identical, changed, or outside B's volume.
   let i = 0;
-  for (let y = 0; y < sa.y; y++) {
+  for (let y = 0; a.blocks.length > 0 && y < sa.y; y++) {
     const wy = oa.y + y;
     const by = wy - ob.y;
     const yIn = by >= 0 && by < sb.y;
@@ -202,7 +202,7 @@ export function compareGeometries(
 
   // Walk B: only cells outside A's volume; the rest were counted above.
   let j = 0;
-  for (let y = 0; y < sb.y; y++) {
+  for (let y = 0; b.blocks.length > 0 && y < sb.y; y++) {
     const wy = ob.y + y;
     const ay = wy - oa.y;
     const yIn = ay >= 0 && ay < sa.y;

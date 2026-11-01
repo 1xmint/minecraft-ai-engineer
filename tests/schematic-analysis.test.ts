@@ -304,6 +304,28 @@ test("empty geometries compare cleanly", () => {
   });
 });
 
+test("zero-volume shapes with maximal other dimensions do no cell work", () => {
+  const one = geo({ x: 1, y: 1, z: 1 }, { x: 0, y: 0, z: 0 }, [STONE], [0]);
+  for (const size of [
+    { x: 0, y: 65535, z: 65535 },
+    { x: 65535, y: 0, z: 65535 },
+    { x: 65535, y: 65535, z: 0 },
+  ]) {
+    const empty = geo(size, { x: 0, y: 0, z: 0 }, [], []);
+    for (const [a, b] of [
+      [empty, one],
+      [one, empty],
+    ]) {
+      const result = compareGeometries(a, b);
+      assert.equal(result.overlap, null);
+      assert.equal(result.counts.identical, 0);
+      assert.equal(result.counts.changed, 0);
+      assert.equal(result.counts.onlyInA.cells, a!.blocks.length);
+      assert.equal(result.counts.onlyInB.cells, b!.blocks.length);
+    }
+  }
+});
+
 test("mismatched DataVersions are rejected, not converted", () => {
   const a = geo({ x: 1, y: 1, z: 1 }, { x: 0, y: 0, z: 0 }, [STONE], [0], 3578);
   const b = geo({ x: 1, y: 1, z: 1 }, { x: 0, y: 0, z: 0 }, [STONE], [0], 3700);
