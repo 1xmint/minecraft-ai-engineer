@@ -30,7 +30,7 @@ function mode(value: unknown, name: string): AnalogMode {
 function levels(value: unknown, name: string): number[] {
   if (!Array.isArray(value) || value.length !== 3)
     throw new RequestError(`Invalid ${name}.`);
-  return value.map((level, index) =>
+  return Array.from(value, (level, index) =>
     integer(level, `${name}[${index}]`, 0, 15),
   );
 }
@@ -96,7 +96,7 @@ export function validateAnalogTrace(
   let last = 7,
     missing: string | undefined,
     mismatch: string | undefined;
-  const samples = v.samples.map((raw: unknown) => {
+  const samples = Array.from(v.samples, (raw: unknown) => {
     const row = sample(raw),
       elapsed = row.elapsedTicks;
     if (elapsed <= last)
