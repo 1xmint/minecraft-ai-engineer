@@ -35,8 +35,8 @@ task work/`observer-final-41268319917`; earlier native fixtures remain archived.
 The composed metadata drift was fixed without weakening canonical validation.
 
 The published `v0.1.0-alpha.1` remains the older single-player alpha. The merged
-source now supports conversational engineering; conversational setup is being
-built here. Overall goal remains incomplete, including all six Phase2 features.
+source now supports conversational engineering and setup. Overall goal remains
+incomplete, including all six Phase2 features.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized. Tests run on GitHub, never on this PC. Locally use scoped compile,
@@ -243,17 +243,12 @@ Fabric's installed GameTest annotation/empty.snbt establish current fixture APIs
 Tasks: A1 write/native-CI calibration and mode-boundary probes first; then decide
 and implement A2/A3 canonical contracts/execution/evidence, and A4 integration.
 GPT-6-Luna/high is challenging only the physical source/isolation assumptions.
-Tests run in CI; local compile/format only. Phase24 is unproven and unshipped.
+Tests run in CI; local compile/format only. Phase24 remains unshipped.
 
-Initial physical probe source compiles. It schedules279 actual calibration samples
-and54 settled samples for each compare/subtract boundary probe, with real game
-clock continuity and final-off checks. A dedicated48x8x48 SNBT fixture contains
-the hardware, following the installed Fabric structure format. Nothing exposes
-comparators to catalog/model/player execution yet. Native proof remains unrun.
-The challenge's initial opposite-FACING suggestion contradicted pinned26.3
-DiodeBlock.getInputSignal: it reads pos.relative(FACING). WEST is retained as
-the west input/east output orientation, with a source comment; actual CI will
-validate the fixture. No expected values were changed to accommodate a guess.
+The probe uses279 calibration samples and54 settled samples per mode, in a
+48x8x48 SNBT fixture. No production comparator routes are exposed yet. Pinned
+DiodeBlock reads pos.relative(FACING), so WEST rear/EAST output is retained;
+the independent challenger corrected its initial opposite-facing suggestion.
 
 CI41320293103 on0697462 passed all120 required native tests, including actual
 calibration279 samples and compare/subtract54+54 samples. Captured game logs were
@@ -271,8 +266,8 @@ until Alice observes that exact public message and writes an acknowledgement;
 privacy assertions and existing bounds stay unchanged. The verifier requires the
 new receipt marker. This is a delivery/teardown race fix, not a production change
 or a timeout increase. Scoped client compilation and script syntax pass.
-A1 physical feasibility passed; A2/A3/A4 remain unimplemented. Fresh full CI is
-required for this race fix before any merge or further completion claim.
+A1 physical feasibility passed. The race fix subsequently passed full CI as
+recorded below; A2/A3/A4 production integration remains incomplete.
 
 ## Parallel lane offered to Claude — 2026-11-01
 
@@ -318,7 +313,8 @@ TypeScript decoder against independent declared stimuli. Pipeline pipefail keeps
 native failures visible; raw native logs and the numeric replay summary become
 artifacts. Archived windows also exercise replay and malformed-data rejection.
 Java/type compilation and script syntax/format checks run locally; all behavioral
-and native proofs run only on GitHub. These new codec checks remain unproven.
+and native proofs run only on GitHub. The codec checks passed Fabric and Companion
+on33f2e3c/CI41326285930; the same run�s multiplayer check is still live.
 Canonical comparator construction, trial restoration/persistence and UI/model
 integration (A2/A3/A4) remain unfinished; A1 physical feasibility is the proved part.
 
@@ -336,3 +332,16 @@ Native probes now place this actual canonical geometry in all four rotations,
 while independent measured port coordinates and expected stimuli remain in the
 proof. Invalid modes, levels and overflowing/vertical bounds have native rejection
 checks. It is not yet exposed through blueprint/catalog/server execution.
+
+Current source2c59529 is committed and backed up at origin/backup/analog-rotations;
+the PR branch still points to33f2e3c so live CI41326285930 can finish without a
+new push cancelling it. Fabric artifacts downloaded to task work/
+analog-codec-proof-41326285930 confirm all121 required native tests and36 actual
+transfer windows/108 stable samples replayed successfully. Windows planner,
+Minecraft client and Companion also passed. Dedicated job124906792163 remains
+live; watch session74456 follows that exact run. New canonical/orientation source
+compiled locally but awaits its own native CI. Next: push it to the PR after
+the current run terminates, inspect evidence, then integrate production analog
+construction/trial/recovery and authorized conversation. Canonical comparators
+need a narrowly justified noninventory block-entity boundary; focused independent
+challenge is in progress before changing existing protections.
