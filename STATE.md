@@ -9,7 +9,10 @@ Current worktree: task work/`conversation-entry`, branch
 **3ae22329fb0df73f2c9735113c91c1052f22372f**. Goal remains incomplete.
 
 Draft PR31: https://github.com/1xmint/minecraft-ai-engineer/pull/31. Initial
-CI source db7e59a is queued/running; no conversation runtime result is claimed.
+Initial source db7e59a passed all five checks in CI41269681275, all116 native
+Minecraft tests, actual text-only private chat, ordinary chat delivery and scoped
+clarification/stop markers. Evidence: task work/`conversation-first-41269681275`.
+This proves the entry/read-only flow, not the later staged world/design flows.
 
 Phase21 observer engineering is complete in merged PR30:
 https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
@@ -22,11 +25,12 @@ was inspected and archived in `docs/images/observer-tested.png`. Final evidence:
 task work/`observer-final-41268319917`; earlier native fixtures remain archived.
 The composed metadata drift was fixed without weakening canonical validation.
 
-Phase22 natural conversation is implemented in part, not runtime-proven. It has
+Phase22 natural conversation is implemented in part. Its entry/read-only flow is
+runtime-proven; later staged world/design flows remain unproven. It has
 private addressed native chat, obvious lesson context, scoped clarification and
 separate actor-bound natural action/behavior/structural confirmations. Scoped
 compilation passed; grammar, chat/privacy and clarification proofs are written
-but unrun. Still required: native staged action/generated/structural conversation,
+and the first native chat proofs passed. Still required: staged action/generated/structural conversation,
 cross-controller callback regression, full stale/replay/revocation/restart proof
 and CI before merge. No model calls or local tests ran for these phases.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
@@ -198,51 +202,53 @@ Tasks:
 4. O4: actual command-free conversation flow, durable evidence and visual review;
    update documentation, rebase onto the proven/merged observer source, CI then merge.
 
-Implementation now written but not proven: native chat hook, explicit addressing,
-private replies, current-connection/server-thread admission, automatic single-design
-lesson, scoped ambiguity question/follow-up, and natural confirmation/
-cancellation of chat-originated interpretation requests via the existing exact
-scoped action handler. Grammar tests added for CI. Dedicated action/generated/
-structural chat proofs and broad stale-scope negative coverage remain incomplete.
-Dedicated text-client proof is now written to send actual chat packets, infer
-single-design lesson context without `teach`, get timing/materials and reject
-viewer stop. Another native client must see ordinary player chat but neither
-the private request nor personal reply. CI verifier requires both new markers;
-these tests have not run. Native grammar tests also remain unrun. Scoped Java
-server/client compilation passed. GPT-6-Luna/high completed the focused chat
-identity/privacy/confirmation check with no concrete blocker. No model calls,
-local tests, permission expansion or public release have occurred.
+Current implementation and proof:
 
-Conversation-origin metadata now follows the existing typed design dispatch into
-the ephemeral generated Basis and structural preview. Natural yes delegates only
-one actual actor-matching action/behavior/structural proposal through its existing
-nonce/current-context handler. Multiple proposals, missing proposals or an active
-component question never guess what yes means. Each behavior/geometry/world stage
-retains separate review; preview approval cannot become construction approval.
-No mode flag is accepted from the model, sent as permission or restored from disk.
-Normal command flows keep their existing prompts and default false origin.
+- Private addressed player chat uses the native server event, actual current
+  connection/server thread and original player text. Ordinary chat retains its
+  audience. A single design gets personal lesson context without a setup command.
+- Composed lesson questions and explicit choices are bounded ephemeral data,
+  bound to the actual session/player/connection stamp/epoch/project/revision/
+  grants/dimension/workspace/lesson/expiry. Default renderer cursors never choose
+  a leaf. Personal auto progress holds during a question; explicit changes reject
+  stale replies. Project use/disconnect/server close clear dialogue.
+- Conversation-origin flags follow typed dispatch into ephemeral generated Basis
+  and structural preview. Natural yes selects exactly one actor-matching server
+  proposal, then calls the existing one-use nonce/current-context handler. Missing
+  or multiple reviews and a pending component question do not guess what yes means.
+  Behavior, geometry and construction retain separate approval. Flags never come
+  from models or disk, and command fallback keeps its old prompts/default origin.
+- The GPT-6-Luna/high focused review found stop left a personal question alive.
+  Authorized stop now cancels it too. Native proof confirmed subsequent yes finds
+  no proposal. Stop aliases preempt dialogue and retain the BUILD check.
+- Unbuilt generated acceptance binds basis.actor during accept and restores the
+  prior actor in finally, matching the structural callback. It cannot inherit
+  an old construction controller; the targeted runtime regression is pending.
 
-The focused GPT-6-Luna/high review found a real stop-dialogue omission: stop
-cancelled action/design/structural frames but left the personal lesson question.
-The authorized stop path now cancels that actor's question too, with a native
-assertion and a subsequent yes that must find no proposal. Stop aliases preempt
-all questions/proposals and still require the existing BUILD permission.
-Unbuilt generated preview acceptance now binds basis.actor during accept and
-restores the previous actor in finally, matching the existing structural branch;
-it cannot inherit a previous (possibly revoked) construction controller. Native
-cross-controller and full staged confirmation regressions remain required before
-release. Grammar now also tests unambiguous review selection. Scoped server/client
-compilation passed; none of the new runtime tests or any model call has run.
+Initial source db7e59a passed all5 CI41269681275, all116 native tests and three
+actual chat markers: text-only lesson context without teach, private request/reply
+versus ordinary broadcast, composed clarification/follow-up and stale lesson/stop
+rejection. Evidence: task work/`conversation-first-41269681275`. This proves the
+entry/read-only flow, not the staged world/design flow.
 
-ConversationLessons now keeps bounded ephemeral personal questions and explicit
-component choices. A default renderer cursor never selects a composed leaf for
-the user. The follow-up names one advertised leaf, checks actual session/player/
-connection stamp/epoch/project/revision/grants/dimension/workspace/lesson/expiry,
-then sets only that player's lesson. Automatic tutorial progress holds during
-the question; explicit lesson changes invalidate it. Project use, disconnect and
-server close clear dialogue; no context/permission is loaded from disk. The
-native proof now includes asking which part, answering "the lamp", a timing
-follow-up and rejection after an explicit different lesson. These new scope and
-native-flow changes compile but remain untested, and need the completed phase's
-focused check. Rebased onto the merged observer source; draft PR31 now runs the
-first conversation CI. Full staged native proofs remain required before merge.
+New native proofs are written, not run: a separate action project cancels build/
+undo, stops and resumes, rejects replay, tests the actual lamp and undoes six
+assistant blocks. A generated project lets Bob really build/undo, then revokes
+him before Alice's chat design request. It covers behavior/structural cancellation,
+separate approvals, actual8/10-block trials, undo retaining accepted intent,
+rejection of a test against mismatched restored geometry and final construction
+undo. SQLite must replay exactly6/17 planning starts, exact typed choices and
+actual tick traces. Fixed synthetic cases wait real admission windows before/after;
+no budget/spam counters or production limits change. Initial native suite8m46s
+leaves room under its existing14m client limit.
+
+New addressed-request echoes are private (`You: ...`) so chat shows both sides;
+other players must get neither echo nor personal reply. A completed-trial native
+conversation screenshot is requested for inspection. These changes need CI.
+Scoped Java compilation and verifier syntax/format checks pass. No local tests,
+SDK calls, fresh inference, permission expansion or release has occurred.
+
+Next: prove staged flows, then broad actor/replay/revocation/disconnect/restart
+cases and final user documentation before merging. New-project/workspace
+conversation, voice/NPC and the broader human experience remain required work;
+these fixtures do not establish all milestones or actual human mouse control.

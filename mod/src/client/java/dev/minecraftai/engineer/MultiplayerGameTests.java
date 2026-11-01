@@ -518,7 +518,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 awaitFile(context, "eve-text.done");
                 if(!LIVE_ACCEPTANCE){
                     expectChat(context,"I told Engineer, wait for me.");
-                    check(MESSAGES.stream().noneMatch(message->message.contains("Engineer, EXPLAIN HOW THIS WORKS") || message.contains("Intended observer timing")),"Another player must not receive the private addressed request or the bot's personal lesson reply");
+                    check(MESSAGES.stream().noneMatch(message->message.contains("EXPLAIN HOW THIS WORKS") || message.contains("Intended observer timing")),"Another player must not receive the private request, sender echo or bot's personal lesson reply");
                     write("conversation-private.done","passed");
                 }
 
@@ -650,7 +650,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);conversationWorkFlows(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1956,6 +1956,83 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer teach pulse");MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"That question no longer applies");
         server.runOnServer(s->{var project=session(s,"Alice");check(LessonAssistant.currentComponent(project,player(s,"Alice").getUUID(),true).equals("pulse") && project.delegation==null,"A changed lesson rejects the stale clarification without overwriting the newer choice or starting world work");});
         write("conversation-clarification.done","passed");
+    }
+    private static void conversationProposal(ClientGameTestContext context,String request){
+        MESSAGES.clear();say(context,"Engineer, "+request);expectChat(context,"Reply 'Engineer, yes'");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
+    }
+    private static void conversationApprove(ClientGameTestContext context,String request){conversationProposal(context,request);say(context,"Engineer, yes please");}
+    private static void conversationWorkFlows(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        // Allow the real admission window from earlier fixed fixtures to expire.
+        // No budget counters or production limits are reset or relaxed.
+        long ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1400 100 0");send(context,"engineer select2 1405 101 0");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1400,100,0)));
+        server.runCommand("tp Alice 1402 104 8 180 30");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Lesson for component root:");
+        conversationProposal(context,"CI build selected lamp.");say(context,"Engineer, no thanks");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Cancelling a chat build leaves no world edit or lease");});
+        conversationApprove(context,"CI build selected lamp.");
+        say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").delegation==null,"Natural stop drops execution authority without an extra model decision"));
+        conversationApprove(context,"CI resume selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==6 && !project.verified.startsWith("passed:"),"One approved conversation build creates exactly its six blocks, not a verification claim or replayed operation");});
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:signal-lamp:"));assertPersisted(server);
+        conversationProposal(context,"CI undo selected lamp.");say(context,"Engineer, never mind");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==6 && session(s,"Alice").delegation==null,"Cancelled chat undo retains the complete assistant operation"));
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());assertPersisted(server);
+        write("conversation-actions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("conversation-actions.done","passed");
+        conversationDesignFlow(context,server);
+        // Leave later, independently asserted fixtures a fresh real admission window.
+        ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+    }
+    private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1440 100 0");send(context,"engineer select2 1447 102 2");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1440,100,0)));
+        server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);commandAs(s,"Bob","engineer build");});
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));server.runOnServer(s->commandAs(s,"Bob","engineer undo"));server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project revoke Bob");check(project.controller.equals(player(s,"Bob").getUUID()) && !project.access.allows(project.controller,ProjectAccess.Permission.EDIT),"The prior real builder is revoked before the owner's generated preview request");});
+        String request="CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
+        conversationApprove(context,request);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, no");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(!GeneratedBlueprint.isGenerated(session(s,"Alice").blueprint) && session(s,"Alice").journal.isEmpty(),"Cancelling behavior approval requests no geometry or construction"));
+        conversationApprove(context,request);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Generated preview accepted.");
+        server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"The captured owner accepts the new preview despite a revoked previous controller; geometry approval edits no blocks");});
+        conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        String designId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        await(context,()->view(context)!=null && view(context).projectId().equals(designId) && view(context).text().contains("COMPLETED"),"The conversation's generated client preview reflects its actual completed trial");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Stored functional result for component root: passed:generated-buffer:");
+        context.waitTicks(3);context.takeScreenshot("engineer-conversation-tested");
+        String structural="CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.";
+        conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Reply 'Engineer, yes' to apply these exact changes");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.revision()==revision && project.blueprint.blocks().size()==8 && project.delegation==null,"Proposing structural geometry preserves current intent and physical work before separate approval");});
+        MESSAGES.clear();say(context,"Engineer, no");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(!session(s,"Alice").hasConversationStructural() && session(s,"Alice").revision()==revision,"Cancelling the structural review preserves the old design"));
+        conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Reply 'Engineer, yes' to apply these exact changes");
+        MESSAGES.clear();say(context,"Engineer, yes");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").revision()==revision+1);
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && !project.verified.startsWith("passed:"),"A separately approved structural revision builds the real larger layout exactly once, without inheriting its earlier test");});
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==8);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.structuralBefore().blocks().size()==8 && project.structuralBefore().blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))) && !project.verified.startsWith("passed:"),"Undo restores the real previous layout without rewriting the accepted design or inheriting a functional pass");});
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Complete/correct");
+        server.runOnServer(s->check(session(s,"Alice").delegation==null && !session(s,"Alice").verified.startsWith("passed:"),"A restored physical layout cannot pass a different accepted intention"));
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        write("conversation-design-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("conversation-design.done","passed");
     }
     private static String actionNonce(){
         var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");

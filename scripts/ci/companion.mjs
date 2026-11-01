@@ -123,8 +123,10 @@ const server = createCompanionServer({
         input.message === "CI choose a one-cell sticky shutter." ||
         input.message === "CI cancel a pending shutter selection."
           ? "plan"
-          : input.message ===
-              "CI generated buffer: on after 12 game ticks, off after 16 game ticks."
+          : [
+                "CI generated buffer: on after 12 game ticks, off after 16 game ticks.",
+                "CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.",
+              ].includes(input.message)
             ? "design"
             : input.message === "CI report selected project status."
               ? "status"
@@ -134,9 +136,11 @@ const server = createCompanionServer({
                   ? "build"
                   : input.message === "CI test selected lamp."
                     ? "test"
-                    : input.message === "CI undo selected lamp."
-                      ? "undo"
-                      : null;
+                    : input.message === "CI resume selected lamp."
+                      ? "resume"
+                      : input.message === "CI undo selected lamp."
+                        ? "undo"
+                        : null;
       const componentId =
         action === "build" || action === "test" ? "root" : null;
       if (!action || !capabilities.get(action)?.has(componentId))

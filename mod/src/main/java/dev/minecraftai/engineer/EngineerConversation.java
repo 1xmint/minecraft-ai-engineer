@@ -30,6 +30,7 @@ final class EngineerConversation {
         EngineeringSession session=null;java.util.UUID previous=null;
         try{
             if(request.isBlank()){reply(player,"Tell me what you want to build, or ask me to explain the selected design.");return;}
+            player.sendSystemMessage(Component.literal("You: "+request));
             var manager=EngineerMod.managerFor(player.level().getServer());
             session=manager.selected(player,false);previous=session.commandActor;session.access.require(player.getUUID(),ProjectAccess.Permission.VIEW);
             if(!session.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose a project in your current dimension before we work on it.");

@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { validateSettledTrace } from "../../dist/companion/src/settled-trace.js";
 import { validateShutterEvidence } from "../../dist/companion/src/shutter-trace.js";
 import { validatePulseEvidence } from "../../dist/companion/src/pulse-trace.js";
+import { mechanism } from "../../dist/companion/src/catalog.js";
 import {
   validateGeneratedBlueprint,
   behaviorDigest,
@@ -414,6 +415,8 @@ try {
       "conversation-text.done",
       "conversation-private.done",
       "conversation-clarification.done",
+      "conversation-actions.done",
+      "conversation-design.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -488,6 +491,144 @@ try {
     assert.equal(observed.testScope.basis, observed.componentBasis);
     assert.deepEqual(observed.testInputs, []);
     validatePulseEvidence(observed.testEvidence, true);
+    const conversations = [
+      {
+        file: "conversation-actions-project",
+        starts: 6,
+        actions: ["build", "build", "resume", "test", "undo", "undo"],
+        template: "signal-lamp",
+      },
+      {
+        file: "conversation-design-project",
+        starts: 17,
+        actions: [
+          "design",
+          "design",
+          "build",
+          "test",
+          "design",
+          "design",
+          "test",
+          "undo",
+          "test",
+          "undo",
+        ],
+        template: "generated-buffer",
+      },
+    ];
+    for (const expected of conversations) {
+      const id = readFileSync(
+        `${coordination}/${expected.file}`,
+        "utf8",
+      ).trim();
+      const starts = db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+        )
+        .get(server.serverId, id);
+      assert.equal(
+        starts.count,
+        expected.starts,
+        "Only the explicitly requested conversation interpretation/design stages dispatch; stop/cancel/replay/approval itself create no extra inference",
+      );
+      const interpretations = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='interpretation-reply' ORDER BY id",
+        )
+        .all(server.serverId, id)
+        .map((entry) => JSON.parse(entry.document));
+      assert.deepEqual(
+        interpretations.map((entry) => entry.reply.action),
+        expected.actions,
+      );
+      assert.ok(
+        interpretations.every(
+          (entry) =>
+            entry.reply.kind === "action" &&
+            entry.worldEvidence === "not-inspected",
+        ),
+      );
+      const passes = db
+        .prepare(
+          "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE ? ORDER BY id",
+        )
+        .all(server.serverId, id, `passed:${expected.template}:%`);
+      assert.ok(
+        passes.length >= (expected.template === "signal-lamp" ? 1 : 2),
+        "Actual conversation tests reach durable memory",
+      );
+      const layouts = new Set();
+      for (const stored of passes) {
+        const report = JSON.parse(stored.document),
+          observed = report.checkpoint.observed,
+          scope = observed.testScope;
+        const source = JSON.parse(
+          db
+            .prepare(
+              "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+            )
+            .get(server.serverId, id, report.context.projectRevision).document,
+        );
+        assert.equal(scope.projectId, id);
+        assert.equal(scope.blueprintId, source.id);
+        assert.equal(scope.blueprintRevision, source.revision);
+        assert.equal(scope.component, "root");
+        assert.equal(scope.basis, observed.componentBasis);
+        assert.equal(observed.controller, report.context.actorId);
+        assert.deepEqual(observed.testInputs, []);
+        const rows = observed.testEvidence;
+        if (expected.template === "signal-lamp") {
+          assert.equal(source.provenance.template, "signal-lamp");
+          assert.deepEqual(
+            rows.map(({ inputs, outputs }) => ({ inputs, outputs })),
+            mechanism("signal-lamp").cases,
+          );
+        } else {
+          const blueprint = validateGeneratedBlueprint(source),
+            digest = behaviorDigest(blueprint.behavior);
+          assert.deepEqual(blueprint.behavior, {
+            schemaVersion: 1,
+            function: "buffer",
+            risingGameTicks: 12,
+            fallingGameTicks: 16,
+          });
+          layouts.add(blueprint.blocks.length);
+          assert.equal(rows.length, 3);
+          assert.deepEqual(
+            rows[0].baselineSamples,
+            Array.from({ length: 9 }, (_, elapsedTicks) => ({
+              elapsedTicks,
+              observed: false,
+            })),
+          );
+          for (const [index, on, ticks] of [
+            [1, true, 12],
+            [2, false, 16],
+          ]) {
+            const row = rows[index],
+              trace = row.trace;
+            assert.equal(row.behaviorDigest, digest);
+            assert.equal(trace.verdict, "passed");
+            assert.equal(trace.expectedGameTicks, ticks);
+            assert.equal(trace.transitionTick, ticks);
+            assert.equal(trace.stableGameTicks, 8);
+            assert.deepEqual(
+              trace.samples,
+              Array.from({ length: ticks + 9 }, (_, elapsedTicks) => ({
+                elapsedTicks,
+                observed: elapsedTicks < ticks ? !on : on,
+              })),
+            );
+          }
+        }
+      }
+      if (expected.template === "generated-buffer")
+        assert.deepEqual(
+          [...layouts].sort((a, b) => a - b),
+          [8, 10],
+          "Both actual generated layouts are independently tested through conversation",
+        );
+    }
   }
   const catalogEvidence = [];
   for (const template of ["or-gate", "not-gate"]) {
