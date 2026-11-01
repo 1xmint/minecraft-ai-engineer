@@ -51,6 +51,30 @@ const context: GatewayContext = {
   requestId: "request",
 };
 
+test("composed observer metadata matches the server temporal contract rather than claiming settled vectors", () => {
+  const observerNodes = structuredClone(nodes);
+  if (observerNodes[1]?.kind === "mechanism")
+    observerNodes[1].template = "observer-pulse";
+  const project = makeComponentBlueprint(input, observerNodes);
+  const pulse = project.tests.find(
+    (entry) => entry.id === "a:functional-vectors",
+  )!;
+  assert.equal(
+    pulse.description,
+    "Measure both input-edge pulses, receiver signal and lamp on consecutive game ticks; restore the exact original input.",
+  );
+  assert.deepEqual(
+    serverBlueprint(project, context, input.worldId, input.dimension),
+    project,
+  );
+  const forged = structuredClone(project);
+  forged.tests.find((entry) => entry.id === pulse.id)!.description =
+    "Exercise each catalog truth-table vector at actual server ticks, then restore every input.";
+  assert.throws(() =>
+    serverBlueprint(forged, context, input.worldId, input.dimension),
+  );
+});
+
 test("composed mechanisms preserve pivot geometry, dependency order and canonical durable mirrors", () => {
   // Deliberately declare the dependant before its prerequisite.
   const project = makeComponentBlueprint(input, [

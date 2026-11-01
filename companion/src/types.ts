@@ -143,7 +143,12 @@ export interface Checkpoint {
 }
 export interface Plan {
   template:
-    "signal-lamp" | "not-gate" | "or-gate" | "sticky-shutter" | "unsupported";
+    | "signal-lamp"
+    | "not-gate"
+    | "or-gate"
+    | "observer-pulse"
+    | "sticky-shutter"
+    | "unsupported";
   explanation: string;
   parameters?: { delay: number };
   rotation?: Rotation;

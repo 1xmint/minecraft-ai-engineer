@@ -263,6 +263,7 @@ final class Diagnosis {
 
     private static Set<String> allowedProperties(BlockState intended) {
         if (intended.is(Blocks.REPEATER)) return Set.of("facing", "delay");
+        if (intended.is(Blocks.OBSERVER)) return Set.of("facing");
         if (intended.is(Blocks.LEVER)) return Set.of("face", "facing");
         if (intended.is(Blocks.REDSTONE_WALL_TORCH)) return Set.of("facing");
         return Set.of();
@@ -288,6 +289,7 @@ final class Diagnosis {
 
     private static String mismatchExplanation(String component, BlockPos pos, BlockState intended, BlockState actual) {
         String prefix = "Component '" + component + "' at " + pos.toShortString() + ": ";
+        if(intended.is(Blocks.OBSERVER))return prefix+"observer must watch "+intended.getValue(BlockStateProperties.FACING)+" and emit opposite that face (observed watching "+actual.getValue(BlockStateProperties.FACING)+"). Orientation alone does not prove a pulse.";
         if (intended.is(Blocks.REPEATER)) {
             return prefix + "repeater input side should be " + inputSide(intended) + " (observed " + inputSide(actual)
                     + "); required delay is " + intended.getValue(BlockStateProperties.DELAY) + " redstone ticks"

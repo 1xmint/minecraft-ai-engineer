@@ -17,7 +17,12 @@ import {
 } from "./types.js";
 
 const ID_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/u;
-const TEMPLATES = ["signal-lamp", "not-gate", "or-gate"] as const;
+const TEMPLATES = [
+  "signal-lamp",
+  "not-gate",
+  "or-gate",
+  "observer-pulse",
+] as const;
 
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
@@ -278,8 +283,9 @@ function content(
     }
     tests.push({
       id: `${node.id}:functional-vectors`,
-      description:
-        "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
+      description: catalog.pulse
+        ? "Measure both input-edge pulses, receiver signal and lamp on consecutive game ticks; restore the exact original input."
+        : "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
     });
   }
   if (blocks.length > 4096)

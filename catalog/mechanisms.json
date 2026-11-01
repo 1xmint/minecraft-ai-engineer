@@ -457,6 +457,123 @@
         }
       ],
       "settleTicks": 12
+    },
+    {
+      "id": "observer-pulse",
+      "name": "Observer edge detector",
+      "explanation": "An observer watches a lever and emits a short pulse on both on and off edges. A settled off lamp does not prove that either pulse occurred. Testing must sample the detector, receiver and lamp on every game tick.",
+      "maxDelay": 1,
+      "settleTicks": 16,
+      "stages": [
+        {
+          "id": "foundation",
+          "title": "Support the pulse detector",
+          "explanation": "Place three stone supports in a row.",
+          "prerequisites": []
+        },
+        {
+          "id": "input",
+          "title": "Add the observed input",
+          "explanation": "Place an off floor lever above the first support.",
+          "prerequisites": ["foundation"]
+        },
+        {
+          "id": "output",
+          "title": "Face the observer toward the lever",
+          "explanation": "Place the observer watching the lever (facing=west), with its red output facing the lamp. Every lever edge should produce a two-game-tick pulse after two game ticks; the lamp stays lit four ticks longer.",
+          "prerequisites": ["foundation", "input"]
+        }
+      ],
+      "blocks": [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "state": "minecraft:stone",
+          "stage": "foundation",
+          "component": "support"
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+          "stage": "input",
+          "component": "input"
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:redstone_lamp[lit=false]",
+          "stage": "output",
+          "component": "output"
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "state": "minecraft:observer[facing=west,powered=false]",
+          "stage": "output",
+          "component": "detector"
+        }
+      ],
+      "ports": [
+        {
+          "name": "input",
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "input"
+        },
+        {
+          "name": "output",
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "kind": "output"
+        }
+      ],
+      "cases": [],
+      "pulse": {
+        "schemaVersion": 1,
+        "delayGameTicks": 2,
+        "widthGameTicks": 2,
+        "lampReleaseGameTicks": 4,
+        "horizonGameTicks": 16
+      }
     }
   ]
 }

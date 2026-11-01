@@ -19,8 +19,10 @@ public final class MechanismCatalog {
     public record Vector(Map<String, Boolean> inputs, Map<String, Boolean> outputs) {
         public Vector { inputs = Map.copyOf(inputs); outputs = Map.copyOf(outputs); }
     }
-    public record Contract(String template, List<Port> ports, List<Vector> cases, int settleTicks) {
+    public record Pulse(int delayGameTicks,int widthGameTicks,int lampReleaseGameTicks,int horizonGameTicks) { }
+    public record Contract(String template, List<Port> ports, List<Vector> cases, int settleTicks, Pulse pulse) {
         public Contract { ports = List.copyOf(ports); cases = List.copyOf(cases); }
+        public Contract(String template,List<Port> ports,List<Vector> cases,int settleTicks){this(template,ports,cases,settleTicks,null);}
     }
 
     private MechanismCatalog() { }
@@ -81,7 +83,7 @@ public final class MechanismCatalog {
         json.add("ports", ports);
         JsonArray tests = new JsonArray(); JsonObject functionalTest = new JsonObject();
         functionalTest.addProperty("id", "functional-vectors");
-        functionalTest.addProperty("description", "Exercise each catalog truth-table vector at actual server ticks, then restore every input.");
+        functionalTest.addProperty("description", recipe.has("pulse")?"Measure both input-edge pulses, receiver signal and lamp on consecutive game ticks; restore the exact original input.":"Exercise each catalog truth-table vector at actual server ticks, then restore every input.");
         tests.add(functionalTest); json.add("tests", tests);
         JsonObject provenance = new JsonObject(); provenance.addProperty("kind", "curated");
         provenance.addProperty("template", template); provenance.addProperty("minecraft", root().get("minecraft").getAsString());
@@ -128,7 +130,13 @@ public final class MechanismCatalog {
         for (JsonElement e : recipe.getAsJsonArray("cases")) {
             JsonObject v = e.getAsJsonObject(); vectors.add(new Vector(boolMap(v.getAsJsonObject("inputs")), boolMap(v.getAsJsonObject("outputs"))));
         }
-        return new Contract(template, ports, vectors, Math.max(integer(recipe.get("settleTicks")), 2 * delay + 6));
+        Pulse pulse=null;
+        if(recipe.has("pulse")){
+            var p=recipe.getAsJsonObject("pulse");
+            if(!template.equals("observer-pulse") || integer(p.get("schemaVersion"))!=1 || integer(p.get("delayGameTicks"))!=PulseTrace.DELAY || integer(p.get("widthGameTicks"))!=PulseTrace.WIDTH || integer(p.get("lampReleaseGameTicks"))!=PulseTrace.LAMP_RELEASE || integer(p.get("horizonGameTicks"))!=PulseTrace.HORIZON || !vectors.isEmpty())throw new IllegalArgumentException("Unsupported temporal contract");
+            pulse=new Pulse(PulseTrace.DELAY,PulseTrace.WIDTH,PulseTrace.LAMP_RELEASE,PulseTrace.HORIZON);
+        }
+        return new Contract(template, ports, vectors, Math.max(integer(recipe.get("settleTicks")), 2 * delay + 6),pulse);
     }
 
     private static int parametersDelay(JsonObject blueprint, JsonObject recipe) {

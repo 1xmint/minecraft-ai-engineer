@@ -29,8 +29,15 @@ export interface Mechanism {
     inputs: Record<string, boolean>;
     outputs: Record<string, boolean>;
   }[];
+  pulse?: {
+    schemaVersion: 1;
+    delayGameTicks: 2;
+    widthGameTicks: 2;
+    lampReleaseGameTicks: 4;
+    horizonGameTicks: 16;
+  };
 }
-const ids = new Set(["signal-lamp", "not-gate", "or-gate"]);
+const ids = new Set(["signal-lamp", "not-gate", "or-gate", "observer-pulse"]);
 function array(value: unknown, name: string, max: number): unknown[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > max)
     throw new RequestError(`Invalid catalog ${name}.`);
@@ -86,7 +93,7 @@ function readMechanism(value: unknown): Mechanism {
         positions.has(key) ||
         Math.max(Math.abs(pos.x), Math.abs(pos.y), Math.abs(pos.z)) > 64 ||
         !seenStages.has(stage) ||
-        !/^minecraft:(?:stone|lever|repeater|redstone_lamp|redstone_wall_torch)(?:\[[a-z0-9_=,]+\])?$/u.test(
+        !/^minecraft:(?:stone|lever|repeater|redstone_lamp|redstone_wall_torch|observer)(?:\[[a-z0-9_=,]+\])?$/u.test(
           state,
         )
       )
@@ -122,7 +129,25 @@ function readMechanism(value: unknown): Mechanism {
     outputs = ports.filter((p) => p.kind === "output").map((p) => p.name);
   if (!inputs.length || !outputs.length)
     throw new RequestError("Catalog needs input and output ports.");
-  const cases = array(v.cases, "cases", 128).map((item) => {
+  const pulse =
+    id === "observer-pulse"
+      ? {
+          schemaVersion: 1 as const,
+          delayGameTicks: 2 as const,
+          widthGameTicks: 2 as const,
+          lampReleaseGameTicks: 4 as const,
+          horizonGameTicks: 16 as const,
+        }
+      : undefined;
+  if (
+    pulse
+      ? JSON.stringify(v.pulse) !== JSON.stringify(pulse) ||
+        !Array.isArray(v.cases) ||
+        v.cases.length !== 0
+      : v.pulse !== undefined
+  )
+    throw new RequestError("Invalid temporal catalog contract.");
+  const cases = (pulse ? [] : array(v.cases, "cases", 128)).map((item) => {
     const c = object(item);
     return {
       inputs: booleanMap(c.inputs, inputs),
@@ -139,6 +164,7 @@ function readMechanism(value: unknown): Mechanism {
     blocks,
     ports,
     cases,
+    ...(pulse ? { pulse } : {}),
   };
 }
 if (raw.schemaVersion !== 1 || raw.minecraft !== "26.3")
@@ -307,8 +333,14 @@ export function makeMechanismBlueprint(
     ports: m.ports.map((p) => ({ ...p, pos: { ...p.pos } })),
     tests: [
       {
-        id: m.id === "signal-lamp" ? "off-on-off" : "truth-table",
-        description: `Test all ${m.cases.length} catalog input vectors against actual Minecraft outputs; restore every original input.`,
+        id: m.pulse
+          ? "observer-edges"
+          : m.id === "signal-lamp"
+            ? "off-on-off"
+            : "truth-table",
+        description: m.pulse
+          ? "Measure both input-edge pulses, receiver signal and lamp on consecutive game ticks; restore the exact original input."
+          : `Test all ${m.cases.length} catalog input vectors against actual Minecraft outputs; restore every original input.`,
       },
     ],
     provenance: {
