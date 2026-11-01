@@ -52,7 +52,26 @@ delegations, and multiple owned projects require an explicit `project use`.
 
 ## Talking to Engineer (development source)
 
-After selecting a project and its workspace, talk in ordinary Minecraft chat:
+Project setup also uses ordinary chat in the development source:
+
+1. Say `Engineer, start a new project`. Creation still requires the operator's
+   existing creation grant; the project starts private.
+2. Stand at the first corner and say `Engineer, mark the first corner here`.
+   The corner is the block containing your feet.
+3. Move or fly to the opposite upper corner and say
+   `Engineer, mark the second corner here`. Engineer reports both positions.
+   Marking a workspace places no blocks and approves no construction.
+4. Tell Engineer what you want to make, review the proposed design, then continue
+   with explanations, construction or testing.
+
+To return to a project, ask `Engineer, show my projects`. Choose its number or
+name; duplicate names require a number. Use `Engineer, show more projects` and
+`Engineer, show previous projects` to browse. Only projects you can view in your
+current dimension appear. Choices expire when their connection, selection,
+revision or permissions change. A yes does not choose a project.
+You can also say `Engineer, work on project` followed by an exact project name.
+
+Within the selected project, talk in ordinary Minecraft chat:
 
 - `Engineer, explain how this works`
 - `Engineer, what materials do I need?`
@@ -80,10 +99,10 @@ Another player's yes cannot approve your request. Requests that need a model
 remain restricted to the configured account-owning operator and consume the
 subscription's available quota.
 
-Project creation, workspace selection and sharing still use the setup commands
-above. Natural conversation for those steps remains unfinished. The published
-solo alpha does not contain this conversation entry point. Commands documented
-below remain available for manual control and troubleshooting.
+Sharing and creation grants still use the owner/operator setup commands above.
+The published solo alpha does not contain these conversational flows. Commands
+below remain available for manual control and troubleshooting. See STATE.md for
+the current branch's runtime proof and remaining human acceptance work.
 
 ## Mechanism library in current source
 

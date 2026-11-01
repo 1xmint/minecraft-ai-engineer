@@ -1093,6 +1093,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
+            MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"does not grant you edit permission");
             MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
             MESSAGES.clear();say(context,"Engineer, CI build selected lamp.");expectChat(context,"account-owning operator");
             write("conversation-bob-denied.done","passed");awaitFile(context,"conversation-bob-revoked");
@@ -1100,6 +1101,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             say(context,"Engineer, yes");
             await(context,()->view(context)==null || !view(context).projectId().equals(conversationProject),"A revoked client gets neither the shared conversation metadata nor its owner's pending review");
             write("conversation-bob-revoked.done","passed");
+            awaitFile(context,"conversation-setup-editor-project");String editorProject=read("conversation-setup-editor-project");
+            send(context,"engineer project use "+editorProject);await(context,()->view(context)!=null && view(context).projectId().equals(editorProject),"The editor receives only its newly shared setup project");
+            MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"Only the project owner can change");
+            write("conversation-setup-editor-denied.done","passed");
         }
         awaitFile(context, "finish");
         disconnect(context);
@@ -1118,6 +1123,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connect(context, 1);
         awaitFile(context, "shared");
         String project = read("project");
+        MESSAGES.clear();say(context,"Engineer, start a new project");expectChat(context,"grant project creation permission first");
+        MESSAGES.clear();say(context,"Engineer, show my projects");expectChat(context,"no matching projects shared with you");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Lever to lamp delay circuit")),"A denied player's project list contains no private blueprint name");
+        write("conversation-setup-denied.done","passed");
         searchProject(context,project,false,"project-find-denied.done");
         send(context, "engineer project use " + project);
         send(context, "engineer project permission Alice build true");
@@ -1978,6 +1987,36 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(LessonAssistant.currentComponent(project,player(s,"Alice").getUUID(),true).equals("pulse") && project.delegation==null,"A changed lesson rejects the stale clarification without overwriting the newer choice or starting world work");});
         write("conversation-clarification.done","passed");
     }
+    private static void conversationSetup(ClientGameTestContext context,TestDedicatedServerContext server,String previous,BlockPos first,BlockPos second){
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
+        MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+        server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        server.runCommand("tp Alice "+first.getX()+" "+first.getY()+" "+first.getZ());
+        server.waitFor(s->player(s,"Alice").blockPosition().equals(first));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the first corner here");expectChat(context,"First corner marked at your feet");
+        server.runCommand("tp Alice "+second.getX()+" "+second.getY()+" "+second.getZ());
+        server.waitFor(s->player(s,"Alice").blockPosition().equals(second));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
+        server.runOnServer(s->{var project=session(s,"Alice");check(first.equals(project.corner1) && second.equals(project.corner2) && project.journal.isEmpty() && project.delegation==null,"Natural setup captures the real player's two positions, creates a private project and edits no blocks");});
+        String duplicate=server.computeOnServer(s->{var actor=player(s,"Alice");var names=EngineerMod.managerFor(s).projects.values().stream().filter(p->p.dimension.equals(actor.level().dimension().identifier().toString()) && p.access.allows(actor.getUUID(),ProjectAccess.Permission.VIEW)).map(p->p.blueprint==null?"New project":p.blueprint.name()).toList();return names.stream().filter(name->java.util.Collections.frequency(names,name)>1).findFirst().orElseThrow();});
+        MESSAGES.clear();setupSay(context,"Engineer, work on project "+duplicate);expectChat(context,"Which project?");
+        MESSAGES.clear();setupSay(context,"Engineer, "+duplicate);expectChat(context,"Choose one of the project numbers");
+        MESSAGES.clear();setupSay(context,"Engineer, never mind");expectChat(context,"Cancelled the project choice");
+        int index=server.computeOnServer(s->{var actor=player(s,"Alice");var manager=EngineerMod.managerFor(s);var ids=manager.projects.values().stream().filter(p->p.dimension.equals(actor.level().dimension().identifier().toString()) && p.access.allows(actor.getUUID(),ProjectAccess.Permission.VIEW)).map(p->p.projectId).toList();return ids.indexOf(session(s,"Alice").projectId)+1;});
+        MESSAGES.clear();setupSay(context,"Engineer, show my projects");expectChat(context,"Which project?");
+        MESSAGES.clear();setupSay(context,"Engineer, yes");expectChat(context,"Tell me a project number or name");
+        for(int page=1;page<=(index-1)/12;page++){MESSAGES.clear();setupSay(context,"Engineer, show more projects");expectChat(context,"Page "+(page+1)+"/");}
+        server.runOnServer(s->{var project=session(s,"Alice");project.access.member(player(s,"Alice").getUUID(),player(s,"Bob").getUUID(),ProjectAccess.Role.VIEWER);project.manager.changed(project);});
+        MESSAGES.clear();setupSay(context,"Engineer, "+index);expectChat(context,"That project list is no longer current");
+        server.runOnServer(s->check(first.equals(session(s,"Alice").corner1) && second.equals(session(s,"Alice").corner2) && session(s,"Alice").journal.isEmpty(),"An ambiguous or stale list choice changes neither workspace nor world work"));
+        MESSAGES.clear();setupSay(context,"Engineer, show my projects");expectChat(context,"Which project?");
+        for(int page=1;page<=(index-1)/12;page++){MESSAGES.clear();setupSay(context,"Engineer, show more projects");expectChat(context,"Page "+(page+1)+"/");}
+        MESSAGES.clear();setupSay(context,"Engineer, "+index);expectChat(context,"Selected project");
+        server.runOnServer(s->check(first.equals(session(s,"Alice").corner1) && second.equals(session(s,"Alice").corner2) && session(s,"Alice").delegation==null,"A fresh numbered choice selects only its displayed authorized project without work authority"));
+    }
+    private static void setupSay(ClientGameTestContext context,String message){
+        say(context,message);context.waitTicks(21); // Respect native chat pacing; never reset its spam counter.
+    }
     private static void conversationProposal(ClientGameTestContext context,String request){
         MESSAGES.clear();say(context,"Engineer, "+request);expectChat(context,"Reply 'Engineer, yes'");
         check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
@@ -1989,8 +2028,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         long ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
         while(System.nanoTime()-ready<0)context.waitTicks(2);
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
-        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
-        send(context,"engineer select1 1400 100 0");send(context,"engineer select2 1405 101 0");send(context,"engineer reference signal-lamp");
+        conversationSetup(context,server,previous,new BlockPos(1400,100,0),new BlockPos(1405,101,0));send(context,"engineer reference signal-lamp");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1400,100,0)));
         server.runCommand("tp Alice 1402 104 8 180 30");
         server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
@@ -2015,6 +2053,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(session(s,"Alice").journal.size()==6 && session(s,"Alice").delegation==null,"Cancelled chat undo retains the complete assistant operation"));
         conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());assertPersisted(server);
         write("conversation-actions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("conversation-actions.done","passed");
+        write("conversation-setup.done","passed");
         conversationDesignFlow(context,server);
         // Leave later, independently asserted fixtures a fresh real admission window.
         ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
@@ -2022,11 +2061,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
-        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
-        send(context,"engineer select1 1440 100 0");send(context,"engineer select2 1447 102 2");send(context,"engineer reference signal-lamp");
+        conversationSetup(context,server,previous,new BlockPos(1440,100,0),new BlockPos(1447,102,2));send(context,"engineer reference signal-lamp");
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1440,100,0)));
         server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
-        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);commandAs(s,"Bob","engineer build");});
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");});
+        write("conversation-setup-editor-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"conversation-setup-editor-denied.done");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.corner1.equals(new BlockPos(1440,100,0)) && project.corner2.equals(new BlockPos(1447,102,2)) && project.journal.isEmpty(),"An editor's actual chat cannot change the owner's workspace or start world work");commandAs(s,"Bob","engineer build");});
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));server.runOnServer(s->commandAs(s,"Bob","engineer undo"));server.waitFor(s->session(s,"Alice").journal.isEmpty());
         server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");check(project.controller.equals(player(s,"Bob").getUUID()) && project.access.allows(project.controller,ProjectAccess.Permission.VIEW) && !project.access.allows(project.controller,ProjectAccess.Permission.EDIT) && !project.access.allows(project.controller,ProjectAccess.Permission.BUILD),"The prior real builder retains view but loses edit/build authority before the owner's generated preview request");});
         String request="CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
