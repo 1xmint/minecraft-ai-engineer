@@ -4,50 +4,28 @@
 AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
-Current branch: **phase/21-observer-pulses**, based on main
-**caa7de6738c10af7534dfb5f1876c32e6fd893d7**. Phase20 PR29 merged at
-2026-10-31T17:23:46Z. Final head0f78de1 passed all5 CI41223355084. Natural requests,
-scoped follow-ups, guarded action delegation and planning are shipped in source.
-Draft PR30: https://github.com/1xmint/minecraft-ai-engineer/pull/30. Current
-implementation checkpoint6ca16d8. Native observer pulse semantics and strict trace
-validation passed all five checks in CI41225064861 on0f13621 (112 native tests).
-Canonical observer catalog/component planning, guarded temporal trial, strict
-Java/TypeScript evidence replay, lessons/orientation repair and dedicated-player
-build/test/interrupt/restart/undo proof are now implemented for the next CI run.
-CI41226129816 on6ca16d8 passed Companion, Windows planner, Minecraft client and
-Fabric (113 native tests). Dedicated flow proved build, both original input states,
-interruption, actual saved-server restart and fresh retest, then failed at an
-incorrect undo expectation: the real guard preserved a manually switched-on lever.
-The proof now requires this refusal and explicit player restoration before retrying
-undo; production undo guards are unchanged. Next: prove this and expanded coverage.
-Expanded source5ee940c/CI41227072775 passed the same four checks, then the text-only
-fixture correctly received "Choose a lesson" instead of timing: it had selected
-the shared project without selecting its personal lesson. The fixture now calls
-`teach root` before timing/materials (and asserts the exact observer material).
-The shared Bob fixture also explicitly chooses its lesson. No production lesson
-or permission rule changed. Local compileClientJava passed. Evidence: task work/
-`observer-shared-41227072775`; continue with the corrected source's CI.
-CI41266521932 on c32b8d4 passed four checks and eight observer markers, including
-text-only lessons, viewer denial, revocation, player conflict, interruption,
-restart/retest and guarded undo. It then correctly refused the composed lamp
-build because the fixture waited for block cells but not dependency-margin chunks.
-The fixture now waits for both leaves' full dependency footprints. Screenshot
-inspection also caught a stale VERIFYING overlay after the server had passed;
-the proof now awaits the actual matching COMPLETED client snapshot and moves
-closer before capture. Neither guard nor functional expectation was weakened.
-Evidence: task work/`observer-authority-41266521932`. Remaining: composed flow,
-SQLite replay and final visual evidence/CI before merge.
-CI41267284500 on c159ecf passed all113 native tests, the entire dedicated native
-flow and all nine observer markers, including composition. SQLite then caught a
-real mirror-contract mismatch: TypeScript composition regenerated an observer's
-test description as a settled truth table, while Java correctly sent the temporal
-description. Strict canonical validation rejected sync, so no composed result
-was stored. TypeScript now mirrors the temporal descriptor, with a regression
-that rejects the old vector claim; the native flow also awaits its actual
-companion acknowledgement before declaring composed success. Validation remains
-strict. Evidence: task work/`observer-composed-41267284500`. Its actual completed
-client image was inspected and archived as `docs/images/observer-tested.png`.
-Remaining: prove the corrected full SQLite flow and exact final-source CI.
+Current worktree: task work/`conversation-entry`, branch
+**phase/22-conversation-entry**, rebased onto main
+**3ae22329fb0df73f2c9735113c91c1052f22372f**. Goal remains incomplete.
+
+Phase21 observer engineering is complete in merged PR30:
+https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
+Exact implementation4d4a1de passed all five checks in CI41268319917, all113 native
+Minecraft tests, the full dedicated flow, all nine observer markers and strict
+SQLite replay for original input states, actual restart and the composed leaf.
+Read-only root/shared lessons, permissions, revocation, player conflicts, input
+restoration, guarded undo and retained stale evidence passed. Native screenshot
+was inspected and archived in `docs/images/observer-tested.png`. Final evidence:
+task work/`observer-final-41268319917`; earlier native fixtures remain archived.
+The composed metadata drift was fixed without weakening canonical validation.
+
+Phase22 natural conversation is implemented in part, not runtime-proven. It has
+private addressed native chat, obvious lesson context, scoped clarification and
+separate actor-bound natural action/behavior/structural confirmations. Scoped
+compilation passed; grammar, chat/privacy and clarification proofs are written
+but unrun. Still required: native staged action/generated/structural conversation,
+cross-controller callback regression, full stale/replay/revocation/restart proof
+and CI before merge. No model calls or local tests ran for these phases.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
@@ -57,12 +35,6 @@ AGENTS.md and STATE.md. Historical development detail is preserved in Git.
 
 ## Full remaining roadmap
 
-Parallel authorized work: isolated worktree task work/`conversation-entry`, branch
-`phase/22-conversation-entry` based c32b8d4, has an unfinished private native-chat
-prototype. No PR or tests yet; rebase after observer merges. It carries its own
-Phase22 Outcomes in STATE.md. GPT-6-Luna/high focused auth review found no concrete
-blocker; actual chat/privacy, ambiguity and generated-confirmation proofs remain.
-
 Josh clarified that normal interaction must be talking naturally to the bot,
 not typing lesson/setup commands. `/engineer teach root` in a fixture selects a
 personal lesson but does not establish the finished experience. After completing
@@ -71,7 +43,7 @@ lesson context, clarification for ambiguity and natural explicit confirmation
 that retains all execution guards. Commands stay available as fallback. This
 serves E1/E4 and precedes more component expansion; comparators remain required.
 
-- E2: broader electrical/mechanical engineering: observers, comparators, analog
+- E2: broader electrical/mechanical engineering: comparators, analog
   strength, actual connections, larger piston mechanisms and composed systems.
   Geometry and settled endpoints never substitute for functional tick proof.
 - E1: broader natural references, durable rationale/summaries and project retrieval
@@ -155,97 +127,32 @@ model call is needed to prove the shipped Phase20 slice.
   Loom1.17.21, Gradle9.6, Node24.14, TypeScript7.0.2, SDK/CLI0.164.0. Preserve pins
   unless a task needs a change; unrelated Dependabot PR6 is not this work.
 
-## Phase21: observer pulse engineering (serves E2/E3)
+## Phase21 shipped proof (serves E2/E3)
 
-Outcomes:
+Observer support is a canonical temporal primitive, not an expanded generated
+block allowlist. Its Pulse contract has zero settled Boolean vectors.
 
-- O1: distinguish a real observer pulse from a failed circuit that is simply off.
-  Prove actual game-tick delay/width, receiver signal and lamp response in all four
-  horizontal rotations, both input edges, held-input quietness and wrong-facing/
-  unrelated-neighbor negatives. Native per-tick samples are the proof.
-- O2: preview, teach and build a canonical observer component under existing creative,
-  loaded-world, permission and reservation guards. Prove no preview authority,
-  preservation of player blocks, conflict/revocation pause and guarded assistant undo.
-- O3: record actual temporal evidence and restore the exact original input safely.
-  Prove rejection of missing/duplicate/wrong-scope traces and false steady-state
-  passes; interrupted/restarted work needs fresh authority and observation, and never
-  imports a lease, pending callback or successful result.
-- O4: integrate component lessons, materials, timing, catalog/native commands and
-  authorized shared/text-only views. Prove native build/test/interrupt/recovery/undo
-  plus regression compatibility with electrical and shutter paths. Planning exposes
-  only a validated supported design, not arbitrary observer geometry or claimed tests.
+- O1 passed: actual delay2, width2 and lamp release4 in all four horizontal
+  rotations, both lever edges, quiet periods and wrong-facing/unrelated-update
+  negatives. Native consecutive tick traces round-trip through strict Java and
+  TypeScript replay; gaps, duplicates and false off-endpoint passes reject.
+- O2 passed: canonical creative construction under existing loaded-world,
+  permission and reservation guards; no preview authority, a player support
+  preserved, actual conflict/revocation pause and guarded assistant-only undo.
+- O3 passed: actual baseline/edge evidence, exact initially-off/on input
+  restoration, fresh owner reconciliation, stale retained evidence after real
+  restart, fresh retest and no restored callback, lease or live pass.
+- O4 passed: catalog/native/component planning, lessons/materials/timing, shared
+  viewer and text-only views, independent composed leaf and actual dedicated
+  build/test/interruption/recovery/undo. SQLite replays exact saved revisions and
+  distinct server epochs. The full old electrical/shutter suite also passed.
 
-Decision: observers add a useful engineering primitive and make temporal verification
-explicit without introducing container/inventory analog inputs. Comparators and larger
-mechanics remain on the roadmap. Reuse placement/reservation/input-journal guards;
-add a distinct temporal contract/trace rather than widening settled Boolean tests.
-Do not advertise observer support from primitive tests alone.
-
-Pinned vanilla ObserverBlock bytecode was read: input changes schedule a tick after2,
-powered activation schedules deactivation after2, and output neighbors are opposite
-FACING. These are contract inputs, not runtime proof. Existing generated falling-edge
-lamp timing already accounts for vanilla lamp delay; verify the combined observer
-and receiver trace in the real game before declaring exact end-to-end timing.
-
-Next tasks:
-
-1. O1: write native four-rotation pulse/quietness/orientation tests and collect actual
-   consecutive game-tick observations in CI. Locally compile only.
-2. O1/O3: implement a strict shared temporal evidence model and meaningful negative
-   validation cases. Keep intended timing separate from measured evidence.
-3. O2/O3: canonical blueprint, guarded build/test/input restoration and journaled
-   interruption/recovery/undo. Get a focused boundary check if authority changes.
-4. O4: public native/component/lesson/planning integration and real dedicated-player
-   proof; inspect exact source CI, markers, SQLite replay and screenshots before merge.
-
-Phase21 progress (2026-10-31): O1 native feasibility passed on0f13621 in
-CI41225064861, Fabric job124607463255: all112 required tests, five complete native
-observer traces (four valid rotations plus wrong-facing negative). Each trace
-contains77 consecutive actual game ticks, both input edges, held quiet periods,
-receiver signal, lamp state and an unrelated side-neighbor update. Actual delay2,
-width2, lamp release4 match the pinned contract. `PulseTrace` rejects steady-off
-false passes, gaps, duplicates, extra pulses, changed input, incorrect lamp timing,
-rewritten contracts and invented pass/authority fields; native edge samples also
-round-trip through it. Evidence: task work/`observer-native-41225064861/fabric-job.log`.
-Local compileJava passed; no local tests or model calls ran.
-
-First native run41224876801 failed because GameTest does not order separate
-same-tick callbacks. The fixed fixture couples each input change and first sample
-in one callback. The proof expectations were retained. The earlier run was
-superseded by the changed source, not retried due to an observation timeout.
-
-O2/O3/O4 remain incomplete pending runtime proof. Integration adds a canonical
-six-block catalog recipe (one observer, lever, lamp, three supports), fixed delay
-parameter1, separate Pulse contract with zero Boolean vectors, and component
-composition/planning. Generated geometry keeps its prior restrictions. Trials
-capture the actual original input, observe a quiet baseline and both edges at
-consecutive game ticks, then finish only with full replay and exact restoration.
-Saved evidence retains existing project/component scope and never restores a
-callback or lease. Lessons distinguish intended timing from measured results;
-orientation diagnosis/repair preserves dynamic power. New dedicated-client flow
-and SQLite verifier require actual off/on initial-state trials, interrupted-input
-restoration, a new server epoch, fresh testing and assistant-only undo preserving
-a player support. First integration evidence is task work/
-`observer-integration-41226129816`; markers functional/interrupted/recovered passed,
-undo did not. The failure is the test expecting removal of a player-edited lever,
-not a missing observer pulse. A GPT-6-Luna/high helper completed the focused
-execution/recovery check with no concrete blocker; no broad review cycle.
-
-Expanded proof is now written/compiled: viewer-denied world actions, revocation
-during a pulse with fresh owner reconciliation, preserved player lamp replacement,
-text-only authorized observer lessons, and a composed observer leaf beside an
-independent lamp. SQLite replay requires their markers, exact scopes and actual
-distinct server epochs. `tests/fixtures/observer-edges.json` archives eight measured
-edges from CI41225064861 for cross-language regression; it supplies no authority.
-A new native screenshot and development command guide are prepared. These added
-flows and corrected undo still need CI proof. Local compile/type/format/syntax
-checks pass; no local tests ran.
-
-Next: prove expanded integration, inspect durable evidence and actual screenshot,
-then finish supported-command docs before merging. Never route observer tests through
-the settled Boolean vector loop. No model calls ran for this phase; archival
-receipts confer no new inference authority. Keep every broader milestone active
-until its own proof exists.
+Final source4d4a1de/all5 CI41268319917, merged3ae2232/PR30. All113 required native
+Minecraft tests and nine observer markers passed. `observer-edges.json` contains
+archival measured native data from CI41225064861, never inference or authority.
+The genuine composition persistence bug was temporal test-description drift in
+the TypeScript mirror; it was fixed with rejection regression and actual receipt
+checks. Earlier fixture errors and full development history remain in Git.
 
 ## Phase22: natural conversation over engineering projects (serves E1/E4)
 
