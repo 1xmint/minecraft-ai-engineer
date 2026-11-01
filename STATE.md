@@ -268,3 +268,11 @@ existing real admission window. The original command-nonce restart proof remains
 unchanged. Exact conversation starts become8/17; this new proof is not yet run.
 Player/acceptance guides now describe private chat, staged approvals, evidence
 markers and remaining command-based setup honestly.
+
+CI41271943307 on96558c8 passed four checks and the actual conversation action,
+wrong-actor, admission-denial and grant-revocation flows, then failed the previous
+builder fixture. The attempted EDIT permission toggle is unsupported by policy;
+the existing supported role change `project share Bob viewer` removes all three
+mutation rights while preserving VIEW and the previous controller. This corrects
+the fixture without changing permissions or assertions. Evidence: task work/
+`conversation-shared-41271943307`. The added restart proof and role fix need CI.
