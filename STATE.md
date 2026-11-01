@@ -283,3 +283,12 @@ byte-bound gap. Scoped type and format/diff checks pass; new behavioral checks
 await GitHub CI. No local tests ran. Update PR34 with this fix, merge only its exact
 green head, then record completion of the file foundation; full in-game schematic
 milestone stays pending. Shared main/Phase24 memory must be reconciled on merge.
+
+Review head d09295d/CI41333273366 passed Companion (including three new boundary
+proofs), Fabric, Windows and Minecraft client. Dedicated hit the inherited
+ordinary-chat send/disconnect race: Alice never received the message before Eve
+left. Applied only the previously proved sender/recipient receipt handshake from
+384a4b4 to this independent branch, plus its required marker. No production chat,
+privacy assertions, quota or timeout changed. This parent integration fix touches
+the shared native fixture/verifier because the failure blocks required CI; Claude
+did not edit those paths. New full CI required before merge.

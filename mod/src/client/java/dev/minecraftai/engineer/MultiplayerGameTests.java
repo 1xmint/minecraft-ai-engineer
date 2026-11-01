@@ -515,12 +515,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     write("observer-text-project",session(s,"Alice").projectId.toString());commandAs(s,"Alice","engineer project use "+original);
                 });
                 write("text-viewer", "ready");
-                awaitFile(context, "eve-text.done");
                 if(!LIVE_ACCEPTANCE){
+                    awaitFile(context,"conversation-broadcast-sent");
                     expectChat(context,"I told Engineer, wait for me.");
                     check(MESSAGES.stream().noneMatch(message->message.contains("EXPLAIN HOW THIS WORKS") || message.contains("Intended observer timing")),"Another player must not receive the private request, sender echo or bot's personal lesson reply");
+                    write("conversation-broadcast-received.done","passed");
                     write("conversation-private.done","passed");
                 }
+                awaitFile(context, "eve-text.done");
 
                 send(context, "engineer project share Bob editor");
                 send(context, "engineer permit Bob");
@@ -1161,6 +1163,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
             say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
             say(context,"I told Engineer, wait for me.");
+            write("conversation-broadcast-sent","ready");awaitFile(context,"conversation-broadcast-received.done");
             check(view(context)==null,"Authorized observer lessons work over ordinary text without setup commands, visual authority or a preview cache");write("observer-text.done","passed");write("conversation-text.done","passed");
         }
         disconnect(context);
