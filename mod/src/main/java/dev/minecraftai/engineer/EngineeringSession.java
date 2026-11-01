@@ -828,7 +828,7 @@ final class EngineeringSession implements BuildExecutor {
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);
         boolean mechanical=ShutterDesign.describes(selected.source());
-        if(!mechanical)MechanismCatalog.contract(selected);
+        if(!mechanical)EngineeringContracts.contract(selected);
         Diagnosis.Proposal proposal=diagnoses.get(actor());
         if(proposal==null || !proposal.actor().equals(actor()) || proposal.expiresAtTick()<=server.getTickCount()
                 || !proposal.epoch().equals(manager.epoch) || !proposal.projectId().equals(projectId)
@@ -1263,7 +1263,7 @@ final class EngineeringSession implements BuildExecutor {
             // A previously restored declared backing is not yet present in the live world during preflight.
             boolean survives=support!=null && view.projected(support)?view.get(support).is(net.minecraft.world.level.block.Blocks.STONE):change.before().canSurvive(level(),change.pos());
             if(change.before().hasBlockEntity() || !survives)throw new IllegalStateException("Undo cannot safely restore the recorded block at "+change.pos().toShortString());
-        });
+        },this::undoAfterMatches);
     }
 
     void undoReserved() {
@@ -1316,7 +1316,11 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Undo target is not the latest operation; no older work was changed");
         return batch;
     }
-    private boolean undoAfterMatches(Change change,BlockState actual) {return UndoProjection.matches(change,actual);}
+    private boolean undoAfterMatches(Change change,BlockState actual) {
+        if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && AnalogIntention.describes(operationScopes.blueprint(change.operation()).source()))
+            return AnalogWireUndo.matches(operationScopes.blueprint(change.operation()),change,actual,level());
+        return UndoProjection.matches(change,actual);
+    }
     void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
         validateUndoNeighbors(change,assistantPositions,plannedPositions,level()::getBlockState);
     }
@@ -1329,7 +1333,8 @@ final class EngineeringSession implements BuildExecutor {
             boolean outside=!plannedPositions.contains(neighbor);
             BlockPos support=UndoProjection.support(actual,neighbor);
             boolean playerSupported=change.pos().equals(support);
-            if(outside || playerSupported)throw new IllegalStateException("Undo would disturb a player block at "+neighbor.toShortString()+"; remove its dependency or take over this section first");
+            boolean playerWire=!outside && actual.is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && AnalogWireUndo.changesPlayerConnection(level(),view,change,neighbor,actual);
+            if(outside || playerSupported || playerWire)throw new IllegalStateException("Undo would disturb a player block at "+neighbor.toShortString()+"; remove its dependency or take over this section first");
         }
     }
     private static BlockState restoreDynamic(BlockState before,BlockState actual) {return UndoProjection.restored(before,actual);}

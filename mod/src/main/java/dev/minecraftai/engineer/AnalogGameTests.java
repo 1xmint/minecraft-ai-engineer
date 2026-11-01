@@ -197,6 +197,28 @@ public final class AnalogGameTests {
         var tooMany=saved.deepCopy();tooMany.getAsJsonArray("testInputs").add(entries.get(0).deepCopy());boolean denied=false;try{restored.trial.load(tooMany);}catch(IllegalStateException expectedFailure){denied=true;}helper.assertTrue(denied,"Analog recovery stays bounded to its exact45 declared selectors");
         helper.succeed();
     }
+    @GameTest(maxTicks=40) public void undoUsesNativeDustShapeAndPreservesInterruptedPlayerDotEdits(GameTestHelper helper){
+        var id=java.util.UUID.randomUUID();var comparator=new BlockPos(2,2,2);var wire=comparator.east();var absolute=helper.absolutePos(comparator);var output=helper.absolutePos(wire);
+        var source=AnalogIntention.create(id,1,id,"test","minecraft:overworld",absolute,0,"compare").blueprint();
+        var after=source.blocks().stream().filter(block->block.pos().equals(output)).findFirst().orElseThrow().state();var change=new EngineeringSession.Change(output,Blocks.AIR.defaultBlockState(),after,"proof","root");
+        helper.setBlock(comparator.below(),Blocks.STONE);helper.setBlock(wire.below(),Blocks.STONE);helper.setBlock(comparator,Blueprint.state("minecraft:comparator[facing=west,mode=compare,powered=false]"));helper.setBlock(wire,after);
+        helper.runAtTickTime(8,()->{
+            var actual=helper.getLevel().getBlockState(output);helper.assertTrue(UndoProjection.matches(change,actual),"Initial undo preflight still requires the exact original dust shape");
+            var comparatorChange=new EngineeringSession.Change(absolute,Blocks.AIR.defaultBlockState(),helper.getLevel().getBlockState(absolute),"proof","root");
+            helper.assertTrue(AnalogWireUndo.changesPlayerConnection(helper.getLevel(),helper.getLevel()::getBlockState,comparatorChange,output,actual),"Removing an owned neighbor cannot silently rewrite an adopted player's dust arms");
+            helper.setBlock(comparator,Blocks.AIR);
+        });
+        helper.runAtTickTime(12,()->{
+            var actual=helper.getLevel().getBlockState(output);
+            helper.assertTrue(!UndoProjection.matches(change,actual) && AnalogWireUndo.matches(source,change,actual,helper.getLevel()),"Native shape changes after owned removals are distinct from an original player edit");
+            var dot=actual;for(var property:java.util.List.of(BlockStateProperties.NORTH_REDSTONE,BlockStateProperties.SOUTH_REDSTONE,BlockStateProperties.EAST_REDSTONE,BlockStateProperties.WEST_REDSTONE))dot=dot.setValue(property,net.minecraft.world.level.block.state.properties.RedstoneSide.NONE);
+            helper.setBlock(wire,dot);
+        });
+        helper.runAtTickTime(16,()->{
+            var dot=helper.getLevel().getBlockState(output);helper.assertTrue(!AnalogWireUndo.matches(source,change,dot,helper.getLevel()),"A player dot change during interrupted undo remains protected rather than ignored as dynamic");
+            helper.assertTrue(helper.getLevel().getBlockState(output).equals(dot),"Native connection prediction is read-only");helper.succeed();
+        });
+    }
     private static int angle(Rotation rotation){return switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};}
 
     private static void modeProbe(GameTestHelper helper,ComparatorMode mode){modeProbe(helper,mode,Rotation.NONE);}

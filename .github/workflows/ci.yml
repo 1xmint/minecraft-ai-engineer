@@ -82,7 +82,7 @@ jobs:
   multiplayer:
     name: Dedicated multiplayer
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
     steps:

@@ -405,6 +405,13 @@ try {
   }
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
     for (const marker of [
+      "analog-repair.done",
+      "analog-viewer.done",
+      "analog-revoked.done",
+      "analog-conflict.done",
+      "analog-shared.done",
+      "analog-restarted.done",
+      "analog-restart-undo.done",
       "analog-preview.done",
       "analog-interruption.done",
       "analog-functional.done",
@@ -579,6 +586,62 @@ try {
       assert.deepEqual(observed.testInputs, []);
       validateAnalogEvidence(observed.testEvidence, "compare", true);
     }
+    const sharedAnalog = readFileSync(
+      `${coordination}/analog-shared-project`,
+      "utf8",
+    ).trim();
+    const sharedPasses = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:comparator-subtract:%' ORDER BY id",
+      )
+      .all(server.serverId, sharedAnalog);
+    assert.ok(
+      sharedPasses.length >= 2,
+      "Shared subtract workbench is tested before and after actual saved-server restart",
+    );
+    const analogEpochs = new Set();
+    for (const stored of sharedPasses) {
+      const report = JSON.parse(stored.document),
+        observed = report.checkpoint.observed,
+        scope = observed.testScope;
+      const raw = JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, sharedAnalog, report.context.projectRevision)
+          .document,
+      );
+      const intended = validateAnalogIntention(raw, {
+        worldId: server.worldId,
+        dimension: raw.dimension,
+        projectId: sharedAnalog,
+      });
+      assert.equal(intended.analog.mode, "subtract");
+      assert.equal(scope.projectId, sharedAnalog);
+      assert.equal(scope.blueprintId, intended.id);
+      assert.equal(scope.blueprintRevision, intended.revision);
+      assert.equal(scope.component, "root");
+      assert.equal(scope.basis, observed.componentBasis);
+      assert.equal(scope.basisVersion, observed.componentBasisVersion);
+      assert.equal(observed.controller, report.context.actorId);
+      assert.deepEqual(observed.testInputs, []);
+      validateAnalogEvidence(observed.testEvidence, "subtract", true);
+      analogEpochs.add(report.context.serverEpoch);
+    }
+    assert.ok(
+      analogEpochs.size >= 2,
+      "A restored historical analog pass cannot substitute for fresh numeric observations in a new server epoch",
+    );
+    assert.equal(
+      db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+        )
+        .get(server.serverId, sharedAnalog).count,
+      0,
+      "Shared analog guard/restart fixture requests no inference",
+    );
     const conversations = [
       {
         file: "conversation-actions-project",

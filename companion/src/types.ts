@@ -30,7 +30,13 @@ export interface ComponentMechanismNode {
   id: string;
   parent: string;
   kind: "mechanism";
-  template: Exclude<Plan["template"], "unsupported" | "sticky-shutter">;
+  template: Exclude<
+    Plan["template"],
+    | "unsupported"
+    | "sticky-shutter"
+    | "comparator-compare"
+    | "comparator-subtract"
+  >;
   anchor: Position;
   rotation: Rotation;
   parameters: { delay: number };
@@ -148,6 +154,8 @@ export interface Plan {
     | "or-gate"
     | "observer-pulse"
     | "sticky-shutter"
+    | "comparator-compare"
+    | "comparator-subtract"
     | "unsupported";
   explanation: string;
   parameters?: { delay: number };

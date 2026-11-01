@@ -421,3 +421,51 @@ No behavioral tests ran locally. All new runtime, boundary, WAL and native66-cas
 checks remain unproven until the next GitHub run. Phase24 stays draft/unshipped.
 Next: inspect fresh CI, fix failures without weakening proofs, then finish catalog,
 shared/revoked/conflict and actual restart trial coverage before claiming A2/A3/A4.
+
+Sourceb2bd6cb CI41329949003: Fabric, Companion, Windows and Minecraft client passed;
+all135 native tests, both66-case native suites and numeric replay passed. Dedicated
+failed. Actual Alice chat built139 blocks, interrupted/restored all original
+selectors and completed the guarded66-case trial; receipt/screenshot exist at task
+work/analog-runtime-failure-41329949003. Screenshot inspected. First undo correctly
+preserved the changed selector; after resetting it, undo removed early owned cells
+then rejected changed native dust arms at1715,102,16. Bob later timed out awaiting
+the next conversation phase. This is an actual undo defect, not a missing numeric
+pass or a reason to relax functional evidence. No old run remains live.
+
+The fix keeps initial undo preflight strict. After durable undo intent, only owned
+wire entries in captured canonical analog operations may compare against the pinned
+engine’s read-only getConnectionState calculation from the recorded after state.
+The private calculation is exposed by a narrowly scoped mixin. It predicts native
+arm changes without setting POWER or reading cached entity output; a manually
+changed isolated dot still differs and blocks interrupted undo. New native proof
+reproduces neighbor removal and rejects the player dot edit. Focused GPT-6-Luna/high
+challenge also identified non-owned adjacent dust connectivity: undo now projects
+the proposed before-state through the same native calculation and refuses changes
+to a player’s dust arms. Existing attachment protection remains in place.
+
+A4 planning now advertises compare/subtract workbenches as canonical options in all
+four fitting rotations, requires delay1 and strict UUID/world bounds, and retains
+legacy electrical options when analog cannot fit. Components remain closed to
+analog leaves until composition is separately implemented. No SDK call is needed
+for these routing/fit rejection proofs. Generic diagnosis/repair is reused rather
+than duplicated: only the exact native canonical comparator is exempt from the
+read footprint BE blocker; wrong-mode/inventory replacements remain protected.
+Ordinary missing-wire corrections use existing fresh actor/connection/project/
+snapshot guards and have their own operation; every repair still needs retesting.
+
+Added actual shared subtract fixture: viewer mutation denial, editor revocation
+during45-input trial, fresh owner reconciliation, player selector conflict
+preservation, scoped missing-wire repair, actual66-case pass, saved-server restart
+with stale history/no lease, fresh new-epoch66-case test and undo of only the latest
+repair while keeping the older139-block build. SQLite requires both epochs and
+replays exact scopes and numeric cases. These new checks remain unproven.
+Bob follows real analog phase receipts before starting the later conversation wait;
+global per-wait limits stay unchanged. Fixed extra native trials justify CI-only
+client16->20min/harness1020->1260sec and job20->25min bounds. Production deadlines,
+permissions, consent and quotas do not change. Local main/client compilation, TS,
+scoped format/syntax/diff pass; tests run only in GitHub.
+
+Claude’s reserved schematic work is now draft PR34 (claude/schematic-interop);
+review/integration is the next independent lane while fresh comparator CI runs.
+Overall goal and Phase24 remain incomplete. Next: fresh CI for these fixes/coverage,
+inspect outcomes and publish comparator evidence only after all required checks.

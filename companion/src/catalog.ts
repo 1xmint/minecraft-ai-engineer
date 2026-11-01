@@ -1,3 +1,4 @@
+import { makeAnalogIntention } from "./analog-intention.js";
 import raw from "../../catalog/mechanisms.json" with { type: "json" };
 import { randomUUID } from "node:crypto";
 import { rotatePosition } from "./geometry.js";
@@ -17,7 +18,13 @@ import {
 } from "./types.js";
 
 export interface Mechanism {
-  id: Exclude<Plan["template"], "unsupported" | "sticky-shutter">;
+  id: Exclude<
+    Plan["template"],
+    | "unsupported"
+    | "sticky-shutter"
+    | "comparator-compare"
+    | "comparator-subtract"
+  >;
   name: string;
   explanation: string;
   maxDelay: number;
@@ -193,6 +200,13 @@ export const PLANNING_MECHANISMS = immutable([
     maxDelay: m.maxDelay,
   })),
   SHUTTER_OPTION,
+  ...(["compare", "subtract"] as const).map((mode) => ({
+    template: `comparator-${mode}` as
+      "comparator-compare" | "comparator-subtract",
+    name: `Comparator ${mode} workbench`,
+    explanation: `A canonical ${mode} comparator with independent physical rear/side strength selectors0..15. Settled numeric testing covers66 cases and restores every original selector; this does not measure latency or read container inventories.`,
+    maxDelay: 1,
+  })),
 ]);
 if (new Set(MECHANISMS.map((m) => m.id)).size !== MECHANISMS.length)
   throw new RequestError("Duplicate catalog identity.");
@@ -213,7 +227,10 @@ export function adaptation(
       v.delay,
       "delay",
       1,
-      template === "sticky-shutter" ? 1 : mechanism(template).maxDelay,
+      template === "sticky-shutter" ||
+        ["comparator-compare", "comparator-subtract"].includes(template)
+        ? 1
+        : mechanism(template).maxDelay,
     ),
   };
 }
@@ -237,6 +254,61 @@ export function makeMechanismBlueprint(
 ): Blueprint {
   if (plan.template === "unsupported")
     throw new RequestError(plan.explanation, 422);
+  if (
+    plan.template === "comparator-compare" ||
+    plan.template === "comparator-subtract"
+  ) {
+    adaptation(plan.template, plan.parameters ?? { delay: 1 });
+    const rotation = plan.rotation ?? input.rotation;
+    if (
+      input.revision &&
+      (input.revision.template !== plan.template ||
+        input.revision.rotation !== rotation)
+    )
+      throw new RequestError(
+        "A revision must keep the current mechanism and rotation.",
+        422,
+      );
+    const corners = [];
+    for (const x of [-15, 1])
+      for (const y of [-2, 0])
+        for (const z of [-15, 15])
+          corners.push({ pos: rotatePosition({ x, y, z }, rotation) });
+    const extent = bounds(corners);
+    if (input.maxSize)
+      for (const axis of ["x", "y", "z"] as const)
+        if (
+          integer(input.maxSize[axis], "workspace size", 1, 129) <
+          extent.max[axis] - extent.min[axis] + 1
+        )
+          throw new RequestError(
+            "The analog workbench does not fit the selected dimensions.",
+            422,
+          );
+    try {
+      return makeAnalogIntention({
+        id: randomUUID(),
+        revision: 1,
+        projectId: input.projectId ?? randomUUID(),
+        worldId: input.worldId,
+        dimension: input.dimension,
+        anchor: {
+          x: input.anchor.x - extent.min.x,
+          y: input.anchor.y - extent.min.y,
+          z: input.anchor.z - extent.min.z,
+        },
+        rotation,
+        mode: plan.template === "comparator-compare" ? "compare" : "subtract",
+      });
+    } catch (error) {
+      if (error instanceof TypeError)
+        throw new RequestError(
+          "Analog identity or occupied coordinates are outside the canonical contract.",
+          422,
+        );
+      throw error;
+    }
+  }
   if (plan.template === "sticky-shutter") {
     adaptation(plan.template, plan.parameters ?? { delay: 1 });
     const rotation = plan.rotation ?? input.rotation;
