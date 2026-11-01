@@ -6,6 +6,8 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.ComparatorBlock;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ComparatorMode;
@@ -18,7 +20,8 @@ public final class AnalogGameTests {
     private static final String WIRE_Z="minecraft:redstone_wire[north=side,south=side,east=none,west=none,power=0]";
 
     @GameTest(structure="engineer:analog_lab",maxTicks=1200)
-    public void physicalSelectorsProduceEveryStrengthWithoutCrossCoupling(GameTestHelper helper){
+    public void physicalSelectorsProduceEveryStrengthWithoutCrossCoupling(GameTestHelper nativeHelper){
+        var helper=new Lab(nativeHelper,Rotation.NONE);
         build(helper,ComparatorMode.COMPARE);
         var samples=new JsonArray();long[] started={0};int caseIndex=0;
         for(int bank=0;bank<3;bank++)for(int step=0;step<=30;step++){
@@ -47,6 +50,24 @@ public final class AnalogGameTests {
     @GameTest(structure="engineer:analog_lab",maxTicks=300)
     public void subtractModeUsesMeasuredRearAndStrongestSide(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT);}
 
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void compareModeSouth(GameTestHelper helper){modeProbe(helper,ComparatorMode.COMPARE,Rotation.CLOCKWISE_90);}
+
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void subtractModeSouth(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT,Rotation.CLOCKWISE_90);}
+
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void compareModeWest(GameTestHelper helper){modeProbe(helper,ComparatorMode.COMPARE,Rotation.CLOCKWISE_180);}
+
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void subtractModeWest(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT,Rotation.CLOCKWISE_180);}
+
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void compareModeNorth(GameTestHelper helper){modeProbe(helper,ComparatorMode.COMPARE,Rotation.COUNTERCLOCKWISE_90);}
+
+    @GameTest(structure="engineer:analog_lab",maxTicks=300)
+    public void subtractModeNorth(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT,Rotation.COUNTERCLOCKWISE_90);}
+
     @GameTest public void numericTransferClaimsCannotChangeTheirIntendedModeOrInputs(GameTestHelper helper){
         var trace=new AnalogTrace("compare",new int[]{8,3,0},1000);
         for(int elapsed=8;elapsed<=10;elapsed++)trace.sample(1000+elapsed,elapsed,"compare",new int[]{8,3,0},8);
@@ -68,7 +89,9 @@ public final class AnalogGameTests {
         helper.succeed();
     }
 
-    private static void modeProbe(GameTestHelper helper,ComparatorMode mode){
+    private static void modeProbe(GameTestHelper helper,ComparatorMode mode){modeProbe(helper,mode,Rotation.NONE);}
+    private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation){
+        var helper=new Lab(nativeHelper,rotation);
         build(helper,mode);
         int[][] cases={{0,0,0},{1,0,0},{15,0,0},{8,3,0},{8,0,3},{8,8,0},
             {8,0,8},{8,9,0},{8,0,9},{8,3,7},{8,7,3},{3,15,0},{15,14,1},
@@ -90,7 +113,7 @@ public final class AnalogGameTests {
                     trace[0].sample(helper.getLevel().getGameTime(),expectedElapsed,state.getValue(ComparatorBlock.MODE).getSerializedName(),new int[]{wire(helper,port(0)),wire(helper,port(1)),wire(helper,port(2))},wire(helper,OUTPUT));
                     if(expectedElapsed==10){
                         helper.assertTrue(trace[0].passed() && AnalogTrace.read(trace[0].json(),mode.getSerializedName(),requested).passed(),"Actual native numeric evidence must round-trip against the intended transfer");
-                        System.out.println("ENGINEER_ANALOG_TRANSFER "+trace[0].json());
+                        System.out.println((rotation==Rotation.NONE?"ENGINEER_ANALOG_TRANSFER ":"ENGINEER_ANALOG_ROTATED_TRANSFER "+rotation+" ")+trace[0].json());
                     }
                     samples.add(row);
                 });
@@ -108,7 +131,7 @@ public final class AnalogGameTests {
         return switch(bank){case 0->COMPARATOR.offset(index-15,0,0);case 1->COMPARATOR.offset(0,0,index-15);case 2->COMPARATOR.offset(0,0,index+1);default->throw new IllegalArgumentException("Unknown bank");};
     }
     private static BlockPos port(int bank){return slot(bank,bank==2?0:14);}
-    private static void build(GameTestHelper helper,ComparatorMode mode){
+    private static void build(Lab helper,ComparatorMode mode){
         for(int bank=0;bank<3;bank++)for(int index=0;index<15;index++)helper.setBlock(slot(bank,index).below(),Blocks.STONE);
         helper.setBlock(COMPARATOR.below(),Blocks.STONE);helper.setBlock(OUTPUT.below(),Blocks.STONE);
         for(int bank=0;bank<3;bank++)for(int index=0;index<15;index++){
@@ -119,7 +142,7 @@ public final class AnalogGameTests {
         helper.setBlock(COMPARATOR,Blueprint.state("minecraft:comparator[facing=west,mode="+mode.getSerializedName()+",powered=false]"));
         helper.setBlock(OUTPUT,Blueprint.state(WIRE_X));
     }
-    private static void drive(GameTestHelper helper,int[] requested){
+    private static void drive(Lab helper,int[] requested){
         for(int bank=0;bank<3;bank++){
             int level=requested[bank];if(level<0 || level>15)throw new IllegalArgumentException("Strength outside0..15");
             int selected=level==0?-1:bank==2?15-level:level-1;
@@ -130,12 +153,12 @@ public final class AnalogGameTests {
             }
         }
     }
-    private static int wire(GameTestHelper helper,BlockPos pos){
+    private static int wire(Lab helper,BlockPos pos){
         var state=helper.getLevel().getBlockState(helper.absolutePos(pos));
         helper.assertTrue(state.is(Blocks.REDSTONE_WIRE),"Measure an actual wire at "+pos);
         return state.getValue(BlockStateProperties.POWER);
     }
-    private static JsonObject sample(GameTestHelper helper,int[] requested,long started,int elapsed){
+    private static JsonObject sample(Lab helper,int[] requested,long started,int elapsed){
         var row=new JsonObject();row.addProperty("tick",helper.getLevel().getGameTime());row.addProperty("elapsed",helper.getLevel().getGameTime()-started);
         var measured=new JsonArray();var expected=new JsonArray();
         for(int bank=0;bank<3;bank++){measured.add(wire(helper,port(bank)));expected.add(requested[bank]);}
@@ -144,10 +167,22 @@ public final class AnalogGameTests {
         helper.assertTrue(measured.equals(expected),"Physical selectors must produce the requested independent signal strengths: "+row);
         return row;
     }
-    private static void assertOff(GameTestHelper helper){
+    private static void assertOff(Lab helper){
         for(int bank=0;bank<3;bank++)for(int index=0;index<15;index++)helper.assertTrue(!helper.getLevel().getBlockState(helper.absolutePos(slot(bank,index).below(2))).getValue(BlockStateProperties.POWERED),"All physical selector levers finish off");
         for(int bank=0;bank<3;bank++)helper.assertTrue(wire(helper,port(bank))==0,"Each measured input finishes at zero");
         helper.assertTrue(wire(helper,OUTPUT)==0,"Actual output finishes at zero");
+    }
+    /** Rotate positions and native states together around the fixture centre. */
+    private record Lab(GameTestHelper helper,Rotation rotation){
+        private BlockPos local(BlockPos pos){return pos.subtract(COMPARATOR).rotate(rotation).offset(COMPARATOR);}
+        BlockPos absolutePos(BlockPos pos){return helper.absolutePos(local(pos));}
+        net.minecraft.server.level.ServerLevel getLevel(){return helper.getLevel();}
+        void setBlock(BlockPos pos,BlockState state){helper.setBlock(local(pos),state.rotate(rotation));}
+        void setBlock(BlockPos pos,net.minecraft.world.level.block.Block block){setBlock(pos,block.defaultBlockState());}
+        void pullLever(BlockPos pos){helper.pullLever(local(pos));}
+        void assertTrue(boolean condition,String message){helper.assertTrue(condition,"rotation="+rotation+": "+message);}
+        void runAtTickTime(long tick,Runnable task){helper.runAtTickTime(tick,task);}
+        void succeed(){helper.succeed();}
     }
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
 }

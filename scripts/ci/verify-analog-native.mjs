@@ -26,37 +26,59 @@ const cases = [
   [15, 15, 15],
   [0, 0, 0],
 ];
-const groups = { compare: [], subtract: [] };
+const rotations = [
+  "NONE",
+  "CLOCKWISE_90",
+  "CLOCKWISE_180",
+  "COUNTERCLOCKWISE_90",
+];
+const groups = Object.fromEntries(
+  rotations.map((rotation) => [rotation, { compare: [], subtract: [] }]),
+);
 const marker = "ENGINEER_ANALOG_TRANSFER ";
 for (const line of readFileSync(log, "utf8").split(/\r?\n/)) {
-  const start = line.indexOf(marker);
-  if (start < 0) continue;
-  const value = JSON.parse(line.slice(start + marker.length).trim());
+  let start = line.indexOf(marker);
+  let rotation = "NONE";
+  let payload;
+  if (start >= 0) payload = line.slice(start + marker.length).trim();
+  else {
+    const rotatedMarker = "ENGINEER_ANALOG_ROTATED_TRANSFER ";
+    start = line.indexOf(rotatedMarker);
+    if (start < 0) continue;
+    const rest = line.slice(start + rotatedMarker.length).trim();
+    const split = rest.indexOf(" ");
+    rotation = rest.slice(0, split);
+    assert.ok(rotations.includes(rotation) && rotation !== "NONE");
+    payload = rest.slice(split + 1);
+  }
+  const value = JSON.parse(payload);
   assert.ok(value?.mode === "compare" || value?.mode === "subtract");
-  groups[value.mode].push(value);
+  groups[rotation][value.mode].push(value);
 }
-for (const mode of ["compare", "subtract"]) {
-  assert.equal(
-    groups[mode].length,
-    cases.length,
-    `${mode}: every native case must arrive exactly once`,
-  );
-  for (let index = 0; index < cases.length; index++)
+for (const rotation of rotations)
+  for (const mode of ["compare", "subtract"]) {
     assert.equal(
-      validateAnalogTrace(
-        groups[mode][index],
-        { mode, requested: cases[index] },
-        true,
-      ).verdict,
-      "passed",
+      groups[rotation][mode].length,
+      cases.length,
+      `${rotation}/${mode}: every native case must arrive exactly once`,
     );
-}
+    for (let index = 0; index < cases.length; index++)
+      assert.equal(
+        validateAnalogTrace(
+          groups[rotation][mode][index],
+          { mode, requested: cases[index] },
+          true,
+        ).verdict,
+        "passed",
+      );
+  }
 console.log(
   JSON.stringify({
     kind: "native-analog-cross-runtime-replay",
-    windows: 36,
-    stableSamples: 108,
+    windows: 144,
+    stableSamples: 432,
     modes: ["compare", "subtract"],
+    rotations,
     authority: "none; one transfer window is not a whole-circuit pass",
   }),
 );

@@ -321,3 +321,10 @@ Java/type compilation and script syntax/format checks run locally; all behaviora
 and native proofs run only on GitHub. These new codec checks remain unproven.
 Canonical comparator construction, trial restoration/persistence and UI/model
 integration (A2/A3/A4) remain unfinished; A1 physical feasibility is the proved part.
+
+A2 orientation proof now rotates the entire native selector apparatus and block states
+together around its centre. Six added native probes cover both comparator modes
+in the remaining three rotations; CI requires all144 transfer windows/432 stable
+samples across four orientations through the independent TypeScript replay.
+This is physical orientation coverage, not yet production construction or a
+latency claim. Local compilation only; the new rotated checks await fresh CI.
