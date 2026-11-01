@@ -469,3 +469,24 @@ Claude’s reserved schematic work is now draft PR34 (claude/schematic-interop);
 review/integration is the next independent lane while fresh comparator CI runs.
 Overall goal and Phase24 remain incomplete. Next: fresh CI for these fixes/coverage,
 inspect outcomes and publish comparator evidence only after all required checks.
+
+CI41332437714 on d43fdf7 passed all136 native tests, including native wire undo
+reproduction, and the actual dedicated compare build/test/interruption/restoration/
+full139-block undo. Real viewer/revocation/conflict and missing-wire repair markers
+also passed. Dedicated then failed because its queued test command was checked
+while the previous repair still said COMPLETED/untested. The fixture now requires
+observing VERIFYING/testTick>=0 before accepting completion in all three full
+analog waits. This changes no production behavior or assertion of a numeric pass.
+Scoped client compilation passed; fresh CI is required. Evidence: task work/
+analog-shared-failure-41332437714. No current comparator run remains live.
+
+Josh requested Claude’s next independent goal. Reserved suggested lane: standalone
+read-only schematic analysis and geometry diff, based on updated PR34/source
+d09295d (or main after it merges). Own only companion/src/schematic-analysis/**,
+tests/schematic-analysis*.test.ts and docs/schematic-analysis.md; no dependency
+manifests or existing codec/server/core/CI/memory edits. Exact raw block/state
+counts are geometry metrics, not obtainable item costs or functional optimization.
+Diff applies offsets, rejects DataVersion mismatch, distinguishes outside-volume
+from air, bounds detailed output and makes no deletion/authority/functional claims.
+CLI reads neutral JSON and writes reports only to stdout; no world mutations or
+paid services. Codex retains PR34 integration and comparator/runtime work.
