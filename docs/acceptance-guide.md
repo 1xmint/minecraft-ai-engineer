@@ -341,3 +341,37 @@ and is saved as `docs/images/natural-diagnosis.png`.
 codec regression tests. It is expired historical evidence, never a fresh native
 response or authority. The private started/untrusted/response receipts remain local.
 This call is consumed; do not invoke it again or reuse older discussion receipts.
+
+## Native chat entry proof (development source)
+
+Ordinary CI sends actual player chat packets addressed to Engineer. The fixed
+provider replies are synthetic routing fixtures, not fresh model inference.
+Inspect the dedicated multiplayer artifact and SQLite verifier before claiming
+that the source passed:
+
+- `conversation-text.done`: an authorized text-only client asks for a lesson,
+  timing and materials without a teach command.
+- `conversation-private.done`: addressed requests, private sender echoes and
+  personal replies stay private; unrelated player chat reaches another player.
+- `conversation-clarification.done`: ambiguous component questions, follow-up,
+  changed lesson and immediate stop retain their personal context.
+- `conversation-bob-denied.done`, `conversation-bob-revoked.done` and
+  `conversation-grants.done`: a second real client cannot approve the owner's
+  proposal or use the owner's model admission, loses shared metadata after
+  revocation, and a changed grant revision invalidates the owner's old approval.
+- `conversation-actions.done`: separate natural approvals drive actual build,
+  stop/resume, functional test and guarded undo; cancellation and replay edit
+  nothing.
+- `conversation-design.done`: behavior, geometry and structural construction
+  each require their own approval. A former builder retains view but has no edit
+  or build right when the owner accepts the new preview. Actual 8/10-block trials
+  reach SQLite; structural undo retains the newer accepted intention and its
+  mismatched restored geometry cannot inherit a functional pass.
+
+Inspect `engineer-conversation-tested` in the native screenshot artifacts. The
+verifier requires exact scoped interpretation/start counts and recomputes actual
+functional traces. A screenshot alone proves neither those traces nor authority.
+Setup commands in these fixtures create/select projects and workspaces; the
+fixtures do not prove a complete conversational setup or a human-driven session.
+Chat-specific expiry, disconnect and restart coverage remains unfinished until
+its own actual flows pass; existing command-path recovery is separate evidence.

@@ -696,10 +696,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
+            if(!LIVE_ACCEPTANCE)prepareConversationRestart(context,server);
         }
         if(!LIVE_ACCEPTANCE) {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
+                recoverConversationRestart(context,server);
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
                 shutterConstructionFlow(context,server,connection);
@@ -2151,6 +2153,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer act "+nonce);expectChat(context,"No matching pending action");write("natural-request-catalog.done","passed");
     }
 
+    private static void prepareConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        conversationProposal(context,"CI propose stopping the selected project.");
+        server.runOnServer(s->{var project=session(s,"Alice");var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();
+            try{check(project.manager.knowledge.hasConversationReview(project) && project.journal.isEmpty() && project.delegation==null,"The actual server closes with an unconsumed conversation proposal, no world work or lease");write("conversation-restart-epoch",project.manager.epoch.toString());}
+            finally{project.commandActor=previous;}});
+        write("conversation-restart-prepared.done","passed");
+    }
+    private static void recoverConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.manager.epoch.toString().equals(read("conversation-restart-epoch")) && project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"A real saved-server boot retains facts but never restores chat approval, execution or test authority");});
+        write("conversation-restart.done","passed");
+    }
     private static void prepareNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("natural-request-project");send(context,"engineer project use "+id);
         server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));

@@ -82,7 +82,7 @@ optimization and multiple builders belong to **phase 2**.
 
 ```mermaid
 flowchart LR
-    Player[Player commands] --> Server[Fabric logical server]
+    Player[Player conversation and fallback commands] --> Server[Fabric logical server]
     Server --> Policy[Project grants and reservations]
     Policy --> Executor[Bounded construction and testing]
     Server -->|Authorized snapshots| Preview[Optional client overlays]

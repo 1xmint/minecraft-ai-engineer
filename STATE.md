@@ -8,7 +8,7 @@ Current worktree: task work/`conversation-entry`, branch
 **phase/22-conversation-entry**, rebased onto main
 **3ae22329fb0df73f2c9735113c91c1052f22372f**. Goal remains incomplete.
 
-Draft PR31: https://github.com/1xmint/minecraft-ai-engineer/pull/31. Initial
+Draft PR31: https://github.com/1xmint/minecraft-ai-engineer/pull/31.
 Initial source db7e59a passed all five checks in CI41269681275, all116 native
 Minecraft tests, actual text-only private chat, ordinary chat delivery and scoped
 clarification/stop markers. Evidence: task work/`conversation-first-41269681275`.
@@ -128,8 +128,8 @@ model call is needed to prove the shipped Phase20 slice.
   and carry no result or authority. Durable requirements are literal owner notes.
 - New shutter previews use canonical mechanical validation; built mechanical work
   cannot enter electrical repeater-delay revision. Preview imports no motion control.
-- Catalog contracts currently use settled Boolean vectors. They cannot prove an
-  observer pulse merely by seeing an idle output. Observer support is not exposed yet.
+- Settled Boolean vectors do not prove an observer pulse. Shipped observer support
+  uses its separate canonical temporal contract and consecutive native tick traces.
 - Pinned runtime: Minecraft26.3, Java25, Fabric Loader0.20.1/API0.165.0+26.3,
   Loom1.17.21, Gradle9.6, Node24.14, TypeScript7.0.2, SDK/CLI0.164.0. Preserve pins
   unless a task needs a change; unrelated Dependabot PR6 is not this work.
@@ -237,7 +237,7 @@ assistant blocks. A generated project lets Bob really build/undo, then revokes
 him before Alice's chat design request. It covers behavior/structural cancellation,
 separate approvals, actual8/10-block trials, undo retaining accepted intent,
 rejection of a test against mismatched restored geometry and final construction
-undo. SQLite must replay exactly7/17 planning starts, exact typed choices and
+undo. SQLite initially required exactly7/17 planning starts, exact typed choices and
 actual tick traces. Fixed synthetic cases wait real admission windows before/after;
 no budget/spam counters or production limits change. Initial native suite8m46s
 leaves room under its existing14m client limit.
@@ -260,3 +260,11 @@ previous controller without mutation rights. New actual Bob chat checks cover
 wrong-actor approval, owner-only model admission, full VIEW revocation and stale
 owner approval after a grant revision. Bounded packet-state waits replace a
 fixed three-tick revocation wait. These changes await a fresh CI run.
+
+The next proof leaves an actual conversation-origin proposal pending at the end
+of the existing third native boot and rejects natural yes on the fourth saved
+boot. It adds no server restart and one fixed stop interpretation, after the
+existing real admission window. The original command-nonce restart proof remains
+unchanged. Exact conversation starts become8/17; this new proof is not yet run.
+Player/acceptance guides now describe private chat, staged approvals, evidence
+markers and remaining command-based setup honestly.
