@@ -1080,6 +1080,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"does not grant you build permission");write("shutter-repair-bob-denied.done","passed");
             awaitFile(context,"shutter-repair-bob-regranted");context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Reconciled; resuming the same bounded assignment");write("shutter-repair-bob-resumed.done","passed");awaitFile(context,"shutter-repair-bob-finished");
         }
+        if(!LIVE_ACCEPTANCE){
+            awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
+            send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
+            MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+            MESSAGES.clear();say(context,"Engineer, CI build selected lamp.");expectChat(context,"account-owning operator");
+            write("conversation-bob-denied.done","passed");awaitFile(context,"conversation-bob-revoked");
+            MESSAGES.clear();send(context,"engineer project use "+conversationProject);expectChat(context,"unavailable or not shared");
+            say(context,"Engineer, yes");
+            await(context,()->view(context)==null || !view(context).projectId().equals(conversationProject),"A revoked client gets neither the shared conversation metadata nor its owner's pending review");
+            write("conversation-bob-revoked.done","passed");
+        }
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -1974,8 +1985,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice 1402 104 8 180 30");
         server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Lesson for component root:");
-        conversationProposal(context,"CI build selected lamp.");say(context,"Engineer, no thanks");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->commandAs(s,"Alice","engineer project share Bob viewer"));
+        conversationProposal(context,"CI build selected lamp.");write("conversation-bob-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"conversation-bob-denied.done");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.manager.knowledge.hasConversationReview(project) && project.journal.isEmpty() && project.delegation==null,"Another actual chat client cannot consume the owner's approval or delegate world work");});
+        say(context,"Engineer, no thanks");expectChat(context,"Cancelled the pending request");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Cancelling a chat build leaves no world edit or lease");});
+        conversationProposal(context,"CI build selected lamp.");server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("conversation-bob-revoked","ready");awaitFile(context,"conversation-bob-revoked.done");
+        MESSAGES.clear();say(context,"Engineer, yes");await(context,()->MESSAGES.stream().anyMatch(message->message.contains("There is no current proposal") || message.contains("Action expired or project context changed")),"A grant change invalidates the earlier conversation review");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"A stale grant review cannot construct even after the original owner says yes");});
+        write("conversation-grants.done","passed");
         conversationApprove(context,"CI build selected lamp.");
         say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
         server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").delegation==null,"Natural stop drops execution authority without an extra model decision"));
@@ -2000,7 +2018,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);commandAs(s,"Bob","engineer build");});
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));server.runOnServer(s->commandAs(s,"Bob","engineer undo"));server.waitFor(s->session(s,"Alice").journal.isEmpty());
-        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project revoke Bob");check(project.controller.equals(player(s,"Bob").getUUID()) && !project.access.allows(project.controller,ProjectAccess.Permission.EDIT),"The prior real builder is revoked before the owner's generated preview request");});
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project permission Bob edit false");commandAs(s,"Alice","engineer project permission Bob build false");commandAs(s,"Alice","engineer project permission Bob undo false");check(project.controller.equals(player(s,"Bob").getUUID()) && project.access.allows(project.controller,ProjectAccess.Permission.VIEW) && !project.access.allows(project.controller,ProjectAccess.Permission.EDIT) && !project.access.allows(project.controller,ProjectAccess.Permission.BUILD),"The prior real builder retains view but loses edit/build authority before the owner's generated preview request");});
         String request="CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
         conversationApprove(context,request);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
         MESSAGES.clear();say(context,"Engineer, no");expectChat(context,"Cancelled the pending request");

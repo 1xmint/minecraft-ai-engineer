@@ -417,6 +417,9 @@ try {
       "conversation-clarification.done",
       "conversation-actions.done",
       "conversation-design.done",
+      "conversation-bob-denied.done",
+      "conversation-bob-revoked.done",
+      "conversation-grants.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
@@ -494,8 +497,8 @@ try {
     const conversations = [
       {
         file: "conversation-actions-project",
-        starts: 6,
-        actions: ["build", "build", "resume", "test", "undo", "undo"],
+        starts: 7,
+        actions: ["build", "build", "build", "resume", "test", "undo", "undo"],
         template: "signal-lamp",
       },
       {

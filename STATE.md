@@ -237,7 +237,7 @@ assistant blocks. A generated project lets Bob really build/undo, then revokes
 him before Alice's chat design request. It covers behavior/structural cancellation,
 separate approvals, actual8/10-block trials, undo retaining accepted intent,
 rejection of a test against mismatched restored geometry and final construction
-undo. SQLite must replay exactly6/17 planning starts, exact typed choices and
+undo. SQLite must replay exactly7/17 planning starts, exact typed choices and
 actual tick traces. Fixed synthetic cases wait real admission windows before/after;
 no budget/spam counters or production limits change. Initial native suite8m46s
 leaves room under its existing14m client limit.
@@ -252,3 +252,11 @@ Next: prove staged flows, then broad actor/replay/revocation/disconnect/restart
 cases and final user documentation before merging. New-project/workspace
 conversation, voice/NPC and the broader human experience remain required work;
 these fixtures do not establish all milestones or actual human mouse control.
+
+CI41271040309 passed four checks but the staged native flow stopped at an invalid
+fixture assumption: full Bob revocation correctly resets controller to owner.
+The regression now retains VIEW while removing EDIT/BUILD/UNDO, keeping the real
+previous controller without mutation rights. New actual Bob chat checks cover
+wrong-actor approval, owner-only model admission, full VIEW revocation and stale
+owner approval after a grant revision. Bounded packet-state waits replace a
+fixed three-tick revocation wait. These changes await a fresh CI run.
