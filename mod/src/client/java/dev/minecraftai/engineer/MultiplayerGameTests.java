@@ -381,6 +381,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try {
             Files.createDirectories(coordination);
             ClientReceiveMessageEvents.GAME.register((message, overlay) -> MESSAGES.add(message.getString()));
+            ClientReceiveMessageEvents.CHAT.register((message,signed,sender,type,time)->MESSAGES.add(message.getString()));
             switch (role) {
                 case "alice" -> owner(context);
                 case "bob" -> editor(context);
@@ -515,6 +516,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 });
                 write("text-viewer", "ready");
                 awaitFile(context, "eve-text.done");
+                if(!LIVE_ACCEPTANCE){
+                    expectChat(context,"I told Engineer, wait for me.");
+                    check(MESSAGES.stream().noneMatch(message->message.contains("Engineer, EXPLAIN HOW THIS WORKS") || message.contains("Intended observer timing")),"Another player must not receive the private addressed request or the bot's personal lesson reply");
+                    write("conversation-private.done","passed");
+                }
 
                 send(context, "engineer project share Bob editor");
                 send(context, "engineer permit Bob");
@@ -1118,10 +1124,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Step ")), "Text tutorial without overlay negotiation");
         check(view(context) == null, "Text-only clients do not acquire visual metadata caches");
         if(!LIVE_ACCEPTANCE){
-            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));send(context,"engineer teach root");send(context,"engineer ask explain the timing");send(context,"engineer ask explain the materials");
+            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));
+            say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
+            say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
-            send(context,"engineer build");expectChat(context,"does not grant you build permission");
-            check(view(context)==null,"Authorized observer lessons work over ordinary text without installing visual authority or a preview cache");write("observer-text.done","passed");
+            say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
+            say(context,"I told Engineer, wait for me.");
+            check(view(context)==null,"Authorized observer lessons work over ordinary text without setup commands, visual authority or a preview cache");write("observer-text.done","passed");write("conversation-text.done","passed");
         }
         disconnect(context);
     }
@@ -2178,6 +2187,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> context.computeOnClient(client -> client.player != null && client.level != null && client.getConnection() != null), "Native client join");
     }
 
+    private static void say(ClientGameTestContext context,String message){context.runOnClient(client->client.getConnection().sendChat(message));context.waitTicks(1);}
     private static void send(ClientGameTestContext context, String command) {
         context.runOnClient(client -> {
             check(client.getConnection() != null, "Command needs a real Minecraft connection");

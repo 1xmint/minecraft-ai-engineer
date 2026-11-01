@@ -29,6 +29,7 @@ final class ProjectKnowledgeClient {
         final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
         final String connectionId;final int revision;final long authorization,startedNanos=System.nanoTime();
         final boolean discussion;final String component;final int lessonStage;
+        boolean conversation;
         CompletableFuture<JsonObject> future;
         Frame(EngineeringSession s,ServerPlayer p,String id,boolean discussion){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();this.discussion=discussion;component=LessonAssistant.currentComponent(s,actor,false);var cursor=s.cursors.get(actor);lessonStage=cursor==null?-1:cursor.stage;}
     }
@@ -116,6 +117,16 @@ final class ProjectKnowledgeClient {
     boolean holdsLesson(EngineeringSession s,UUID actor){var f=active.get(actor);return f!=null && f.session==s && f.discussion && current(f);}
     void cancelDiscussion(EngineeringSession s) {for(var f:new ArrayList<>(active.values()))if(f.session==s && f.discussion)finish(f);}
     void interpret(EngineeringSession s,String message) {
+        interpret(s,message,false);
+    }
+    void interpretConversation(EngineeringSession s,String message){interpret(s,message,true);}
+    boolean confirmConversation(EngineeringSession s){
+        var pending=pendingActions.get(s.actor());
+        if(pending==null || pending.frame().session!=s || !pending.frame().conversation)return false;
+        act(s,pending.nonce().toString());return true;
+    }
+    boolean cancelConversation(EngineeringSession s){var f=active.get(s.actor());if(f==null || f.session!=s || !f.conversation)return false;finish(f);return true;}
+    private void interpret(EngineeringSession s,String message,boolean conversation) {
         if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
         String normalized=message==null?"":message.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();
         if(Set.of("stop","stop building","stopbuilding").contains(normalized)) {
@@ -126,7 +137,7 @@ final class ProjectKnowledgeClient {
         }
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Interpretation requires the single configured account-owning operator");
         s.access.require(s.actor(),ProjectAccess.Permission.PLAN);
-        var f=start(s,true);String capturedState=executionState(s);
+        var f=start(s,true);f.conversation=conversation;String capturedState=executionState(s);
         String selected=f.component!=null?f.component:s.blueprint!=null && !ComponentTree.composite(s.blueprint)?"root":null;
         var body=new JsonObject();body.addProperty("message",message);body.addProperty("modelAuthorized",true);body.addProperty("isOperator",true);
         if(selected!=null)body.addProperty("componentId",selected);
@@ -153,7 +164,7 @@ final class ProjectKnowledgeClient {
                     tell(f,"Proposed action: "+choice.action()+" | project "+s.projectId+" | component "+(choice.component()==null?"project":choice.component())+". No world work has started.");
                     if(choice.action().equals("plan"))tell(f,"Plan delegation starts one additional AI catalog-selection request from your original words. Preview only; no world edit is approved.");
                     if(choice.action().equals("design"))tell(f,"Design delegation starts one additional AI behavior-proposal request from your original words. Geometry still requires its own confirmation; no world edit is approved.");
-                    tell(f,"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
+                    tell(f,f.conversation?"Reply 'Engineer, yes' to approve this action, or 'Engineer, no' to cancel it. This approval expires shortly; current world and permission checks still apply.":"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
                 } else {
                     s.commandActor=f.actor;
                     try{NaturalActions.dispatch(s,choice,message);rememberAction(s,choice);}finally{s.commandActor=null;}

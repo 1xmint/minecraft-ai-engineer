@@ -246,3 +246,59 @@ then finish supported-command docs before merging. Never route observer tests th
 the settled Boolean vector loop. No model calls ran for this phase; archival
 receipts confer no new inference authority. Keep every broader milestone active
 until its own proof exists.
+
+## Phase22: natural conversation over engineering projects (serves E1/E4)
+
+Outcomes:
+
+- O1: type `Engineer, explain how this works` in ordinary Minecraft chat and get
+  a private explanation of the selected design without a setup command. Prove
+  plain unrelated player chat is unaffected, addressed requests/replies are not
+  broadcast, and an authorized client without overlays gets the same interaction.
+- O2: infer an obvious single-design lesson; clarify ambiguous parts and accept a
+  natural follow-up without silently choosing another component. Prove personal
+  lessons, grants, connection, project, revision, dimension and expiry remain bound
+  and changes invalidate the question rather than granting authority.
+- O3: propose engineering work from conversation and confirm/cancel in plain words,
+  including behavior/geometry proposal stages. Prove no work before the reviewed
+  one-use confirmation, no other actor/replay/stale confirmation, immediate stop,
+  safe cancellation and the existing owner/operator quota gate.
+- O4: drive actual dedicated-player conversation through preview, lesson, delegated
+  build, interruption/recovery, testing and undo, plus shared/text-only paths. Prove
+  actual chat packets, SQLite evidence and screenshots; keep commands as fallback.
+
+Decision: use explicitly addressed ordinary player chat (`Engineer, ...`,
+`Engineer: ...`, `@Engineer ...`, `Hey Engineer, ...`) as the first private bot
+entry point. Ordinary multiplayer chat retains its audience. Consume the native
+validated player-chat event before broadcast, using the server's actual player
+connection and original signed text, never system messages or decorated world
+text. Use the current selected project; no new permission or AI account eligibility
+is inferred. New-project/workspace conversation and voice/NPC interaction remain
+required broader work, not established by this entry point.
+
+Tasks:
+
+1. O1/O3: private authenticated chat adapter, bounded addressing/intent grammar,
+   reuse scoped interpretation and one-use act dispatch. Native grammar and
+   actual player-packet/privacy negative proofs; local compilation only.
+2. O1/O2: obvious read-only lesson context and scoped ambiguity follow-up; no
+   automatic build/test or inference merely from choosing a personal lesson.
+3. O3: complete natural confirmation/cancellation for each generated-design stage,
+   failure/replay/revocation/disconnect/restart proofs; focused authority review.
+4. O4: actual command-free conversation flow, durable evidence and visual review;
+   update documentation, rebase onto the proven/merged observer source, CI then merge.
+
+Prototype now written but not proven: native chat hook, explicit addressing,
+private replies, current-connection/server-thread admission, automatic single-design
+lesson, ambiguity question (follow-up still missing), and natural confirmation/
+cancellation of chat-originated interpretation requests via the existing exact
+scoped action handler. Grammar tests added for CI. Generated-proposal confirmation,
+full clarification state and dedicated action-chat proof remain incomplete.
+Dedicated text-client proof is now written to send actual chat packets, infer
+single-design lesson context without `teach`, get timing/materials and reject
+viewer stop. Another native client must see ordinary player chat but neither
+the private request nor personal reply. CI verifier requires both new markers;
+these tests have not run. Native grammar tests also remain unrun. Scoped Java
+server/client compilation passed. GPT-6-Luna/high completed the focused chat
+identity/privacy/confirmation check with no concrete blocker. No model calls,
+local tests, permission expansion or public release have occurred.
