@@ -490,3 +490,14 @@ Diff applies offsets, rejects DataVersion mismatch, distinguishes outside-volume
 from air, bounds detailed output and makes no deletion/authority/functional claims.
 CLI reads neutral JSON and writes reports only to stdout; no world mutations or
 paid services. Codex retains PR34 integration and comparator/runtime work.
+
+Prepared the comparator user guide and source overview around ordinary addressed
+chat, exact workspace/material needs, distinct numeric tests, static repair and
+latest-operation undo. Acceptance docs now record the shipped Phase23 proof and
+the new analog gates. These documentation changes are backed up separately while
+CI41360150254 validates runtime sourcecc0cbed; do not cancel that live run for docs.
+PR34 source55ca74c is in CI41360384747 after the inherited receipt fix. Both runs
+currently have four successful checks and their dedicated jobs remain live.
+After PR34’s exact head is green, integrate it and reconcile main/Phase24 memory;
+include prepared docs with that necessary combined-source validation. No comparator
+or whole-goal completion is claimed yet.

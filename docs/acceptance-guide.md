@@ -390,7 +390,7 @@ The native screenshot was inspected and archived as
 `docs/images/conversation-tested.png`. These are fixed-provider routing fixtures,
 not additional SDK inference or a human-driven session.
 
-Conversational setup adds separate pending proof: `conversation-setup.done`,
+Conversational setup passed in source1561555/all5 CI41276307352 (PR32). Its separate proof markers: `conversation-setup.done`,
 `conversation-setup-denied.done` and `conversation-setup-editor-denied.done` must
 pass alongside the existing full conversation flow. These drive real chat for
 private creation, feet-based corners, duplicate names, paged authorized choices,
@@ -400,3 +400,27 @@ position players. The final source replaces canonical reference seeding with
 requires an untested, unbuilt local preview, with incomplete/too-small workspace
 negatives and a later show request preserving a built/tested design. No setup
 or local-preview request spends model quota; interpretation counts stay10/17.
+
+## Canonical analog proof (development)
+
+Comparators use a distinct numeric contract. The native suite must calibrate all
+three input banks0..15, measure compare/subtract boundary behavior in four
+rotations, and replay the exact Java-built canonical intentions through the
+companion. It also produces66-case actual numeric suites in both modes. The
+cross-runtime verifier rejects missing samples, false pass claims, changed intent,
+unknown authority fields and reordered cases. It does not establish latency.
+
+The dedicated flow requires `analog-preview.done`, `analog-interruption.done`,
+`analog-functional.done`, `analog-restoration.done` and `analog-undo.done` for
+actual addressed chat, construction, interruption, restored original-on/off
+controls, numeric testing and guarded undo. The shared subtract flow additionally
+requires viewer denial, revocation/owner reconciliation, player-conflict
+preservation, a scoped static repair, actual saved-server restart and a fresh
+new-epoch numeric test. `verify-memory.mjs` replays those actual SQLite reports
+against their exact immutable intention, component basis and actor. A historical
+pass cannot become a live pass after restart.
+
+The harness first observes an actual VERIFYING trial before waiting for its
+completion; a previous completed repair is not evidence of a new test. These are
+fixed-provider native fixtures. The full signed-in human collaboration acceptance
+and general shared-subscription eligibility remain separate overall goals.

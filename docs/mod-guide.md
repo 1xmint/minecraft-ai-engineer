@@ -66,11 +66,15 @@ Project setup also uses ordinary chat in the development source:
    explanations, construction or testing.
 
 Local previews also understand `show me an inverter`, `show me an or gate`,
-`show me an observer pulse` and `show me a sticky shutter`. These use the tested
+`show me an observer pulse`, `show me a sticky shutter`, `show me a comparator`
+and `show me a subtracting comparator`. These use the canonical
 catalog without an AI request. The design must fit the marked workspace. A show
 request cannot replace existing construction; start another project for another
 preview. Showing a design places no blocks and runs no test. Broader requests
 still use the configured operator's bounded model interpretation and approvals.
+
+The [comparator guide](comparators.md) explains the larger workspace, physical
+strength selectors, numeric tests and guarded recovery.
 
 To return to a project, ask `Engineer, show my projects`. Choose its number or
 name; duplicate names require a number. Use `Engineer, show more projects` and
