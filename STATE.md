@@ -27,6 +27,16 @@ the shared project without selecting its personal lesson. The fixture now calls
 The shared Bob fixture also explicitly chooses its lesson. No production lesson
 or permission rule changed. Local compileClientJava passed. Evidence: task work/
 `observer-shared-41227072775`; continue with the corrected source's CI.
+CI41266521932 on c32b8d4 passed four checks and eight observer markers, including
+text-only lessons, viewer denial, revocation, player conflict, interruption,
+restart/retest and guarded undo. It then correctly refused the composed lamp
+build because the fixture waited for block cells but not dependency-margin chunks.
+The fixture now waits for both leaves' full dependency footprints. Screenshot
+inspection also caught a stale VERIFYING overlay after the server had passed;
+the proof now awaits the actual matching COMPLETED client snapshot and moves
+closer before capture. Neither guard nor functional expectation was weakened.
+Evidence: task work/`observer-authority-41266521932`. Remaining: composed flow,
+SQLite replay and final visual evidence/CI before merge.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
@@ -35,6 +45,20 @@ type, formatting and syntax checks; Gradle `--max-workers=1`. Keep memory only i
 AGENTS.md and STATE.md. Historical development detail is preserved in Git.
 
 ## Full remaining roadmap
+
+Parallel authorized work: isolated worktree task work/`conversation-entry`, branch
+`phase/22-conversation-entry` based c32b8d4, has an unfinished private native-chat
+prototype. No PR or tests yet; rebase after observer merges. It carries its own
+Phase22 Outcomes in STATE.md. GPT-6-Luna/high focused auth review found no concrete
+blocker; actual chat/privacy, ambiguity and generated-confirmation proofs remain.
+
+Josh clarified that normal interaction must be talking naturally to the bot,
+not typing lesson/setup commands. `/engineer teach root` in a fixture selects a
+personal lesson but does not establish the finished experience. After completing
+the observer proof, prioritize a conversational entry point, obvious read-only
+lesson context, clarification for ambiguity and natural explicit confirmation
+that retains all execution guards. Commands stay available as fallback. This
+serves E1/E4 and precedes more component expansion; comparators remain required.
 
 - E2: broader electrical/mechanical engineering: observers, comparators, analog
   strength, actual connections, larger piston mechanisms and composed systems.

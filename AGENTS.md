@@ -2,6 +2,8 @@
 
 Build a local-first, multiplayer-first engineering partner for Minecraft Java:
 show me, teach me, help me, take over, test it, and remember the project.
+Normal player interaction is natural conversation. Commands are a manual fallback
+and test interface; command-only proofs do not complete the player experience.
 Use a dedicated Fabric server first, including when Josh initially plays alone;
 keep ordinary single-player compatible through the same logical-server core.
 Read STATE.md before proposing work. Its 2026-10-26 multiplayer decision and the

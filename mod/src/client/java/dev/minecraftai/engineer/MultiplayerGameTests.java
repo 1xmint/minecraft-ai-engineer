@@ -1902,7 +1902,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer resume");server.waitFor(s->!session(s,"Alice").trial.pending());
         write("observer-conflict.done","passed");context.waitTicks(20);
         send(context,"engineer test");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
-        context.waitTicks(3);context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-observer-tested");
+        String observerId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        server.runCommand("tp Alice 1101 104 6 180 35");
+        await(context,()->view(context)!=null && view(context).projectId().equals(observerId) && view(context).text().contains("COMPLETED") && view(context).blocks().stream().allMatch(ProjectView.Ghost::matches),"The actual observer client receives the completed matching snapshot");
+        context.waitTicks(5);context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.takeScreenshot("engineer-observer-tested");
         write("observer-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
     }
     private static void observerRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
@@ -1923,7 +1926,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer component add pulse root observer-pulse 1200 100 0");expectChat(context,"Added component pulse");
         MESSAGES.clear();send(context,"engineer component add lamp root signal-lamp 1208 100 0");expectChat(context,"Added component lamp");
         server.runCommand("tp Alice 1205 108 12 180 25");
-        server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
+        server.waitFor(s->{var project=session(s,"Alice");return List.of("pulse","lamp").stream().flatMap(id->project.dependencyPositions(id,true).stream()).allMatch(project.level()::hasChunkAt);});
         send(context,"engineer component build lamp");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         send(context,"engineer component build pulse");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").activeComponent.equals("pulse"));
         send(context,"engineer component test pulse");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
