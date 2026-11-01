@@ -8,9 +8,10 @@ public final class ConversationGameTests {
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){
         helper.assertTrue(ConversationSetupText.parse("Let's start a new project!").operation()==ConversationSetupText.Operation.CREATE,"Explicit private-project creation is a local setup intent");
         helper.assertTrue(ConversationSetupText.parse("What projects can I work on?").operation()==ConversationSetupText.Operation.LIST,"Project discovery needs no model request");
-        helper.assertTrue(ConversationSetupText.parse("work on project Signal lamp").project().equals("signal lamp"),"An explicit project reference carries only a name, not permission");
+        helper.assertTrue(ConversationSetupText.parse("work on project Signal lamp").target().equals("signal lamp"),"An explicit project reference carries only a name, not permission");
         helper.assertTrue(ConversationSetupText.parse("work on the wiring")==null && ConversationSetupText.parse("the sign says start a new project")==null,"Ordinary work and quoted world text cannot become setup instructions");
         helper.assertTrue(ConversationSetupText.parse("New project")==null,"A default project name must not create another project when used as a menu reply");
+        helper.assertTrue(ConversationSetupText.parse("show me a signal lamp").target().equals("signal-lamp") && ConversationSetupText.parse("build this")==null,"A known local preview is distinct from delegating construction");
         helper.assertTrue(ConversationSetupText.parse("mark the first corner here").operation()==ConversationSetupText.Operation.FIRST_CORNER && ConversationSetupText.parse("this is the second corner").operation()==ConversationSetupText.Operation.SECOND_CORNER,"Two distinct explicit corner requests use the authenticated player's position");
         helper.succeed();
     }

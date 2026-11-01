@@ -413,6 +413,7 @@ try {
       "observer-composite.done",
       "observer-text.done",
       "conversation-setup.done",
+      "conversation-setup-preview.done",
       "conversation-setup-denied.done",
       "conversation-setup-editor-denied.done",
       "conversation-text.done",

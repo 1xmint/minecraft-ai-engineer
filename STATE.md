@@ -202,8 +202,8 @@ via chat, exercise duplicate names/yes/paging, grant-stale rejection and fresh
 numbered choice, denied Eve creation/list privacy, Bob viewer and editor corner
 rejections. Setup messages wait21 real ticks to respect native chat limits; no
 counter reset. Fixture teleports position the actual player; no human-driven
-session is claimed. Blueprint reference fixtures still seed the design; complete
-conversational design/setup human acceptance remains broader work.
+session is claimed. The final source uses local catalog preview chat in place of reference fixtures;
+complete human acceptance remains broader work.
 
 Scoped Java compilation and script syntax/format pass. GPT-6-Luna/high focused
 auth review and paging follow-up found no concrete privacy or authority bypass.
@@ -213,3 +213,27 @@ unproven. Native grammar count becomes117. Rebase onto shipped Phase22 is done.
 
 Next: current-head CI and actual evidence/screenshot inspection, fix genuine
 failures, then merge. Keep the entire remaining roadmap above active.
+
+A further O3 gap is being closed before final Phase23 merge: exact local catalog
+preview requests (`show me a signal lamp`, inverter/OR/observer/shutter variants)
+need no model quota. Existing EDIT/current-dimension checks and reviseProposal
+apply; incomplete workspaces and any old construction/journal/controlled shutter
+reject. The native flow replaces reference-seeding commands with actual chat,
+checks no lease/pass/placements from preview, rejects incomplete regions and
+preserves a built, tested design. Existing model counts stay10/17; no counters,
+production limits or model admission change. Current CI41275010408 still tests
+older source d8d0316 and must be observed through terminal before pushing this
+new source. New preview source compiled; final negative additions need compile/CI.
+
+The GPT-6-Luna/high preview-only review found no concrete authorization or
+world-mutation bypass. Local previews now also reject a too-small marked region
+before accepting intention; native negatives cover incomplete and one-block
+workspaces, then actual chat shows the canonical lamp. The old reference-seeding
+commands in both fixtures are removed. A built/tested design must remain exactly
+unchanged after a show request. No SDK calls or model-count changes.
+
+The viewer also attempts local preview through actual chat while the owner has
+a pending action; EDIT denial must leave that owner review and intended design
+intact. Local-preview work is checkpointed on work/conversation-setup-preview
+while PR32 keeps testing d8d0316. Promote only after CI41275010408 is terminal
+and its evidence is inspected. No local tests ran.

@@ -61,8 +61,16 @@ Project setup also uses ordinary chat in the development source:
 3. Move or fly to the opposite upper corner and say
    `Engineer, mark the second corner here`. Engineer reports both positions.
    Marking a workspace places no blocks and approves no construction.
-4. Tell Engineer what you want to make, review the proposed design, then continue
-   with explanations, construction or testing.
+4. Ask `Engineer, show me a signal lamp` for a local catalog preview, or tell
+   Engineer what you want to make. Review the design, then continue with
+   explanations, construction or testing.
+
+Local previews also understand `show me an inverter`, `show me an or gate`,
+`show me an observer pulse` and `show me a sticky shutter`. These use the tested
+catalog without an AI request. The design must fit the marked workspace. A show
+request cannot replace existing construction; start another project for another
+preview. Showing a design places no blocks and runs no test. Broader requests
+still use the configured operator's bounded model interpretation and approvals.
 
 To return to a project, ask `Engineer, show my projects`. Choose its number or
 name; duplicate names require a number. Use `Engineer, show more projects` and

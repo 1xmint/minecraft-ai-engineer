@@ -395,5 +395,8 @@ Conversational setup adds separate pending proof: `conversation-setup.done`,
 pass alongside the existing full conversation flow. These drive real chat for
 private creation, feet-based corners, duplicate names, paged authorized choices,
 grant-stale rejection and viewer/editor workspace denial. Fixture teleports only
-position players; canonical reference commands still seed test designs. No setup
-request spends model quota, and existing interpretation counts stay10/17.
+position players. The final source replaces canonical reference seeding with
+`show me a signal lamp` through actual chat. `conversation-setup-preview.done`
+requires an untested, unbuilt local preview, with incomplete/too-small workspace
+negatives and a later show request preserving a built/tested design. No setup
+or local-preview request spends model quota; interpretation counts stay10/17.

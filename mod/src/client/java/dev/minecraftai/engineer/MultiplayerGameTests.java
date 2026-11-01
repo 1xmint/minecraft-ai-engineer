@@ -1093,6 +1093,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
+            MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
             MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"does not grant you edit permission");
             MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
             MESSAGES.clear();say(context,"Engineer, CI build selected lamp.");expectChat(context,"account-owning operator");
@@ -1994,6 +1995,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice "+first.getX()+" "+first.getY()+" "+first.getZ());
         server.waitFor(s->player(s,"Alice").blockPosition().equals(first));
         MESSAGES.clear();setupSay(context,"Engineer, mark the first corner here");expectChat(context,"First corner marked at your feet");
+        MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"Mark both workspace corners");
+        server.runOnServer(s->check(session(s,"Alice").blueprint==null && session(s,"Alice").journal.isEmpty(),"An incomplete workspace cannot accept a local preview or start work"));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
+        MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"needs more room than the marked workspace");
+        server.runOnServer(s->check(session(s,"Alice").blueprint==null && session(s,"Alice").journal.isEmpty(),"A too-small workspace rejects the preview without changing intention or world work"));
         server.runCommand("tp Alice "+second.getX()+" "+second.getY()+" "+second.getZ());
         server.waitFor(s->player(s,"Alice").blockPosition().equals(second));
         MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
@@ -2014,6 +2020,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();setupSay(context,"Engineer, "+index);expectChat(context,"Selected project");
         server.runOnServer(s->check(first.equals(session(s,"Alice").corner1) && second.equals(session(s,"Alice").corner2) && session(s,"Alice").delegation==null,"A fresh numbered choice selects only its displayed authorized project without work authority"));
     }
+    private static void conversationPreview(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"Preview ready:");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint!=null && MechanismCatalog.contract(project.blueprint).template().equals("signal-lamp") && project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"A natural local catalog preview records only the intended design, never construction or functional evidence");});
+        write("conversation-setup-preview.done","passed");
+    }
     private static void setupSay(ClientGameTestContext context,String message){
         say(context,message);context.waitTicks(21); // Respect native chat pacing; never reset its spam counter.
     }
@@ -2028,7 +2039,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         long ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
         while(System.nanoTime()-ready<0)context.waitTicks(2);
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
-        conversationSetup(context,server,previous,new BlockPos(1400,100,0),new BlockPos(1405,101,0));send(context,"engineer reference signal-lamp");
+        conversationSetup(context,server,previous,new BlockPos(1400,100,0),new BlockPos(1405,101,0));conversationPreview(context,server);
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1400,100,0)));
         server.runCommand("tp Alice 1402 104 8 180 30");
         server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
@@ -2049,6 +2060,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==6 && !project.verified.startsWith("passed:"),"One approved conversation build creates exactly its six blocks, not a verification claim or replayed operation");});
         conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:signal-lamp:"));assertPersisted(server);
+        var previewBefore=server.computeOnServer(s->session(s,"Alice").blueprint);
+        MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"already contains construction");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint==previewBefore && project.journal.size()==6 && project.delegation==null && project.verified.startsWith("passed:signal-lamp:"),"A show request cannot replace constructed intention, journal or recorded functional evidence");});
         conversationProposal(context,"CI undo selected lamp.");say(context,"Engineer, never mind");expectChat(context,"Cancelled the pending request");
         server.runOnServer(s->check(session(s,"Alice").journal.size()==6 && session(s,"Alice").delegation==null,"Cancelled chat undo retains the complete assistant operation"));
         conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());assertPersisted(server);
@@ -2061,7 +2075,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
-        conversationSetup(context,server,previous,new BlockPos(1440,100,0),new BlockPos(1447,102,2));send(context,"engineer reference signal-lamp");
+        conversationSetup(context,server,previous,new BlockPos(1440,100,0),new BlockPos(1447,102,2));conversationPreview(context,server);
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1440,100,0)));
         server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");});

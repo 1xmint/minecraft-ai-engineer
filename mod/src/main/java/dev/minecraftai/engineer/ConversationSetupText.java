@@ -2,8 +2,8 @@ package dev.minecraftai.engineer;
 
 /** Bounded local setup intents. Parsing never grants permission or executes commands. */
 final class ConversationSetupText {
-    enum Operation { CREATE, LIST, CHOOSE, NEXT_PAGE, PREVIOUS_PAGE, FIRST_CORNER, SECOND_CORNER }
-    record Request(Operation operation,String project) { }
+    enum Operation { CREATE, LIST, CHOOSE, NEXT_PAGE, PREVIOUS_PAGE, PREVIEW, FIRST_CORNER, SECOND_CORNER }
+    record Request(Operation operation,String target) { }
     private ConversationSetupText() { }
     static Request parse(String message){
         String text=ConversationText.normalized(message);
@@ -17,6 +17,15 @@ final class ConversationSetupText {
             default -> null;
         };
         if(operation!=null)return new Request(operation,null);
+        String template=switch(text){
+            case "show me a signal lamp","show me a lamp circuit" -> "signal-lamp";
+            case "show me an inverter","show me a not gate" -> "not-gate";
+            case "show me an or gate" -> "or-gate";
+            case "show me an observer pulse" -> "observer-pulse";
+            case "show me a sticky shutter" -> "sticky-shutter";
+            default -> null;
+        };
+        if(template!=null)return new Request(Operation.PREVIEW,template);
         for(String prefix:new String[]{"work on project ","switch to project ","use project "})if(text.startsWith(prefix)){
             String name=text.substring(prefix.length()).strip();
             if(name.isEmpty() || name.length()>120)throw new IllegalArgumentException("Choose a project name from the list.");

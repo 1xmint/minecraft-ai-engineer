@@ -65,7 +65,19 @@ final class ConversationSetup {
             case CREATE -> {manager.create(player);manager.conversationLessons.forget(player.getUUID());reply(player,"Created your private project. Stand at the first workspace corner and say 'Engineer, mark the first corner here'. Corners use the block containing your feet; marking places no blocks.");}
             case LIST -> offer(player,available(player));
             case NEXT_PAGE,PREVIOUS_PAGE -> throw new IllegalStateException("Project paging needs a current list");
-            case CHOOSE -> {var matches=available(player).stream().filter(c->ConversationText.normalized(c.name()).equals(request.project())).toList();if(matches.size()==1)manager.use(player,matches.getFirst().session().projectId);else offer(player,matches);}
+            case CHOOSE -> {var matches=available(player).stream().filter(c->ConversationText.normalized(c.name()).equals(request.target())).toList();if(matches.size()==1)manager.use(player,matches.getFirst().session().projectId);else offer(player,matches);}
+            case PREVIEW -> {
+                var s=manager.selected(player,false);var previous=s.commandActor;
+                try{s.commandActor=player.getUUID();s.access.require(player.getUUID(),ProjectAccess.Permission.EDIT);
+                    if(!s.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose a project in this dimension first.");
+                    if(s.corner1==null || s.corner2==null)throw new IllegalStateException("Mark both workspace corners before requesting a preview.");
+                    if(s.shutterOwned || !s.journal.isEmpty() || s.hasBuiltStructure())throw new IllegalStateException("This project already contains construction or controlled work. Ask about its design, or start a new project to preview another.");
+                    var candidate=request.target().equals("sticky-shutter")?ShutterDesign.create(UUID.randomUUID(),1,s.projectId,s.worldId,s.dimension,s.anchor(),0).blueprint():MechanismCatalog.create(request.target(),s.worldId,s.dimension,s.anchor(),0,1);
+                    if(candidate.blocks().stream().anyMatch(block->!s.contains(block.pos())))throw new IllegalStateException("This design needs more room than the marked workspace. Mark a larger region or ask for another design.");
+                    s.reviseProposal(candidate);
+                    reply(player,"Preview ready: "+s.blueprint.name()+". No blocks were placed and no functional test ran. Ask how it works, or ask me to build it for a separate reviewed approval.");
+                }finally{s.commandActor=previous;}
+            }
             case FIRST_CORNER,SECOND_CORNER -> {
                 var s=manager.selected(player,false);var previous=s.commandActor;
                 try{s.commandActor=player.getUUID();if(!s.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose a project in this dimension first.");s.select(request.operation()==ConversationSetupText.Operation.FIRST_CORNER?1:2,player.blockPosition());
