@@ -1,4 +1,12 @@
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  fstatSync,
+  ftruncateSync,
+  openSync,
+  readSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -37,14 +45,42 @@ const ARITY: Record<string, number> = { import: 2, export: 2, inspect: 1 };
 
 class UsageError extends Error {}
 
-function readBounded(path: string, maxBytes: number): Buffer {
-  const size = statSync(path).size;
-  if (size > maxBytes)
-    throw new SchematicError(
-      "E_INPUT_TOO_LARGE",
-      `${path} is ${size} bytes; the limit is ${maxBytes}`,
-    );
-  return readFileSync(path);
+interface InputFile {
+  bytes: Buffer;
+  identity: { dev: bigint; ino: bigint };
+}
+
+function readBounded(path: string, maxBytes: number): InputFile {
+  if (!statSync(path).isFile())
+    throw new UsageError("input path must identify a regular file");
+  const descriptor = openSync(path, "r");
+  try {
+    const identity = fstatSync(descriptor, { bigint: true });
+    if (!identity.isFile())
+      throw new UsageError("input path must identify a regular file");
+    if (identity.size > BigInt(maxBytes))
+      throw new SchematicError(
+        "E_INPUT_TOO_LARGE",
+        `${path} exceeds the limit of ${maxBytes} bytes`,
+      );
+    const chunks: Buffer[] = [];
+    let total = 0;
+    while (true) {
+      const chunk = Buffer.allocUnsafe(Math.min(65536, maxBytes - total + 1));
+      const count = readSync(descriptor, chunk, 0, chunk.length, null);
+      if (count === 0) break;
+      total += count;
+      if (total > maxBytes)
+        throw new SchematicError(
+          "E_INPUT_TOO_LARGE",
+          `${path} exceeds the limit of ${maxBytes} bytes`,
+        );
+      chunks.push(chunk.subarray(0, count));
+    }
+    return { bytes: Buffer.concat(chunks, total), identity };
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 function writeOutput(
@@ -52,17 +88,34 @@ function writeOutput(
   output: string,
   data: string | Uint8Array,
   force: boolean,
+  source: InputFile["identity"],
 ): void {
   if (resolve(input) === resolve(output))
     throw new UsageError("output path must differ from the input path");
+  let descriptor: number;
   try {
-    writeFileSync(output, data, { flag: force ? "w" : "wx" });
+    descriptor = openSync(output, "wx");
   } catch (error) {
-    if ((error as { code?: string }).code === "EEXIST")
+    if ((error as { code?: string }).code !== "EEXIST") throw error;
+    if (!force)
       throw new UsageError(
         `${output} already exists; pass --force to replace it`,
       );
-    throw error;
+    // Open without truncating: check the actual file handle before any destructive write.
+    descriptor = openSync(output, "r+");
+  }
+  try {
+    const target = fstatSync(descriptor, { bigint: true });
+    if (!target.isFile())
+      throw new UsageError("output path must identify a regular file");
+    if (target.dev === source.dev && target.ino === source.ino)
+      throw new UsageError(
+        "output path must differ from the input path (including file aliases)",
+      );
+    ftruncateSync(descriptor, 0);
+    writeFileSync(descriptor, data);
+  } finally {
+    closeSync(descriptor);
   }
 }
 
@@ -116,26 +169,34 @@ function run(argv: readonly string[], io: CliIo): void {
   };
   const input = paths[0]!;
   if (command === "export") {
-    const text = readBounded(input, MAX_GEOMETRY_JSON_BYTES).toString("utf8");
+    const source = readBounded(input, MAX_GEOMETRY_JSON_BYTES);
+    const text = source.bytes.toString("utf8");
     const bytes = exportSpongeSchematic(
       parseGeometryJson(text, DEFAULT_SCHEMATIC_LIMITS),
     );
-    writeOutput(input, paths[1]!, bytes, force);
+    writeOutput(input, paths[1]!, bytes, force, source.identity);
     io.stdout(
       `Wrote ${paths[1]} (${bytes.byteLength} bytes, Sponge schematic v3).\n`,
     );
     return;
   }
-  const result = importSpongeSchematic(
-    readBounded(input, DEFAULT_SCHEMATIC_LIMITS.maxCompressedBytes),
-    options,
+  const source = readBounded(
+    input,
+    DEFAULT_SCHEMATIC_LIMITS.maxCompressedBytes,
   );
+  const result = importSpongeSchematic(source.bytes, options);
   reportDiscarded(result, io);
   if (command === "inspect") {
     io.stdout(`${JSON.stringify(summary(result), null, 2)}\n`);
     return;
   }
-  writeOutput(input, paths[1]!, stringifyGeometry(result.geometry), force);
+  writeOutput(
+    input,
+    paths[1]!,
+    stringifyGeometry(result.geometry),
+    force,
+    source.identity,
+  );
   const { size } = result.geometry;
   io.stdout(
     `Wrote ${paths[1]} (${size.x}x${size.y}x${size.z}, untrusted geometry only).\n`,

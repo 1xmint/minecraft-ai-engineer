@@ -134,3 +134,8 @@ block. Files built by `prismarine-nbt` are imported, and this exporter's
 output is read back by `prismarine-nbt`. `tests/schematics-reject.test.ts`
 covers malformed, oversized and unsupported input, and
 `tests/schematics-cli.test.ts` covers the command line.
+
+Input and output must refer to different files, including hard links and symbolic
+links. `--force` never permits replacing the input through an alias. The CLI also
+bounds bytes actually read, so an input growing during conversion cannot bypass
+the size limit. Sparse in-memory palette and metadata arrays are rejected.

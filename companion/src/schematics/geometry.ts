@@ -193,7 +193,7 @@ export function validateUntrustedMetadata(
         `expected at most ${MAX_REQUIRED_MODS} strings`,
       );
     out.requiredMods = Object.freeze(
-      v.requiredMods.map((m, i) =>
+      Array.from(v.requiredMods, (m, i) =>
         metadataString(m, `${path}.requiredMods[${i}]`),
       ),
     );
@@ -250,7 +250,7 @@ export function validateGeometry(
       `palette has ${v.palette.length} entries; the limit is ${limits.maxPaletteEntries}`,
     );
   const seen = new Set<string>();
-  const palette = v.palette.map((entry, i) => {
+  const palette = Array.from(v.palette, (entry, i) => {
     const path = `geometry.palette[${i}]`;
     const e = record(
       entry,
