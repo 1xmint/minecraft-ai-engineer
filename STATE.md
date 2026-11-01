@@ -208,8 +208,9 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
 
 ## Overall remaining goals
 
-- E2: finish analog/comparators; actual connections and larger multicomponent/
-  piston systems, update-order/interference and adapting existing structures.
+- E2: actual connections and larger multicomponent/piston systems, register banks,
+  memory, arithmetic and display circuits, update-order/interference and adapting
+  existing structures. Canonical comparator workbenches shipped in PR33.
 - E1: broader natural references/retrieval beyond literal saved-intention search,
   durable rationale/summaries and preferences.
 - E3: richer connection/timing/interference/inconclusive diagnosis and repair;
