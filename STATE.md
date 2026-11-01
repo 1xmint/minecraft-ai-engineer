@@ -14,11 +14,11 @@ actual screenshot inspected and archived in docs/images/comparator-tested.png.
 
 Claude PR34 merged **885748e**, exact source55ca74c/all5 CI41360384747, with21
 schematic proofs. Claude PR35 adds standalone read-only geometry analysis/diff;
-sourcef04fac3 is still running CI41363193634. Parent found valid zero-volume
+sourcef04fac3 passed all five checks in CI41363193634. Parent found valid zero-volume
 shapes could do billions of empty loop iterations. Fix3b01112 skips cell walks
 when there are no blocks; maximal-dimension regressions cover both input orders.
-Scoped type/format checks pass; tests await GitHub. The integration branch merges
-current main. Wait for the original live run to finish before updating PR35.
+Scoped type/format checks pass; the new regression awaits GitHub. The integration
+branch merges current main; PR35 now needs exact combined-head CI before merge.
 
 The downloadable v0.1.0-alpha.1 remains the older solo alpha. Full in-game
 schematic integration, release packaging and the overall roadmap remain pending.
