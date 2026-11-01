@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "dev.minecraftai.engineer.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["PistonEventMixin", "ServerRecoveryMixin", "ServerBlockEventsMixin"],
+  "mixins": ["PistonEventMixin", "ServerRecoveryMixin", "ServerBlockEventsMixin", "WireConnectionMixin"],
   "injectors": { "defaultRequire": 1 }
 }
