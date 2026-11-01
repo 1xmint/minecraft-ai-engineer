@@ -8,6 +8,9 @@ Current worktree: task work/`conversation-entry`, branch
 **phase/22-conversation-entry**, rebased onto main
 **3ae22329fb0df73f2c9735113c91c1052f22372f**. Goal remains incomplete.
 
+Draft PR31: https://github.com/1xmint/minecraft-ai-engineer/pull/31. Initial
+CI source db7e59a is queued/running; no conversation runtime result is claimed.
+
 Phase21 observer engineering is complete in merged PR30:
 https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
 Exact implementation4d4a1de passed all five checks in CI41268319917, all113 native
@@ -241,4 +244,5 @@ server close clear dialogue; no context/permission is loaded from disk. The
 native proof now includes asking which part, answering "the lamp", a timing
 follow-up and rejection after an explicit different lesson. These new scope and
 native-flow changes compile but remain untested, and need the completed phase's
-focused check. No CI or PR yet: preserve observer dependency and rebase first.
+focused check. Rebased onto the merged observer source; draft PR31 now runs the
+first conversation CI. Full staged native proofs remain required before merge.
