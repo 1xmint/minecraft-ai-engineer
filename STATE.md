@@ -4,9 +4,17 @@
 AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
-Current worktree: task work/`conversation-setup`, branch
-**phase/23-conversation-setup**, rebased onto merged main
-**b7e3e26af47ca9d38084780c6be85af6f5a20611**. Phase23 runtime proofs remain pending.
+Current worktree: task work/`analog-comparators`, branch
+**phase/24-analog-comparators**, based on merged main
+**d9bde62e4b6cd874b4dd3a89e37c211582ddac1a**. Overall goal remains incomplete.
+
+Phase23 shipped in PR32, merged2026-11-01T14:39:54Z. Exact source1561555 passed all5
+CI41276307352 and all117 required native tests, four setup markers and the full
+conversation suite. Actual private setup, scoped project choices, local previews,
+negative permissions/workspace cases and preserved built/tested designs passed.
+Strict SQLite10/17 starts and actual functional traces passed; native flow15m13s.
+Preview screenshot inspected and archived in docs/images/conversation-setup-preview.png.
+Evidence: task work/conversation-setup-final-41276307352. No SDK/local tests.
 
 Phase22 shipped in PR31, merged2026-11-01T04:55:25Z. Exact sourcebd39067 passed all5
 CI41273958762, all116 native tests and12 conversation markers, including actual
@@ -174,83 +182,75 @@ no new inspection/test is implied. GPT-6-Luna/high focused auth review findings
 were fixed. Production deadlines, limits and permissions stay unchanged; CI-only
 time allowances include the real expiry wait. No local tests or SDK calls.
 
-## Phase23: conversational setup (serves E1/E4)
+## Phase23 shipped: conversational setup and local previews
+
+PR32/merged9bde62/source1561555/all5 CI41276307352 proves private project creation,
+authorized name/number selection, duplicate-name ambiguity, paging, grant-stale
+rejection, real feet-based corner marking, denied Eve creation/name discovery,
+viewer/editor workspace denial and viewer preview denial. Question scopes bind
+actual player/connection stamp, epoch, selected project, dimension, expiry and
+all candidate identities/revisions/grants/VIEW. All256 allowed projects can be
+paged in groups of12; no stored question grants permission. Local catalog previews
+need EDIT, a complete fitting workspace and no old construction or controlled
+work. They use canonical factories/reviseProposal, place no blocks, record no pass
+and use no model quota. Incomplete/one-block regions and replacement of built,
+tested intention reject. Actual chat replaces reference-seeding commands in both
+native conversation fixtures; teleports only position actual players. All117 native
+tests, four setup markers and inherited chat/SQLite evidence passed. Screenshot
+inspected. GPT-6-Luna/high focused reviews found no concrete bypass. Full human
+acceptance, broader engineering, release/provider eligibility and Phase2 remain.
+
+## Phase24: analog comparators (serves E2/E3)
 
 Outcomes:
 
-- O1: create a private project or find/select an authorized project through chat.
-  Prove denied creation, no inaccessible names, ambiguous names require a choice,
-  and stale list choices cannot select a changed/revoked project.
-- O2: stand at two workspace corners and mark them through chat. Explain the exact
-  bounds and retain existing owner/state/overlap checks; no world edit or model
-  request from marking. Prove viewers and editors cannot change the workspace.
-- O3: a native player creates/selects/marks projects through ordinary chat, then
-  uses the existing design/build/test conversation. Commands remain fallback.
+- A1: establish independent actual signal strengths0..15 without inventories or
+  forcing wire power. Native disposable lever/dust fixtures measure all levels
+  up/down on rear/left/right inputs and reject cross-coupling. No production
+  comparator support is claimed from this feasibility probe.
+- A2: canonical compare/subtract mechanisms and creative construction in all
+  supported orientations, with explicit analog input/output contracts. Native
+  actual output checks include zero, equality, lower/higher sides and both sides.
+- A3: real server functional evidence, interruption/input restoration, conflicts,
+  revocation, guarded undo and restart; strict Java/TypeScript numeric evidence
+  replay tied to exact project/revision/component/basis/epoch. No Boolean-only
+  or geometry pass can establish analog function.
+- A4: authorized previews, lessons/materials/timing and conversation/catalog
+  routing, plus actual dedicated flow, durable evidence and visual proof.
 
-Decision: local setup intents call existing ProjectManager/EngineeringSession
-methods, never executable command text or model-generated permissions. A corner
-is the block containing the player's feet. Bounded personal project choices use
-only current VIEW-authorized projects in the current dimension. Player object,
-connection/stamp, epoch, selection, expiry and every candidate identity/revision/
-grant revision/VIEW are rechecked. Duplicate names require a number. Paged lists
-show12 entries, retain the original scope/expiry and reach all256 allowed projects.
-Creation and sharing grants stay operator/owner-controlled; no new model access.
+Probe first: three independent dust lines with one ceiling lever beneath each
+stone support; choosing source distance produces a requested analog level. The
+fixture sits in its own48x8x48 test structure. Measure the actual port/output
+wire POWER after settling; never set wire POWER except initial unpowered state.
+No inventory contents, world-time changes, entities, model requests or production
+permissions. The riskiest unknown is native calibration/isolation, not the known
+comparator formula. If it fails, fix/reconsider physical geometry; never rewrite
+expected levels to make it pass. Production test apparatus/input representation
+is decided only after this probe; no new generated block allowlist yet.
 
-Implemented: explicit new/list/name/number/page/corner dialogue and lifecycle
-cleanup. Private native fixtures now create and mark both conversation projects
-via chat, exercise duplicate names/yes/paging, grant-stale rejection and fresh
-numbered choice, denied Eve creation/list privacy, Bob viewer and editor corner
-rejections. Setup messages wait21 real ticks to respect native chat limits; no
-counter reset. Fixture teleports position the actual player; no human-driven
-session is claimed. The final source uses local catalog preview chat in place of reference fixtures;
-complete human acceptance remains broader work.
+Rejected: forcing numeric wire states (would fake physical evidence); using
+container/lectern contents (unnecessary private-inventory mutation); treating
+0/15-only cases as analog support. The physical probe is the cheapest honest
+next check before choosing the production representation.
 
-Scoped Java compilation and script syntax/format pass. GPT-6-Luna/high focused
-auth review and paging follow-up found no concrete privacy or authority bypass.
-Guides explain feet-based corners and authorized project choice. Existing model
-counts remain10/17; no SDK calls/local tests. All Phase23 runtime proofs are
-unproven. Native grammar count becomes117. Rebase onto shipped Phase22 is done.
+Primary sources checked2026-11-01: official comparator overview
+https://www.minecraft.net/en-us/article/taking-inventory--redstone-comparator
+and the pinned26.3 ComparatorBlock.calculateOutputSignal bytecode. Side strength
+above rear yields zero; compare includes equality; subtract uses the strongest
+side. The native probe will measure actual signals, not trust prose or geometry.
+Fabric's installed GameTest annotation/empty.snbt establish current fixture APIs.
 
-Next: current-head CI and actual evidence/screenshot inspection, fix genuine
-failures, then merge. Keep the entire remaining roadmap above active.
+Tasks: A1 write/native-CI calibration and mode-boundary probes first; then decide
+and implement A2/A3 canonical contracts/execution/evidence, and A4 integration.
+GPT-6-Luna/high is challenging only the physical source/isolation assumptions.
+Tests run in CI; local compile/format only. Phase24 is unproven and unshipped.
 
-A further O3 gap is being closed before final Phase23 merge: exact local catalog
-preview requests (`show me a signal lamp`, inverter/OR/observer/shutter variants)
-need no model quota. Existing EDIT/current-dimension checks and reviseProposal
-apply; incomplete workspaces and any old construction/journal/controlled shutter
-reject. The native flow replaces reference-seeding commands with actual chat,
-checks no lease/pass/placements from preview, rejects incomplete regions and
-preserves a built, tested design. Existing model counts stay10/17; no counters,
-production limits or model admission change. Current CI41275010408 still tests
-older source d8d0316 and must be observed through terminal before pushing this
-new source. New preview source compiled; final negative additions need compile/CI.
-
-The GPT-6-Luna/high preview-only review found no concrete authorization or
-world-mutation bypass. Local previews now also reject a too-small marked region
-before accepting intention; native negatives cover incomplete and one-block
-workspaces, then actual chat shows the canonical lamp. The old reference-seeding
-commands in both fixtures are removed. A built/tested design must remain exactly
-unchanged after a show request. No SDK calls or model-count changes.
-
-The viewer also attempts local preview through actual chat while the owner has
-a pending action; EDIT denial must leave that owner review and intended design
-intact. Local-preview work is checkpointed on work/conversation-setup-preview
-while PR32 keeps testing d8d0316. Promote only after CI41275010408 is terminal
-and its evidence is inspected. No local tests ran.
-
-The final native preview path also captures a real screenshot after the selected
-project's six-block READY snapshot arrives, with the actual chat request/reply
-and ghost geometry. It reuses the fixture's viewing position. Source requires
-scoped compilation before promotion; new images remain unrun.
-
-Source d8d0316 passed all five checks in CI41275010408, all117 required native
-tests, three setup markers and the full old conversation suite. Actual private
-creation/corner marking, duplicate names, paging, grant-stale choice rejection,
-Eve privacy/creation denial, and viewer/editor workspace rejection passed.
-Strict SQLite10/17 starts and functional traces passed. Native flow15m17s.
-Evidence: task work/conversation-setup-first-41275010408. This establishes O1/O2
-and the setup portion of O3; those fixtures still used reference commands.
-
-Final source adds local preview chat and its negative/visual checks described
-above; scoped Java compilation and script syntax/format pass. It must now run
-fresh CI before merge. No extra model request, SDK call or local test occurred.
+Initial physical probe source compiles. It schedules279 actual calibration samples
+and54 settled samples for each compare/subtract boundary probe, with real game
+clock continuity and final-off checks. A dedicated48x8x48 SNBT fixture contains
+the hardware, following the installed Fabric structure format. Nothing exposes
+comparators to catalog/model/player execution yet. Native proof remains unrun.
+The challenge's initial opposite-FACING suggestion contradicted pinned26.3
+DiodeBlock.getInputSignal: it reads pos.relative(FACING). WEST is retained as
+the west input/east output orientation, with a source comment; actual CI will
+validate the fixture. No expected values were changed to accommodate a guess.

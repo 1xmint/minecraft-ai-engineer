@@ -81,6 +81,8 @@ You can also say `Engineer, work on project` followed by an exact project name.
 
 ![Private conversation explaining intended timing and the separately recorded actual passing trial](images/conversation-tested.png)
 
+![Actual native chat requests a local unbuilt catalog preview without commands](images/conversation-setup-preview.png)
+
 Within the selected project, talk in ordinary Minecraft chat:
 
 - `Engineer, explain how this works`
