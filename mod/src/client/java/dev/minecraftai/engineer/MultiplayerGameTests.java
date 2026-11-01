@@ -2042,6 +2042,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String designId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         await(context,()->view(context)!=null && view(context).projectId().equals(designId) && view(context).text().contains("COMPLETED"),"The conversation's generated client preview reflects its actual completed trial");
         context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Stored functional result for component root: passed:generated-buffer:");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Functional testing is still required.")),"An intended-behavior lesson must not contradict its separately recorded actual passing trial");
         context.waitTicks(3);context.takeScreenshot("engineer-conversation-tested");
         String structural="CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.";
         conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");

@@ -1,6 +1,6 @@
 # Now
 
-2026-10-31. Active goal: **complete all milestones**: the entire Phase1 Minecraft
+2026-11-01. Active goal: **complete all milestones**: the entire Phase1 Minecraft
 AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
@@ -295,3 +295,16 @@ Lifecycle source bb9ade4 is compiled and committed locally. Its remote checkpoin
 branch is work/conversation-lifecycle-proof. PR31 remains on7210d45 while exact
 CI41272832823 is live; promote the lifecycle commit to the PR branch only after
 that run is terminal and its evidence is inspected, so no native run is cancelled.
+
+Source7210d45 passed all five checks in CI41272832823. All ten conversation markers
+passed, including staged action/generated/structural flows, prior-controller
+viewer regression and actual pending-approval saved-server restart. Strict SQLite
+verification passed exact8/17 starts and actual signal-lamp/generated8/10-block
+tick traces. Native flow13m9s. Evidence: task work/
+`conversation-staged-proof-41272832823`; the screenshot was inspected. It exposed
+a real presentation issue: an intended behavior summary still said testing was
+required above an actual pass. Lesson rendering now omits that static sentence
+and keeps the separate stored-result/no-new-test statements. Immutable behavior,
+source and evidence are unchanged. The final source also adds real expiry and
+same-server reconnect proofs, so expected starts are10/17. These additions need
+fresh CI before merge.
