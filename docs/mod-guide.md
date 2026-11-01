@@ -50,6 +50,41 @@ Inspect before explicitly resuming or undoing. Other players, copied paths,
 and arbitrary file imports are not silently adopted. Restart expires all
 delegations, and multiple owned projects require an explicit `project use`.
 
+## Talking to Engineer (development source)
+
+After selecting a project and its workspace, talk in ordinary Minecraft chat:
+
+- `Engineer, explain how this works`
+- `Engineer, what materials do I need?`
+- `Engineer, how does the timing work?`
+- `Engineer, build this` or `Engineer, test this`
+- `Engineer, stop` to interrupt immediately, subject to your build permission.
+
+Addressed requests and replies are private to you. Ordinary player chat keeps
+its normal audience. `@Engineer ...`, `Engineer: ...` and `Hey Engineer, ...`
+are also accepted. Text teaching works without the optional client overlays.
+
+For a single design, Engineer uses that design automatically. For several parts,
+it asks which one you mean; reply with a part name such as `Engineer, the lamp`.
+Selecting a lesson never approves construction or testing.
+
+Read each proposed action before replying `Engineer, yes` or `Engineer, no`.
+A generated design has separate behavior, geometry and construction approvals.
+Approving a preview places no blocks and establishes no functional pass. Tests
+measure the actual supported mechanism in the game. You can say
+`Engineer, never mind` to cancel a pending conversation request.
+
+Approvals belong to your current connection, project and permissions, expire,
+and are consumed once. If context changes, ask again and review the new proposal.
+Another player's yes cannot approve your request. Requests that need a model
+remain restricted to the configured account-owning operator and consume the
+subscription's available quota.
+
+Project creation, workspace selection and sharing still use the setup commands
+above. Natural conversation for those steps remains unfinished. The published
+solo alpha does not contain this conversation entry point. Commands documented
+below remain available for manual control and troubleshooting.
+
 ## Mechanism library in current source
 
 Merged PR #11 adds `/engineer catalog` and `reference <mechanism> [delay]` for a

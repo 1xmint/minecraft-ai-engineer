@@ -20,7 +20,7 @@ final class GeneratedPlanning {
                          BlockPos origin, int rotation, JsonObject maxSize,
                          String request, String priorState, EngineeringBehavior behavior,
                          String explanation, UUID nonce, long expiresAtMillis,
-                         long expiresAtNanos) { }
+                         long expiresAtNanos,boolean conversation) { }
     private record Flight(Basis basis, CompletableFuture<JsonObject> future) { }
 
     private final ProjectManager manager;
@@ -31,6 +31,9 @@ final class GeneratedPlanning {
     GeneratedPlanning(ProjectManager manager) { this.manager = manager; }
 
     void design(EngineeringSession session, String request) {
+        design(session,request,false);
+    }
+    void design(EngineeringSession session,String request,boolean conversation) {
         requireServerThread();
         ensureOpen();
         UUID actor = session.actor();
@@ -50,7 +53,7 @@ final class GeneratedPlanning {
         Basis captured = new Basis(session, actor, player, player.connection, manager.connectionId(player),
                 manager.epoch, session.revision(), session.access.revision(), manager.selections.get(actor),
                 corner1, corner2, origin, rotation, maxSize, request, session.state, null, null,
-                UUID.randomUUID(), expiresAtMillis, expiresAtNanos);
+                UUID.randomUUID(), expiresAtMillis, expiresAtNanos,conversation);
 
         JsonObject body = requestBody(captured, false, null);
         session.state = "PLANNING";
@@ -74,6 +77,10 @@ final class GeneratedPlanning {
         future.whenComplete((result, error) -> session.server.execute(() -> finishProposal(flight, result, error)));
     }
 
+    boolean hasConversationReview(EngineeringSession s){requireServerThread();var b=pending.get(s);return b!=null && b.conversation() && b.actor().equals(s.actor());}
+    boolean conversationActive(EngineeringSession s){requireServerThread();var b=pending.get(s);var f=flights.get(s);return b!=null && b.conversation() && b.actor().equals(s.actor()) || f!=null && f.basis().conversation() && f.basis().actor().equals(s.actor());}
+    void confirmConversation(EngineeringSession s){requireServerThread();var b=pending.get(s);if(b==null || !b.conversation() || !b.actor().equals(s.actor()))throw new IllegalStateException("No current behavior proposal for you to approve");confirm(s,b.nonce().toString());}
+    boolean cancelConversation(EngineeringSession s){requireServerThread();if(!conversationActive(s))return false;cancelActor(s,s.actor());return true;}
     void confirm(EngineeringSession session, String nonce) {
         requireServerThread();
         ensureOpen();
@@ -222,9 +229,9 @@ final class GeneratedPlanning {
             Basis accepted = new Basis(session, basis.actor(), basis.player(), basis.connection(), basis.connectionId(), basis.epoch(),
                     basis.revision(), basis.authorization(), basis.selectedProject(), basis.corner1(), basis.corner2(), basis.origin(),
                     basis.rotation(), basis.maxSize(), basis.request(), basis.priorState(), behavior, explanation,
-                    basis.nonce(), basis.expiresAtMillis(), basis.expiresAtNanos());
+                    basis.nonce(), basis.expiresAtMillis(), basis.expiresAtNanos(),basis.conversation());
             pending.put(session, accepted);
-            tell(basis.player(), behavior.summary() + "\n" + explanation + "\nTo request one geometry proposal, run: /engineer confirm " + basis.nonce());
+            tell(basis.player(), behavior.summary() + "\n" + explanation + (basis.conversation()?"\nReply 'Engineer, yes' to request one geometry proposal for this behavior, or 'Engineer, no' to cancel. This does not approve construction.":"\nTo request one geometry proposal, run: /engineer confirm " + basis.nonce()));
         } catch (RuntimeException rejected) {
             restoreState(session, basis.priorState(), "Behavior proposal unavailable; existing design kept");
             tell(basis.player(), "Behavior proposal unavailable; existing design kept: " + safe(rejected));
@@ -258,17 +265,19 @@ final class GeneratedPlanning {
                 throw new IllegalArgumentException("Generated blueprint belongs to a stale project revision");
             if(session.hasBuiltStructure()) {
                 UUID previousActor=session.commandActor;session.commandActor=basis.actor();
-                try { session.previewStructural(candidate); }
+                try { session.previewStructural(candidate,basis.conversation()); }
                 finally { session.commandActor=previousActor; }
                 session.detail="Structural proposal ready; review changes and explicitly apply it";session.save();
-                tell(basis.player(),"Structural proposal ready. The accepted intention and world are unchanged. Review /engineer changes before applying the private confirmation.");
+                tell(basis.player(),basis.conversation()?"Structural proposal ready. Review the exact changes above. Reply 'Engineer, yes' to apply this reviewed proposal, or 'Engineer, no' to keep the current design. The accepted intention and world are unchanged until approval.":"Structural proposal ready. The accepted intention and world are unchanged. Review /engineer changes before applying the private confirmation.");
                 return;
             }
             session.state = "READY";
-            session.accept(candidate);
+            UUID previousActor=session.commandActor;session.commandActor=basis.actor();
+            try { session.accept(candidate); }
+            finally { session.commandActor=previousActor; }
             acceptedToCanonical = true;
             session.checkpoint();
-            tell(basis.player(), "Generated preview accepted. " + accepted.summary() + " Geometry is untested. Review the preview, then explicitly run /engineer build to construct it.");
+            tell(basis.player(), "Generated preview accepted. " + accepted.summary() + (basis.conversation()?" Geometry is untested. Review the preview and tell me when you want to build it; construction needs its own proposal and approval.":" Geometry is untested. Review the preview, then explicitly run /engineer build to construct it."));
         } catch (RuntimeException rejected) {
             if (acceptedToCanonical) {
                 tell(basis.player(), "Generated preview accepted. " + basis.behavior().summary() + " Geometry is untested; checkpoint reporting needs attention.");

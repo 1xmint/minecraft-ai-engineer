@@ -32,8 +32,10 @@ public final class EngineerMod implements ModInitializer {
 
     @Override public void onInitialize() {
         EngineerNetwork.initialize();
+        EngineerConversation.initialize();
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
             ProjectManager manager=MANAGERS.get(server);if(manager==null)return;
+            manager.conversationLessons.forget(handler.player.getUUID());
             for(var project:manager.projects.values()) {
                 project.forgetDiagnosis(handler.player.getUUID());
                 manager.generated.cancelActor(project,handler.player.getUUID());

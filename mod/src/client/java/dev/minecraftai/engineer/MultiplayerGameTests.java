@@ -381,6 +381,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try {
             Files.createDirectories(coordination);
             ClientReceiveMessageEvents.GAME.register((message, overlay) -> MESSAGES.add(message.getString()));
+            ClientReceiveMessageEvents.CHAT.register((message,signed,sender,type,time)->MESSAGES.add(message.getString()));
             switch (role) {
                 case "alice" -> owner(context);
                 case "bob" -> editor(context);
@@ -515,6 +516,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 });
                 write("text-viewer", "ready");
                 awaitFile(context, "eve-text.done");
+                if(!LIVE_ACCEPTANCE){
+                    expectChat(context,"I told Engineer, wait for me.");
+                    check(MESSAGES.stream().noneMatch(message->message.contains("EXPLAIN HOW THIS WORKS") || message.contains("Intended observer timing")),"Another player must not receive the private request, sender echo or bot's personal lesson reply");
+                    write("conversation-private.done","passed");
+                }
 
                 send(context, "engineer project share Bob editor");
                 send(context, "engineer permit Bob");
@@ -644,7 +650,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);conversationWorkFlows(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -659,8 +665,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
         LocalFiles.write(recovery.file(),recovery.checkpoint());
-        try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
-            TestDedicatedServerConnection connection=server.connect()){
+        try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties))){
+          try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
             if(!LIVE_ACCEPTANCE)observerRecovery(context,server);
@@ -690,10 +696,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
+            if(!LIVE_ACCEPTANCE)prepareConversationDisconnect(context,server);
+          }
+          if(!LIVE_ACCEPTANCE){
+            server.waitFor(s->s.getPlayerList().getPlayerCount()==0);
+            try(TestDedicatedServerConnection reconnected=server.connect()){
+                recoverConversationReconnect(context,server);
+                prepareConversationRestart(context,server);
+            }
+          }
         }
         if(!LIVE_ACCEPTANCE) {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
+                recoverConversationRestart(context,server);
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
                 shutterConstructionFlow(context,server,connection);
@@ -1074,6 +1090,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"does not grant you build permission");write("shutter-repair-bob-denied.done","passed");
             awaitFile(context,"shutter-repair-bob-regranted");context.waitTicks(25);MESSAGES.clear();send(context,"engineer resume");expectChat(context,"Reconciled; resuming the same bounded assignment");write("shutter-repair-bob-resumed.done","passed");awaitFile(context,"shutter-repair-bob-finished");
         }
+        if(!LIVE_ACCEPTANCE){
+            awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
+            send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
+            MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+            MESSAGES.clear();say(context,"Engineer, CI build selected lamp.");expectChat(context,"account-owning operator");
+            write("conversation-bob-denied.done","passed");awaitFile(context,"conversation-bob-revoked");
+            MESSAGES.clear();send(context,"engineer project use "+conversationProject);expectChat(context,"unavailable or not shared");
+            say(context,"Engineer, yes");
+            await(context,()->view(context)==null || !view(context).projectId().equals(conversationProject),"A revoked client gets neither the shared conversation metadata nor its owner's pending review");
+            write("conversation-bob-revoked.done","passed");
+        }
         awaitFile(context, "finish");
         disconnect(context);
     }
@@ -1118,10 +1145,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Step ")), "Text tutorial without overlay negotiation");
         check(view(context) == null, "Text-only clients do not acquire visual metadata caches");
         if(!LIVE_ACCEPTANCE){
-            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));send(context,"engineer teach root");send(context,"engineer ask explain the timing");send(context,"engineer ask explain the materials");
+            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));
+            say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
+            say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
-            send(context,"engineer build");expectChat(context,"does not grant you build permission");
-            check(view(context)==null,"Authorized observer lessons work over ordinary text without installing visual authority or a preview cache");write("observer-text.done","passed");
+            say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
+            say(context,"I told Engineer, wait for me.");
+            check(view(context)==null,"Authorized observer lessons work over ordinary text without setup commands, visual authority or a preview cache");write("observer-text.done","passed");write("conversation-text.done","passed");
         }
         disconnect(context);
     }
@@ -1933,6 +1963,105 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.trial.scope().get("component").getAsString().equals("pulse") && project.assignments.task(project.blueprint,"lamp").lastPassedScope==null,"A composed observer trial proves only the explicitly selected leaf");check(project.level().getBlockState(new BlockPos(1210,101,0)).is(Blocks.REDSTONE_LAMP),"Temporal testing preserves the independent electrical component");});
         write("observer-composite-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("observer-composite.done","passed");
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Tell me which part you mean");
+        MESSAGES.clear();say(context,"Engineer, stop");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.manager.conversationLessons.holdsLesson(project,player(s,"Alice").getUUID()) && project.delegation==null,"An authorized stop cancels the pending question as well as execution authority");});
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        server.runOnServer(s->check(session(s,"Alice").delegation==null,"Clarifying a composed lesson cannot delegate construction or testing"));
+        MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"Lesson for component lamp:");
+        MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Intended timing for component lamp:");
+        String composed=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project use "+composed);MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        send(context,"engineer teach pulse");MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"That question no longer applies");
+        server.runOnServer(s->{var project=session(s,"Alice");check(LessonAssistant.currentComponent(project,player(s,"Alice").getUUID(),true).equals("pulse") && project.delegation==null,"A changed lesson rejects the stale clarification without overwriting the newer choice or starting world work");});
+        write("conversation-clarification.done","passed");
+    }
+    private static void conversationProposal(ClientGameTestContext context,String request){
+        MESSAGES.clear();say(context,"Engineer, "+request);expectChat(context,"Reply 'Engineer, yes'");
+        check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
+    }
+    private static void conversationApprove(ClientGameTestContext context,String request){conversationProposal(context,request);say(context,"Engineer, yes please");}
+    private static void conversationWorkFlows(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        // Allow the real admission window from earlier fixed fixtures to expire.
+        // No budget counters or production limits are reset or relaxed.
+        long ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1400 100 0");send(context,"engineer select2 1405 101 0");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1400,100,0)));
+        server.runCommand("tp Alice 1402 104 8 180 30");
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Lesson for component root:");
+        server.runOnServer(s->commandAs(s,"Alice","engineer project share Bob viewer"));
+        conversationProposal(context,"CI build selected lamp.");write("conversation-bob-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"conversation-bob-denied.done");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.manager.knowledge.hasConversationReview(project) && project.journal.isEmpty() && project.delegation==null,"Another actual chat client cannot consume the owner's approval or delegate world work");});
+        say(context,"Engineer, no thanks");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Cancelling a chat build leaves no world edit or lease");});
+        conversationProposal(context,"CI build selected lamp.");server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("conversation-bob-revoked","ready");awaitFile(context,"conversation-bob-revoked.done");
+        MESSAGES.clear();say(context,"Engineer, yes");await(context,()->MESSAGES.stream().anyMatch(message->message.contains("There is no current proposal") || message.contains("Action expired or project context changed")),"A grant change invalidates the earlier conversation review");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null,"A stale grant review cannot construct even after the original owner says yes");});
+        write("conversation-grants.done","passed");
+        conversationApprove(context,"CI build selected lamp.");
+        say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").delegation==null,"Natural stop drops execution authority without an extra model decision"));
+        conversationApprove(context,"CI resume selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==6 && !project.verified.startsWith("passed:"),"One approved conversation build creates exactly its six blocks, not a verification claim or replayed operation");});
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:signal-lamp:"));assertPersisted(server);
+        conversationProposal(context,"CI undo selected lamp.");say(context,"Engineer, never mind");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(session(s,"Alice").journal.size()==6 && session(s,"Alice").delegation==null,"Cancelled chat undo retains the complete assistant operation"));
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());assertPersisted(server);
+        write("conversation-actions-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("conversation-actions.done","passed");
+        conversationDesignFlow(context,server);
+        // Leave later, independently asserted fixtures a fresh real admission window.
+        ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+    }
+    private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 1440 100 0");send(context,"engineer select2 1447 102 2");send(context,"engineer reference signal-lamp");
+        server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1440,100,0)));
+        server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");commandAs(s,"Bob","engineer project use "+session(s,"Alice").projectId);commandAs(s,"Bob","engineer build");});
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));server.runOnServer(s->commandAs(s,"Bob","engineer undo"));server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");check(project.controller.equals(player(s,"Bob").getUUID()) && project.access.allows(project.controller,ProjectAccess.Permission.VIEW) && !project.access.allows(project.controller,ProjectAccess.Permission.EDIT) && !project.access.allows(project.controller,ProjectAccess.Permission.BUILD),"The prior real builder retains view but loses edit/build authority before the owner's generated preview request");});
+        String request="CI generated buffer: on after 12 game ticks, off after 16 game ticks.";
+        conversationApprove(context,request);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, no");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(!GeneratedBlueprint.isGenerated(session(s,"Alice").blueprint) && session(s,"Alice").journal.isEmpty(),"Cancelling behavior approval requests no geometry or construction"));
+        conversationApprove(context,request);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Generated preview accepted.");
+        server.runOnServer(s->{var project=session(s,"Alice");check(GeneratedBlueprint.isGenerated(project.blueprint) && project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"The captured owner accepts the new preview despite a revoked previous controller; geometry approval edits no blocks");});
+        conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        int revision=server.computeOnServer(s->session(s,"Alice").revision());
+        String designId=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        await(context,()->view(context)!=null && view(context).projectId().equals(designId) && view(context).text().contains("COMPLETED"),"The conversation's generated client preview reflects its actual completed trial");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Stored functional result for component root: passed:generated-buffer:");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Functional testing is still required.")),"An intended-behavior lesson must not contradict its separately recorded actual passing trial");
+        context.waitTicks(3);context.takeScreenshot("engineer-conversation-tested");
+        String structural="CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.";
+        conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Reply 'Engineer, yes' to apply these exact changes");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.revision()==revision && project.blueprint.blocks().size()==8 && project.delegation==null,"Proposing structural geometry preserves current intent and physical work before separate approval");});
+        MESSAGES.clear();say(context,"Engineer, no");expectChat(context,"Cancelled the pending request");
+        server.runOnServer(s->check(!session(s,"Alice").hasConversationStructural() && session(s,"Alice").revision()==revision,"Cancelling the structural review preserves the old design"));
+        conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Reply 'Engineer, yes' to apply these exact changes");
+        MESSAGES.clear();say(context,"Engineer, yes");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").revision()==revision+1);
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && !project.verified.startsWith("passed:"),"A separately approved structural revision builds the real larger layout exactly once, without inheriting its earlier test");});
+        conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==8);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.structuralBefore().blocks().size()==8 && project.structuralBefore().blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))) && !project.verified.startsWith("passed:"),"Undo restores the real previous layout without rewriting the accepted design or inheriting a functional pass");});
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Complete/correct");
+        server.runOnServer(s->check(session(s,"Alice").delegation==null && !session(s,"Alice").verified.startsWith("passed:"),"A restored physical layout cannot pass a different accepted intention"));
+        conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->session(s,"Alice").journal.isEmpty());
+        write("conversation-design-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("conversation-design.done","passed");
     }
     private static String actionNonce(){
         var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");
@@ -2033,6 +2162,40 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer act "+nonce);expectChat(context,"No matching pending action");write("natural-request-catalog.done","passed");
     }
 
+    private static void prepareConversationDisconnect(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        conversationProposal(context,"CI propose stopping the selected project.");
+        // Exercise the production monotonic deadline, without changing clocks or TTLs.
+        long expiry=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(101);
+        while(System.nanoTime()-expiry<0)context.waitTicks(2);
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"An expired chat approval cannot revive execution or mutate the world");});
+        write("conversation-expiry.done","passed");
+        conversationProposal(context,"CI propose stopping the selected project.");
+        server.runOnServer(s->{var project=session(s,"Alice");write("conversation-disconnect-stamp",project.manager.connectionId(player(s,"Alice")));write("conversation-disconnect-epoch",project.manager.epoch.toString());});
+    }
+    private static void recoverConversationReconnect(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.manager.epoch.toString().equals(read("conversation-disconnect-epoch")) && !project.manager.connectionId(player(s,"Alice")).equals(read("conversation-disconnect-stamp")) && project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"A real reconnect in the same server epoch cannot revive the previous connection's chat approval");});
+        write("conversation-reconnect.done","passed");
+    }
+    private static void prepareConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        conversationProposal(context,"CI propose stopping the selected project.");
+        server.runOnServer(s->{var project=session(s,"Alice");var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();
+            try{check(project.manager.knowledge.hasConversationReview(project) && project.journal.isEmpty() && project.delegation==null,"The actual server closes with an unconsumed conversation proposal, no world work or lease");write("conversation-restart-epoch",project.manager.epoch.toString());}
+            finally{project.commandActor=previous;}});
+        write("conversation-restart-prepared.done","passed");
+    }
+    private static void recoverConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("conversation-actions-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.manager.epoch.toString().equals(read("conversation-restart-epoch")) && project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"A real saved-server boot retains facts but never restores chat approval, execution or test authority");});
+        write("conversation-restart.done","passed");
+    }
     private static void prepareNaturalRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String id=read("natural-request-project");send(context,"engineer project use "+id);
         server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
@@ -2178,6 +2341,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> context.computeOnClient(client -> client.player != null && client.level != null && client.getConnection() != null), "Native client join");
     }
 
+    private static void say(ClientGameTestContext context,String message){context.runOnClient(client->client.getConnection().sendChat(message));context.waitTicks(1);}
     private static void send(ClientGameTestContext context, String command) {
         context.runOnClient(client -> {
             check(client.getConnection() != null, "Command needs a real Minecraft connection");

@@ -41,9 +41,10 @@ final class LessonAssistant {
         boolean mechanical=ShutterDesign.describes(selected.source());var contract=mechanical?null:EngineeringContracts.contract(selected);
         int delay=selected.source().has("parameters")?selected.source().getAsJsonObject("parameters").get("delay").getAsInt():1;
         boolean generated=GeneratedBlueprint.isGenerated(selected);
+        String intendedBehavior=generated?GeneratedBlueprint.behavior(selected).summary().replace(" Functional testing is still required.",""):null;
         Blueprint canonical=generated || mechanical?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
-            s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?GeneratedBlueprint.behavior(selected).summary():canonical.source().get("explanation").getAsString()));
+            s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?intendedBehavior:canonical.source().get("explanation").getAsString()));
             String current=currentComponent(s,false);
             if(target.equals(current)) {
                 var cursor=s.cursors.get(s.actor());var stage=s.blueprint.stages().get(cursor.stage);
@@ -65,7 +66,7 @@ final class LessonAssistant {
         else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
         else if(contract!=null && contract.pulse()!=null){s.tell("Intended observer timing: both lever edges produce a pulse after 2 game ticks, powered for 2 game ticks; the lamp switches off 4 ticks after the pulse ends. Testing samples detector, receiver and lamp every tick. This is the intended contract, not a new measurement.");}
         else if(generated) {
-            s.tell(GeneratedBlueprint.behavior(selected).summary());
+            s.tell(intendedBehavior);
         } else {
             var delays=new TreeSet<Integer>();
             for(var block:selected.blocks())if(block.state().is(Blocks.REPEATER))delays.add(block.state().getValue(BlockStateProperties.DELAY));

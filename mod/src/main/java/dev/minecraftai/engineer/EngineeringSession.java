@@ -50,7 +50,7 @@ final class EngineeringSession implements BuildExecutor {
     int structuralCursor;
     private record StructuralPreview(StructuralTransition transition,UUID actor,
             net.minecraft.server.network.ServerGamePacketListenerImpl connection,long authorization,
-            int revision,BlockPos first,BlockPos second,UUID nonce,long expiresAtNanos) { }
+            int revision,BlockPos first,BlockPos second,UUID nonce,long expiresAtNanos,boolean conversation) { }
     private StructuralPreview structuralPreview;
     private StructuralTransition restoredLayout;
     Blueprint structuralBefore() {
@@ -311,7 +311,7 @@ final class EngineeringSession implements BuildExecutor {
         for(var block:blueprint.blocks())if(!ComponentTree.composite(blueprint) || block.component().equals(id))stages.add(block.stage());
         int first=-1;for(int i=0;i<blueprint.stages().size();i++)if(stages.contains(blueprint.stages().get(i).id())){first=i;break;}
         if(first<0)throw new IllegalStateException("Choose a component with a construction lesson");
-        Cursor c=cursor(actor());c.stage=first;c.teaching=true;save();explain();
+        Cursor c=cursor(actor());c.stage=first;c.teaching=true;save();manager.conversationLessons.remember(this,id);explain();
     }
     void moveStage(int delta) { access.require(actor(),ProjectAccess.Permission.VIEW); if (blueprint == null) throw new IllegalStateException("No blueprint"); Cursor c=cursor(actor());c.stage = Math.clamp(c.stage + delta,0,blueprint.stages().size()-1); c.teaching=true; save(); explain(); }
     void componentAdd(String id,String parent,String template,BlockPos position) {
@@ -469,6 +469,12 @@ final class EngineeringSession implements BuildExecutor {
         save(); checkpoint(); tell(detail + ". /engineer stop interrupts; /engineer undo reverts only assistant blocks.");
     }
     String previewStructural(Blueprint candidate) {
+        return previewStructural(candidate,false);
+    }
+    boolean hasConversationStructural(){var p=structuralPreview;return p!=null && p.conversation() && p.actor().equals(actor());}
+    void confirmConversationStructural(){var p=structuralPreview;if(p==null || !p.conversation() || !p.actor().equals(actor()))throw new IllegalStateException("No current structural proposal for you to approve");applyStructuralPreview(p.nonce().toString());}
+    boolean cancelConversationStructural(){if(!hasConversationStructural())return false;clearStructuralPreview();return true;}
+    String previewStructural(Blueprint candidate,boolean conversation) {
         requireCreative();access.require(actor(),ProjectAccess.Permission.EDIT);
         if(!actor().equals(owner))throw new IllegalStateException("Only the project owner can propose a structural revision");
         ensureComponentContextIdle("preview a structural revision");
@@ -478,7 +484,7 @@ final class EngineeringSession implements BuildExecutor {
         for(Blueprint source:List.of(transition.before(),transition.after()))for(var block:source.blocks())
             if(!contains(block.pos()))throw new IllegalStateException("Expand the workspace explicitly before previewing this layout");
         if(transition.writes().isEmpty())throw new IllegalStateException("This revision has no physical changes");
-        structuralPreview=new StructuralPreview(transition,actor(),player().connection,access.revision(),revision(),corner1.immutable(),corner2.immutable(),UUID.randomUUID(),System.nanoTime()+java.util.concurrent.TimeUnit.MINUTES.toNanos(5));
+        structuralPreview=new StructuralPreview(transition,actor(),player().connection,access.revision(),revision(),corner1.immutable(),corner2.immutable(),UUID.randomUUID(),System.nanoTime()+java.util.concurrent.TimeUnit.MINUTES.toNanos(5),conversation);
         showStructuralChanges();return structuralPreview.nonce().toString();
     }
     void showStructuralChanges() {
@@ -488,7 +494,7 @@ final class EngineeringSession implements BuildExecutor {
         var transition=pending.transition();tell("Proposed structural changes: "+transition.added()+" added, "+transition.removed()+" removed, "+transition.changed()+" changed. World and accepted intention are unchanged.");
         int shown=0;
         for(var step:transition.steps()) {if(shown++==32){tell("More changes are included in this bounded proposal.");break;}tell(step.pos().toShortString()+": "+Blueprint.describe(step.before())+" -> "+Blueprint.describe(step.after()));}
-        if(actor().equals(pending.actor()))tell("To apply this proposal once within five minutes: /engineer apply "+pending.nonce());
+        if(actor().equals(pending.actor()))tell(pending.conversation()?"Reply 'Engineer, yes' to apply these exact changes once within five minutes, or 'Engineer, no' to cancel them.":"To apply this proposal once within five minutes: /engineer apply "+pending.nonce());
     }
     void applyStructuralPreview(String nonce) {
         var pending=structuralPreview;
@@ -774,7 +780,7 @@ final class EngineeringSession implements BuildExecutor {
         for(var entry:new ArrayList<>(cursors.entrySet())) {
             UUID actor=entry.getKey();Cursor c=entry.getValue();ServerPlayer p=server.getPlayerList().getPlayer(actor);
             if(!c.teaching || p==null || !dimension.equals(p.level().dimension().identifier().toString()) || !access.allows(actor,ProjectAccess.Permission.VIEW))continue;
-            if(manager.knowledge.holdsLesson(this,actor))continue;
+            if(manager.knowledge.holdsLesson(this,actor) || manager.conversationLessons.holdsLesson(this,actor))continue;
             String current=blueprint.stages().get(c.stage).id();
             boolean complete=blueprint.blocks().stream().filter(b->b.stage().equals(current)).allMatch(b->level().hasChunkAt(b.pos()) && Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(complete){
