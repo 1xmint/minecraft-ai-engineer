@@ -311,7 +311,7 @@ final class EngineeringSession implements BuildExecutor {
         for(var block:blueprint.blocks())if(!ComponentTree.composite(blueprint) || block.component().equals(id))stages.add(block.stage());
         int first=-1;for(int i=0;i<blueprint.stages().size();i++)if(stages.contains(blueprint.stages().get(i).id())){first=i;break;}
         if(first<0)throw new IllegalStateException("Choose a component with a construction lesson");
-        Cursor c=cursor(actor());c.stage=first;c.teaching=true;save();explain();
+        Cursor c=cursor(actor());c.stage=first;c.teaching=true;save();manager.conversationLessons.remember(this,id);explain();
     }
     void moveStage(int delta) { access.require(actor(),ProjectAccess.Permission.VIEW); if (blueprint == null) throw new IllegalStateException("No blueprint"); Cursor c=cursor(actor());c.stage = Math.clamp(c.stage + delta,0,blueprint.stages().size()-1); c.teaching=true; save(); explain(); }
     void componentAdd(String id,String parent,String template,BlockPos position) {
@@ -774,7 +774,7 @@ final class EngineeringSession implements BuildExecutor {
         for(var entry:new ArrayList<>(cursors.entrySet())) {
             UUID actor=entry.getKey();Cursor c=entry.getValue();ServerPlayer p=server.getPlayerList().getPlayer(actor);
             if(!c.teaching || p==null || !dimension.equals(p.level().dimension().identifier().toString()) || !access.allows(actor,ProjectAccess.Permission.VIEW))continue;
-            if(manager.knowledge.holdsLesson(this,actor))continue;
+            if(manager.knowledge.holdsLesson(this,actor) || manager.conversationLessons.holdsLesson(this,actor))continue;
             String current=blueprint.stages().get(c.stage).id();
             boolean complete=blueprint.blocks().stream().filter(b->b.stage().equals(current)).allMatch(b->level().hasChunkAt(b.pos()) && Blueprint.matches(b.state(),level().getBlockState(b.pos())));
             if(complete){

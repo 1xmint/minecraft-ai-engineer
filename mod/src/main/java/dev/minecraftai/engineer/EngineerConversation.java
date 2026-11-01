@@ -38,16 +38,9 @@ final class EngineerConversation {
                 if(!manager.knowledge.confirmConversation(session))reply(player,"There is no current action for you to approve. Tell me what you want to do.");
                 return;
             }
-            if(ConversationText.no(request)){reply(player,manager.knowledge.cancelConversation(session)?"Cancelled the pending request. No new work was delegated.":"There is no pending conversation request to cancel.");return;}
+            if(ConversationText.no(request)){boolean lessonCancelled=manager.conversationLessons.cancel(player.getUUID());boolean requestCancelled=manager.knowledge.cancelConversation(session);reply(player,lessonCancelled || requestCancelled?"Cancelled the pending request. No new work was delegated.":"There is no pending conversation request to cancel.");return;}
             String lesson=ConversationText.lesson(request);
-            if(lesson!=null){
-                if(session.blueprint!=null && LessonAssistant.currentComponent(session,session.actor(),false)==null && !ComponentTree.composite(session.blueprint))session.teachComponent("root");
-                if(session.blueprint!=null && ComponentTree.composite(session.blueprint) && LessonAssistant.currentComponent(session,session.actor(),false)==null){
-                    var names=ComponentTree.nodes(session.blueprint).stream().filter(node->node.kind().equals("mechanism")).map(ComponentTree.Node::id).toList();
-                    reply(player,"Which part should I explain: "+String.join(", ",names)+"? I have not changed your lesson or started world work.");return;
-                }
-                LessonAssistant.ask(session,lesson);return;
-            }
+            if(manager.conversationLessons.handle(session,request,lesson))return;
             manager.knowledge.interpretConversation(session,request);
         }catch(IllegalArgumentException | IllegalStateException invalid){reply(player,invalid.getMessage()==null?"I could not handle that request. Please ask again.":invalid.getMessage());}
         finally{if(session!=null)session.commandActor=previous;}

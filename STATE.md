@@ -290,10 +290,10 @@ Tasks:
 
 Prototype now written but not proven: native chat hook, explicit addressing,
 private replies, current-connection/server-thread admission, automatic single-design
-lesson, ambiguity question (follow-up still missing), and natural confirmation/
+lesson, scoped ambiguity question/follow-up, and natural confirmation/
 cancellation of chat-originated interpretation requests via the existing exact
 scoped action handler. Grammar tests added for CI. Generated-proposal confirmation,
-full clarification state and dedicated action-chat proof remain incomplete.
+full generated confirmation and dedicated action-chat proof remain incomplete.
 Dedicated text-client proof is now written to send actual chat packets, infer
 single-design lesson context without `teach`, get timing/materials and reject
 viewer stop. Another native client must see ordinary player chat but neither
@@ -302,3 +302,15 @@ these tests have not run. Native grammar tests also remain unrun. Scoped Java
 server/client compilation passed. GPT-6-Luna/high completed the focused chat
 identity/privacy/confirmation check with no concrete blocker. No model calls,
 local tests, permission expansion or public release have occurred.
+
+ConversationLessons now keeps bounded ephemeral personal questions and explicit
+component choices. A default renderer cursor never selects a composed leaf for
+the user. The follow-up names one advertised leaf, checks actual session/player/
+connection stamp/epoch/project/revision/grants/dimension/workspace/lesson/expiry,
+then sets only that player's lesson. Automatic tutorial progress holds during
+the question; explicit lesson changes invalidate it. Project use, disconnect and
+server close clear dialogue; no context/permission is loaded from disk. The
+native proof now includes asking which part, answering "the lamp", a timing
+follow-up and rejection after an explicit different lesson. These new scope and
+native-flow changes compile but remain untested, and need the completed phase's
+focused check. No CI or PR yet: preserve observer dependency and rebase first.

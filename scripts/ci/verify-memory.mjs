@@ -413,6 +413,7 @@ try {
       "observer-text.done",
       "conversation-text.done",
       "conversation-private.done",
+      "conversation-clarification.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

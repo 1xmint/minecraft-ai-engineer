@@ -1942,6 +1942,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.trial.scope().get("component").getAsString().equals("pulse") && project.assignments.task(project.blueprint,"lamp").lastPassedScope==null,"A composed observer trial proves only the explicitly selected leaf");check(project.level().getBlockState(new BlockPos(1210,101,0)).is(Blocks.REDSTONE_LAMP),"Temporal testing preserves the independent electrical component");});
         write("observer-composite-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("observer-composite.done","passed");
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        server.runOnServer(s->check(session(s,"Alice").delegation==null,"Clarifying a composed lesson cannot delegate construction or testing"));
+        MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"Lesson for component lamp:");
+        MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Intended timing for component lamp:");
+        String composed=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project use "+composed);MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        send(context,"engineer teach pulse");MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"That question no longer applies");
+        server.runOnServer(s->{var project=session(s,"Alice");check(LessonAssistant.currentComponent(project,player(s,"Alice").getUUID(),true).equals("pulse") && project.delegation==null,"A changed lesson rejects the stale clarification without overwriting the newer choice or starting world work");});
+        write("conversation-clarification.done","passed");
     }
     private static String actionNonce(){
         var pattern=java.util.regex.Pattern.compile("/engineer act ([0-9a-f-]{36})");
