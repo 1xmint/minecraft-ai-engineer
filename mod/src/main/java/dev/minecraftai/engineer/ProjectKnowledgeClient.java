@@ -125,6 +125,7 @@ final class ProjectKnowledgeClient {
         if(pending==null || pending.frame().session!=s || !pending.frame().conversation)return false;
         act(s,pending.nonce().toString());return true;
     }
+    boolean hasConversationReview(EngineeringSession s){var p=pendingActions.get(s.actor());return p!=null && p.frame().session==s && p.frame().conversation;}
     boolean cancelConversation(EngineeringSession s){var f=active.get(s.actor());if(f==null || f.session!=s || !f.conversation)return false;finish(f);return true;}
     private void interpret(EngineeringSession s,String message,boolean conversation) {
         if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
@@ -167,7 +168,7 @@ final class ProjectKnowledgeClient {
                     tell(f,f.conversation?"Reply 'Engineer, yes' to approve this action, or 'Engineer, no' to cancel it. This approval expires shortly; current world and permission checks still apply.":"Delegate this action with /engineer act "+nonce+". Expires shortly; current world and permission checks still apply.");
                 } else {
                     s.commandActor=f.actor;
-                    try{NaturalActions.dispatch(s,choice,message);rememberAction(s,choice);}finally{s.commandActor=null;}
+                    try{NaturalActions.dispatch(s,choice,message,f.conversation);rememberAction(s,choice);}finally{s.commandActor=null;}
                 }
             }catch(RuntimeException invalid){tell(f,"Request result not confirmed. Check the selected project and ask again explicitly; no automatic retry.");}
             finally{if(!retained)finish(f);}
@@ -180,7 +181,7 @@ final class ProjectKnowledgeClient {
         boolean valid=current(f) && pending.executionState().equals(executionState(s));
         finish(f); // One-use consent, consumed before any dispatch or failed live check.
         if(!valid)throw new IllegalStateException("Action expired or project context changed; request it again");
-        NaturalActions.dispatch(s,pending.choice(),pending.originalRequest());rememberAction(s,pending.choice());
+        NaturalActions.dispatch(s,pending.choice(),pending.originalRequest(),f.conversation);rememberAction(s,pending.choice());
     }
     void discuss(EngineeringSession s,String message) {
         if(!s.owner.equals(s.actor()) || !manager.modelOperator(s.player()))throw new IllegalStateException("Discussion requires the single configured account-owning operator");

@@ -21,5 +21,11 @@ public final class ConversationGameTests {
         helper.assertTrue(ConversationText.yes("Yes, do it") && ConversationText.yes("yes please!") && !ConversationText.yes("yes but change the design"),"Explicit approval is distinct from a request to change the reviewed action");
         helper.assertTrue(!ConversationText.yes("the sign says yes") && ConversationText.no("Never mind."),"Quoted world text does not establish consent");helper.succeed();
     }
+    @GameTest public void approvalMustIdentifyOneActualReviewAndStopCannotBecomeApproval(GameTestHelper helper){
+        helper.assertTrue(ConversationReview.choose(false,false,false)==ConversationReview.NONE,"No pending proposal cannot become approval");
+        helper.assertTrue(ConversationReview.choose(true,false,false)==ConversationReview.ACTION && ConversationReview.choose(false,true,false)==ConversationReview.BEHAVIOR && ConversationReview.choose(false,false,true)==ConversationReview.STRUCTURAL,"Each distinct server-held proposal has its own handler");
+        for(boolean[] pair:new boolean[][]{{true,true,false},{true,false,true},{false,true,true},{true,true,true}}){boolean rejected=false;try{ConversationReview.choose(pair[0],pair[1],pair[2]);}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,"A vague yes cannot silently choose between multiple reviews");}
+        helper.assertTrue(ConversationText.stop("Please stop!") && ConversationText.stop("hold on") && !ConversationText.stop("the sign says stop") && !ConversationText.yes("stop"),"Explicit stop remains distinct from approval or quoted world text");helper.succeed();
+    }
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
 }

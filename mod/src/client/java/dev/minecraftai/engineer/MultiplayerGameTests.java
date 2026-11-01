@@ -1943,6 +1943,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.trial.scope().get("component").getAsString().equals("pulse") && project.assignments.task(project.blueprint,"lamp").lastPassedScope==null,"A composed observer trial proves only the explicitly selected leaf");check(project.level().getBlockState(new BlockPos(1210,101,0)).is(Blocks.REDSTONE_LAMP),"Temporal testing preserves the independent electrical component");});
         write("observer-composite-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("observer-composite.done","passed");
         MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"Tell me which part you mean");
+        MESSAGES.clear();say(context,"Engineer, stop");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.manager.conversationLessons.holdsLesson(project,player(s,"Alice").getUUID()) && project.delegation==null,"An authorized stop cancels the pending question as well as execution authority");});
+        MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Which part should I explain:");
         server.runOnServer(s->check(session(s,"Alice").delegation==null,"Clarifying a composed lesson cannot delegate construction or testing"));
         MESSAGES.clear();say(context,"Engineer, the lamp");expectChat(context,"Lesson for component lamp:");
         MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Intended timing for component lamp:");

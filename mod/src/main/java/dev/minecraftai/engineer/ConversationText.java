@@ -27,4 +27,5 @@ final class ConversationText {
     }
     static boolean yes(String message){return java.util.Set.of("yes","yes please","yes, please","yes, do it","yes, go ahead","go ahead","do it","confirm").contains(normalized(message));}
     static boolean no(String message){return java.util.Set.of("no","no thanks","cancel that","never mind","nevermind").contains(normalized(message));}
+    static boolean stop(String message){return java.util.Set.of("stop","stop now","please stop","stop please","stop building","stopbuilding","hold on","wait").contains(normalized(message));}
 }

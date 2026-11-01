@@ -34,13 +34,21 @@ final class EngineerConversation {
             session=manager.selected(player,false);previous=session.commandActor;session.access.require(player.getUUID(),ProjectAccess.Permission.VIEW);
             if(!session.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose a project in your current dimension before we work on it.");
             session.commandActor=player.getUUID();
+            if(ConversationText.stop(request)){manager.knowledge.interpretConversation(session,"stop");manager.conversationLessons.cancel(player.getUUID());return;}
             if(ConversationText.yes(request)){
-                if(!manager.knowledge.confirmConversation(session))reply(player,"There is no current action for you to approve. Tell me what you want to do.");
+                if(manager.conversationLessons.holdsLesson(session,player.getUUID())){reply(player,"Tell me which part you mean, or say 'Engineer, never mind' to cancel the question. A yes does not choose a component or approve other work here.");return;}
+                switch(ConversationReview.choose(manager.knowledge.hasConversationReview(session),manager.generated.hasConversationReview(session),session.hasConversationStructural())){
+                    case ACTION -> manager.knowledge.confirmConversation(session);
+                    case BEHAVIOR -> manager.generated.confirmConversation(session);
+                    case STRUCTURAL -> session.confirmConversationStructural();
+                    case NONE -> reply(player,"There is no current proposal for you to approve. Tell me what you want to do.");
+                }
                 return;
             }
-            if(ConversationText.no(request)){boolean lessonCancelled=manager.conversationLessons.cancel(player.getUUID());boolean requestCancelled=manager.knowledge.cancelConversation(session);reply(player,lessonCancelled || requestCancelled?"Cancelled the pending request. No new work was delegated.":"There is no pending conversation request to cancel.");return;}
+            if(ConversationText.no(request)){boolean lessonCancelled=manager.conversationLessons.cancel(player.getUUID());boolean requestCancelled=manager.knowledge.cancelConversation(session);boolean designCancelled=manager.generated.cancelConversation(session);boolean structuralCancelled=session.cancelConversationStructural();reply(player,lessonCancelled || requestCancelled || designCancelled || structuralCancelled?"Cancelled the pending request. No new work was delegated.":"There is no pending conversation request to cancel.");return;}
             String lesson=ConversationText.lesson(request);
             if(manager.conversationLessons.handle(session,request,lesson))return;
+            if(manager.generated.conversationActive(session) || session.hasConversationStructural()){reply(player,"Review the current design proposal, or tell me 'Engineer, never mind' before starting another request.");return;}
             manager.knowledge.interpretConversation(session,request);
         }catch(IllegalArgumentException | IllegalStateException invalid){reply(player,invalid.getMessage()==null?"I could not handle that request. Please ask again.":invalid.getMessage());}
         finally{if(session!=null)session.commandActor=previous;}

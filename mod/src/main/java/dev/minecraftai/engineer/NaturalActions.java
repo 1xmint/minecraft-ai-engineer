@@ -36,6 +36,9 @@ final class NaturalActions {
         return new Choice(kind,action,component,prose);
     }
     static void dispatch(EngineeringSession s,Choice choice,String originalRequest) {
+        dispatch(s,choice,originalRequest,false);
+    }
+    static void dispatch(EngineeringSession s,Choice choice,String originalRequest,boolean conversation) {
         s.access.require(s.actor(),Set.of("design","plan").contains(choice.action())?ProjectAccess.Permission.PLAN:choice.action().equals("undo")?ProjectAccess.Permission.UNDO:
                 choice.needsConsent()?ProjectAccess.Permission.BUILD:ProjectAccess.Permission.VIEW);
         switch(choice.action()) {
@@ -45,7 +48,7 @@ final class NaturalActions {
             }
             case "design" -> {
                 if(originalRequest==null || originalRequest.isBlank() || originalRequest.length()>1000)throw new IllegalArgumentException("Missing original design requirements");
-                s.manager.generated.design(s,originalRequest);
+                s.manager.generated.design(s,originalRequest,conversation);
             }
             case "status" -> LessonAssistant.ask(s,"what are you working on");
             case "explain" -> LessonAssistant.ask(s,"explain component "+choice.component());

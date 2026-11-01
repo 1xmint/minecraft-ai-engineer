@@ -288,12 +288,12 @@ Tasks:
 4. O4: actual command-free conversation flow, durable evidence and visual review;
    update documentation, rebase onto the proven/merged observer source, CI then merge.
 
-Prototype now written but not proven: native chat hook, explicit addressing,
+Implementation now written but not proven: native chat hook, explicit addressing,
 private replies, current-connection/server-thread admission, automatic single-design
 lesson, scoped ambiguity question/follow-up, and natural confirmation/
 cancellation of chat-originated interpretation requests via the existing exact
-scoped action handler. Grammar tests added for CI. Generated-proposal confirmation,
-full generated confirmation and dedicated action-chat proof remain incomplete.
+scoped action handler. Grammar tests added for CI. Dedicated action/generated/
+structural chat proofs and broad stale-scope negative coverage remain incomplete.
 Dedicated text-client proof is now written to send actual chat packets, infer
 single-design lesson context without `teach`, get timing/materials and reject
 viewer stop. Another native client must see ordinary player chat but neither
@@ -302,6 +302,27 @@ these tests have not run. Native grammar tests also remain unrun. Scoped Java
 server/client compilation passed. GPT-6-Luna/high completed the focused chat
 identity/privacy/confirmation check with no concrete blocker. No model calls,
 local tests, permission expansion or public release have occurred.
+
+Conversation-origin metadata now follows the existing typed design dispatch into
+the ephemeral generated Basis and structural preview. Natural yes delegates only
+one actual actor-matching action/behavior/structural proposal through its existing
+nonce/current-context handler. Multiple proposals, missing proposals or an active
+component question never guess what yes means. Each behavior/geometry/world stage
+retains separate review; preview approval cannot become construction approval.
+No mode flag is accepted from the model, sent as permission or restored from disk.
+Normal command flows keep their existing prompts and default false origin.
+
+The focused GPT-6-Luna/high review found a real stop-dialogue omission: stop
+cancelled action/design/structural frames but left the personal lesson question.
+The authorized stop path now cancels that actor's question too, with a native
+assertion and a subsequent yes that must find no proposal. Stop aliases preempt
+all questions/proposals and still require the existing BUILD permission.
+Unbuilt generated preview acceptance now binds basis.actor during accept and
+restores the previous actor in finally, matching the existing structural branch;
+it cannot inherit a previous (possibly revoked) construction controller. Native
+cross-controller and full staged confirmation regressions remain required before
+release. Grammar now also tests unambiguous review selection. Scoped server/client
+compilation passed; none of the new runtime tests or any model call has run.
 
 ConversationLessons now keeps bounded ephemeral personal questions and explicit
 component choices. A default renderer cursor never selects a composed leaf for
