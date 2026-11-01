@@ -25,6 +25,7 @@ final class ProjectManager {
     final GeneratedPlanning generated=new GeneratedPlanning(this);
     final ProjectKnowledgeClient knowledge=new ProjectKnowledgeClient(this);
     final ConversationLessons conversationLessons=new ConversationLessons(this);
+    final ConversationSetup conversationSetup=new ConversationSetup(this);
     private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
     private final Map<UUID,ConnectionStamp> connectionIds=new HashMap<>();
     String connectionId(ServerPlayer player) {
@@ -89,6 +90,7 @@ final class ProjectManager {
         EngineeringSession project = projects.get(id);
         if (project == null || !project.access.allows(player.getUUID(), ProjectAccess.Permission.VIEW)) throw new IllegalStateException("Project unavailable or not shared with you");
         conversationLessons.forget(player.getUUID());
+        conversationSetup.forget(player.getUUID());
         for(var other:projects.values())if(!other.projectId.equals(id))generated.cancelActor(other,player.getUUID());
         selections.put(player.getUUID(), id);
         EngineerNetwork.send(player,null); // Retire the previous project before the next periodic snapshot.
@@ -211,7 +213,7 @@ final class ProjectManager {
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
-        generated.close();inventories.close();knowledge.close();conversationLessons.close();connectionIds.clear();
+        generated.close();inventories.close();knowledge.close();conversationLessons.close();conversationSetup.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

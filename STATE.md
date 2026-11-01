@@ -4,15 +4,16 @@
 AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
-Current worktree: task work/`conversation-entry`, branch
-**phase/22-conversation-entry**, rebased onto main
-**3ae22329fb0df73f2c9735113c91c1052f22372f**. Goal remains incomplete.
+Current worktree: task work/`conversation-setup`, branch
+**phase/23-conversation-setup**, rebased onto merged main
+**b7e3e26af47ca9d38084780c6be85af6f5a20611**. Phase23 runtime proofs remain pending.
 
-Draft PR31: https://github.com/1xmint/minecraft-ai-engineer/pull/31.
-Initial source db7e59a passed all five checks in CI41269681275, all116 native
-Minecraft tests, actual text-only private chat, ordinary chat delivery and scoped
-clarification/stop markers. Evidence: task work/`conversation-first-41269681275`.
-This proves the entry/read-only flow, not the later staged world/design flows.
+Phase22 shipped in PR31, merged2026-11-01T04:55:25Z. Exact sourcebd39067 passed all5
+CI41273958762, all116 native tests and12 conversation markers, including actual
+expiry, same-server reconnect and saved-server restart. Strict SQLite10/17 starts
+and actual8/10-block traces passed. Native flow13m20s; screenshot inspected and
+archived in docs/images/conversation-tested.png. Final evidence: task work/
+`conversation-final-41273958762`. No SDK calls or local tests for this slice.
 
 Phase21 observer engineering is complete in merged PR30:
 https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
@@ -25,15 +26,9 @@ was inspected and archived in `docs/images/observer-tested.png`. Final evidence:
 task work/`observer-final-41268319917`; earlier native fixtures remain archived.
 The composed metadata drift was fixed without weakening canonical validation.
 
-Phase22 natural conversation is implemented in part. Its entry/read-only flow is
-runtime-proven; later staged world/design flows remain unproven. It has
-private addressed native chat, obvious lesson context, scoped clarification and
-separate actor-bound natural action/behavior/structural confirmations. Scoped
-compilation passed; grammar, chat/privacy and clarification proofs are written
-and the first native chat proofs passed. Still required: staged action/generated/structural conversation,
-cross-controller callback regression, full stale/replay/revocation/restart proof
-and CI before merge. No model calls or local tests ran for these phases.
-The published `v0.1.0-alpha.1` remains the older single-player alpha.
+The published `v0.1.0-alpha.1` remains the older single-player alpha. The merged
+source now supports conversational engineering; conversational setup is being
+built here. Overall goal remains incomplete, including all six Phase2 features.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized. Tests run on GitHub, never on this PC. Locally use scoped compile,
@@ -161,150 +156,101 @@ The genuine composition persistence bug was temporal test-description drift in
 the TypeScript mirror; it was fixed with rejection regression and actual receipt
 checks. Earlier fixture errors and full development history remain in Git.
 
-## Phase22: natural conversation over engineering projects (serves E1/E4)
+## Phase22 shipped: conversational engineering
+
+PR31/mergeb7e3e26/sourcebd39067/all5 CI41273958762 proves private/text-only native
+chat, unaffected ordinary broadcast, obvious lessons and scoped component
+questions, separate one-use action/behavior/geometry/structural approvals, actual
+build/stop/resume/test/undo, wrong-actor/model admission denial, grant-stale
+rejection and prior-controller viewer regression. Real101-second expiry,
+same-server disconnect/reconnect with a new connection stamp, and a fresh pending
+saved-server restart approval all reject stale yes. Strict SQLite10/17 starts
+and exact actual generated8/10-block timing traces passed. All116 native tests,
+12 chat markers, native flow13m20s. Evidence and screenshot are listed above.
+
+Generated acceptance binds the captured owner and restores the previous command
+actor. Lesson text keeps intended behavior separate from the actual stored pass;
+no new inspection/test is implied. GPT-6-Luna/high focused auth review findings
+were fixed. Production deadlines, limits and permissions stay unchanged; CI-only
+time allowances include the real expiry wait. No local tests or SDK calls.
+
+## Phase23: conversational setup (serves E1/E4)
 
 Outcomes:
 
-- O1: type `Engineer, explain how this works` in ordinary Minecraft chat and get
-  a private explanation of the selected design without a setup command. Prove
-  plain unrelated player chat is unaffected, addressed requests/replies are not
-  broadcast, and an authorized client without overlays gets the same interaction.
-- O2: infer an obvious single-design lesson; clarify ambiguous parts and accept a
-  natural follow-up without silently choosing another component. Prove personal
-  lessons, grants, connection, project, revision, dimension and expiry remain bound
-  and changes invalidate the question rather than granting authority.
-- O3: propose engineering work from conversation and confirm/cancel in plain words,
-  including behavior/geometry proposal stages. Prove no work before the reviewed
-  one-use confirmation, no other actor/replay/stale confirmation, immediate stop,
-  safe cancellation and the existing owner/operator quota gate.
-- O4: drive actual dedicated-player conversation through preview, lesson, delegated
-  build, interruption/recovery, testing and undo, plus shared/text-only paths. Prove
-  actual chat packets, SQLite evidence and screenshots; keep commands as fallback.
+- O1: create a private project or find/select an authorized project through chat.
+  Prove denied creation, no inaccessible names, ambiguous names require a choice,
+  and stale list choices cannot select a changed/revoked project.
+- O2: stand at two workspace corners and mark them through chat. Explain the exact
+  bounds and retain existing owner/state/overlap checks; no world edit or model
+  request from marking. Prove viewers and editors cannot change the workspace.
+- O3: a native player creates/selects/marks projects through ordinary chat, then
+  uses the existing design/build/test conversation. Commands remain fallback.
 
-Decision: use explicitly addressed ordinary player chat (`Engineer, ...`,
-`Engineer: ...`, `@Engineer ...`, `Hey Engineer, ...`) as the first private bot
-entry point. Ordinary multiplayer chat retains its audience. Consume the native
-validated player-chat event before broadcast, using the server's actual player
-connection and original signed text, never system messages or decorated world
-text. Use the current selected project; no new permission or AI account eligibility
-is inferred. New-project/workspace conversation and voice/NPC interaction remain
-required broader work, not established by this entry point.
+Decision: local setup intents call existing ProjectManager/EngineeringSession
+methods, never executable command text or model-generated permissions. A corner
+is the block containing the player's feet. Bounded personal project choices use
+only current VIEW-authorized projects in the current dimension. Player object,
+connection/stamp, epoch, selection, expiry and every candidate identity/revision/
+grant revision/VIEW are rechecked. Duplicate names require a number. Paged lists
+show12 entries, retain the original scope/expiry and reach all256 allowed projects.
+Creation and sharing grants stay operator/owner-controlled; no new model access.
 
-Tasks:
+Implemented: explicit new/list/name/number/page/corner dialogue and lifecycle
+cleanup. Private native fixtures now create and mark both conversation projects
+via chat, exercise duplicate names/yes/paging, grant-stale rejection and fresh
+numbered choice, denied Eve creation/list privacy, Bob viewer and editor corner
+rejections. Setup messages wait21 real ticks to respect native chat limits; no
+counter reset. Fixture teleports position the actual player; no human-driven
+session is claimed. The final source uses local catalog preview chat in place of reference fixtures;
+complete human acceptance remains broader work.
 
-1. O1/O3: private authenticated chat adapter, bounded addressing/intent grammar,
-   reuse scoped interpretation and one-use act dispatch. Native grammar and
-   actual player-packet/privacy negative proofs; local compilation only.
-2. O1/O2: obvious read-only lesson context and scoped ambiguity follow-up; no
-   automatic build/test or inference merely from choosing a personal lesson.
-3. O3: complete natural confirmation/cancellation for each generated-design stage,
-   failure/replay/revocation/disconnect/restart proofs; focused authority review.
-4. O4: actual command-free conversation flow, durable evidence and visual review;
-   update documentation, rebase onto the proven/merged observer source, CI then merge.
+Scoped Java compilation and script syntax/format pass. GPT-6-Luna/high focused
+auth review and paging follow-up found no concrete privacy or authority bypass.
+Guides explain feet-based corners and authorized project choice. Existing model
+counts remain10/17; no SDK calls/local tests. All Phase23 runtime proofs are
+unproven. Native grammar count becomes117. Rebase onto shipped Phase22 is done.
 
-Current implementation and proof:
+Next: current-head CI and actual evidence/screenshot inspection, fix genuine
+failures, then merge. Keep the entire remaining roadmap above active.
 
-- Private addressed player chat uses the native server event, actual current
-  connection/server thread and original player text. Ordinary chat retains its
-  audience. A single design gets personal lesson context without a setup command.
-- Composed lesson questions and explicit choices are bounded ephemeral data,
-  bound to the actual session/player/connection stamp/epoch/project/revision/
-  grants/dimension/workspace/lesson/expiry. Default renderer cursors never choose
-  a leaf. Personal auto progress holds during a question; explicit changes reject
-  stale replies. Project use/disconnect/server close clear dialogue.
-- Conversation-origin flags follow typed dispatch into ephemeral generated Basis
-  and structural preview. Natural yes selects exactly one actor-matching server
-  proposal, then calls the existing one-use nonce/current-context handler. Missing
-  or multiple reviews and a pending component question do not guess what yes means.
-  Behavior, geometry and construction retain separate approval. Flags never come
-  from models or disk, and command fallback keeps its old prompts/default origin.
-- The GPT-6-Luna/high focused review found stop left a personal question alive.
-  Authorized stop now cancels it too. Native proof confirmed subsequent yes finds
-  no proposal. Stop aliases preempt dialogue and retain the BUILD check.
-- Unbuilt generated acceptance binds basis.actor during accept and restores the
-  prior actor in finally, matching the structural callback. It cannot inherit
-  an old construction controller; the targeted runtime regression is pending.
+A further O3 gap is being closed before final Phase23 merge: exact local catalog
+preview requests (`show me a signal lamp`, inverter/OR/observer/shutter variants)
+need no model quota. Existing EDIT/current-dimension checks and reviseProposal
+apply; incomplete workspaces and any old construction/journal/controlled shutter
+reject. The native flow replaces reference-seeding commands with actual chat,
+checks no lease/pass/placements from preview, rejects incomplete regions and
+preserves a built, tested design. Existing model counts stay10/17; no counters,
+production limits or model admission change. Current CI41275010408 still tests
+older source d8d0316 and must be observed through terminal before pushing this
+new source. New preview source compiled; final negative additions need compile/CI.
 
-Initial source db7e59a passed all5 CI41269681275, all116 native tests and three
-actual chat markers: text-only lesson context without teach, private request/reply
-versus ordinary broadcast, composed clarification/follow-up and stale lesson/stop
-rejection. Evidence: task work/`conversation-first-41269681275`. This proves the
-entry/read-only flow, not the staged world/design flow.
+The GPT-6-Luna/high preview-only review found no concrete authorization or
+world-mutation bypass. Local previews now also reject a too-small marked region
+before accepting intention; native negatives cover incomplete and one-block
+workspaces, then actual chat shows the canonical lamp. The old reference-seeding
+commands in both fixtures are removed. A built/tested design must remain exactly
+unchanged after a show request. No SDK calls or model-count changes.
 
-New native proofs are written, not run: a separate action project cancels build/
-undo, stops and resumes, rejects replay, tests the actual lamp and undoes six
-assistant blocks. A generated project lets Bob really build/undo, then revokes
-him before Alice's chat design request. It covers behavior/structural cancellation,
-separate approvals, actual8/10-block trials, undo retaining accepted intent,
-rejection of a test against mismatched restored geometry and final construction
-undo. SQLite initially required exactly7/17 planning starts, exact typed choices and
-actual tick traces. Fixed synthetic cases wait real admission windows before/after;
-no budget/spam counters or production limits change. Initial native suite8m46s
-leaves room under its existing14m client limit.
+The viewer also attempts local preview through actual chat while the owner has
+a pending action; EDIT denial must leave that owner review and intended design
+intact. Local-preview work is checkpointed on work/conversation-setup-preview
+while PR32 keeps testing d8d0316. Promote only after CI41275010408 is terminal
+and its evidence is inspected. No local tests ran.
 
-New addressed-request echoes are private (`You: ...`) so chat shows both sides;
-other players must get neither echo nor personal reply. A completed-trial native
-conversation screenshot is requested for inspection. These changes need CI.
-Scoped Java compilation and verifier syntax/format checks pass. No local tests,
-SDK calls, fresh inference, permission expansion or release has occurred.
+The final native preview path also captures a real screenshot after the selected
+project's six-block READY snapshot arrives, with the actual chat request/reply
+and ghost geometry. It reuses the fixture's viewing position. Source requires
+scoped compilation before promotion; new images remain unrun.
 
-Next: prove staged flows, then broad actor/replay/revocation/disconnect/restart
-cases and final user documentation before merging. New-project/workspace
-conversation, voice/NPC and the broader human experience remain required work;
-these fixtures do not establish all milestones or actual human mouse control.
+Source d8d0316 passed all five checks in CI41275010408, all117 required native
+tests, three setup markers and the full old conversation suite. Actual private
+creation/corner marking, duplicate names, paging, grant-stale choice rejection,
+Eve privacy/creation denial, and viewer/editor workspace rejection passed.
+Strict SQLite10/17 starts and functional traces passed. Native flow15m17s.
+Evidence: task work/conversation-setup-first-41275010408. This establishes O1/O2
+and the setup portion of O3; those fixtures still used reference commands.
 
-CI41271040309 passed four checks but the staged native flow stopped at an invalid
-fixture assumption: full Bob revocation correctly resets controller to owner.
-The regression now retains VIEW while removing EDIT/BUILD/UNDO, keeping the real
-previous controller without mutation rights. New actual Bob chat checks cover
-wrong-actor approval, owner-only model admission, full VIEW revocation and stale
-owner approval after a grant revision. Bounded packet-state waits replace a
-fixed three-tick revocation wait. These changes await a fresh CI run.
-
-The next proof leaves an actual conversation-origin proposal pending at the end
-of the existing third native boot and rejects natural yes on the fourth saved
-boot. It adds no server restart and one fixed stop interpretation, after the
-existing real admission window. The original command-nonce restart proof remains
-unchanged. Exact conversation starts become8/17; this new proof is not yet run.
-Player/acceptance guides now describe private chat, staged approvals, evidence
-markers and remaining command-based setup honestly.
-
-CI41271943307 on96558c8 passed four checks and the actual conversation action,
-wrong-actor, admission-denial and grant-revocation flows, then failed the previous
-builder fixture. The attempted EDIT permission toggle is unsupported by policy;
-the existing supported role change `project share Bob viewer` removes all three
-mutation rights while preserving VIEW and the previous controller. This corrects
-the fixture without changing permissions or assertions. Evidence: task work/
-`conversation-shared-41271943307`. The added restart proof and role fix need CI.
-
-The next lifecycle proof also waits101 real seconds for the production100-second
-conversation-action deadline, rejects yes without work, then requests a fresh
-proposal for the existing restart proof. No clocks, deadlines or production
-limits change. This adds one fixed interpretation: exact starts9/17. CI-only
-client/harness allowances increase by two minutes for the explicit wall wait;
-all functional assertions remain. Compilation/syntax checks precede push.
-
-The same lifecycle fixture now closes the native connection, reconnects to the
-still-running third server, verifies the epoch is unchanged and connection stamp
-is new, and rejects the previous pending approval. It then requests a fresh
-proposal for the fourth-boot restart proof. The Fabric connection close API was
-checked locally; nested connection resources avoid an invalid double close.
-No extra server boot is added. Exact starts10/17; reconnect proof is unrun.
-
-Lifecycle source bb9ade4 is compiled and committed locally. Its remote checkpoint
-branch is work/conversation-lifecycle-proof. PR31 remains on7210d45 while exact
-CI41272832823 is live; promote the lifecycle commit to the PR branch only after
-that run is terminal and its evidence is inspected, so no native run is cancelled.
-
-Source7210d45 passed all five checks in CI41272832823. All ten conversation markers
-passed, including staged action/generated/structural flows, prior-controller
-viewer regression and actual pending-approval saved-server restart. Strict SQLite
-verification passed exact8/17 starts and actual signal-lamp/generated8/10-block
-tick traces. Native flow13m9s. Evidence: task work/
-`conversation-staged-proof-41272832823`; the screenshot was inspected. It exposed
-a real presentation issue: an intended behavior summary still said testing was
-required above an actual pass. Lesson rendering now omits that static sentence
-and keeps the separate stored-result/no-new-test statements. Immutable behavior,
-source and evidence are unchanged. The final source also adds real expiry and
-same-server reconnect proofs, so expected starts are10/17. These additions need
-fresh CI before merge.
+Final source adds local preview chat and its negative/visual checks described
+above; scoped Java compilation and script syntax/format pass. It must now run
+fresh CI before merge. No extra model request, SDK call or local test occurred.
