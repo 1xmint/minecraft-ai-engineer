@@ -42,7 +42,8 @@ final class LessonAssistant {
         int delay=selected.source().has("parameters")?selected.source().getAsJsonObject("parameters").get("delay").getAsInt():1;
         boolean generated=GeneratedBlueprint.isGenerated(selected);
         String intendedBehavior=generated?GeneratedBlueprint.behavior(selected).summary().replace(" Functional testing is still required.",""):null;
-        Blueprint canonical=generated || mechanical?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
+        boolean analog=AnalogIntention.describes(selected.source());
+        Blueprint canonical=generated || mechanical || analog?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
             s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?intendedBehavior:canonical.source().get("explanation").getAsString()));
             String current=currentComponent(s,false);
@@ -61,9 +62,11 @@ final class LessonAssistant {
             } else s.tell("Build order for this component: "+String.join(" -> ",canonical.stages().stream().map(Blueprint.Stage::title).toList())+". Your lesson selection is unchanged.");
             materials(s,target,canonical);
             if(mechanical){var design=ShutterDesign.read(selected.source());s.tell("Intended lever input at "+design.input().toShortString()+"; mechanical aperture output at "+design.aperture().toShortString()+". Off opens; on closes.");}
+            else if(analog){var design=AnalogIntention.validated(selected).design();for(int bank=0;bank<3;bank++)s.tell("Intended measured "+(bank==0?"rear":bank==1?"first side":"second side")+" strength input at "+design.input(bank).toShortString()+"; one of15 ceiling levers selects strength1..15, all off selects0.");s.tell("Intended numeric output at "+design.output().toShortString()+". Port positions are design information, not an observed measurement.");}
             else for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
         } else if(topic==Topic.MATERIALS)materials(s,target,canonical);
         else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
+        else if(analog){s.tell("Intended analog test:66 numeric cases, covering every strength0..15 at all three inputs and both-side boundaries. Each case settles for8 game ticks and records3 consecutive samples. Every original selector state must be restored before a pass; this contract does not measure latency or run a new test.");}
         else if(contract!=null && contract.pulse()!=null){s.tell("Intended observer timing: both lever edges produce a pulse after 2 game ticks, powered for 2 game ticks; the lamp switches off 4 ticks after the pulse ends. Testing samples detector, receiver and lamp every tick. This is the intended contract, not a new measurement.");}
         else if(generated) {
             s.tell(intendedBehavior);

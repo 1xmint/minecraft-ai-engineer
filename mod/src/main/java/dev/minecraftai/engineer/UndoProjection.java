@@ -43,7 +43,7 @@ final class UndoProjection {
     }
     /** Attachment dependencies in the supported engineering block library. */
     static BlockPos support(BlockState state,BlockPos pos) {
-        if(state.is(Blocks.REPEATER))return pos.below();
+        if(state.is(Blocks.REPEATER) || state.is(Blocks.COMPARATOR) || state.is(Blocks.REDSTONE_WIRE))return pos.below();
         if(state.is(Blocks.REDSTONE_WALL_TORCH))return pos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite());
         if(state.is(Blocks.LEVER))return switch(state.getValue(BlockStateProperties.ATTACH_FACE)) {
             case FLOOR -> pos.below();case CEILING -> pos.above();

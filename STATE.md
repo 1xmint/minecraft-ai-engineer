@@ -381,3 +381,43 @@ check, Java compile, scoped format/syntax and diff checks pass. No behavioral te
 ran locally. CI now checks eight actual built native intentions through this
 companion decoder as well as144 numeric windows/432 stable samples. These new
 checks are pending the next run; production comparator integration is incomplete.
+
+Source37b1bfa passed all five checks in CI41328039790. Fabric artifact at task
+work/analog-intention-proof-41328039790 confirms all129 required native tests,
+eight actual canonical intentions and144 transfer windows/432 stable samples.
+Dedicated multiplayer also completed successfully; no prior run was cancelled.
+
+A2/A3/A4 runtime integration now in progress: strict canonical Blueprint parsing,
+component contract selection, companion server snapshot admission and a separately
+typed66-case numeric FunctionalTrial. Each input sweeps0..15 plus both-side
+boundaries; real output-wire/mode/input samples are read at elapsed8/9/10. A
+pass requires complete replay and exact restoration of all45 original levers.
+Interrupted recovery stores per-input facts, never active callbacks/leases. New
+AnalogEvidence replay is mirrored in Java/TypeScript; native CI must produce and
+replay actual66-case suites in both modes. GPT-6-Luna/high changed only the new
+TypeScript evidence module; parent owns native, TS and SQLite proofs.
+
+Canonical comparator entities are now recognized only at their validated cell,
+mode/facing and exact native backing type. No container or entity NBT is admitted.
+Comparator journal creation requires air-before and exact canonical after state,
+checked before save and again against captured operation intention on load. Undo
+still never restores a before block entity. Focused GPT-6-Luna/high follow-up
+found a real adopted-player comparator support hazard; inverse dependencies now
+include comparators and dust. A native proof calls the real undo-neighbor guard
+with actual blocks and verifies player attachments retain their support.
+
+Natural local previews now recognize compare/subtract comparator requests; lessons
+explain numeric ports, materials and the settled contract without claiming measured
+latency. Materials count actual redstone dust items rather than wire block IDs.
+Model planning/catalog expansion and composition are still pending. New dedicated
+chat flow exercises preview/build, original-on input, test interruption/restoration,
+actual66-case test, persisted proof, blocked undo for a changed selector and safe
+owned undo; screenshot and five markers must be checked in fresh CI. SQLite replays
+exact source/scope/actor and numeric cases, with exactly five interpretation starts.
+This scripted flow is not full human acceptance or Mojang-auth proof.
+
+Scoped Java/main+client compilation, TypeScript, format/syntax and diff checks pass.
+No behavioral tests ran locally. All new runtime, boundary, WAL and native66-case
+checks remain unproven until the next GitHub run. Phase24 stays draft/unshipped.
+Next: inspect fresh CI, fix failures without weakening proofs, then finish catalog,
+shared/revoked/conflict and actual restart trial coverage before claiming A2/A3/A4.

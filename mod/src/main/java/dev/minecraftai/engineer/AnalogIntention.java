@@ -11,6 +11,18 @@ final class AnalogIntention {
     private final JsonObject source;
     private final AnalogDesign design;
     private AnalogIntention(JsonObject source,AnalogDesign design){this.source=source.deepCopy();this.design=design;}
+    static boolean describes(JsonObject source){
+        if(source.has("analog"))return true;
+        var provenance=source.get("provenance");
+        if(provenance==null || !provenance.isJsonObject())return false;
+        var template=provenance.getAsJsonObject().get("template");
+        return template!=null && template.isJsonPrimitive() && template.getAsJsonPrimitive().isString() && Set.of("comparator-compare","comparator-subtract").contains(template.getAsString());
+    }
+    static AnalogIntention validated(Blueprint blueprint){
+        var intention=read(blueprint.source(),blueprint.worldId(),blueprint.dimension(),UUID.fromString(blueprint.projectId()));
+        if(!intention.blueprint().equals(blueprint))throw new IllegalArgumentException("Analog blueprint differs from its canonical source");
+        return intention;
+    }
     AnalogDesign design(){return design;}
     JsonObject source(){return source.deepCopy();}
     static AnalogIntention create(UUID id,int revision,UUID project,String world,String dimension,BlockPos anchor,int rotation,String mode){
@@ -31,7 +43,7 @@ final class AnalogIntention {
             var block=new JsonObject();String stage=cell.state().is(Blocks.STONE)?"foundation":cell.state().is(Blocks.LEVER)?"selectors":"transfer";
             block.add("pos",Blueprint.jsonPos(cell.pos()));block.addProperty("state",Blueprint.describe(cell.state()));block.addProperty("stage",stage);block.addProperty("component","root");
             var prerequisites=new JsonArray();if(!stage.equals("foundation"))prerequisites.add("foundation");if(stage.equals("transfer"))prerequisites.add("selectors");block.add("prerequisites",prerequisites);blocks.add(block);
-            resources.merge(BuiltInRegistries.BLOCK.getKey(cell.state().getBlock()).toString(),1,Integer::sum);
+            resources.merge(BuiltInRegistries.ITEM.getKey(cell.state().getBlock().asItem()).toString(),1,Integer::sum);
         }
         out.add("blocks",blocks);var resourceJson=new JsonObject();resources.forEach(resourceJson::addProperty);out.add("resources",resourceJson);
         var bounds=new JsonObject();bounds.add("min",Blueprint.jsonPos(new BlockPos(-15,-2,-15)));bounds.add("max",Blueprint.jsonPos(new BlockPos(1,0,15)));out.add("bounds",bounds);

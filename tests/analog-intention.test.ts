@@ -1,3 +1,7 @@
+import {
+  serverBlueprint,
+  type GatewayContext,
+} from "../companion/src/gateway-types.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -31,7 +35,7 @@ test("canonical analog intentions describe physical hardware without a pass", ()
       assert.deepEqual(value.resources, {
         "minecraft:stone": 47,
         "minecraft:lever": 45,
-        "minecraft:redstone_wire": 46,
+        "minecraft:redstone": 46,
         "minecraft:comparator": 1,
       });
       assert.equal(value.verification, "untested");
@@ -103,5 +107,43 @@ test("analog factory rejects malformed identities and complete apparatus escapin
   assert.throws(() => makeAnalogIntention({ ...identity, id: "owner" }));
   assert.throws(() =>
     makeAnalogIntention({ ...identity, worldId: "bad world" }),
+  );
+});
+
+test("companion accepts only current-context canonical analog server snapshots", () => {
+  const value = makeAnalogIntention(identity);
+  const gateway: GatewayContext = {
+    serverId: "server",
+    serverEpoch: "epoch",
+    actorId: identity.id,
+    projectId: identity.projectId,
+    projectRevision: 3,
+    authorizationRevision: 1,
+    requestId: "request",
+  };
+  assert.deepEqual(
+    serverBlueprint(value, gateway, identity.worldId, identity.dimension),
+    value,
+  );
+  assert.throws(() =>
+    serverBlueprint(
+      value,
+      { ...gateway, projectRevision: 4 },
+      identity.worldId,
+      identity.dimension,
+    ),
+  );
+  assert.throws(() =>
+    serverBlueprint(
+      value,
+      { ...gateway, projectId: identity.id },
+      identity.worldId,
+      identity.dimension,
+    ),
+  );
+  const changed = structuredClone(value);
+  changed.blocks[0]!.state = "minecraft:chest";
+  assert.throws(() =>
+    serverBlueprint(changed, gateway, identity.worldId, identity.dimension),
   );
 });

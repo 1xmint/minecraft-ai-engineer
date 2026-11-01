@@ -582,7 +582,8 @@ final class EngineeringSession implements BuildExecutor {
         if (!level().hasChunkAt(pos)) throw new IllegalStateException("Chunk unloaded: " + pos.toShortString());
         if (!level().getWorldBorder().isWithinBounds(pos) || pos.getY() < level().getMinY() || pos.getY() > level().getMaxY())
             throw new IllegalStateException("Target outside world bounds");
-        if (level().getBlockEntity(pos) != null) throw new IllegalStateException("Inventories and block entities are protected");
+        var entity=level().getBlockEntity(pos);
+        if (entity != null && !AnalogSafety.observedComparator(blueprint,pos,level().getBlockState(pos),entity)) throw new IllegalStateException("Inventories and block entities are protected");
     }
     Map<BlockPos, BlockState> expectedNow() {
         Map<BlockPos, BlockState> expected = new LinkedHashMap<>(baseline);
@@ -950,6 +951,11 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(AnalogIntention.describes(candidate.source())) {
+            AnalogIntention.validated(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built analog designs cannot be replaced by another preview; reconcile their existing work first");
+            accept(candidate);return true;
+        }
         if(ShutterDesign.describes(candidate.source())) {
             ShutterDesign.validate(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built mechanical designs cannot use electrical delay revision; reconcile and release their controlled work first");
@@ -1311,7 +1317,7 @@ final class EngineeringSession implements BuildExecutor {
         return batch;
     }
     private boolean undoAfterMatches(Change change,BlockState actual) {return UndoProjection.matches(change,actual);}
-    private void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
+    void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions) {
         validateUndoNeighbors(change,assistantPositions,plannedPositions,level()::getBlockState);
     }
     private void validateUndoNeighbors(Change change,Set<BlockPos> assistantPositions,Set<BlockPos> plannedPositions,java.util.function.Function<BlockPos,BlockState> view) {
@@ -1407,7 +1413,10 @@ final class EngineeringSession implements BuildExecutor {
         Set<String> required=retainedOperationIds();
         if(!required.equals(operationScopes.operationIds()))throw new IllegalStateException("Operation history does not match its retained journal/frame");
         if(!baseline.isEmpty() || pendingPlacement || undoRequested)operationScopes.validateComponent(activeOperation,activeComponent);
-        for(Change change:journal)operationScopes.validate(change.operation(),change.component(),change.pos());
+        for(Change change:journal){
+            operationScopes.validate(change.operation(),change.component(),change.pos());
+            if(change.before().hasBlockEntity() || (change.after().hasBlockEntity() && !AnalogSafety.journalAfter(operationScopes.blueprint(change.operation()),change.pos(),change.before(),change.after())))throw new IllegalStateException("Journal cannot import a block entity or noncanonical comparator ownership");
+        }
         if(shutterRepairs.size()>4097)throw new IllegalStateException("Too many mechanical repair records");
         for(var entry:shutterRepairs.entrySet()){
             if(!operationScopes.contains(entry.getKey()) || !entry.getKey().equals(entry.getValue().operation()))throw new IllegalStateException("Mechanical repair record escaped its retained operation");
@@ -1544,7 +1553,7 @@ final class EngineeringSession implements BuildExecutor {
             }
             Set<String> closedGroups=new HashSet<>();String previousGroup=null;Map<String,String> groupComponents=new HashMap<>();
             for(Change change:journal) {
-                if(!contains(change.pos()) || change.before().hasBlockEntity() || change.after().hasBlockEntity())throw new IllegalStateException("Journal entry escapes its workspace or includes a block entity");
+                if(!contains(change.pos()) || change.before().hasBlockEntity() || (change.after().hasBlockEntity() && !(journalVersion==4 && operationScopes.contains(change.operation()) && AnalogSafety.journalAfter(operationScopes.blueprint(change.operation()),change.pos(),change.before(),change.after()))))throw new IllegalStateException("Journal entry escapes its workspace or includes an unsupported block entity");
                 if(journalVersion==4)operationScopes.validate(change.operation(),change.component(),change.pos());
                 else if(blueprint==null || ComponentTree.component(blueprint,change.component()).blocks().stream().noneMatch(block->block.pos().equals(change.pos())))
                     throw new IllegalStateException("Journal entry escaped its recorded component");

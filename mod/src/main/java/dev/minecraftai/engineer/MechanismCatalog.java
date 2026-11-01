@@ -20,9 +20,10 @@ public final class MechanismCatalog {
         public Vector { inputs = Map.copyOf(inputs); outputs = Map.copyOf(outputs); }
     }
     public record Pulse(int delayGameTicks,int widthGameTicks,int lampReleaseGameTicks,int horizonGameTicks) { }
-    public record Contract(String template, List<Port> ports, List<Vector> cases, int settleTicks, Pulse pulse) {
+    public record Contract(String template, List<Port> ports, List<Vector> cases, int settleTicks, Pulse pulse, String analogMode) {
         public Contract { ports = List.copyOf(ports); cases = List.copyOf(cases); }
-        public Contract(String template,List<Port> ports,List<Vector> cases,int settleTicks){this(template,ports,cases,settleTicks,null);}
+        public Contract(String template,List<Port> ports,List<Vector> cases,int settleTicks,Pulse pulse){this(template,ports,cases,settleTicks,pulse,null);}
+        public Contract(String template,List<Port> ports,List<Vector> cases,int settleTicks){this(template,ports,cases,settleTicks,null,null);}
     }
 
     private MechanismCatalog() { }

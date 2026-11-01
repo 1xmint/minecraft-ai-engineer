@@ -122,19 +122,104 @@ public final class AnalogGameTests {
         }
         helper.succeed();
     }
+    @GameTest public void comparatorEntityBoundaryCannotAdmitInventoryOrForeignJournalState(GameTestHelper helper){
+        var id=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
+        var position=new BlockPos(2,2,2);var absolute=helper.absolutePos(position);
+        var intention=AnalogIntention.create(id,1,id,"test","minecraft:overworld",absolute,0,"compare");
+        var blueprint=intention.blueprint();
+        var expected=Blueprint.state("minecraft:comparator[facing=west,mode=compare,powered=false]");
+        helper.setBlock(position.below(),Blocks.STONE);helper.setBlock(position,expected);
+        var level=helper.getLevel();var entity=level.getBlockEntity(absolute);
+        helper.assertTrue(AnalogSafety.observedComparator(blueprint,absolute,level.getBlockState(absolute),entity),"Only the exact canonical native comparator backing is recognized");
+        ((net.minecraft.world.level.block.entity.ComparatorBlockEntity)entity).setOutputSignal(15);
+        helper.assertTrue(AnalogSafety.observedComparator(blueprint,absolute,level.getBlockState(absolute),entity),"Cached signal is not intention, authority or a functional pass");
+        helper.assertTrue(AnalogSafety.journalAfter(blueprint,absolute,Blocks.AIR.defaultBlockState(),expected),"An owned air-to-canonical comparator journal needs no entity NBT");
+        helper.assertTrue(!AnalogSafety.journalAfter(blueprint,absolute,expected,expected),"A player comparator cannot become an invented restorable before state");
+        helper.assertTrue(!AnalogSafety.journalAfter(blueprint,absolute,Blocks.STONE.defaultBlockState(),expected),"Canonical comparator creation cannot hide replacement of another block");
+        var wrongMode=expected.setValue(net.minecraft.world.level.block.ComparatorBlock.MODE,ComparatorMode.SUBTRACT);
+        helper.assertTrue(!AnalogSafety.canonicalAfter(blueprint,absolute,wrongMode) && !AnalogSafety.canonicalAfter(blueprint,absolute.east(),expected),"Wrong mode or cell cannot enter an operation journal");
+        var foreign=new net.minecraft.world.level.block.entity.ComparatorBlockEntity(absolute.east(),expected);
+        helper.assertTrue(!AnalogSafety.observedComparator(blueprint,absolute,expected,foreign),"A foreign backing entity cannot be rebound to this cell");
+        helper.setBlock(position,wrongMode);
+        helper.assertTrue(!AnalogSafety.observedComparator(blueprint,absolute,level.getBlockState(absolute),level.getBlockEntity(absolute)),"Observed wrong comparator mode remains protected");
+        helper.setBlock(position,Blocks.CHEST);
+        helper.assertTrue(!AnalogSafety.observedComparator(blueprint,absolute,level.getBlockState(absolute),level.getBlockEntity(absolute)),"An inventory in the canonical cell stays protected");
+        var forged=blueprint.source();forged.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:chest");
+        var changed=new Blueprint(blueprint.id(),blueprint.projectId(),blueprint.revision(),blueprint.worldId(),blueprint.dimension(),blueprint.name(),blueprint.anchor(),blueprint.rotation(),blueprint.blocks(),blueprint.stages(),forged);
+        rejects(helper,()->AnalogSafety.canonicalAfter(changed,absolute,expected),"A provenance label cannot authorize noncanonical source geometry");
+        helper.succeed();
+    }
+    @GameTest public void analogCheckpointKeepsOwnedComparatorWithoutRestoringAuthority(GameTestHelper helper) throws java.io.IOException{
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var project=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();String dimension=helper.getLevel().dimension().identifier().toString();
+        var intention=AnalogIntention.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(24,2,24)),0,"compare");
+        var blueprint=Blueprint.parse(intention.source(),manager.worldId,dimension);ComponentTree.validate(blueprint);var contract=EngineeringContracts.contract(blueprint);
+        helper.assertTrue(contract.analogMode().equals("compare") && contract.ports().size()==46 && contract.cases().isEmpty() && contract.pulse()==null,"Analog contracts stay separate from Boolean and pulse contracts");
+        var session=new EngineeringSession(manager,project,owner,dimension);session.blueprint=blueprint;session.corner1=blueprint.anchor().offset(-15,-2,-15);session.corner2=blueprint.anchor().offset(1,0,15);
+        String operation=java.util.UUID.randomUUID().toString();session.operationScopes.capture(operation,"root",blueprint,false);session.activeOperation=operation;session.operationKind="BUILD";
+        var comparator=blueprint.blocks().stream().filter(block->block.state().is(Blocks.COMPARATOR)).findFirst().orElseThrow();
+        session.journal.add(new EngineeringSession.Change(comparator.pos(),Blocks.AIR.defaultBlockState(),comparator.state(),operation,"root"));session.state="PAUSED";session.save();
+        var restored=new EngineeringSession(manager,project,owner,dimension);
+        helper.assertTrue(restored.journal.size()==1 && restored.delegation==null && restored.verified.equals("untested") && restored.testTick<0,"Native canonical journal reload restores facts, no lease, active trial or pass");
+        var saved=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+        // The saved record format stays exactly the common operation journal; no entity NBT is stored.
+        helper.assertTrue(!saved.toString().contains("OutputSignal"),"Dynamic comparator output is not project state");
+        var invalid=new EngineeringSession.Change(comparator.pos(),Blocks.STONE.defaultBlockState(),comparator.state(),operation,"root");
+        helper.assertTrue(!AnalogSafety.journalAfter(blueprint,invalid.pos(),invalid.before(),invalid.after()),"Reload boundary cannot mint ownership by replacing a player block");
+        restored.journal.clear();restored.journal.add(invalid);boolean denied=false;try{restored.save();}catch(IllegalStateException expectedFailure){denied=true;}helper.assertTrue(denied,"Invalid comparator ownership must reject before checkpoint writing");
+        helper.succeed();
+    }
+    @GameTest public void undoCannotRemoveSupportFromAdoptedPlayerComparatorOrDust(GameTestHelper helper){
+        var level=helper.getLevel();var manager=EngineerMod.managerFor(level.getServer());var session=new EngineeringSession(manager,java.util.UUID.randomUUID(),java.util.UUID.randomUUID(),level.dimension().identifier().toString());
+        var relative=new BlockPos(3,4,3);var component=helper.absolutePos(relative);var support=component.below();helper.setBlock(relative.below(),Blocks.STONE);
+        var planned=new java.util.HashSet<BlockPos>();planned.add(support);for(var direction:net.minecraft.core.Direction.values())planned.add(support.relative(direction));
+        var change=new EngineeringSession.Change(support,Blocks.AIR.defaultBlockState(),Blocks.STONE.defaultBlockState(),"proof","root");
+        for(var block:new net.minecraft.world.level.block.Block[]{Blocks.COMPARATOR,Blocks.REDSTONE_WIRE}){
+            helper.setBlock(relative,block);boolean denied=false;
+            try{session.validateUndoNeighbors(change,java.util.Set.of(support),planned);}catch(IllegalStateException expectedFailure){denied=expectedFailure.getMessage().contains(component.toShortString());}
+            helper.assertTrue(denied,"Actual player-owned analog attachment must keep its assistant-built support: "+block);
+            session.validateUndoNeighbors(change,java.util.Set.of(support,component),planned);
+        }
+        helper.succeed();
+    }
+    @GameTest public void all45SelectorRecoveryFactsSurviveWithoutAResumedTrial(GameTestHelper helper){
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var project=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();String dimension=helper.getLevel().dimension().identifier().toString();
+        var intention=AnalogIntention.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(24,2,24)),0,"subtract");
+        var session=new EngineeringSession(manager,project,owner,dimension);session.blueprint=intention.blueprint();session.corner1=session.blueprint.anchor().offset(-15,-2,-15);session.corner2=session.blueprint.anchor().offset(1,0,15);
+        var saved=new JsonObject();var entries=new JsonArray();int index=0;
+        for(var port:EngineeringContracts.contract(session.blueprint).ports())if(port.input()){
+            var planned=session.blueprint.blocks().stream().filter(block->block.pos().equals(port.pos())).findFirst().orElseThrow().state();
+            var original=planned.setValue(BlockStateProperties.POWERED,index++%2==0);var entry=new JsonObject();entry.addProperty("name",port.name());entry.add("pos",Blueprint.jsonPos(port.pos()));entry.addProperty("original",Blueprint.describe(original));entry.addProperty("last",Blueprint.describe(planned));entry.addProperty("before",Blueprint.describe(original));entry.addProperty("pending",true);entries.add(entry);
+        }
+        saved.add("testInputs",entries);saved.add("functionalEvidence",new JsonArray());var scope=new JsonObject();scope.addProperty("projectId",project.toString());scope.addProperty("blueprintId",session.blueprint.id());scope.addProperty("blueprintRevision",1);scope.addProperty("component","root");scope.addProperty("basis",ComponentAssignments.basis(session.blueprint,"root"));scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);saved.add("functionalScope",scope);
+        session.trial.load(saved);session.state="PAUSED";session.save();var restored=new EngineeringSession(manager,project,owner,dimension);
+        helper.assertTrue(restored.trial.pending() && restored.trial.inputsSnapshot().size()==45 && restored.delegation==null && restored.testTick<0,"All selector restoration facts survive; no callback, live trial or authority resumes");
+        var first=restored.trial.inputsSnapshot().get(0).getAsJsonObject();helper.assertTrue(first.get("original").getAsString().contains("powered=true") && first.get("last").getAsString().contains("powered=false") && first.get("pending").getAsBoolean(),"Original on-state remains distinct from last assistant state and pending transition");
+        var tooMany=saved.deepCopy();tooMany.getAsJsonArray("testInputs").add(entries.get(0).deepCopy());boolean denied=false;try{restored.trial.load(tooMany);}catch(IllegalStateException expectedFailure){denied=true;}helper.assertTrue(denied,"Analog recovery stays bounded to its exact45 declared selectors");
+        helper.succeed();
+    }
     private static int angle(Rotation rotation){return switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};}
 
     private static void modeProbe(GameTestHelper helper,ComparatorMode mode){modeProbe(helper,mode,Rotation.NONE);}
-    private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation){
+    @GameTest(structure="engineer:analog_lab",maxTicks=900) public void compareProductionSuite(GameTestHelper helper){modeProbe(helper,ComparatorMode.COMPARE,Rotation.NONE,true);}
+    @GameTest(structure="engineer:analog_lab",maxTicks=900) public void subtractProductionSuite(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT,Rotation.NONE,true);}
+    private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation){modeProbe(nativeHelper,mode,rotation,false);}
+    private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation,boolean fullSuite){
         var helper=new Lab(nativeHelper,rotation);
         var intention=build(helper,mode);
-        System.out.println("ENGINEER_ANALOG_INTENTION "+intention.source());
+        if(!fullSuite)System.out.println("ENGINEER_ANALOG_INTENTION "+intention.source());
         int[][] cases={{0,0,0},{1,0,0},{15,0,0},{8,3,0},{8,0,3},{8,8,0},
             {8,0,8},{8,9,0},{8,0,9},{8,3,7},{8,7,3},{3,15,0},{15,14,1},
             {15,1,14},{1,1,1},{0,15,15},{15,15,15},{0,0,0}};
+        if(fullSuite){
+            var extended=new java.util.ArrayList<int[]>();
+            for(int bank=0;bank<3;bank++)for(int strength=0;strength<=15;strength++){int[] values={8,0,0};values[bank]=strength;extended.add(values);}
+            extended.addAll(java.util.Arrays.asList(cases));cases=extended.toArray(int[][]::new);
+        }
+        final int caseCount=cases.length;
+        var suite=new JsonArray();
         var samples=new JsonArray();long[] started={0};AnalogTrace[] trace={null};
         for(int index=0;index<cases.length;index++){
-            int[] requested=cases[index];int base=8+index*12;
+            int[] requested=cases[index];int caseNumber=index;int base=8+index*12;
             helper.runAtTickTime(base,()->{drive(helper,requested);started[0]=helper.getLevel().getGameTime();trace[0]=new AnalogTrace(mode.getSerializedName(),requested,started[0]);});
             for(int elapsed=8;elapsed<=10;elapsed++){
                 int expectedElapsed=elapsed;
@@ -149,7 +234,11 @@ public final class AnalogGameTests {
                     trace[0].sample(helper.getLevel().getGameTime(),expectedElapsed,state.getValue(ComparatorBlock.MODE).getSerializedName(),new int[]{wire(helper,port(0)),wire(helper,port(1)),wire(helper,port(2))},wire(helper,OUTPUT));
                     if(expectedElapsed==10){
                         helper.assertTrue(trace[0].passed() && AnalogTrace.read(trace[0].json(),mode.getSerializedName(),requested).passed(),"Actual native numeric evidence must round-trip against the intended transfer");
-                        System.out.println((rotation==Rotation.NONE?"ENGINEER_ANALOG_TRANSFER ":"ENGINEER_ANALOG_ROTATED_TRANSFER "+rotation+" ")+trace[0].json());
+                        if(fullSuite){
+                            var saved=new JsonObject();saved.addProperty("case",caseNumber);saved.addProperty("tick",helper.getLevel().getGameTime());saved.addProperty("elapsedTicks",10);var controls=new JsonObject();
+                            for(var selector:intention.design().selectors())controls.addProperty("bank-"+selector.bank()+"-"+selector.index(),helper.getLevel().getBlockState(helper.helper().absolutePos(selector.pos())).getValue(BlockStateProperties.POWERED));
+                            saved.add("inputs",controls);var outputs=new JsonObject();outputs.addProperty("output",wire(helper,OUTPUT)>0);saved.add("outputs",outputs);saved.add("analog",trace[0].json());suite.add(saved);
+                        }else System.out.println((rotation==Rotation.NONE?"ENGINEER_ANALOG_TRANSFER ":"ENGINEER_ANALOG_ROTATED_TRANSFER "+rotation+" ")+trace[0].json());
                     }
                     samples.add(row);
                 });
@@ -157,7 +246,8 @@ public final class AnalogGameTests {
         }
         helper.runAtTickTime(8+cases.length*12,()->{
             assertOff(helper);
-            helper.assertTrue(samples.size()==54,"Every declared boundary case needs three actual stable samples");
+            helper.assertTrue(samples.size()==caseCount*3,"Every declared native case needs three actual stable samples");
+            if(fullSuite){AnalogEvidence.validate(suite,mode.getSerializedName(),true);var saved=new JsonObject();saved.addProperty("mode",mode.getSerializedName());saved.add("cases",suite);System.out.println("ENGINEER_ANALOG_SUITE "+saved);}
             System.out.println("ENGINEER_ANALOG_MODE "+mode.getSerializedName()+" "+samples);
             helper.succeed();
         });

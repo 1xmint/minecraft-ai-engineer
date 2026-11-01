@@ -652,7 +652,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);conversationWorkFlows(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);conversationWorkFlows(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -2042,6 +2042,33 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
     }
     private static void conversationApprove(ClientGameTestContext context,String request){conversationProposal(context,request);say(context,"Engineer, yes please");}
+    private static void analogConversationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("forceload add 1680 -16 1744 48");
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
+        MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+        server.runCommand("tp Alice 1700 100 0");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(1700,100,0)));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the first corner here");expectChat(context,"First corner marked at your feet");
+        server.runCommand("tp Alice 1716 102 30");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(1716,102,30)));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
+        MESSAGES.clear();setupSay(context,"Engineer, show me a comparator");expectChat(context,"Preview ready: Comparator compare workbench");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==139 && project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"A natural analog preview grants no construction or functional pass");});write("analog-preview.done","passed");
+        MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Comparator compare workbench");
+        MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Intended analog test:66 numeric cases");
+        conversationApprove(context,"CI build selected comparator.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==139 && !project.verified.startsWith("passed:"),"Canonical comparator construction is geometry only");var design=AnalogIntention.validated(project.blueprint).design();var selector=design.selectors().stream().filter(control->control.bank()==0 && control.index()==4).findFirst().orElseThrow();var state=project.level().getBlockState(selector.pos());((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),selector.pos(),player(s,"Alice"));});
+        context.waitTicks(12);
+        conversationApprove(context,"CI test selected comparator.");server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 && session(s,"Alice").testTick>=0,30_000);
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");var design=AnalogIntention.validated(project.blueprint).design();check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && !project.verified.startsWith("passed:"),"Stopping the numeric trial restores inputs and releases authority without a pass");check(design.selectors().stream().allMatch(control->project.level().getBlockState(control.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==(control.bank()==0 && control.index()==4)),"Every real selector returns to its exact originally-on/off state after interruption");});write("analog-interruption.done","passed");
+        conversationApprove(context,"CI test selected comparator.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:comparator-compare:66 numeric cases@"),"Actual guarded production analog trial must pass: "+project.status());AnalogEvidence.validate(project.trial.evidence(),"compare",true);check(!project.hasPendingTest() && project.delegation==null,"A real numeric pass requires complete restoration and released authority");var design=AnalogIntention.validated(project.blueprint).design();check(design.selectors().stream().allMatch(control->project.level().getBlockState(control.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==(control.bank()==0 && control.index()==4)),"All45 real selector states restored after66 cases");});
+        assertPersisted(server);write("analog-functional-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("analog-functional.done","passed");write("analog-restoration.done","passed");
+        server.runCommand("tp Alice 1720 107 40 180 15");context.waitTicks(12);context.takeScreenshot("engineer-analog-tested-workbench");
+        conversationApprove(context,"CI undo selected comparator.");expectChat(context,"Undo blocked by later edit");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.size()==139 && project.delegation==null,"Undo preflight preserves all work when an original player selector state differs from the assistant journal");var design=AnalogIntention.validated(project.blueprint).design();var selector=design.selectors().stream().filter(control->control.bank()==0 && control.index()==4).findFirst().orElseThrow();var state=project.level().getBlockState(selector.pos());((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),selector.pos(),player(s,"Alice"));});
+        context.waitTicks(12);conversationApprove(context,"CI undo selected comparator.");server.waitFor(s->session(s,"Alice").journal.isEmpty(),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()) && project.delegation==null && !project.verified.startsWith("passed:"),"Guarded undo removes owned comparator entity and apparatus without restoring cached entity data or a pass");});write("analog-undo.done","passed");
+    }
     private static void conversationWorkFlows(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         // Allow the real admission window from earlier fixed fixtures to expire.
         // No budget counters or production limits are reset or relaxed.

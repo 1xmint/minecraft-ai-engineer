@@ -170,7 +170,9 @@ function design(input: AnalogIntentionInput): AnalogIntention {
       prerequisites,
     });
     const bracket = state.indexOf("[");
-    const resource = bracket < 0 ? state : state.slice(0, bracket);
+    const blockId = bracket < 0 ? state : state.slice(0, bracket);
+    const resource =
+      blockId === "minecraft:redstone_wire" ? "minecraft:redstone" : blockId;
     resources[resource] = (resources[resource] ?? 0) + 1;
   };
   const wirePos = (bank: number, index: number): Position => {

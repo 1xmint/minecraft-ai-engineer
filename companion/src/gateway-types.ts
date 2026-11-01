@@ -1,4 +1,5 @@
 import { validateGeneratedBlueprint } from "./generated.js";
+import { validateAnalogIntention } from "./analog-intention.js";
 import { readShutterDesign } from "./shutter-design.js";
 import {
   type Blueprint,
@@ -125,6 +126,22 @@ export function serverBlueprint(
     typeof v.rotation !== "number"
   )
     throw new RequestError("Invalid blueprint rotation.");
+  if (
+    v.analog !== undefined ||
+    ["comparator-compare", "comparator-subtract"].includes(
+      String(object(v.provenance).template),
+    )
+  ) {
+    try {
+      return validateAnalogIntention(v, {
+        worldId,
+        dimension,
+        projectId: context.projectId,
+      });
+    } catch {
+      throw new RequestError("Invalid canonical analog blueprint.");
+    }
+  }
   if (
     v.mechanical !== undefined ||
     object(v.provenance).template === "sticky-shutter"

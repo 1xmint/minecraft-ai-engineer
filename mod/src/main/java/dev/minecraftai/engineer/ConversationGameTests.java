@@ -13,6 +13,7 @@ public final class ConversationGameTests {
         helper.assertTrue(ConversationSetupText.parse("New project")==null,"A default project name must not create another project when used as a menu reply");
         helper.assertTrue(ConversationSetupText.parse("show me a signal lamp").target().equals("signal-lamp") && ConversationSetupText.parse("build this")==null,"A known local preview is distinct from delegating construction");
         helper.assertTrue(ConversationSetupText.parse("mark the first corner here").operation()==ConversationSetupText.Operation.FIRST_CORNER && ConversationSetupText.parse("this is the second corner").operation()==ConversationSetupText.Operation.SECOND_CORNER,"Two distinct explicit corner requests use the authenticated player's position");
+        helper.assertTrue(ConversationSetupText.parse("Show me a comparator").target().equals("comparator-compare") && ConversationSetupText.parse("show me a subtracting comparator").target().equals("comparator-subtract"),"Explicit analog preview intents distinguish native modes without approving work");
         helper.succeed();
     }
     @GameTest public void ordinaryChatCannotBecomeAnEngineeringRequest(GameTestHelper helper){

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { validateAnalogEvidence } from "../../dist/companion/src/analog-evidence.js";
 import { validateAnalogTrace } from "../../dist/companion/src/analog-trace.js";
 import { validateAnalogIntention } from "../../dist/companion/src/analog-intention.js";
 
@@ -34,6 +35,22 @@ const rotations = [
   "COUNTERCLOCKWISE_90",
 ];
 const lines = readFileSync(log, "utf8").split(/\r?\n/);
+const suiteModes = new Set();
+const suiteMarker = "ENGINEER_ANALOG_SUITE ";
+for (const line of lines) {
+  const start = line.indexOf(suiteMarker);
+  if (start < 0) continue;
+  const raw = JSON.parse(line.slice(start + suiteMarker.length).trim());
+  assert.ok(raw.mode === "compare" || raw.mode === "subtract");
+  assert.ok(!suiteModes.has(raw.mode));
+  assert.equal(validateAnalogEvidence(raw.cases, raw.mode, true).length, 66);
+  suiteModes.add(raw.mode);
+}
+assert.equal(
+  suiteModes.size,
+  2,
+  "Both actual native 66-case suites must pass independent replay",
+);
 const intentionKeys = new Set();
 const intentionMarker = "ENGINEER_ANALOG_INTENTION ";
 const nativeIdentity = "db1175eb-1559-4cca-a740-d63f224a4068";
@@ -106,6 +123,7 @@ for (const rotation of rotations)
 console.log(
   JSON.stringify({
     kind: "native-analog-cross-runtime-replay",
+    nativeSuiteCases: 132,
     canonicalIntentions: intentionKeys.size,
     windows: 144,
     stableSamples: 432,

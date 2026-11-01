@@ -132,13 +132,22 @@ const server = createCompanionServer({
               ? "status"
               : input.message === "CI propose stopping the selected project."
                 ? "stop"
-                : input.message === "CI build selected lamp."
+                : [
+                      "CI build selected lamp.",
+                      "CI build selected comparator.",
+                    ].includes(input.message)
                   ? "build"
-                  : input.message === "CI test selected lamp."
+                  : [
+                        "CI test selected lamp.",
+                        "CI test selected comparator.",
+                      ].includes(input.message)
                     ? "test"
                     : input.message === "CI resume selected lamp."
                       ? "resume"
-                      : input.message === "CI undo selected lamp."
+                      : [
+                            "CI undo selected lamp.",
+                            "CI undo selected comparator.",
+                          ].includes(input.message)
                         ? "undo"
                         : null;
       const componentId =
