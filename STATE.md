@@ -5,12 +5,15 @@ AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
 Current worktree: task work/`conversation-setup`, branch
-**phase/23-conversation-setup**, initially based on Phase22 sourcebd39067.
-Phase22 PR31 remains separate and its final CI41273958762 is live; do not replace
-or cancel that run. Its earlier source7210d45 passed all5 CI41272832823, all ten
-native chat markers, staged actual construction/tests/undo and saved-server
-restart. Final additions cover real expiry/reconnect and consistent lesson text.
-Phase23 must rebase onto the eventual merged Phase22 before its final CI/merge.
+**phase/23-conversation-setup**, rebased onto merged main
+**b7e3e26af47ca9d38084780c6be85af6f5a20611**. Phase23 runtime proofs remain pending.
+
+Phase22 shipped in PR31, merged2026-11-01T04:55:25Z. Exact sourcebd39067 passed all5
+CI41273958762, all116 native tests and12 conversation markers, including actual
+expiry, same-server reconnect and saved-server restart. Strict SQLite10/17 starts
+and actual8/10-block traces passed. Native flow13m20s; screenshot inspected and
+archived in docs/images/conversation-tested.png. Final evidence: task work/
+`conversation-final-41273958762`. No SDK calls or local tests for this slice.
 
 Phase21 observer engineering is complete in merged PR30:
 https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
@@ -23,12 +26,9 @@ was inspected and archived in `docs/images/observer-tested.png`. Final evidence:
 task work/`observer-final-41268319917`; earlier native fixtures remain archived.
 The composed metadata drift was fixed without weakening canonical validation.
 
-Phase22 source7210d45 passed all5 CI41272832823 and all ten native conversation
-markers, including staged actual build/design/structural test/undo and a pending
-chat approval across saved-server restart. Strict SQLite replay passed8/17 starts
-and actual8/10-block traces; screenshot inspected. Final sourcebd39067 adds real
-expiry/same-server reconnect and consistent lesson text; CI41273958762 is live.
-The published `v0.1.0-alpha.1` remains the older single-player alpha.
+The published `v0.1.0-alpha.1` remains the older single-player alpha. The merged
+source now supports conversational engineering; conversational setup is being
+built here. Overall goal remains incomplete, including all six Phase2 features.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
 authorized. Tests run on GitHub, never on this PC. Locally use scoped compile,
@@ -156,26 +156,23 @@ The genuine composition persistence bug was temporal test-description drift in
 the TypeScript mirror; it was fixed with rejection regression and actual receipt
 checks. Earlier fixture errors and full development history remain in Git.
 
-## Phase22: conversational engineering (PR31, final proof running)
+## Phase22 shipped: conversational engineering
 
-Source7210d45/all5 CI41272832823 proves private/text-only native chat, unaffected
-ordinary broadcast, obvious lessons and scoped component questions, actor-bound
-separate action/behavior/geometry/structural approvals, actual build/stop/resume/
-test/undo, wrong-actor/model admission denial, grant-stale rejection and actual
-saved-server restart. Native flow13m9s; strict SQLite8/17 starts and exact actual
-generated8/10-block timing traces. Evidence: task work/
-`conversation-staged-proof-41272832823`; screenshot inspected. Prior-controller
-regression retains Bob's VIEW via the supported viewer role; generated acceptance
-binds captured owner and restores previous command actor. GPT-6-Luna/high auth
-review findings were fixed. Initial grammar/native suite has116 required tests.
+PR31/mergeb7e3e26/sourcebd39067/all5 CI41273958762 proves private/text-only native
+chat, unaffected ordinary broadcast, obvious lessons and scoped component
+questions, separate one-use action/behavior/geometry/structural approvals, actual
+build/stop/resume/test/undo, wrong-actor/model admission denial, grant-stale
+rejection and prior-controller viewer regression. Real101-second expiry,
+same-server disconnect/reconnect with a new connection stamp, and a fresh pending
+saved-server restart approval all reject stale yes. Strict SQLite10/17 starts
+and exact actual generated8/10-block timing traces passed. All116 native tests,
+12 chat markers, native flow13m20s. Evidence and screenshot are listed above.
 
-Final sourcebd39067/CI41273958762 adds actual101-second expiry, disconnect/reconnect
-in the same server epoch and a fresh pending saved-server restart proposal.
-Expected10/17 starts; production deadlines/limits unchanged. CI-only allowances
-include the explicit wall wait. Lesson rendering removes the stale static
-"testing required" sentence above actual stored passes; canonical source/evidence
-stay unchanged. Final screenshot/evidence and green exact-head merge remain.
-No local tests, SDK calls, fresh inference or release for these slices.
+Generated acceptance binds the captured owner and restores the previous command
+actor. Lesson text keeps intended behavior separate from the actual stored pass;
+no new inspection/test is implied. GPT-6-Luna/high focused auth review findings
+were fixed. Production deadlines, limits and permissions stay unchanged; CI-only
+time allowances include the real expiry wait. No local tests or SDK calls.
 
 ## Phase23: conversational setup (serves E1/E4)
 
@@ -184,45 +181,35 @@ Outcomes:
 - O1: create a private project or find/select an authorized project through chat.
   Prove denied creation, no inaccessible names, ambiguous names require a choice,
   and stale list choices cannot select a changed/revoked project.
-- O2: stand at the two workspace corners and mark them through chat. Explain the
-  exact bounds and retain existing owner, state and overlap checks; no world edit
-  or model request from marking. Prove shared viewers/editors cannot change it.
-- O3: a native player creates/selects/marks a project through ordinary chat, then
+- O2: stand at two workspace corners and mark them through chat. Explain the exact
+  bounds and retain existing owner/state/overlap checks; no world edit or model
+  request from marking. Prove viewers and editors cannot change the workspace.
+- O3: a native player creates/selects/marks projects through ordinary chat, then
   uses the existing design/build/test conversation. Commands remain fallback.
 
-Decision: deterministic local setup intents call existing ProjectManager and
-EngineeringSession methods, never executable command text or a model-generated
-permission. The first corner is the block containing the player's feet; explain
-this explicitly. A bounded personal project-choice dialogue uses only current
-VIEW-authorized projects in the player's dimension and fresh connection/epoch/
-selection/grant/revision checks. No automatic choice among duplicate names.
-Creation grants stay operator-owned. No new account or shared AI access.
+Decision: local setup intents call existing ProjectManager/EngineeringSession
+methods, never executable command text or model-generated permissions. A corner
+is the block containing the player's feet. Bounded personal project choices use
+only current VIEW-authorized projects in the current dimension. Player object,
+connection/stamp, epoch, selection, expiry and every candidate identity/revision/
+grant revision/VIEW are rechecked. Duplicate names require a number. Paged lists
+show12 entries, retain the original scope/expiry and reach all256 allowed projects.
+Creation and sharing grants stay operator/owner-controlled; no new model access.
 
-Tasks: O1 grammar and scoped chooser/privacy proofs; O2 existing workspace-method
-adapter and owner/overlap rejection proofs; O3 replace setup-only commands in a
-native conversation fixture, inspect evidence, update guide, current-head CI and
-merge after Phase22. Focused GPT-6-Luna/high auth review only. No local tests.
+Implemented: explicit new/list/name/number/page/corner dialogue and lifecycle
+cleanup. Private native fixtures now create and mark both conversation projects
+via chat, exercise duplicate names/yes/paging, grant-stale rejection and fresh
+numbered choice, denied Eve creation/list privacy, Bob viewer and editor corner
+rejections. Setup messages wait21 real ticks to respect native chat limits; no
+counter reset. Fixture teleports position the actual player; no human-driven
+session is claimed. Blueprint reference fixtures still seed the design; complete
+conversational design/setup human acceptance remains broader work.
 
-Phase23 setup/parser and current-connection adapter are implemented. Native proof
-now creates/marks both conversation fixtures via actual chat, exercises duplicate
-names, yes ambiguity, paging, grant-stale rejection and a fresh numbered choice,
-plus denied Eve creation/list privacy and Bob viewer workspace denial. Corners
-are actual standing positions (fixture teleport only positions the native player).
-Existing model calls/counts remain10/17. All runtime additions remain unproven.
-GPT-6-Luna/high completed the narrow auth review: no concrete disclosure, stale
-selection, actor or owner/workspace bypass. Paging retains the same scope/expiry
-and exposes at most12 current authorized entries per response. Compilation before
-paging passed; the latest additions need scoped compilation and CI.
+Scoped Java compilation and script syntax/format pass. GPT-6-Luna/high focused
+auth review and paging follow-up found no concrete privacy or authority bypass.
+Guides explain feet-based corners and authorized project choice. Existing model
+counts remain10/17; no SDK calls/local tests. All Phase23 runtime proofs are
+unproven. Native grammar count becomes117. Rebase onto shipped Phase22 is done.
 
-Setup-only native messages wait21 actual ticks between sends, respecting the
-unchanged vanilla chat budget. Latest source compiles; runtime proofs and a
-post-Phase22 rebase remain required. No SDK calls or local tests ran.
-
-The GPT-6-Luna/high paging-only follow-up found no disclosure or stale-choice
-bypass. The guide now explains feet-based corner marking, private creation and
-authorized paged project selection; sharing/creation grants remain administrative
-commands. Phase23 has not run CI and is not shipped.
-
-Native setup coverage also coordinates the real Bob client after an EDITOR grant:
-its corner-marking chat must reach the owner-only rejection while Alice's exact
-workspace and empty journal remain unchanged. Runtime proof remains pending.
+Next: current-head CI and actual evidence/screenshot inspection, fix genuine
+failures, then merge. Keep the entire remaining roadmap above active.

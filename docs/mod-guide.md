@@ -71,6 +71,8 @@ current dimension appear. Choices expire when their connection, selection,
 revision or permissions change. A yes does not choose a project.
 You can also say `Engineer, work on project` followed by an exact project name.
 
+![Private conversation explaining intended timing and the separately recorded actual passing trial](images/conversation-tested.png)
+
 Within the selected project, talk in ordinary Minecraft chat:
 
 - `Engineer, explain how this works`

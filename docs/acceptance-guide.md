@@ -380,3 +380,20 @@ and `conversation-restart.done`). These require their own passing CI evidence;
 existing command-path recovery is separate evidence. `conversation-reconnect.done` additionally requires an actual disconnect and
 reconnect with the same server epoch and a different connection stamp; the old
 approval must remain unavailable.
+
+Final native-chat source `bd39067` passed all five checks in
+[CI41273958762](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41273958762)
+and merged as PR31 (`b7e3e26`). All116 native tests, twelve conversation markers,
+strict SQLite10/17 starts and actual8/10-block functional traces passed. The
+101-second expiry, same-server reconnect and saved-server restart proofs passed.
+The native screenshot was inspected and archived as
+`docs/images/conversation-tested.png`. These are fixed-provider routing fixtures,
+not additional SDK inference or a human-driven session.
+
+Conversational setup adds separate pending proof: `conversation-setup.done`,
+`conversation-setup-denied.done` and `conversation-setup-editor-denied.done` must
+pass alongside the existing full conversation flow. These drive real chat for
+private creation, feet-based corners, duplicate names, paged authorized choices,
+grant-stale rejection and viewer/editor workspace denial. Fixture teleports only
+position players; canonical reference commands still seed test designs. No setup
+request spends model quota, and existing interpretation counts stay10/17.
