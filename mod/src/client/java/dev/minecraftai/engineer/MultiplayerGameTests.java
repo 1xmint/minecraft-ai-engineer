@@ -2021,8 +2021,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(first.equals(session(s,"Alice").corner1) && second.equals(session(s,"Alice").corner2) && session(s,"Alice").delegation==null,"A fresh numbered choice selects only its displayed authorized project without work authority"));
     }
     private static void conversationPreview(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
-        MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"Preview ready:");
+        context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();setupSay(context,"Engineer, show me a signal lamp");expectChat(context,"Preview ready:");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint!=null && MechanismCatalog.contract(project.blueprint).template().equals("signal-lamp") && project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"A natural local catalog preview records only the intended design, never construction or functional evidence");});
+        String id=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        BlockPos anchor=server.computeOnServer(s->session(s,"Alice").blueprint.anchor());
+        server.runCommand("tp Alice "+(anchor.getX()+2)+" "+(anchor.getY()+4)+" "+(anchor.getZ()+8)+" 180 30");
+        await(context,()->view(context)!=null && view(context).projectId().equals(id) && view(context).text().contains("READY") && view(context).blocks().size()==6 && context.computeOnClient(client->client.player!=null && client.player.blockPosition().equals(anchor.offset(2,4,8))),"The actual client receives its selected unbuilt catalog preview and viewing position");
+        context.waitTicks(3);
+        context.takeScreenshot("engineer-conversation-setup-preview-"+anchor.getX());
         write("conversation-setup-preview.done","passed");
     }
     private static void setupSay(ClientGameTestContext context,String message){
@@ -2041,7 +2047,6 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         conversationSetup(context,server,previous,new BlockPos(1400,100,0),new BlockPos(1405,101,0));conversationPreview(context,server);
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1400,100,0)));
-        server.runCommand("tp Alice 1402 104 8 180 30");
         server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         MESSAGES.clear();say(context,"Engineer, explain how this works");expectChat(context,"Lesson for component root:");
         server.runOnServer(s->commandAs(s,"Alice","engineer project share Bob viewer"));
@@ -2077,7 +2082,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         conversationSetup(context,server,previous,new BlockPos(1440,100,0),new BlockPos(1447,102,2));conversationPreview(context,server);
         server.waitFor(s->session(s,"Alice").blueprint!=null && session(s,"Alice").blueprint.anchor().equals(new BlockPos(1440,100,0)));
-        server.runCommand("tp Alice 1442 104 8 180 30");server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
+        server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Alice","engineer project permission Bob undo true");});
         write("conversation-setup-editor-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));awaitFile(context,"conversation-setup-editor-denied.done");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.corner1.equals(new BlockPos(1440,100,0)) && project.corner2.equals(new BlockPos(1447,102,2)) && project.journal.isEmpty(),"An editor's actual chat cannot change the owner's workspace or start world work");commandAs(s,"Bob","engineer build");});

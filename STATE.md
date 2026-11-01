@@ -237,3 +237,20 @@ a pending action; EDIT denial must leave that owner review and intended design
 intact. Local-preview work is checkpointed on work/conversation-setup-preview
 while PR32 keeps testing d8d0316. Promote only after CI41275010408 is terminal
 and its evidence is inspected. No local tests ran.
+
+The final native preview path also captures a real screenshot after the selected
+project's six-block READY snapshot arrives, with the actual chat request/reply
+and ghost geometry. It reuses the fixture's viewing position. Source requires
+scoped compilation before promotion; new images remain unrun.
+
+Source d8d0316 passed all five checks in CI41275010408, all117 required native
+tests, three setup markers and the full old conversation suite. Actual private
+creation/corner marking, duplicate names, paging, grant-stale choice rejection,
+Eve privacy/creation denial, and viewer/editor workspace rejection passed.
+Strict SQLite10/17 starts and functional traces passed. Native flow15m17s.
+Evidence: task work/conversation-setup-first-41275010408. This establishes O1/O2
+and the setup portion of O3; those fixtures still used reference commands.
+
+Final source adds local preview chat and its negative/visual checks described
+above; scoped Java compilation and script syntax/format pass. It must now run
+fresh CI before merge. No extra model request, SDK call or local test occurred.
