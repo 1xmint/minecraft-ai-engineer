@@ -290,3 +290,8 @@ is new, and rejects the previous pending approval. It then requests a fresh
 proposal for the fourth-boot restart proof. The Fabric connection close API was
 checked locally; nested connection resources avoid an invalid double close.
 No extra server boot is added. Exact starts10/17; reconnect proof is unrun.
+
+Lifecycle source bb9ade4 is compiled and committed locally. Its remote checkpoint
+branch is work/conversation-lifecycle-proof. PR31 remains on7210d45 while exact
+CI41272832823 is live; promote the lifecycle commit to the PR branch only after
+that run is terminal and its evidence is inspected, so no native run is cancelled.
