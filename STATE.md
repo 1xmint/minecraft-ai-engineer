@@ -273,3 +273,21 @@ new receipt marker. This is a delivery/teardown race fix, not a production chang
 or a timeout increase. Scoped client compilation and script syntax pass.
 A1 physical feasibility passed; A2/A3/A4 remain unimplemented. Fresh full CI is
 required for this race fix before any merge or further completion claim.
+
+## Parallel lane offered to Claude — 2026-11-01
+
+Josh explicitly invited safe parallel milestone work. Suggested lane: Phase2
+schematic file-interchange foundation, isolated from active analog/server work.
+Claude should branch claude/schematic-interop from current origin/main in its own
+worktree work/claude-schematics and deliver a draft PR for Codex integration.
+Owned paths: companion/src/schematics/**, tests/schematics\*.test.ts,
+tests/fixtures/schematics/**, docs/schematics.md. package.json/package-lock.json
+are reserved only for necessary new pinned codec dependencies; preserve all
+existing pins/scripts. Codex avoids those package files while this lane is active.
+No changes to mod/**, shared core schemas/gateway/storage/provider/auth, existing
+CI, AGENTS.md or STATE.md by Claude. Put its decisions/proof in the PR body; Codex
+updates shared memory. Target a standalone geometry-only Sponge v3 .schem codec
+and CLI with independent-format evidence, bounded parsing and explicit rejection
+of unsupported inventory/entity data. No world edits or imported authority.
+In-game preview/import/export integration and full schematic milestone remain
+pending; this is separately authorized Phase2 preparation, not Phase1 completion.
