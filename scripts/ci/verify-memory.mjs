@@ -418,6 +418,7 @@ try {
       "conversation-setup-editor-denied.done",
       "conversation-text.done",
       "conversation-private.done",
+      "conversation-broadcast-received.done",
       "conversation-clarification.done",
       "conversation-actions.done",
       "conversation-design.done",

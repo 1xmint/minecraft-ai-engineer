@@ -4,9 +4,11 @@
 AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
 Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
 
-Current worktree: task work/`conversation-setup`, branch
-**phase/23-conversation-setup**, rebased onto merged main
-**b7e3e26af47ca9d38084780c6be85af6f5a20611**. Phase23 runtime proofs remain pending.
+Current worktree: task work/`schematic-review`, branch **fix/schematic-boundaries**,
+reviewing Claude's independent PR34 from merged main **d9bde62**. Phase23 shipped
+in PR32: source1561555/all5 CI41276307352, all117 required native tests and actual
+conversation setup/preview proof. Phase24 comparator work continues separately in
+PR33 at sourced43fdf7, CI41332437714. Overall goal remains incomplete.
 
 Phase22 shipped in PR31, merged2026-11-01T04:55:25Z. Exact sourcebd39067 passed all5
 CI41273958762, all116 native tests and12 conversation markers, including actual
@@ -55,7 +57,7 @@ serves E1/E4 and precedes more component expansion; comparators remain required.
 - E4: complete signed-in preview -> human functional section -> AI remainder ->
   interrupt/change/resume -> actual test -> service/game restart -> later explanation
   and visual proof. Scripted fixtures do not establish this entire human experience.
-- Phase2, all unstarted: voice conversation; physical NPC; genuine survival gathering
+- Phase2 features remain incomplete: voice conversation; physical NPC; genuine survival gathering
   and placement; schematic import/export; measured size/resources/latency/reliability
   optimization; multiple coordinated independent builders.
 - Multiplayer release/package/setup, production Mojang authentication and provider
@@ -254,3 +256,39 @@ and the setup portion of O3; those fixtures still used reference commands.
 Final source adds local preview chat and its negative/visual checks described
 above; scoped Java compilation and script syntax/format pass. It must now run
 fresh CI before merge. No extra model request, SDK call or local test occurred.
+
+## Parallel schematic file foundation — 2026-11-01 (serves Phase2 schematics)
+
+Josh explicitly authorized Claude parallel milestones. Claude delivered PR34,
+Sponge v3 file interchange and CLI in companion/src/schematics/**, independent of
+server blueprints, storage, auth and world execution. The neutral geometry format
+contains no ownership, grants or functional verification. Dimensions/offsets,
+DataVersion, block IDs/properties and supported untrusted metadata survive; entity
+payloads are rejected and explicit optional discards are reported. No world hook,
+DataVersion upgrade or in-game preview/import/export is implemented yet.
+
+Source7ec6659 passed all five checks in CI41327833280, including the existing
+multiplayer suite and18 new schematic proofs with independently decoded
+third-party WorldEdit/schematic4j fixtures and prismarine-nbt2.8.0 as a pinned dev
+oracle. No production dependencies or billed services were introduced. Parent
+review checked the primary Sponge v3 specification and actual parser/CLI paths.
+
+Review found two concrete boundaries: forced output could alias and truncate its
+input, and Array.map skipped sparse palette/metadata holes. Parent now checks the
+actual opened output's device/inode against the opened input identity before any
+truncate, bounds actual read bytes as well as initial size, and densely validates
+arrays. Tests cover hard-link alias preservation, sparse data and oversized input.
+Focused GPT-6-Luna/high data-preservation review found no remaining overwrite or
+byte-bound gap. Scoped type and format/diff checks pass; new behavioral checks
+await GitHub CI. No local tests ran. Update PR34 with this fix, merge only its exact
+green head, then record completion of the file foundation; full in-game schematic
+milestone stays pending. Shared main/Phase24 memory must be reconciled on merge.
+
+Review head d09295d/CI41333273366 passed Companion (including three new boundary
+proofs), Fabric, Windows and Minecraft client. Dedicated hit the inherited
+ordinary-chat send/disconnect race: Alice never received the message before Eve
+left. Applied only the previously proved sender/recipient receipt handshake from
+384a4b4 to this independent branch, plus its required marker. No production chat,
+privacy assertions, quota or timeout changed. This parent integration fix touches
+the shared native fixture/verifier because the failure blocks required CI; Claude
+did not edit those paths. New full CI required before merge.
