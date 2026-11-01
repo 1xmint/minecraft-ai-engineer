@@ -345,3 +345,13 @@ the current run terminates, inspect evidence, then integrate production analog
 construction/trial/recovery and authorized conversation. Canonical comparators
 need a narrowly justified noninventory block-entity boundary; focused independent
 challenge is in progress before changing existing protections.
+
+Focused GPT-6-Luna/high challenge completed: use one canonical comparator cell,
+exact expected mode/facing and native ComparatorBlockEntity type; never a generic
+BE/provenance allowlist. Initial construction must not adopt an existing BE for
+mutation. Journal before states remain non-BE; a comparator after state must match
+the operation’s canonical intention again on reload. Undo removes owned geometry
+without restoring entity NBT. Diagnosis can observe that exact canonical entity
+but cannot repair it by restoring arbitrary before-BE data. Pinned26.3 bytecode
+shows only dynamic cached OutputSignal; it is not persisted as project intent or
+used alone as functional proof. No current runtime protection has changed.
