@@ -1118,8 +1118,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context, () -> MESSAGES.stream().anyMatch(message -> message.contains("Step ")), "Text tutorial without overlay negotiation");
         check(view(context) == null, "Text-only clients do not acquire visual metadata caches");
         if(!LIVE_ACCEPTANCE){
-            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));send(context,"engineer ask explain the timing");send(context,"engineer ask explain the materials");
-            expectChat(context,"Intended observer timing");expectChat(context,"observer");
+            MESSAGES.clear();send(context,"engineer project use "+read("observer-text-project"));send(context,"engineer teach root");send(context,"engineer ask explain the timing");send(context,"engineer ask explain the materials");
+            expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
             send(context,"engineer build");expectChat(context,"does not grant you build permission");
             check(view(context)==null,"Authorized observer lessons work over ordinary text without installing visual authority or a preview cache");write("observer-text.done","passed");
         }
@@ -1874,7 +1874,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice 1101 108 12 180 25");
         server.waitFor(s->session(s,"Alice").dependencyPositions(true).stream().allMatch(pos->session(s,"Alice").level().hasChunkAt(pos)));
         server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.journal.isEmpty(),"Observer preview has no world authority");project.level().setBlockAndUpdate(new BlockPos(1100,100,0),Blocks.STONE.defaultBlockState());});
-        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer build");commandAs(s,"Bob","engineer test");commandAs(s,"Bob","engineer undo");check(project.delegation==null && project.journal.isEmpty() && project.testTick<0,"Authorized shared observer lessons do not grant a viewer construction, testing or undo");});
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer teach root");commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer build");commandAs(s,"Bob","engineer test");commandAs(s,"Bob","engineer undo");check(project.delegation==null && project.journal.isEmpty() && project.testTick<0,"Authorized shared observer lessons do not grant a viewer construction, testing or undo");});
         write("observer-viewer.done","passed");
         MESSAGES.clear();send(context,"engineer ask explain the timing");expectChat(context,"Intended observer timing");
         send(context,"engineer build");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));

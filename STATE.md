@@ -20,6 +20,13 @@ interruption, actual saved-server restart and fresh retest, then failed at an
 incorrect undo expectation: the real guard preserved a manually switched-on lever.
 The proof now requires this refusal and explicit player restoration before retrying
 undo; production undo guards are unchanged. Next: prove this and expanded coverage.
+Expanded source5ee940c/CI41227072775 passed the same four checks, then the text-only
+fixture correctly received "Choose a lesson" instead of timing: it had selected
+the shared project without selecting its personal lesson. The fixture now calls
+`teach root` before timing/materials (and asserts the exact observer material).
+The shared Bob fixture also explicitly chooses its lesson. No production lesson
+or permission rule changed. Local compileClientJava passed. Evidence: task work/
+`observer-shared-41227072775`; continue with the corrected source's CI.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
