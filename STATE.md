@@ -291,3 +291,33 @@ and CLI with independent-format evidence, bounded parsing and explicit rejection
 of unsupported inventory/entity data. No world edits or imported authority.
 In-game preview/import/export integration and full schematic milestone remain
 pending; this is separately authorized Phase2 preparation, not Phase1 completion.
+
+Source384a4b4 passed all five checks in CI41321820187, all120 required native tests
+and the full dedicated suite. The public-chat receipt marker and strict SQLite
+proof passed; native flow14m37s. Evidence: task work/analog-receipt-proof-41321820187.
+The sender/recipient handshake fixed the observed teardown race without changing
+production chat, privacy assertions, counters or timeouts.
+
+A3 foundation now adds one settled comparator-transfer codec in Java and
+TypeScript. A separately supplied intended mode/input vector is required; only
+integer strengths0..15, exact bounded fields and clock-consistent observations
+are accepted. Missing samples stay inconclusive; wrong mode/input/output stays
+failed; false claims/extra authority fields reject. This describes one sampled
+transfer, never a whole-circuit pass, latency measurement or execution permission.
+Project/revision/component/basis/epoch and actual trial ownership remain the
+future caller's responsibility; no production route is wired yet.
+
+GPT-6-Luna/high implemented only the TypeScript module in its separate worktree;
+parent wrote the proofs, Java producer/replayer and native integration. Review
+found sparse-array traversal could skip validation; it was corrected with dense
+traversal and explicit rejection proofs. No worker modified proofs or dependency
+manifests. Claude's schematic paths and package files remain reserved.
+
+New CI replays this run's actual Java-emitted36 transfer windows through the
+TypeScript decoder against independent declared stimuli. Pipeline pipefail keeps
+native failures visible; raw native logs and the numeric replay summary become
+artifacts. Archived windows also exercise replay and malformed-data rejection.
+Java/type compilation and script syntax/format checks run locally; all behavioral
+and native proofs run only on GitHub. These new codec checks remain unproven.
+Canonical comparator construction, trial restoration/persistence and UI/model
+integration (A2/A3/A4) remain unfinished; A1 physical feasibility is the proved part.

@@ -44,7 +44,22 @@ jobs:
           java-version: "25"
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - run: chmod +x gradlew
-      - run: ./gradlew --no-daemon --max-workers=2 build runGameTest
+      - name: Build and run native GameTests
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          ./gradlew --console=plain --no-daemon --max-workers=2 build runGameTest 2>&1 | tee build/native-gametest.log
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.0.1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Replay this run's native analog windows through the companion codec
+        working-directory: .
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          node scripts/ci/verify-analog-native.mjs mod/build/native-gametest.log | tee mod/build/analog-native-replay.json
       - name: Verify catalog bytes in the Fabric jar
         run: |
           jar_file=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -print -quit)
@@ -58,6 +73,8 @@ jobs:
             mod/build/libs/*.jar
             mod/build/reports/
             mod/build/test-results/
+            mod/build/native-gametest.log
+            mod/build/analog-native-replay.json
             mod/run/gametest/logs/latest.log
           if-no-files-found: warn
           retention-days: 14

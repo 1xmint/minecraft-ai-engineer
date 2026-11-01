@@ -47,15 +47,36 @@ public final class AnalogGameTests {
     @GameTest(structure="engineer:analog_lab",maxTicks=300)
     public void subtractModeUsesMeasuredRearAndStrongestSide(GameTestHelper helper){modeProbe(helper,ComparatorMode.SUBTRACT);}
 
+    @GameTest public void numericTransferClaimsCannotChangeTheirIntendedModeOrInputs(GameTestHelper helper){
+        var trace=new AnalogTrace("compare",new int[]{8,3,0},1000);
+        for(int elapsed=8;elapsed<=10;elapsed++)trace.sample(1000+elapsed,elapsed,"compare",new int[]{8,3,0},8);
+        helper.assertTrue(trace.passed() && AnalogTrace.read(trace.json(),"compare",new int[]{8,3,0}).passed(),"A complete numeric window round-trips under its separate intended transfer");
+        rejects(helper,()->AnalogTrace.read(trace.json(),"subtract",new int[]{8,3,0}),"A coincident or different mode cannot rebind a stored transfer");
+        rejects(helper,()->AnalogTrace.read(trace.json(),"compare",new int[]{8,7,0}),"Another stimulus cannot inherit this window");
+        var extra=trace.json();extra.addProperty("authority",true);rejects(helper,()->AnalogTrace.read(extra,"compare",new int[]{8,3,0}),"Observed values carry no authority fields");
+        var forged=trace.json();forged.addProperty("expectedOutput",0);rejects(helper,()->AnalogTrace.read(forged,"compare",new int[]{8,3,0}),"Expected output is recomputed from intended mode and levels");
+        var wrong=new AnalogTrace("compare",new int[]{0,0,0},1000);
+        for(int elapsed=8;elapsed<=10;elapsed++)wrong.sample(1000+elapsed,elapsed,"subtract",new int[]{0,0,0},0);
+        helper.assertTrue(!wrong.passed() && AnalogTrace.read(wrong.json(),"compare",new int[]{0,0,0}).verdict().equals("failed"),"A zero-only coincidence cannot hide an observed wrong mode");
+        var gap=new AnalogTrace("compare",new int[]{8,3,0},1000);gap.sample(1008,8,"compare",new int[]{8,3,0},8);gap.sample(1010,10,"compare",new int[]{8,3,0},8);
+        helper.assertTrue(AnalogTrace.read(gap.json(),"compare",new int[]{8,3,0}).verdict().equals("inconclusive") && !gap.passed(),"Missing native samples cannot become a pass");
+        rejects(helper,()->trace.sample(1011,10,"compare",new int[]{8,3,0},8),"Clock corruption or duplicate elapsed samples reject");
+        var badClock=new AnalogTrace("compare",new int[]{8,3,0},1000);
+        rejects(helper,()->badClock.sample(1009,8,"compare",new int[]{8,3,0},8),"A numeric window cannot rewrite its absolute game clock");
+        var overflow=trace.json();overflow.getAsJsonArray("samples").get(0).getAsJsonObject().getAsJsonArray("inputs").set(0,new com.google.gson.JsonPrimitive(4_294_967_296L));
+        rejects(helper,()->AnalogTrace.read(overflow,"compare",new int[]{8,3,0}),"Oversized input integers reject without truncation");
+        helper.succeed();
+    }
+
     private static void modeProbe(GameTestHelper helper,ComparatorMode mode){
         build(helper,mode);
         int[][] cases={{0,0,0},{1,0,0},{15,0,0},{8,3,0},{8,0,3},{8,8,0},
             {8,0,8},{8,9,0},{8,0,9},{8,3,7},{8,7,3},{3,15,0},{15,14,1},
             {15,1,14},{1,1,1},{0,15,15},{15,15,15},{0,0,0}};
-        var samples=new JsonArray();long[] started={0};
+        var samples=new JsonArray();long[] started={0};AnalogTrace[] trace={null};
         for(int index=0;index<cases.length;index++){
             int[] requested=cases[index];int base=8+index*12;
-            helper.runAtTickTime(base,()->{drive(helper,requested);started[0]=helper.getLevel().getGameTime();});
+            helper.runAtTickTime(base,()->{drive(helper,requested);started[0]=helper.getLevel().getGameTime();trace[0]=new AnalogTrace(mode.getSerializedName(),requested,started[0]);});
             for(int elapsed=8;elapsed<=10;elapsed++){
                 int expectedElapsed=elapsed;
                 helper.runAtTickTime(base+elapsed,()->{
@@ -66,6 +87,11 @@ public final class AnalogGameTests {
                     int expected=mode==ComparatorMode.SUBTRACT?Math.max(0,rear-side):rear>=side?rear:0;
                     row.addProperty("mode",mode.getSerializedName());row.addProperty("expected",expected);
                     helper.assertTrue(wire(helper,OUTPUT)==expected,"Actual comparator output must match measured inputs after settling: "+row);
+                    trace[0].sample(helper.getLevel().getGameTime(),expectedElapsed,state.getValue(ComparatorBlock.MODE).getSerializedName(),new int[]{wire(helper,port(0)),wire(helper,port(1)),wire(helper,port(2))},wire(helper,OUTPUT));
+                    if(expectedElapsed==10){
+                        helper.assertTrue(trace[0].passed() && AnalogTrace.read(trace[0].json(),mode.getSerializedName(),requested).passed(),"Actual native numeric evidence must round-trip against the intended transfer");
+                        System.out.println("ENGINEER_ANALOG_TRANSFER "+trace[0].json());
+                    }
                     samples.add(row);
                 });
             }
@@ -123,4 +149,5 @@ public final class AnalogGameTests {
         for(int bank=0;bank<3;bank++)helper.assertTrue(wire(helper,port(bank))==0,"Each measured input finishes at zero");
         helper.assertTrue(wire(helper,OUTPUT)==0,"Actual output finishes at zero");
     }
+    private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
 }
