@@ -12,8 +12,9 @@ is not only checked against its own encoder. Tests check each SHA-256 first.
 
 - `worldedit-fabric-7.3.schem` is a real WorldEdit 7.3.0-beta-02 Fabric export
   (DataVersion 3578) with six sign block entities.
-- `hollowcube-2x2-chunk-vert.schem` is a 32x384x32 world slice (DataVersion
-  in the file) with twelve chest block entities that carry loot-table data.
+- `hollowcube-2x2-chunk-vert.schem` is a 32x384x32 world slice (DataVersion 4325) with twelve block entities: four chests and eight suspicious-sand or
+  suspicious-gravel blocks (`minecraft:brushable_block`) that carry loot-table
+  data.
 - `schematic4j-sponge-v3.schem` uses a flat root compound named `Schematic`
   and includes an entity (a creeper) and a campfire block entity.
 
