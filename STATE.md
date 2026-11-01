@@ -254,3 +254,22 @@ The challenge's initial opposite-FACING suggestion contradicted pinned26.3
 DiodeBlock.getInputSignal: it reads pos.relative(FACING). WEST is retained as
 the west input/east output orientation, with a source comment; actual CI will
 validate the fixture. No expected values were changed to accommodate a guess.
+
+CI41320293103 on0697462 passed all120 required native tests, including actual
+calibration279 samples and compare/subtract54+54 samples. Captured game logs were
+parsed and inspected: all three banks cover0..15 independently, stable groups
+use real consecutive game ticks, and both mode outputs match measured inputs.
+The exact historical samples are archived in tests/fixtures/analog-native-probe.json
+as feasibility data only, never production authority or fresh inference. The
+challenge corrected its facing finding after reading the pinned implementation:
+WEST rear/EAST output is right; no orientation blocker remained.
+
+Overall CI failed in a separate inherited chat fixture: Eve sent ordinary chat
+then disconnected before Alice received it. Eve's log had no ordinary-chat echo,
+but its completion marker was already written. The fixture now keeps Eve online
+until Alice observes that exact public message and writes an acknowledgement;
+privacy assertions and existing bounds stay unchanged. The verifier requires the
+new receipt marker. This is a delivery/teardown race fix, not a production change
+or a timeout increase. Scoped client compilation and script syntax pass.
+A1 physical feasibility passed; A2/A3/A4 remain unimplemented. Fresh full CI is
+required for this race fix before any merge or further completion claim.
