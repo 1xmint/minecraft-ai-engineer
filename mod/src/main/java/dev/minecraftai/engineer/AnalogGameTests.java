@@ -7,7 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.ComparatorBlock;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ComparatorMode;
@@ -16,8 +15,6 @@ import net.minecraft.world.level.block.state.properties.ComparatorMode;
 public final class AnalogGameTests {
     private static final BlockPos COMPARATOR=new BlockPos(24,2,24);
     private static final BlockPos OUTPUT=COMPARATOR.east();
-    private static final String WIRE_X="minecraft:redstone_wire[north=none,south=none,east=side,west=side,power=0]";
-    private static final String WIRE_Z="minecraft:redstone_wire[north=side,south=side,east=none,west=none,power=0]";
 
     @GameTest(structure="engineer:analog_lab",maxTicks=1200)
     public void physicalSelectorsProduceEveryStrengthWithoutCrossCoupling(GameTestHelper nativeHelper){
@@ -89,6 +86,22 @@ public final class AnalogGameTests {
         helper.succeed();
     }
 
+    @GameTest public void canonicalAnalogGeometryRejectsInvalidControlsAndBounds(GameTestHelper helper){
+        for(int angle:new int[]{0,90,180,270}){
+            var design=new AnalogDesign("subtract",new BlockPos(24,2,24),angle);
+            helper.assertTrue(design.cells().stream().map(AnalogDesign.Cell::pos).distinct().count()==139,"Canonical cells cannot overlap in any rotation");
+            helper.assertTrue(design.selectors().stream().filter(selector->design.selected(selector,new int[]{1,8,15})).count()==3,"One physical source per nonzero bank");
+            helper.assertTrue(design.selectors().stream().noneMatch(selector->design.selected(selector,new int[]{0,0,0})),"Zero strength switches every physical source off");
+            rejects(helper,()->design.selected(design.selectors().getFirst(),new int[]{0,16,0}),"Out of range strength rejects before execution");
+            rejects(helper,()->design.selected(design.selectors().getFirst(),new int[]{0,0}),"All three input intentions are required");
+        }
+        rejects(helper,()->new AnalogDesign("invented",BlockPos.ZERO,0),"Only native compare/subtract modes are supported");
+        rejects(helper,()->new AnalogDesign("compare",new BlockPos(Integer.MAX_VALUE,0,0),0),"Geometry cannot overflow into another world position");
+        rejects(helper,()->new AnalogDesign("compare",new BlockPos(0,-2048,0),0),"Complete apparatus must fit supported vertical bounds");
+        helper.succeed();
+    }
+    private static int angle(Rotation rotation){return switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};}
+
     private static void modeProbe(GameTestHelper helper,ComparatorMode mode){modeProbe(helper,mode,Rotation.NONE);}
     private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation){
         var helper=new Lab(nativeHelper,rotation);
@@ -132,25 +145,16 @@ public final class AnalogGameTests {
     }
     private static BlockPos port(int bank){return slot(bank,bank==2?0:14);}
     private static void build(Lab helper,ComparatorMode mode){
-        for(int bank=0;bank<3;bank++)for(int index=0;index<15;index++)helper.setBlock(slot(bank,index).below(),Blocks.STONE);
-        helper.setBlock(COMPARATOR.below(),Blocks.STONE);helper.setBlock(OUTPUT.below(),Blocks.STONE);
-        for(int bank=0;bank<3;bank++)for(int index=0;index<15;index++){
-            helper.setBlock(slot(bank,index).below(2),Blueprint.state("minecraft:lever[face=ceiling,facing=north,powered=false]"));
-            helper.setBlock(slot(bank,index),Blueprint.state(bank==0?WIRE_X:WIRE_Z));
-        }
-        // DiodeBlock reads the rear at pos.relative(FACING): WEST input emits EAST.
-        helper.setBlock(COMPARATOR,Blueprint.state("minecraft:comparator[facing=west,mode="+mode.getSerializedName()+",powered=false]"));
-        helper.setBlock(OUTPUT,Blueprint.state(WIRE_X));
+        var design=new AnalogDesign(mode.getSerializedName(),COMPARATOR,angle(helper.rotation()));
+        helper.assertTrue(design.cells().size()==139 && design.selectors().size()==45,"Canonical analog workbench has its complete bounded physical apparatus");
+        for(var cell:design.cells())helper.helper().setBlock(cell.pos(),cell.state());
     }
     private static void drive(Lab helper,int[] requested){
-        for(int bank=0;bank<3;bank++){
-            int level=requested[bank];if(level<0 || level>15)throw new IllegalArgumentException("Strength outside0..15");
-            int selected=level==0?-1:bank==2?15-level:level-1;
-            for(int index=0;index<15;index++){
-                var pos=slot(bank,index).below(2);var state=helper.getLevel().getBlockState(helper.absolutePos(pos));
-                helper.assertTrue(state.is(Blocks.LEVER),"A selector remains a real attached lever");
-                if(state.getValue(BlockStateProperties.POWERED)!=(index==selected))helper.pullLever(pos);
-            }
+        var design=new AnalogDesign("compare",COMPARATOR,angle(helper.rotation()));
+        for(var selector:design.selectors()){
+            var state=helper.getLevel().getBlockState(helper.helper().absolutePos(selector.pos()));
+            helper.assertTrue(state.is(Blocks.LEVER),"A selector remains a real attached lever");
+            if(state.getValue(BlockStateProperties.POWERED)!=design.selected(selector,requested))helper.helper().pullLever(selector.pos());
         }
     }
     private static int wire(Lab helper,BlockPos pos){
@@ -172,14 +176,11 @@ public final class AnalogGameTests {
         for(int bank=0;bank<3;bank++)helper.assertTrue(wire(helper,port(bank))==0,"Each measured input finishes at zero");
         helper.assertTrue(wire(helper,OUTPUT)==0,"Actual output finishes at zero");
     }
-    /** Rotate positions and native states together around the fixture centre. */
+    /** Independent measurement coordinates rotate around the fixture centre. */
     private record Lab(GameTestHelper helper,Rotation rotation){
         private BlockPos local(BlockPos pos){return pos.subtract(COMPARATOR).rotate(rotation).offset(COMPARATOR);}
         BlockPos absolutePos(BlockPos pos){return helper.absolutePos(local(pos));}
         net.minecraft.server.level.ServerLevel getLevel(){return helper.getLevel();}
-        void setBlock(BlockPos pos,BlockState state){helper.setBlock(local(pos),state.rotate(rotation));}
-        void setBlock(BlockPos pos,net.minecraft.world.level.block.Block block){setBlock(pos,block.defaultBlockState());}
-        void pullLever(BlockPos pos){helper.pullLever(local(pos));}
         void assertTrue(boolean condition,String message){helper.assertTrue(condition,"rotation="+rotation+": "+message);}
         void runAtTickTime(long tick,Runnable task){helper.runAtTickTime(tick,task);}
         void succeed(){helper.succeed();}

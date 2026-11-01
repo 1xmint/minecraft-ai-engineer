@@ -328,3 +328,11 @@ in the remaining three rotations; CI requires all144 transfer windows/432 stable
 samples across four orientations through the independent TypeScript replay.
 This is physical orientation coverage, not yet production construction or a
 latency claim. Local compilation only; the new rotated checks await fresh CI.
+
+A2 now extracts the139-cell/45-selector physical apparatus into AnalogDesign.
+Its immutable bounded geometry rotates native states and cells together and
+selects real levers for requested strengths; it grants no world authority.
+Native probes now place this actual canonical geometry in all four rotations,
+while independent measured port coordinates and expected stimuli remain in the
+proof. Invalid modes, levels and overflowing/vertical bounds have native rejection
+checks. It is not yet exposed through blueprint/catalog/server execution.
