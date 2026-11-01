@@ -100,12 +100,35 @@ public final class AnalogGameTests {
         rejects(helper,()->new AnalogDesign("compare",new BlockPos(0,-2048,0),0),"Complete apparatus must fit supported vertical bounds");
         helper.succeed();
     }
+    @GameTest public void analogIntentionCannotImportGeometryAuthorityOrAnotherIdentity(GameTestHelper helper){
+        var id=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
+        var project=java.util.UUID.fromString("9a71b5bd-2073-4c67-9cd8-60d66f43cb6a");
+        for(String mode:new String[]{"compare","subtract"})for(int rotation:new int[]{0,90,180,270}){
+            var intention=AnalogIntention.create(id,3,project,"test","minecraft:overworld",new BlockPos(24,2,24),rotation,mode);
+            var restored=AnalogIntention.read(intention.source(),"test","minecraft:overworld",project);
+            helper.assertTrue(restored.blueprint().equals(intention.blueprint()) && restored.blueprint().blocks().size()==139,"Exact canonical intent survives round trip without a functional claim");
+            var cells=restored.design().cells();var planned=restored.blueprint().blocks();
+            for(int index=0;index<cells.size();index++)helper.assertTrue(cells.get(index).pos().equals(planned.get(index).pos()) && cells.get(index).state().equals(planned.get(index).state()),"Saved intention and actual rotated native design must be identical");
+            var geometry=intention.source();geometry.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:chest[facing=north,type=single,waterlogged=false]");
+            rejects(helper,()->AnalogIntention.read(geometry,"test","minecraft:overworld",project),"Canonical provenance cannot admit inventories or changed geometry");
+            var authority=intention.source();authority.addProperty("ownerId",id.toString());rejects(helper,()->AnalogIntention.read(authority,"test","minecraft:overworld",project),"Imported intention cannot carry execution authority");
+            var pass=intention.source();pass.addProperty("verification","passed");rejects(helper,()->AnalogIntention.read(pass,"test","minecraft:overworld",project),"Saved intention cannot mint a functional pass");
+            var modeChange=intention.source();modeChange.getAsJsonObject("analog").addProperty("mode",mode.equals("compare")?"subtract":"compare");rejects(helper,()->AnalogIntention.read(modeChange,"test","minecraft:overworld",project),"A mode change cannot silently keep another mode's geometry and metadata");
+            rejects(helper,()->AnalogIntention.read(intention.source(),"other","minecraft:overworld",project),"Saved design cannot bind another world");
+            rejects(helper,()->AnalogIntention.read(intention.source(),"test","minecraft:the_nether",project),"Saved design cannot bind another dimension");
+            rejects(helper,()->AnalogIntention.read(intention.source(),"test","minecraft:overworld",id),"Saved design cannot bind another project");
+            var malformed=intention.source();malformed.addProperty("analog",true);rejects(helper,()->AnalogIntention.read(malformed,"test","minecraft:overworld",project),"Malformed contract fields reject explicitly");
+            var detached=intention.source();detached.getAsJsonArray("blocks").remove(0);helper.assertTrue(intention.source().getAsJsonArray("blocks").size()==139,"Exported geometry cannot mutate the accepted intention");
+        }
+        helper.succeed();
+    }
     private static int angle(Rotation rotation){return switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};}
 
     private static void modeProbe(GameTestHelper helper,ComparatorMode mode){modeProbe(helper,mode,Rotation.NONE);}
     private static void modeProbe(GameTestHelper nativeHelper,ComparatorMode mode,Rotation rotation){
         var helper=new Lab(nativeHelper,rotation);
-        build(helper,mode);
+        var intention=build(helper,mode);
+        System.out.println("ENGINEER_ANALOG_INTENTION "+intention.source());
         int[][] cases={{0,0,0},{1,0,0},{15,0,0},{8,3,0},{8,0,3},{8,8,0},
             {8,0,8},{8,9,0},{8,0,9},{8,3,7},{8,7,3},{3,15,0},{15,14,1},
             {15,1,14},{1,1,1},{0,15,15},{15,15,15},{0,0,0}};
@@ -144,10 +167,14 @@ public final class AnalogGameTests {
         return switch(bank){case 0->COMPARATOR.offset(index-15,0,0);case 1->COMPARATOR.offset(0,0,index-15);case 2->COMPARATOR.offset(0,0,index+1);default->throw new IllegalArgumentException("Unknown bank");};
     }
     private static BlockPos port(int bank){return slot(bank,bank==2?0:14);}
-    private static void build(Lab helper,ComparatorMode mode){
+    private static AnalogIntention build(Lab helper,ComparatorMode mode){
         var design=new AnalogDesign(mode.getSerializedName(),COMPARATOR,angle(helper.rotation()));
         helper.assertTrue(design.cells().size()==139 && design.selectors().size()==45,"Canonical analog workbench has its complete bounded physical apparatus");
-        for(var cell:design.cells())helper.helper().setBlock(cell.pos(),cell.state());
+        var identity=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
+        var intention=AnalogIntention.create(identity,1,identity,"test","minecraft:overworld",COMPARATOR,angle(helper.rotation()),mode.getSerializedName());
+        var restored=AnalogIntention.read(intention.source(),"test","minecraft:overworld",identity);
+        for(var block:restored.blueprint().blocks())helper.helper().setBlock(block.pos(),block.state());
+        return restored;
     }
     private static void drive(Lab helper,int[] requested){
         var design=new AnalogDesign("compare",COMPARATOR,angle(helper.rotation()));

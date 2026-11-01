@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { validateAnalogTrace } from "../../dist/companion/src/analog-trace.js";
+import { validateAnalogIntention } from "../../dist/companion/src/analog-intention.js";
 
 if (process.env.CI !== "true")
   throw new Error("Replay native observations on GitHub CI, not Josh's PC.");
@@ -32,11 +33,41 @@ const rotations = [
   "CLOCKWISE_180",
   "COUNTERCLOCKWISE_90",
 ];
+const lines = readFileSync(log, "utf8").split(/\r?\n/);
+const intentionKeys = new Set();
+const intentionMarker = "ENGINEER_ANALOG_INTENTION ";
+const nativeIdentity = "db1175eb-1559-4cca-a740-d63f224a4068";
+for (const line of lines) {
+  const start = line.indexOf(intentionMarker);
+  if (start < 0) continue;
+  const raw = JSON.parse(line.slice(start + intentionMarker.length).trim());
+  const value = validateAnalogIntention(raw, {
+    worldId: "test",
+    dimension: "minecraft:overworld",
+    projectId: nativeIdentity,
+  });
+  assert.equal(value.id, nativeIdentity);
+  assert.equal(value.revision, 1);
+  assert.deepEqual(value.anchor, { x: 24, y: 2, z: 24 });
+  assert.ok([0, 90, 180, 270].includes(value.rotation));
+  assert.ok(["compare", "subtract"].includes(value.analog.mode));
+  const key = `${value.analog.mode}/${value.rotation}`;
+  assert.ok(
+    !intentionKeys.has(key),
+    "Every built native analog intention appears exactly once",
+  );
+  intentionKeys.add(key);
+}
+assert.equal(
+  intentionKeys.size,
+  8,
+  "Both modes in all four rotations must use companion-readable canonical intention",
+);
 const groups = Object.fromEntries(
   rotations.map((rotation) => [rotation, { compare: [], subtract: [] }]),
 );
 const marker = "ENGINEER_ANALOG_TRANSFER ";
-for (const line of readFileSync(log, "utf8").split(/\r?\n/)) {
+for (const line of lines) {
   let start = line.indexOf(marker);
   let rotation = "NONE";
   let payload;
@@ -75,6 +106,7 @@ for (const rotation of rotations)
 console.log(
   JSON.stringify({
     kind: "native-analog-cross-runtime-replay",
+    canonicalIntentions: intentionKeys.size,
     windows: 144,
     stableSamples: 432,
     modes: ["compare", "subtract"],

@@ -355,3 +355,29 @@ without restoring entity NBT. Diagnosis can observe that exact canonical entity
 but cannot repair it by restoring arbitrary before-BE data. Pinned26.3 bytecode
 shows only dynamic cached OutputSignal; it is not persisted as project intent or
 used alone as functional proof. No current runtime protection has changed.
+
+A2 adds AnalogIntention: a strict identity-bound canonical139-block intention
+with stages/materials/selector ports and an explicit settled numeric contract.
+Reading regenerates and compares the entire source; world/dimension/project
+mismatches, changed modes/geometry, authority fields and imported pass claims
+reject. Native probes now place its actual round-tripped blueprint, independently
+measure the rotated port coordinates and replay numeric evidence. It is still
+internal: generic Blueprint parsing, model/catalog admission and world execution
+remain closed until the production recovery and companion paths are ready.
+New proofs run in GitHub CI only; local Java compilation is the scoped check.
+
+Source33f2e3c passed all five required checks in CI41326285930. Dedicated
+job124906792163 completed successfully17m19s, including real companion replacements,
+Alice/Bob/denied Eve/text-only Eve and saved-world restart. The watched session
+74456 is terminal success. All121 native tests and36 measured transfer windows
+are confirmed in the Fabric artifact; the next push can proceed without
+cancelling that proof. New canonical intention/orientation checks remain pending.
+
+GPT-6-Luna/high supplied only companion/src/analog-intention.ts from its isolated
+worktree; parent reviewed it and owns all proofs. It matches the Java intention
+without widening shared Blueprint/Plan schemas, returns detached frozen data and
+compares bounded canonical shape including sparse-array rejection. Parent type
+check, Java compile, scoped format/syntax and diff checks pass. No behavioral tests
+ran locally. CI now checks eight actual built native intentions through this
+companion decoder as well as144 numeric windows/432 stable samples. These new
+checks are pending the next run; production comparator integration is incomplete.
