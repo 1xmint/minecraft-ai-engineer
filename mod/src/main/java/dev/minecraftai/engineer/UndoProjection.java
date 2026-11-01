@@ -14,6 +14,11 @@ final class UndoProjection {
     static Map<BlockPos,BlockState> project(List<EngineeringSession.Change> inverse,
             Function<BlockPos,BlockState> current,Predicate<EngineeringSession.Change> mayAlreadyBeRestored,
             BiConsumer<EngineeringSession.Change,View> validateRestoration) {
+        return project(inverse,current,mayAlreadyBeRestored,validateRestoration,UndoProjection::matches);
+    }
+    static Map<BlockPos,BlockState> project(List<EngineeringSession.Change> inverse,
+            Function<BlockPos,BlockState> current,Predicate<EngineeringSession.Change> mayAlreadyBeRestored,
+            BiConsumer<EngineeringSession.Change,View> validateRestoration,BiPredicate<EngineeringSession.Change,BlockState> matching) {
         if(inverse.size()>8192)throw new IllegalStateException("Undo projection exceeds its bounded operation");
         Map<BlockPos,BlockState> projected=new LinkedHashMap<>();
         View view=new View() {
@@ -23,7 +28,7 @@ final class UndoProjection {
         for(var change:inverse) {
             BlockPos pos=change.pos().immutable();BlockState actual=view.get(pos);
             if(mayAlreadyBeRestored.test(change) && actual.equals(change.before())){projected.put(pos,actual);continue;}
-            if(!matches(change,actual))throw new IllegalStateException("Undo blocked by later edit at "+pos.toShortString());
+            if(!matching.test(change,actual))throw new IllegalStateException("Undo blocked by later edit at "+pos.toShortString());
             validateRestoration.accept(change,view);
             projected.put(pos,restored(change.before(),actual));
         }
@@ -43,7 +48,7 @@ final class UndoProjection {
     }
     /** Attachment dependencies in the supported engineering block library. */
     static BlockPos support(BlockState state,BlockPos pos) {
-        if(state.is(Blocks.REPEATER))return pos.below();
+        if(state.is(Blocks.REPEATER) || state.is(Blocks.COMPARATOR) || state.is(Blocks.REDSTONE_WIRE))return pos.below();
         if(state.is(Blocks.REDSTONE_WALL_TORCH))return pos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite());
         if(state.is(Blocks.LEVER))return switch(state.getValue(BlockStateProperties.ATTACH_FACE)) {
             case FLOOR -> pos.below();case CEILING -> pos.above();

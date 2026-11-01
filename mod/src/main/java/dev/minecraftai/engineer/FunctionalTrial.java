@@ -23,6 +23,7 @@ final class FunctionalTrial {
     private SettledTrace settled;
     private TransitionTrace transition;
     private PulseTrace pulse;
+    private AnalogTrace analog;
     private boolean pulseOriginal;
     private JsonObject generatedRow;
     private long startedGameTick,phaseStart,lastBaseline=-1;
@@ -63,8 +64,8 @@ final class FunctionalTrial {
         var accepted=GeneratedBlueprint.isGenerated(s.executionBlueprint())?GeneratedBlueprint.behavior(s.executionBlueprint()):null;
         generatedBehavior=accepted instanceof BehaviorSpec buffer?buffer:null;
         truthBehavior=accepted instanceof TruthTableSpec truth?truth:null;settled=null;
-        generatedRow=null;transition=null;pulse=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
-        s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+(contract.pulse()!=null?" pulse test running":" truth table running");
+        generatedRow=null;transition=null;pulse=null;analog=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
+        s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+(contract.analogMode()!=null?" settled numeric suite running":contract.pulse()!=null?" pulse test running":" truth table running");
         s.save();s.checkpoint();
         s.tell(s.detail);
     }
@@ -73,6 +74,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(contract.analogMode()!=null){tickAnalog();return;}
             if(contract.pulse()!=null){tickPulse();return;}
             if(truthBehavior!=null){tickTruth();return;}
             if(generatedBehavior!=null){tickGenerated();return;}
@@ -94,6 +96,36 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickAnalog(){
+        var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0){if(s.testTick<contract.settleTicks())return;beginAnalog(now,0);return;}
+        long elapsed=now-phaseStart;
+        if(elapsed<8)return;
+        if(elapsed>10)throw new IllegalStateException("inconclusive: analog game-tick window missed");
+        var design=AnalogIntention.validated(s.executionBlueprint()).design();
+        var state=s.level().getBlockState(design.comparator());
+        int[] measured=new int[3];for(int bank=0;bank<3;bank++)measured[bank]=analogWire(design.input(bank));
+        int output=analogWire(design.output());
+        analog.sample(now,Math.toIntExact(elapsed),state.getValue(net.minecraft.world.level.block.ComparatorBlock.MODE).getSerializedName(),measured,output);
+        generatedRow.add("analog",analog.json());generatedRow.addProperty("tick",now);generatedRow.addProperty("elapsedTicks",elapsed);var out=new JsonObject();out.addProperty("output",output>0);generatedRow.add("outputs",out);
+        s.save();
+        if(analog.verdict().equals("failed") || analog.verdict().equals("inconclusive"))throw new IllegalStateException(analog.failure());
+        if(!analog.complete())return;
+        AnalogEvidence.validate(evidence,contract.analogMode(),false);
+        if(vector+1<AnalogEvidence.count()){beginAnalog(now,vector+1);return;}
+        AnalogEvidence.validate(evidence,contract.analogMode(),true);int total=s.testTick;
+        restore();if(pending())throw new IllegalStateException("Analog selector restoration incomplete; no pass recorded");
+        s.verified="passed:"+contract.template()+":"+evidence.size()+" numeric cases@"+total;
+        s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString()).lastPassedScope=evidenceScope.deepCopy();
+        s.state="COMPLETED";s.detail="Actual settled analog suite passed all66 numeric cases; all original selector states restored. Latency was not measured.";
+        s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
+    }
+    private int analogWire(BlockPos pos){var state=session.level().getBlockState(pos);if(!state.is(Blocks.REDSTONE_WIRE))throw new IllegalStateException("Analog measurement wire changed");return state.getValue(BlockStateProperties.POWER);}
+    private void beginAnalog(long now,int index){
+        vector=index;phaseStart=now;var design=AnalogIntention.validated(session.executionBlueprint()).design();var values=AnalogEvidence.controls(design,AnalogEvidence.requested(index));
+        apply(values);analog=new AnalogTrace(contract.analogMode(),AnalogEvidence.requested(index),now);
+        generatedRow=new JsonObject();generatedRow.addProperty("case",index);generatedRow.addProperty("tick",now);generatedRow.addProperty("elapsedTicks",0);var in=new JsonObject();values.forEach(in::addProperty);generatedRow.add("inputs",in);var out=new JsonObject();out.addProperty("output",false);generatedRow.add("outputs",out);generatedRow.add("analog",analog.json());evidence.add(generatedRow);session.save();
     }
     private void tickPulse(){
         var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
@@ -373,7 +405,7 @@ final class FunctionalTrial {
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
-        validateCases(evidence);
+        validateCases(evidence,session.blueprint!=null && AnalogIntention.describes(session.blueprint.source())?45:32);
         evidenceScope=null;evidenceBlueprint=null;
         if(json.has("functionalScope")) {
             evidenceScope=validateHistoricalScope(json.getAsJsonObject("functionalScope"));
@@ -393,6 +425,7 @@ final class FunctionalTrial {
             if(session.blueprint==null)throw new IllegalStateException("Legacy functional evidence has no intended blueprint");
         }
         if(session.blueprint!=null && GeneratedBlueprint.isGenerated(session.blueprint))validateGeneratedEvidence(evidence,GeneratedBlueprint.behavior(session.blueprint),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
+        if(session.blueprint!=null && AnalogIntention.describes(session.executionBlueprint().source()))AnalogEvidence.validate(evidence,AnalogIntention.validated(session.executionBlueprint()).design().mode(),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         if(session.blueprint!=null && !ShutterDesign.describes(session.blueprint.source()) && EngineeringContracts.contract(session.executionBlueprint()).pulse()!=null)PulseEvidence.validate(evidence,session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         if(session.blueprint!=null && ShutterDesign.describes(session.blueprint.source()) && (!evidence.isEmpty() || shutterOriginal!=null))ShutterEvidence.validate(evidence,ShutterDesign.read(session.blueprint.source()),shutterOriginal,session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         JsonArray entries=json.has("testInputs")?json.getAsJsonArray("testInputs"):null;
@@ -409,7 +442,7 @@ final class FunctionalTrial {
             BlockState original=Blueprint.state(json.get("testOriginal").getAsString()),last=Blueprint.state(json.get("testLast").getAsString());
             putLoaded(new Input(port.name(),port.pos(),original,last,last.cycle(BlockStateProperties.POWERED),true));
         }else{
-            if(entries.size()>32)throw new IllegalStateException("Too many test inputs");
+            if(entries.size()>(contract.analogMode()!=null?45:32))throw new IllegalStateException("Too many test inputs");
             for(var value:entries){var entry=value.getAsJsonObject();putLoaded(new Input(entry.get("name").getAsString(),Blueprint.pos(entry.getAsJsonObject("pos")),Blueprint.state(entry.get("original").getAsString()),Blueprint.state(entry.get("last").getAsString()),Blueprint.state(entry.get("before").getAsString()),entry.get("pending").getAsBoolean()));}
         }
     }
@@ -441,14 +474,14 @@ final class FunctionalTrial {
         String expected=version==1?ComponentAssignments.legacyBasis(blueprint,component):ComponentAssignments.basis(blueprint,component);
         if(!expected.equals(scope.get("basis").getAsString()))throw new IllegalStateException("Functional evidence basis disagrees with its intended component");
     }
-    private static void validateCases(JsonArray cases) {
+    private static void validateCases(JsonArray cases,int inputLimit) {
         for(JsonElement value:cases) {
             if(!value.isJsonObject())throw new IllegalStateException("Invalid functional evidence case");JsonObject row=value.getAsJsonObject();
             if(!row.has("case") || !row.has("tick") || !row.has("elapsedTicks") || !row.has("inputs") || !row.has("outputs")
                     || !row.get("inputs").isJsonObject() || !row.get("outputs").isJsonObject())throw new IllegalStateException("Invalid functional evidence case fields");
             try {
                 if(row.get("case").getAsInt()<0 || row.get("tick").getAsLong()<0 || row.get("elapsedTicks").getAsInt()<0
-                        || row.getAsJsonObject("inputs").size()>32 || row.getAsJsonObject("outputs").size()>32)throw new IllegalStateException("Invalid functional evidence case values");
+                        || row.getAsJsonObject("inputs").size()>inputLimit || row.getAsJsonObject("outputs").size()>32)throw new IllegalStateException("Invalid functional evidence case values");
                 for(JsonObject ports:List.of(row.getAsJsonObject("inputs"),row.getAsJsonObject("outputs")))for(var entry:ports.entrySet())
                     if(entry.getKey().length()>128 || !entry.getValue().isJsonPrimitive() || !entry.getValue().getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid functional evidence port value");
             }catch(RuntimeException bad){if(bad instanceof IllegalStateException e)throw e;throw new IllegalStateException("Invalid functional evidence case values",bad);}

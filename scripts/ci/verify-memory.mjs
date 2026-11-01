@@ -1,3 +1,5 @@
+import { validateAnalogEvidence } from "../../dist/companion/src/analog-evidence.js";
+import { validateAnalogIntention } from "../../dist/companion/src/analog-intention.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
@@ -403,6 +405,18 @@ try {
   }
   if (process.env.MCE_LIVE_ACCEPTANCE !== "true") {
     for (const marker of [
+      "analog-repair.done",
+      "analog-viewer.done",
+      "analog-revoked.done",
+      "analog-conflict.done",
+      "analog-shared.done",
+      "analog-restarted.done",
+      "analog-restart-undo.done",
+      "analog-preview.done",
+      "analog-interruption.done",
+      "analog-functional.done",
+      "analog-restoration.done",
+      "analog-undo.done",
       "observer-functional.done",
       "observer-interrupted.done",
       "observer-recovered.done",
@@ -503,6 +517,131 @@ try {
     assert.equal(observed.testScope.basis, observed.componentBasis);
     assert.deepEqual(observed.testInputs, []);
     validatePulseEvidence(observed.testEvidence, true);
+    const analogProject = readFileSync(
+      `${coordination}/analog-functional-project`,
+      "utf8",
+    ).trim();
+    const analogStarts = db
+      .prepare(
+        "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+      )
+      .get(server.serverId, analogProject);
+    assert.equal(
+      analogStarts.count,
+      5,
+      "Only five explicitly requested analog action interpretations start; setup, lessons, stop and confirmations use no extra inference",
+    );
+    const analogReplies = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='interpretation-reply' ORDER BY id",
+      )
+      .all(server.serverId, analogProject)
+      .map((row) => JSON.parse(row.document));
+    assert.deepEqual(
+      analogReplies.map((row) => row.reply.action),
+      ["build", "test", "test", "undo", "undo"],
+    );
+    assert.ok(
+      analogReplies.every(
+        (row) =>
+          row.worldEvidence === "not-inspected" &&
+          row.reply.componentId ===
+            (row.reply.action === "undo" ? null : "root"),
+      ),
+    );
+    const analogPasses = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:comparator-compare:%' ORDER BY id",
+      )
+      .all(server.serverId, analogProject);
+    assert.ok(
+      analogPasses.length >= 1,
+      "Actual guarded numeric trial must reach durable SQLite memory",
+    );
+    for (const stored of analogPasses) {
+      const report = JSON.parse(stored.document),
+        observed = report.checkpoint.observed,
+        scope = observed.testScope;
+      const raw = JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, analogProject, report.context.projectRevision)
+          .document,
+      );
+      const intended = validateAnalogIntention(raw, {
+        worldId: server.worldId,
+        dimension: raw.dimension,
+        projectId: analogProject,
+      });
+      assert.equal(intended.analog.mode, "compare");
+      assert.equal(scope.projectId, analogProject);
+      assert.equal(scope.blueprintId, intended.id);
+      assert.equal(scope.blueprintRevision, intended.revision);
+      assert.equal(scope.component, "root");
+      assert.equal(scope.basis, observed.componentBasis);
+      assert.equal(scope.basisVersion, observed.componentBasisVersion);
+      assert.equal(observed.controller, report.context.actorId);
+      assert.deepEqual(observed.testInputs, []);
+      validateAnalogEvidence(observed.testEvidence, "compare", true);
+    }
+    const sharedAnalog = readFileSync(
+      `${coordination}/analog-shared-project`,
+      "utf8",
+    ).trim();
+    const sharedPasses = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:comparator-subtract:%' ORDER BY id",
+      )
+      .all(server.serverId, sharedAnalog);
+    assert.ok(
+      sharedPasses.length >= 2,
+      "Shared subtract workbench is tested before and after actual saved-server restart",
+    );
+    const analogEpochs = new Set();
+    for (const stored of sharedPasses) {
+      const report = JSON.parse(stored.document),
+        observed = report.checkpoint.observed,
+        scope = observed.testScope;
+      const raw = JSON.parse(
+        db
+          .prepare(
+            "SELECT document FROM gateway_blueprints WHERE server_id=? AND project_id=? AND revision=?",
+          )
+          .get(server.serverId, sharedAnalog, report.context.projectRevision)
+          .document,
+      );
+      const intended = validateAnalogIntention(raw, {
+        worldId: server.worldId,
+        dimension: raw.dimension,
+        projectId: sharedAnalog,
+      });
+      assert.equal(intended.analog.mode, "subtract");
+      assert.equal(scope.projectId, sharedAnalog);
+      assert.equal(scope.blueprintId, intended.id);
+      assert.equal(scope.blueprintRevision, intended.revision);
+      assert.equal(scope.component, "root");
+      assert.equal(scope.basis, observed.componentBasis);
+      assert.equal(scope.basisVersion, observed.componentBasisVersion);
+      assert.equal(observed.controller, report.context.actorId);
+      assert.deepEqual(observed.testInputs, []);
+      validateAnalogEvidence(observed.testEvidence, "subtract", true);
+      analogEpochs.add(report.context.serverEpoch);
+    }
+    assert.ok(
+      analogEpochs.size >= 2,
+      "A restored historical analog pass cannot substitute for fresh numeric observations in a new server epoch",
+    );
+    assert.equal(
+      db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='planning-start'",
+        )
+        .get(server.serverId, sharedAnalog).count,
+      0,
+      "Shared analog guard/restart fixture requests no inference",
+    );
     const conversations = [
       {
         file: "conversation-actions-project",

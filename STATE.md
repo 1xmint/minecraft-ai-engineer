@@ -1,294 +1,235 @@
 # Now
 
 2026-11-01. Active goal: **complete all milestones**: the entire Phase1 Minecraft
-AI Engineer and all six Phase2 features. Requirements: `docs/product-brief.md`.
-Public repo: https://github.com/1xmint/minecraft-ai-engineer. Overall goal incomplete.
+AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
+incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: task work/`schematic-review`, branch **fix/schematic-boundaries**,
-reviewing Claude's independent PR34 from merged main **d9bde62**. Phase23 shipped
-in PR32: source1561555/all5 CI41276307352, all117 required native tests and actual
-conversation setup/preview proof. Phase24 comparator work continues separately in
-PR33 at sourced43fdf7, CI41332437714. Overall goal remains incomplete.
+Current worktree: task `work/analog-comparators`, branch
+`phase/24-analog-comparators`. Runtime source **cc0cbed / CI41360150254** passed four checks and every new analog
+marker, then reached the CI process cap during the remaining approval/restart tail.
+Local **9f96d81** adds prepared docs and is backed up at
+`origin/backup/analog-rotations`; do not push docs merely to cancel that live run.
+Main is **885748e** (merged PR34, schematic file foundation). The downloadable v0.1.0-alpha.1 is still
+the older solo alpha; source capabilities are broader than that release.
 
-Phase22 shipped in PR31, merged2026-11-01T04:55:25Z. Exact sourcebd39067 passed all5
-CI41273958762, all116 native tests and12 conversation markers, including actual
-expiry, same-server reconnect and saved-server restart. Strict SQLite10/17 starts
-and actual8/10-block traces passed. Native flow13m20s; screenshot inspected and
-archived in docs/images/conversation-tested.png. Final evidence: task work/
-`conversation-final-41273958762`. No SDK calls or local tests for this slice.
+Claude's schematic foundation **PR34** merged as **885748e** on
+2026-11-01T23:24:42Z. Exact source **55ca74c** passed all five checks in
+**CI41360384747**, all117 native tests and177 companion tests (176 passed, one
+existing skip), including21 schematic tests and full dedicated/restart proof.
+Review worktree: `work/schematic-review`, branch `fix/schematic-boundaries`.
+The main worktree is clean and fast-forwarded. This branch is merging that main
+with prepared comparator docs; source files merged cleanly, and this note resolves
+the sole conflict by retaining both outcomes. Complete the combined-source CI
+before merging PR33. Full in-game schematic integration is still pending.
 
-Phase21 observer engineering is complete in merged PR30:
-https://github.com/1xmint/minecraft-ai-engineer/pull/30. Merged2026-11-01T03:28:20Z.
-Exact implementation4d4a1de passed all five checks in CI41268319917, all113 native
-Minecraft tests, the full dedicated flow, all nine observer markers and strict
-SQLite replay for original input states, actual restart and the composed leaf.
-Read-only root/shared lessons, permissions, revocation, player conflicts, input
-restoration, guarded undo and retained stale evidence passed. Native screenshot
-was inspected and archived in `docs/images/observer-tested.png`. Final evidence:
-task work/`observer-final-41268319917`; earlier native fixtures remain archived.
-The composed metadata drift was fixed without weakening canonical validation.
+Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
+PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
+Gradle `--max-workers=1`. Preserve pins and push progress. Memory only in AGENTS.md
+and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
 
-The published `v0.1.0-alpha.1` remains the older single-player alpha. The merged
-source now supports conversational engineering; conversational setup is being
-built here. Overall goal remains incomplete, including all six Phase2 features.
+## Current phase24 Outcomes (E2/E3)
 
-Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
-authorized. Tests run on GitHub, never on this PC. Locally use scoped compile,
-type, formatting and syntax checks; Gradle `--max-workers=1`. Keep memory only in
-AGENTS.md and STATE.md. Historical development detail is preserved in Git.
+- A1: physical selectors produce independent strengths0..15. Proof: actual native
+  calibration279 samples; compare/subtract boundary probes in four rotations.
+- A2: players preview/build canonical compare/subtract workbenches. Proof: strict
+  identity-bound139-cell/45-selector intention, rotated native placement, fitting
+  and rejection checks, guarded creative construction and player-preserving undo.
+- A3: real numeric tests restore original controls and survive interruption,
+  permission changes, player conflicts and restart. Proof:66 declared cases per
+  mode, samples at actual elapsed8/9/10, strict Java/TS replay, scoped SQLite
+  reports, restored45 original controls and fresh evidence in a new server epoch.
+- A4: normal chat, lessons/materials, model/catalog routing and shared views work.
+  Proof: actual chat/private approval flow, denied viewer, revoked editor, static
+  repair, real server restart, native screenshot and exact interpretation counts.
 
-## Full remaining roadmap
+A1 and the canonical/native foundation are proved. A2/A3/A4 production integration
+is implemented but its complete dedicated/restart/SQLite proof is still pending.
+No settled transfer claims latency, all4096 combinations, or arbitrary analog
+wiring. Component composition does not yet accept analog leaves.
 
-Josh clarified that normal interaction must be talking naturally to the bot,
-not typing lesson/setup commands. `/engineer teach root` in a fixture selects a
-personal lesson but does not establish the finished experience. After completing
-the observer proof, prioritize a conversational entry point, obvious read-only
-lesson context, clarification for ambiguity and natural explicit confirmation
-that retains all execution guards. Commands stay available as fallback. This
-serves E1/E4 and precedes more component expansion; comparators remain required.
+Current implementation:
 
-- E2: broader electrical/mechanical engineering: comparators, analog
-  strength, actual connections, larger piston mechanisms and composed systems.
-  Geometry and settled endpoints never substitute for functional tick proof.
-- E1: broader natural references, durable rationale/summaries and project retrieval
-  beyond literal saved-intention search. The bounded Phase20 action flow is done.
-- E3: richer connection/timing/interference/inconclusive diagnosis and repairs
-  beyond supported canonical designs; audit mechanical pose overlays for clarity.
-- E4: complete signed-in preview -> human functional section -> AI remainder ->
-  interrupt/change/resume -> actual test -> service/game restart -> later explanation
-  and visual proof. Scripted fixtures do not establish this entire human experience.
-- Phase2 features remain incomplete: voice conversation; physical NPC; genuine survival gathering
-  and placement; schematic import/export; measured size/resources/latency/reliability
-  optimization; multiple coordinated independent builders.
-- Multiplayer release/package/setup, production Mojang authentication and provider
-  eligibility evidence. Synthetic offline players do not prove production login.
+- AnalogDesign/AnalogIntention regenerate exact bounded geometry and metadata.
+  Compare passes rear when rear>=both sides; subtract clamps rear-strongest side
+  at zero. Materials:47 stone,45 levers,46 dust,1 comparator. Base workspace17x3x31;
+  rotated workspace31x3x17. No inventories or forced wire POWER generate signals.
+- AnalogTrace and AnalogEvidence strictly replay separate intended mode/stimuli,
+  real clocks and bounded data. Missing ticks stay inconclusive; wrong mode/input/
+  output fails; unknown fields/authority/false pass claims reject. Suite ownership,
+  project/revision/component/basis and epoch remain separately server-authoritative.
+- FunctionalTrial uses existing per-input WAL/restoration and permission checks.
+  All45 original selector states must restore before pass. Recovery restores facts,
+  never a callback/lease/pass. Canonical comparator entity handling admits only
+  its exact cell/mode/facing/native backing type; no entity NBT/cached OutputSignal
+  is imported. Journal creation requires air-before/exact canonical-after, checked
+  before save and against captured operation on load. Containers remain protected.
+- Normal local previews: `show me a comparator` / `show me a subtracting comparator`.
+  High-level planning offers both modes with delay1 and fitting rotations. Lessons
+  distinguish intention, snapshot and stored test evidence. Generic static
+  diagnosis/repair handles ordinary missing wiring using fresh existing guards;
+  an existing wrong-mode comparator or replacement inventory stays protected.
+- Undo preserves player comparator/dust support. Initial preflight stays strict.
+  After durable undo intent, owned canonical wires use pinned native read-only
+  connection calculation to recognize arms changed by earlier owned removals.
+  Manual dot changes still block. Projected native connection checks protect
+  non-owned neighboring dust. New WireConnectionMixin exposes calculation only.
+- Prepared docs: docs/comparators.md, updated source overview/mod/acceptance guides.
 
-## Proven foundation
+## Phase24 evidence and immediate next actions
 
-- Dedicated Fabric server owns identity, access, projects, reservations and world
-  mutations. One private localhost companion owns durable SQLite project memory.
-  Optional authorized client overlays; core commands work with text-only clients.
-- Creative execution, per-player VIEW/EDIT/BUILD/UNDO/PLAN, shared personal lessons,
-  conflict pauses, interruption/reconciliation/restart, operation-bound undo and
-  actual electrical functional evidence. No restored lease or permission from disk.
-- Canonical electrical catalog: signal lamp, NOT, OR. Generated timed buffers and
-  up-to-four-input Boolean logic have separate behavior/geometry confirmation and
-  actual per-tick game proof. Generated geometry and model replies are untrusted.
-- Canonical sticky shutter has full read isolation, motion tickets/journals,
-  guarded construction/test/recovery/manual release, settled undo and static repair.
-  Keep moving-block semantics separate from the generic electrical allowlist.
-- Textured translucent preview, literal project search, intended lesson/timing/
-  materials explanations and read-only grounded discussion/owner notes.
+- **0697462 / CI41320293103:** all120 native tests, calibration279 and boundary
+  measurements54+54. Exact historical data in
+  tests/fixtures/analog-native-probe.json is feasibility data only, not live
+  authority, a saved production pass or fresh inference. Pinned DiodeBlock reads
+  pos.relative(FACING): WEST rear/EAST output is correct; initial challenger
+  opposite-facing suggestion was corrected against the pinned bytecode.
+- **384a4b4 / CI41321820187:** all five checks/all120 native passed after inherited
+  chat fixture receipt fix. **33f2e3c / CI41326285930:** all five/all121 native and
+  actual36 transfer windows through Java/TS passed; dedicated17m19s.
+- **37b1bfa / CI41328039790:** all five/all129 native; eight actual canonical
+  intentions and144 transfer windows/432 stable samples across four rotations.
+  Evidence: task work/analog-intention-proof-41328039790.
+- **b2bd6cb / CI41329949003:** four checks/all135 native passed, including both
+  actual66-case native suites. Real dedicated chat built139 cells, interrupted,
+  restored original-on/off controls and passed66 production cases. Undo then
+  exposed native dust-arm changes; Bob later timed out. Evidence:
+  work/analog-runtime-failure-41329949003; native screenshot inspected there.
+- **d43fdf7 / CI41332437714:** four checks/all136 native passed, including dust
+  undo/dot-edit reproduction and132 suite cases plus144 boundary windows. Real
+  dedicated compare flow now completed full139-cell undo; viewer/revocation/
+  conflict/static repair markers passed. Shared test assertion raced its queued
+  command and saw the prior repair's COMPLETED/untested state. Evidence:
+  work/analog-shared-failure-41332437714 and work/analog-wire-proof-41332437714.
+- **cc0cbed / CI41360150254:** fixture now observes actual VERIFYING/testTick
+  before accepting completion in all three full analog waits. No production
+  behavior or pass criterion changed. All13 analog markers passed, including shared
+  repair, saved-server fresh retest and latest-operation undo. The process cap
+  expired later during the existing pending-stop/restart tail. Full job/SQLite
+  verification is still required. Evidence: work/analog-trial-start-proof-41360150254.
+  Local client compile passed.
 
-Mechanical Phase19 PR28 merged5b29a9c; final sourcee881d73/all5 CI41151376521,
-all103 native tests, nine repair markers, six real server boots and strict SQLite
-replay of owner/shared repaired trials. Evidence: task work/
-`mechanical-repair-shared-proof-41151376521`.
+Next: inspect the same live handles to terminal (observation timeout is not
+failure). Validate every analog marker and actual SQLite source/scope/actor/
+case replay, including at least two subtract epochs. Inspect/archive fresh native
+screenshot. Fix failures without weakening proof. Finish docs and merge only the
+exact green combined head; then update this note with the shipped outcomes.
 
-Phase20 PR29 mergedcaa7de6; final source0f78de1/all5 CI41223355084. Foundation
-CI41221636372 on8214fbd and native proof41219014537 establish all106 required
-Minecraft tests, all13 natural markers and exact SQLite dispatch/reply replay.
-Evidence: task work/`natural-request-proof-41219014537`.
+Dedicated fixture explicitly covers compare chat build/test/stop/restoration/
+blocked-edit undo/full owned undo; subtract viewer denial/editor revocation/
+owner recovery/player conflict/missing-wire repair/test/actual saved-server restart/
+fresh test/latest-repair-only undo. Bob follows actual phase receipts. Fixed added
+native trials justify CI-only client23min/harness1440sec/job30min budgets;
+production deadlines, quotas and permissions are unchanged. Fixed provider replies
+are routing fixtures, not additional SDK inference or complete human acceptance.
 
-Fresh signed-in natural acceptance41221809497 and response41222705526 passed on
-8214fbd after all five checks were green. Exactly one gpt-6-luna/SDK0.164.0 call:
-11519 input, 0 cached, 73 output. It selected diagnose/root, cited project and
-component:root, and made no observed-world claim. Actual native diagnosis, denied
-editor model admission, companion replacement, saved-server recovery and SQLite
-proof passed. Native flow10m28s. Screenshot inspected and archived in
-`docs/images/natural-diagnosis.png`; exact public synthetic data is in
-`tests/fixtures/live-natural.json`. Source archive regression rejects expiry/rebinding.
-Evidence: task work/`natural-live-proof-41221809497`.
+GPT-6-Luna/high supplied only standalone TS intention/evidence modules in isolated
+worktrees. Parent owns proofs and reviewed sparse-array fixes. Focused independent
+reviews found the concrete player-support/neighbor-dust hazards and validated the
+narrow entity and native-connection boundaries. No broad review loop is needed.
 
-Natural request digest:
-`c5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9`.
-Result digest:
-`658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9`.
-Private exclusive started/untrusted/response receipts remain local and consumed.
-All prior structural/Boolean/discussion receipts are also consumed. Never replay
-archival replies as fresh inference or restore authority from them. No further
-model call is needed to prove the shipped Phase20 slice.
+## Parallel schematic work
 
-## Decisions and current boundaries
+PR34 is a standalone Sponge v3 .schem/neutral-geometry codec and CLI, separate from
+world/server blueprints. Dimensions/offsets/DataVersion/block IDs/properties and
+supported untrusted metadata survive. Entity payloads reject; explicit optional
+block-entity/biome discards are reported. Imports carry no owner/grants/pass.
+No in-game import/export, DataVersion upgrade or registry validation is claimed.
 
-- Multiplayer-first dedicated server, single-player-compatible logical core. World
-  state is authoritative; keep intended, observed and verified facts separate.
-- One local operator-owned Codex service using ChatGPT sign-in, no separately billed
-  API, API keys, hosting purchase or credential sharing. General shared-subscription
-  eligibility remains unresolved; model admission stays configured owner/operator-only.
-- Model interpretation is a strict advertised action/target choice. Server-generated
-  summaries and one-use `/engineer act` govern inferred work/additional AI planning.
-  Original player words remain separate from model prose. Exact stop stays immediate.
-- Pending reasoning/consent binds real player/connection, epoch, project/revision,
-  grants, component and personal lesson. Automatic lesson progress waits during it;
-  explicit lesson changes invalidate it. Recent intentions expire in five minutes
-  and carry no result or authority. Durable requirements are literal owner notes.
-- New shutter previews use canonical mechanical validation; built mechanical work
-  cannot enter electrical repeater-delay revision. Preview imports no motion control.
-- Settled Boolean vectors do not prove an observer pulse. Shipped observer support
-  uses its separate canonical temporal contract and consecutive native tick traces.
-- Pinned runtime: Minecraft26.3, Java25, Fabric Loader0.20.1/API0.165.0+26.3,
-  Loom1.17.21, Gradle9.6, Node24.14, TypeScript7.0.2, SDK/CLI0.164.0. Preserve pins
-  unless a task needs a change; unrelated Dependabot PR6 is not this work.
+- Claude source **7ec6659 / CI41327833280:** all five checks;18 independent-format,
+  rejection and CLI tests passed. Production uses bounded custom NBT; pinned
+  prismarine-nbt2.8.0 is a dev-only oracle. Fixtures/license sources documented.
+- Parent **d09295d / CI41333273366:** added input-alias protection before output
+  truncation, actual bounded reads even if input grows, and sparse-array rejection.
+  Three new boundary tests passed with four checks. Dedicated reproduced inherited
+  ordinary-chat send/disconnect race, unrelated to codec behavior.
+- Parent **55ca74c / all5 CI41360384747, merged PR34/885748e:** applies the proved384a4b4 sender/
+  recipient receipt handshake and required marker. No production chat, privacy,
+  timeout or quota changes. Scoped compile/type/format/syntax checks pass. A
+  focused GPT-6-Luna/high file-preservation review found no concrete overwrite or
+  byte-bound gap. All21 schematic tests and full dedicated/restart proof passed; the file foundation is shipped.
 
-## Phase21 shipped proof (serves E2/E3)
+Josh requested Claude's next goal. Reserved offered lane: read-only analysis and
+geometry diff in **companion/src/schematic-analysis/**,
+_*tests/schematic-analysis*.test.ts_*, **docs/schematic-analysis.md**, branch
+claude/schematic-analysis, own worktree. Base on updated PR34 or main after merge.
+No manifests, existing codec, core/server/auth/storage/CI/memory edits. Exact raw
+block/state counts are geometry metrics, not item costs or functional optimization.
+Diff applies offsets, rejects DataVersion mismatch, distinguishes outside-volume
+from air, bounds details with exact totals and never iterates vast empty gaps.
+CLI consumes neutral JSON and writes reports to stdout only. No world authority,
+paid services, keys or model calls. Claude delivers a draft PR; Codex integrates.
 
-Observer support is a canonical temporal primitive, not an expanded generated
-block allowlist. Its Pulse contract has zero settled Boolean vectors.
+## Shipped foundation and decisions
 
-- O1 passed: actual delay2, width2 and lamp release4 in all four horizontal
-  rotations, both lever edges, quiet periods and wrong-facing/unrelated-update
-  negatives. Native consecutive tick traces round-trip through strict Java and
-  TypeScript replay; gaps, duplicates and false off-endpoint passes reject.
-- O2 passed: canonical creative construction under existing loaded-world,
-  permission and reservation guards; no preview authority, a player support
-  preserved, actual conflict/revocation pause and guarded assistant-only undo.
-- O3 passed: actual baseline/edge evidence, exact initially-off/on input
-  restoration, fresh owner reconciliation, stale retained evidence after real
-  restart, fresh retest and no restored callback, lease or live pass.
-- O4 passed: catalog/native/component planning, lessons/materials/timing, shared
-  viewer and text-only views, independent composed leaf and actual dedicated
-  build/test/interruption/recovery/undo. SQLite replays exact saved revisions and
-  distinct server epochs. The full old electrical/shutter suite also passed.
+- Dedicated Fabric server owns projects, authenticated connection identity,
+  VIEW/EDIT/BUILD/UNDO/PLAN, world mutations and reservations. One private localhost
+  companion on Josh's PC owns SQLite memory and the operator's Codex connection.
+  Optional authorized client overlays; shared lessons have personal cursors.
+- Creative execution supports lamp/NOT/OR, observer pulses, generated timed buffers
+  and up-to-four-input Boolean truth tables, canonical sticky-piston shutter/static
+  repair, bounded teaching/build/stop/reconcile/test/undo, grounded discussion,
+  literal retrieval, owner notes and permission-scoped inventory snapshots.
+- Phase19 mechanical repair: PR28/merge5b29a9c/sourcee881d73/all5 CI41151376521,
+  all103 native tests; real restart/repair/SQLite proof.
+- Phase20 natural action flow: PR29/mergecaa7de6/source0f78de1/all5 CI41223355084;
+  foundation8214fbd and actual natural/diagnosis/restart evidence.
+- Phase21 observers: PR30/merge3ae2232/source4d4a1de/all5 CI41268319917,
+  all113 native tests; exact edge timing/restoration/shared/restart/composed-leaf
+  proof. Screenshot docs/images/observer-tested.png.
+- Phase22 conversational engineering: PR31/mergeb7e3e26/sourcebd39067/all5
+  CI41273958762, all116 native,12 chat markers, strict SQLite10/17 starts and actual
+  generated8/10-block traces. Real101-second expiry, reconnect/new stamp and
+  saved-server restart invalidate approvals. Screenshot conversation-tested.png.
+- Phase23 conversational setup: PR32/merged9bde62/source1561555/all5 CI41276307352,
+  all117 native and four setup markers. Private creation, scoped names/numbers/
+  paging/ambiguity, feet-based corners, permissions/fit negatives, preserved built
+  intentions and local unbuilt previews. Screenshot conversation-setup-preview.png.
 
-Final source4d4a1de/all5 CI41268319917, merged3ae2232/PR30. All113 required native
-Minecraft tests and nine observer markers passed. `observer-edges.json` contains
-archival measured native data from CI41225064861, never inference or authority.
-The genuine composition persistence bug was temporal test-description drift in
-the TypeScript mirror; it was fixed with rejection regression and actual receipt
-checks. Earlier fixture errors and full development history remain in Git.
+Model output/world text/imported geometry are untrusted. Keep intended, observed
+and verified state separate. Recheck current grants/revision/connection/epoch at
+execution; human conflicts pause rather than overwrite. Restart never restores
+leases, callbacks, consent or live passes. Operator-only model admission remains:
+general shared-subscription eligibility is unresolved, and operator consent is
+not provider permission. Never introduce paid API fallback or credential sharing.
 
-## Phase22 shipped: conversational engineering
+Pinned: Minecraft26.3, Java25, FabricLoader0.20.1/API0.165.0+26.3, Loom1.17.21,
+Gradle9.6, Node24.14, TypeScript7.0.2, SDK/CLI0.164.0. Unrelated Dependabot PR6
+is not this task. Keep motion-specific handling separate from ordinary circuits.
 
-PR31/mergeb7e3e26/sourcebd39067/all5 CI41273958762 proves private/text-only native
-chat, unaffected ordinary broadcast, obvious lessons and scoped component
-questions, separate one-use action/behavior/geometry/structural approvals, actual
-build/stop/resume/test/undo, wrong-actor/model admission denial, grant-stale
-rejection and prior-controller viewer regression. Real101-second expiry,
-same-server disconnect/reconnect with a new connection stamp, and a fresh pending
-saved-server restart approval all reject stale yes. Strict SQLite10/17 starts
-and exact actual generated8/10-block timing traces passed. All116 native tests,
-12 chat markers, native flow13m20s. Evidence and screenshot are listed above.
+Signed-in Phase20 acceptance on8214fbd passed CI41221809497/response41222705526:
+exactly one gpt-6-luna SDK0.164.0 call (11519 input/0 cached/73 output), choosing
+diagnose/root and making no observed-world claim. All earlier structural/Boolean/
+discussion/natural receipts are consumed. Private exclusive receipts remain in
+AppData/Roaming/minecraft-ai-engineer/acceptance. Never read/print auth credentials,
+replay archived replies as fresh inference, or dispatch unnecessary probes.
+Request digest c5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9;
+result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
 
-Generated acceptance binds the captured owner and restores the previous command
-actor. Lesson text keeps intended behavior separate from the actual stored pass;
-no new inspection/test is implied. GPT-6-Luna/high focused auth review findings
-were fixed. Production deadlines, limits and permissions stay unchanged; CI-only
-time allowances include the real expiry wait. No local tests or SDK calls.
+## Overall remaining goals
 
-## Phase23: conversational setup (serves E1/E4)
+- E2: finish analog/comparators; actual connections and larger multicomponent/
+  piston systems, update-order/interference and adapting existing structures.
+- E1: broader natural references/retrieval beyond literal saved-intention search,
+  durable rationale/summaries and preferences.
+- E3: richer connection/timing/interference/inconclusive diagnosis and repair;
+  clear mechanical pose overlays beyond supported canonical designs.
+- E4: signed-in preview -> actual human functional section -> AI remainder ->
+  interrupt/change/resume -> actual test -> service/game restart -> later
+  explanation and visual proof. Scripted fixtures do not complete this experience.
+- Multiplayer packaging/release/setup, real production Mojang authentication and
+  provider eligibility evidence. Offline fixtures do not prove production login.
+- Phase2: voice conversation; physical NPC; genuine survival gathering/placement;
+  full in-game schematic import/export (file foundation in PR34); measured size/
+  resources/latency/reliability optimization; multiple coordinated builders.
 
-Outcomes:
+Do not mark the overall goal complete after any one phase or file-codec milestone.
 
-- O1: create a private project or find/select an authorized project through chat.
-  Prove denied creation, no inaccessible names, ambiguous names require a choice,
-  and stale list choices cannot select a changed/revoked project.
-- O2: stand at two workspace corners and mark them through chat. Explain the exact
-  bounds and retain existing owner/state/overlap checks; no world edit or model
-  request from marking. Prove viewers and editors cannot change the workspace.
-- O3: a native player creates/selects/marks projects through ordinary chat, then
-  uses the existing design/build/test conversation. Commands remain fallback.
-
-Decision: local setup intents call existing ProjectManager/EngineeringSession
-methods, never executable command text or model-generated permissions. A corner
-is the block containing the player's feet. Bounded personal project choices use
-only current VIEW-authorized projects in the current dimension. Player object,
-connection/stamp, epoch, selection, expiry and every candidate identity/revision/
-grant revision/VIEW are rechecked. Duplicate names require a number. Paged lists
-show12 entries, retain the original scope/expiry and reach all256 allowed projects.
-Creation and sharing grants stay operator/owner-controlled; no new model access.
-
-Implemented: explicit new/list/name/number/page/corner dialogue and lifecycle
-cleanup. Private native fixtures now create and mark both conversation projects
-via chat, exercise duplicate names/yes/paging, grant-stale rejection and fresh
-numbered choice, denied Eve creation/list privacy, Bob viewer and editor corner
-rejections. Setup messages wait21 real ticks to respect native chat limits; no
-counter reset. Fixture teleports position the actual player; no human-driven
-session is claimed. The final source uses local catalog preview chat in place of reference fixtures;
-complete human acceptance remains broader work.
-
-Scoped Java compilation and script syntax/format pass. GPT-6-Luna/high focused
-auth review and paging follow-up found no concrete privacy or authority bypass.
-Guides explain feet-based corners and authorized project choice. Existing model
-counts remain10/17; no SDK calls/local tests. All Phase23 runtime proofs are
-unproven. Native grammar count becomes117. Rebase onto shipped Phase22 is done.
-
-Next: current-head CI and actual evidence/screenshot inspection, fix genuine
-failures, then merge. Keep the entire remaining roadmap above active.
-
-A further O3 gap is being closed before final Phase23 merge: exact local catalog
-preview requests (`show me a signal lamp`, inverter/OR/observer/shutter variants)
-need no model quota. Existing EDIT/current-dimension checks and reviseProposal
-apply; incomplete workspaces and any old construction/journal/controlled shutter
-reject. The native flow replaces reference-seeding commands with actual chat,
-checks no lease/pass/placements from preview, rejects incomplete regions and
-preserves a built, tested design. Existing model counts stay10/17; no counters,
-production limits or model admission change. Current CI41275010408 still tests
-older source d8d0316 and must be observed through terminal before pushing this
-new source. New preview source compiled; final negative additions need compile/CI.
-
-The GPT-6-Luna/high preview-only review found no concrete authorization or
-world-mutation bypass. Local previews now also reject a too-small marked region
-before accepting intention; native negatives cover incomplete and one-block
-workspaces, then actual chat shows the canonical lamp. The old reference-seeding
-commands in both fixtures are removed. A built/tested design must remain exactly
-unchanged after a show request. No SDK calls or model-count changes.
-
-The viewer also attempts local preview through actual chat while the owner has
-a pending action; EDIT denial must leave that owner review and intended design
-intact. Local-preview work is checkpointed on work/conversation-setup-preview
-while PR32 keeps testing d8d0316. Promote only after CI41275010408 is terminal
-and its evidence is inspected. No local tests ran.
-
-The final native preview path also captures a real screenshot after the selected
-project's six-block READY snapshot arrives, with the actual chat request/reply
-and ghost geometry. It reuses the fixture's viewing position. Source requires
-scoped compilation before promotion; new images remain unrun.
-
-Source d8d0316 passed all five checks in CI41275010408, all117 required native
-tests, three setup markers and the full old conversation suite. Actual private
-creation/corner marking, duplicate names, paging, grant-stale choice rejection,
-Eve privacy/creation denial, and viewer/editor workspace rejection passed.
-Strict SQLite10/17 starts and functional traces passed. Native flow15m17s.
-Evidence: task work/conversation-setup-first-41275010408. This establishes O1/O2
-and the setup portion of O3; those fixtures still used reference commands.
-
-Final source adds local preview chat and its negative/visual checks described
-above; scoped Java compilation and script syntax/format pass. It must now run
-fresh CI before merge. No extra model request, SDK call or local test occurred.
-
-## Parallel schematic file foundation — 2026-11-01 (serves Phase2 schematics)
-
-Josh explicitly authorized Claude parallel milestones. Claude delivered PR34,
-Sponge v3 file interchange and CLI in companion/src/schematics/**, independent of
-server blueprints, storage, auth and world execution. The neutral geometry format
-contains no ownership, grants or functional verification. Dimensions/offsets,
-DataVersion, block IDs/properties and supported untrusted metadata survive; entity
-payloads are rejected and explicit optional discards are reported. No world hook,
-DataVersion upgrade or in-game preview/import/export is implemented yet.
-
-Source7ec6659 passed all five checks in CI41327833280, including the existing
-multiplayer suite and18 new schematic proofs with independently decoded
-third-party WorldEdit/schematic4j fixtures and prismarine-nbt2.8.0 as a pinned dev
-oracle. No production dependencies or billed services were introduced. Parent
-review checked the primary Sponge v3 specification and actual parser/CLI paths.
-
-Review found two concrete boundaries: forced output could alias and truncate its
-input, and Array.map skipped sparse palette/metadata holes. Parent now checks the
-actual opened output's device/inode against the opened input identity before any
-truncate, bounds actual read bytes as well as initial size, and densely validates
-arrays. Tests cover hard-link alias preservation, sparse data and oversized input.
-Focused GPT-6-Luna/high data-preservation review found no remaining overwrite or
-byte-bound gap. Scoped type and format/diff checks pass; new behavioral checks
-await GitHub CI. No local tests ran. Update PR34 with this fix, merge only its exact
-green head, then record completion of the file foundation; full in-game schematic
-milestone stays pending. Shared main/Phase24 memory must be reconciled on merge.
-
-Review head d09295d/CI41333273366 passed Companion (including three new boundary
-proofs), Fabric, Windows and Minecraft client. Dedicated hit the inherited
-ordinary-chat send/disconnect race: Alice never received the message before Eve
-left. Applied only the previously proved sender/recipient receipt handshake from
-384a4b4 to this independent branch, plus its required marker. No production chat,
-privacy assertions, quota or timeout changed. This parent integration fix touches
-the shared native fixture/verifier because the failure blocks required CI; Claude
-did not edit those paths. New full CI required before merge.
+Combined-source preparation: PR34/source55ca74c is merged as885748e; code merged
+cleanly into this branch and the sole STATE conflict retains both outcomes. The
+pinned test-only prismarine-nbt dependency was installed locally without scripts
+or manifest/lock changes to permit type checking; no behavioral tests ran. Combined
+TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt before
+20min process expiry in the later existing pending-review/restart tail, so the
+CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
+consent/101sec expiry proof and every existing assertion remain unchanged. Next:
+commit this combined source with docs and run its required exact-head proof.

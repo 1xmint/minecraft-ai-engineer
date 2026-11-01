@@ -70,7 +70,7 @@ final class Diagnosis {
                 if (!level.hasChunkAt(pos) || !level.getWorldBorder().isWithinBounds(pos)
                         || pos.getY() < level.getMinY() || pos.getY() > level.getMaxY())
                     throw new IllegalStateException("Diagnosis footprint is no longer loaded or in bounds; diagnose again");
-                if (level.getBlockEntity(pos) != null)
+                if (level.getBlockEntity(pos) != null && !AnalogSafety.observedComparator(s.blueprint,pos,level.getBlockState(pos),level.getBlockEntity(pos)))
                     throw new IllegalStateException("A block entity entered the diagnosis footprint; inspect it manually");
                 if (!level.getBlockState(pos).equals(entry.getValue()))
                     throw new IllegalStateException("World changed at " + pos.toShortString() + "; diagnose again");
@@ -113,7 +113,7 @@ final class Diagnosis {
             return new Proposal(UUID.randomUUID(),actor,player.connection,s.manager.epoch,s.projectId,s.revision(),s.access.revision(),componentId,
                 assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,s.server.getTickCount()+MAX_TTL_TICKS,report.observed(),targets,messages,!targets.isEmpty());
         }
-        MechanismCatalog.contract(selected);
+        if(AnalogIntention.describes(selected.source()))EngineeringContracts.contract(selected);else MechanismCatalog.contract(selected);
         var level = s.level();
         var footprint = new LinkedHashSet<BlockPos>();
         Set<String> closure=new LinkedHashSet<>();
@@ -143,7 +143,7 @@ final class Diagnosis {
             if (!level.hasChunkAt(pos) || !level.getWorldBorder().isWithinBounds(pos)
                     || pos.getY() < level.getMinY() || pos.getY() > level.getMaxY())
                 throw new IllegalStateException("Diagnosis stopped: footprint is unloaded or outside world bounds at " + pos.toShortString());
-            if (level.getBlockEntity(pos) != null) blockEntities.add(pos);
+            if (level.getBlockEntity(pos) != null && !AnalogSafety.observedComparator(selected,pos,level.getBlockState(pos),level.getBlockEntity(pos))) blockEntities.add(pos);
             observed.put(pos, level.getBlockState(pos));
         }
 
@@ -221,11 +221,17 @@ final class Diagnosis {
         else if (!targets.isEmpty())
             messages.add("Some differences are supported, but automatic repair is blocked until every unsupported condition is resolved.");
 
+        if(AnalogIntention.describes(selected.source())){
+            var design=AnalogIntention.validated(selected).design();
+            messages.add("Snapshot signal strengths: rear="+analogStrength(observed.get(design.input(0)))+", first side="+analogStrength(observed.get(design.input(1)))+", second side="+analogStrength(observed.get(design.input(2)))+", output="+analogStrength(observed.get(design.output()))+". This is one wire-state snapshot, not a functional pass, cached entity output or latency measurement.");
+        }
         var assignment=s.assignments.task(s.blueprint,componentId);
         return new Proposal(UUID.randomUUID(), actor, player.connection, s.manager.epoch, s.projectId, s.revision(),
                 s.access.revision(),componentId,assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,
                 s.server.getTickCount() + MAX_TTL_TICKS, observed, targets, messages, repairable);
     }
+
+    private static String analogStrength(BlockState state){return state!=null && state.is(Blocks.REDSTONE_WIRE)?Integer.toString(state.getValue(BlockStateProperties.POWER)):"unavailable";}
 
     private static void collectClosure(Blueprint project,String id,Set<String> result) {
         if(!result.add(id))return;

@@ -22,6 +22,8 @@ final class ConversationSetupText {
             case "show me an inverter","show me a not gate" -> "not-gate";
             case "show me an or gate" -> "or-gate";
             case "show me an observer pulse" -> "observer-pulse";
+            case "show me a comparator","show me a compare comparator" -> "comparator-compare";
+            case "show me a subtracting comparator","show me a subtract comparator" -> "comparator-subtract";
             case "show me a sticky shutter" -> "sticky-shutter";
             default -> null;
         };

@@ -6,7 +6,8 @@ A local-first engineering partner for Minecraft Java: **show me, teach me,
 take over, test it, and remember what we're building.**
 
 The source build provides bounded creative-mode workflows for a signal lamp,
-inverter and two-input OR gate: preview, teach, delegate, diagnose, explicitly
+inverter, two-input OR gate, observer pulse and canonical piston shutter: preview,
+teach, delegate, diagnose, explicitly
 repair, undo and test actual redstone behavior. Bounded component hierarchies
 support independent player/assistant work, with private inventory/material checks.
 The source also supports separately confirmed raw generated buffers with actual
@@ -14,6 +15,9 @@ on/off transition timing tests; see the [generated flow](docs/mod-guide.md#gener
 It also accepts complete named Boolean truth tables and tests every row forward
 and backward with per-tick stability and safe input restoration; see
 [Boolean logic](docs/mod-guide.md#generated-boolean-logic-source-build).
+Compare/subtract [comparator workbenches](docs/comparators.md) add physical
+strength selectors and a distinct server-side numeric test with original-input
+restoration. Project setup and the main workflow use [normal addressed chat](docs/mod-guide.md#talking-to-engineer-development-source).
 Larger engineering designs and broader features in the [product brief](docs/product-brief.md) are
 still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
