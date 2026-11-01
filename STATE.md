@@ -5,20 +5,22 @@ AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
 Current worktree: task `work/analog-comparators`, branch
-`phase/24-analog-comparators`. Runtime source **cc0cbed** is in live
-**CI41360150254** (four checks passed; dedicated multiplayer pending).
+`phase/24-analog-comparators`. Runtime source **cc0cbed / CI41360150254** passed four checks and every new analog
+marker, then reached the CI process cap during the remaining approval/restart tail.
 Local **9f96d81** adds prepared docs and is backed up at
 `origin/backup/analog-rotations`; do not push docs merely to cancel that live run.
-Main remains **d9bde62** (merged PR32). The downloadable v0.1.0-alpha.1 is still
+Main is **885748e** (merged PR34, schematic file foundation). The downloadable v0.1.0-alpha.1 is still
 the older solo alpha; source capabilities are broader than that release.
 
-Claude's schematic foundation **PR34**, head **55ca74c**, is in live
-**CI41360384747** (four checks passed; dedicated pending). Review worktree:
-`work/schematic-review`, local branch `fix/schematic-boundaries`. Codex owns
-integration; exact green-head merges are authorized. Merge PR34 first if green,
-then reconcile main/Phase24 STATE.md and validate their combined source with the
-prepared comparator docs. Do not claim Phase24 complete before inspecting all
-required native, dedicated, SQLite and screenshot evidence.
+Claude's schematic foundation **PR34** merged as **885748e** on
+2026-11-01T23:24:42Z. Exact source **55ca74c** passed all five checks in
+**CI41360384747**, all117 native tests and177 companion tests (176 passed, one
+existing skip), including21 schematic tests and full dedicated/restart proof.
+Review worktree: `work/schematic-review`, branch `fix/schematic-boundaries`.
+The main worktree is clean and fast-forwarded. This branch is merging that main
+with prepared comparator docs; source files merged cleanly, and this note resolves
+the sole conflict by retaining both outcomes. Complete the combined-source CI
+before merging PR33. Full in-game schematic integration is still pending.
 
 Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
 PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
@@ -98,9 +100,13 @@ Current implementation:
   conflict/static repair markers passed. Shared test assertion raced its queued
   command and saw the prior repair's COMPLETED/untested state. Evidence:
   work/analog-shared-failure-41332437714 and work/analog-wire-proof-41332437714.
-- **cc0cbed / live CI41360150254:** fixture now observes actual VERIFYING/testTick
+- **cc0cbed / CI41360150254:** fixture now observes actual VERIFYING/testTick
   before accepting completion in all three full analog waits. No production
-  behavior or pass criterion changed. Local client compile passed.
+  behavior or pass criterion changed. All13 analog markers passed, including shared
+  repair, saved-server fresh retest and latest-operation undo. The process cap
+  expired later during the existing pending-stop/restart tail. Full job/SQLite
+  verification is still required. Evidence: work/analog-trial-start-proof-41360150254.
+  Local client compile passed.
 
 Next: inspect the same live handles to terminal (observation timeout is not
 failure). Validate every analog marker and actual SQLite source/scope/actor/
@@ -112,7 +118,7 @@ Dedicated fixture explicitly covers compare chat build/test/stop/restoration/
 blocked-edit undo/full owned undo; subtract viewer denial/editor revocation/
 owner recovery/player conflict/missing-wire repair/test/actual saved-server restart/
 fresh test/latest-repair-only undo. Bob follows actual phase receipts. Fixed added
-native trials justify CI-only client20min/harness1260sec/job25min budgets;
+native trials justify CI-only client23min/harness1440sec/job30min budgets;
 production deadlines, quotas and permissions are unchanged. Fixed provider replies
 are routing fixtures, not additional SDK inference or complete human acceptance.
 
@@ -136,11 +142,11 @@ No in-game import/export, DataVersion upgrade or registry validation is claimed.
   truncation, actual bounded reads even if input grows, and sparse-array rejection.
   Three new boundary tests passed with four checks. Dedicated reproduced inherited
   ordinary-chat send/disconnect race, unrelated to codec behavior.
-- Parent **55ca74c / live CI41360384747:** applies only the proved384a4b4 sender/
+- Parent **55ca74c / all5 CI41360384747, merged PR34/885748e:** applies the proved384a4b4 sender/
   recipient receipt handshake and required marker. No production chat, privacy,
   timeout or quota changes. Scoped compile/type/format/syntax checks pass. A
   focused GPT-6-Luna/high file-preservation review found no concrete overwrite or
-  byte-bound gap. Wait for exact-head full CI before merging.
+  byte-bound gap. All21 schematic tests and full dedicated/restart proof passed; the file foundation is shipped.
 
 Josh requested Claude's next goal. Reserved offered lane: read-only analysis and
 geometry diff in **companion/src/schematic-analysis/**,
@@ -217,3 +223,13 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
   resources/latency/reliability optimization; multiple coordinated builders.
 
 Do not mark the overall goal complete after any one phase or file-codec milestone.
+
+Combined-source preparation: PR34/source55ca74c is merged as885748e; code merged
+cleanly into this branch and the sole STATE conflict retains both outcomes. The
+pinned test-only prismarine-nbt dependency was installed locally without scripts
+or manifest/lock changes to permit type checking; no behavioral tests ran. Combined
+TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt before
+20min process expiry in the later existing pending-review/restart tail, so the
+CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
+consent/101sec expiry proof and every existing assertion remain unchanged. Next:
+commit this combined source with docs and run its required exact-head proof.

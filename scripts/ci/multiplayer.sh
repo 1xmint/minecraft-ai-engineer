@@ -15,8 +15,8 @@ copies=()
 companion_pid=""
 companion_entry="$repo/scripts/ci/companion.mjs"
 # Includes real approval expiry plus three guarded66-case analog trials across boots.
-client_timeout=20m
-harness_seconds=1260
+client_timeout=23m
+harness_seconds=1440
 # Synthetic provider only; this offline UUID carries no real account credentials.
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
   export MCE_CODEX_OPERATOR_UUID=10920508-d5d8-3eed-93d2-92f193afe7d7
