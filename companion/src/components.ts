@@ -283,8 +283,9 @@ function content(
     }
     tests.push({
       id: `${node.id}:functional-vectors`,
-      description:
-        "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
+      description: catalog.pulse
+        ? "Measure both input-edge pulses, receiver signal and lamp on consecutive game ticks; restore the exact original input."
+        : "Exercise each catalog truth-table vector at actual server ticks, then restore every input.",
     });
   }
   if (blocks.length > 4096)

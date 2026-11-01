@@ -593,3 +593,8 @@ recovery. `/engineer undo` removes only the selected assistant operation, preser
 player blocks. Observer leaves can also be added to composed projects with
 `/engineer component add <id> root observer-pulse <x> <y> <z>` and tested explicitly
 with `/engineer component test <id>`; that result proves only the selected leaf.
+
+Actual client after a completed observer trial; timing evidence is recorded
+separately in the game-tick trace:
+
+![Native observer construction after its pulse trial](images/observer-tested.png)

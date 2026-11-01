@@ -1930,6 +1930,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer component build lamp");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
         send(context,"engineer component build pulse");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").activeComponent.equals("pulse"));
         send(context,"engineer component test pulse");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:observer-pulse:"));
+        assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");PulseEvidence.validate(project.trial.evidence(),true);check(project.trial.scope().get("component").getAsString().equals("pulse") && project.assignments.task(project.blueprint,"lamp").lastPassedScope==null,"A composed observer trial proves only the explicitly selected leaf");check(project.level().getBlockState(new BlockPos(1210,101,0)).is(Blocks.REDSTONE_LAMP),"Temporal testing preserves the independent electrical component");});
         write("observer-composite-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("observer-composite.done","passed");
     }

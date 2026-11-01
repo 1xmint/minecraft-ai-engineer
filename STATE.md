@@ -37,6 +37,17 @@ the proof now awaits the actual matching COMPLETED client snapshot and moves
 closer before capture. Neither guard nor functional expectation was weakened.
 Evidence: task work/`observer-authority-41266521932`. Remaining: composed flow,
 SQLite replay and final visual evidence/CI before merge.
+CI41267284500 on c159ecf passed all113 native tests, the entire dedicated native
+flow and all nine observer markers, including composition. SQLite then caught a
+real mirror-contract mismatch: TypeScript composition regenerated an observer's
+test description as a settled truth table, while Java correctly sent the temporal
+description. Strict canonical validation rejected sync, so no composed result
+was stored. TypeScript now mirrors the temporal descriptor, with a regression
+that rejects the old vector claim; the native flow also awaits its actual
+companion acknowledgement before declaring composed success. Validation remains
+strict. Evidence: task work/`observer-composed-41267284500`. Its actual completed
+client image was inspected and archived as `docs/images/observer-tested.png`.
+Remaining: prove the corrected full SQLite flow and exact final-source CI.
 The published `v0.1.0-alpha.1` remains the older single-player alpha.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes and green merges are
