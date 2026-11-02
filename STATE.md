@@ -373,3 +373,15 @@ geometry and full electrical graph. Companion gateway now admits only this exact
 canonical source after current project/revision checks, with stale revision and
 inventory tampering regressions. Scoped Java/type/format checks passed. Planner
 menu/provider offer remains disabled until actual session flows are proven.
+
+Added pending dedicated connectedExecutionFlow using actual Alice connection and
+EngineeringSession.accept/build/resume/test/undo, with explicit canonical fixture
+selection (not natural planning proof). It interrupts after20 owned placements,
+resumes436-cell construction, starts with A on/B off, requires whole-suite pass
+and exact restoration, then resets the player lever and requires owned undo to
+remove every cell. Client coordination requires success markers. SQLite verifier
+requires persisted connected pass evidence, current project/revision/basis and no
+pending controls, then independently replays all8 cases against canonical digest.
+Scoped client compilation and script syntax checks passed; full behavior awaits
+the next exact-source CI after41476541185 finishes. Shared Bob/revocation, full
+saved-server restart, human teaching and normal conversation planning remain.

@@ -652,7 +652,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);conversationWorkFlows(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1095,6 +1095,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             // Follow actual phase receipts before starting the later conversation wait.
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
+            awaitFile(context,"connected-functional.done");awaitFile(context,"connected-undo.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
             MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
@@ -2046,6 +2047,38 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
     }
     private static void conversationApprove(ClientGameTestContext context,String request){conversationProposal(context,request);say(context,"Engineer, yes please");}
+    private static void connectedAction(TestDedicatedServerContext server,java.util.function.Consumer<EngineeringSession> action) throws Exception {
+        server.runOnServer(s->{var project=session(s,"Alice");var previous=project.commandActor;
+            try{project.commandActor=player(s,"Alice").getUUID();action.accept(project);}finally{project.commandActor=previous;}});
+    }
+    private static void connectedExecutionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("forceload add 1984 -16 2064 64");
+        MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+        // Deliberate canonical fixture selection, not a claim of natural-language planning.
+        connectedAction(server,project->{project.corner1=new BlockPos(2000,100,0);project.corner2=new BlockPos(2045,101,36);
+            project.accept(ConnectedIntention.create(java.util.UUID.randomUUID(),1,project.projectId,project.worldId,project.dimension,project.corner1,0).blueprint());project.build();});
+        server.waitFor(s->session(s,"Alice").journal.size()>=20 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && !project.verified.startsWith("passed:"),"Interrupted connected build releases authority without verification");});
+        connectedAction(server,EngineeringSession::resume);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==436,"Production connected construction must complete: "+project.status());
+            var input=EngineeringContracts.contract(project.blueprint).ports().stream().filter(port->port.name().equals("a:control")).findFirst().orElseThrow();
+            var actual=project.level().getBlockState(input.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),input.pos(),player(s,"Alice"));});
+        context.waitTicks(12);connectedAction(server,EngineeringSession::test);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"Production whole-circuit trial must pass: "+project.status());
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
+            check(!project.hasPendingTest() && project.delegation==null,"Connected pass follows restoration and lease release");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Exact originally-on/off controls restored");});
+        assertPersisted(server);write("connected-functional-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("connected-functional.done","passed");
+        server.runOnServer(s->{var project=session(s,"Alice");var port=EngineeringContracts.contract(project.blueprint).ports().stream().filter(input->input.name().equals("a:control")).findFirst().orElseThrow();
+            var actual=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),port.pos(),player(s,"Alice"));});
+        context.waitTicks(12);connectedAction(server,EngineeringSession::undo);
+        server.waitFor(s->session(s,"Alice").journal.isEmpty() || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Production connected undo removes exactly assistant construction: "+project.status());});
+        write("connected-undo.done","passed");
+    }
     private static void analogConversationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         server.runCommand("forceload add 1680 -16 1744 48");
         server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
