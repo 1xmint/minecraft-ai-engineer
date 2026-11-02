@@ -271,3 +271,11 @@ Scoped Java compilation passed. Latest source still requires a fresh complete CI
 after41472491344 terminates; its Fabric/Companion/Windows/client jobs are green,
 dedicated multiplayer remains live. PR42's41472675876 has the same four green
 jobs and a live dedicated job. No merge or replacement run while these are live.
+
+ConnectedWireUndo now checks canonical operation/source/geometry before applying
+the pinned read-only native wire projection. EngineeringSession calls it only for
+connected wires after durable undo intent; initial preflight and player-neighbor
+guards remain unchanged. The native branch/dot fixture now exercises this actual
+helper: initial exact shape, allowed owned branch transition, rejected manual dot,
+and read-only preservation. No generic parser admission or new live-pass authority.
+Full session undo/restart/conflict flow still needs C3 proof.

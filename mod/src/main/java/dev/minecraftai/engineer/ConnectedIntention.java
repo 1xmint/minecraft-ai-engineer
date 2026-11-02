@@ -9,6 +9,12 @@ final class ConnectedIntention {
     private final JsonObject source;
     private ConnectedIntention(JsonObject source){this.source=source.deepCopy();}
     JsonObject source(){return source.deepCopy();}
+    static boolean describes(JsonObject value){return value!=null && value.has("connected");}
+    static ConnectedIntention validated(Blueprint blueprint){
+        var expected=read(blueprint.source(),blueprint.worldId(),blueprint.dimension(),UUID.fromString(blueprint.projectId()));
+        if(!expected.blueprint().equals(blueprint))throw new IllegalArgumentException("Connected native plan differs from its canonical source");
+        return expected;
+    }
     Blueprint blueprint(){
         var anchor=Blueprint.pos(source.getAsJsonObject("anchor"));int angle=integer(source.get("rotation"));
         var rotation=Blueprint.rotation(angle);var blocks=new java.util.ArrayList<Blueprint.PlannedBlock>();

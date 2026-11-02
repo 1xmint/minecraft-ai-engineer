@@ -1317,6 +1317,8 @@ final class EngineeringSession implements BuildExecutor {
         return batch;
     }
     private boolean undoAfterMatches(Change change,BlockState actual) {
+        if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && ConnectedIntention.describes(operationScopes.blueprint(change.operation()).source()))
+            return ConnectedWireUndo.matches(operationScopes.blueprint(change.operation()),change,actual,level());
         if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && AnalogIntention.describes(operationScopes.blueprint(change.operation()).source()))
             return AnalogWireUndo.matches(operationScopes.blueprint(change.operation()),change,actual,level());
         return UndoProjection.matches(change,actual);

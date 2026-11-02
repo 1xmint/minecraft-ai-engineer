@@ -177,8 +177,12 @@ public final class HalfAdderGameTests {
         var branch=at(relative.south(),Rotation.NONE);
         var intended=design.cells().stream().filter(cell->cell.pos().equals(relative)).findFirst().orElseThrow().state();
         var canonical=intended;
+        var identity=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
+        var plan=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",helper.absolutePos(at(BlockPos.ZERO,Rotation.NONE)),0).blueprint();
+        var change=new EngineeringSession.Change(helper.absolutePos(wire),Blocks.AIR.defaultBlockState(),canonical,"proof","a-net");
         helper.runAtTickTime(10,()->{
             helper.assertTrue(Blueprint.matches(canonical,helper.getBlockState(wire)),"Complete branch starts with canonical arms");
+            helper.assertTrue(UndoProjection.matches(change,helper.getBlockState(wire)),"Initial undo preflight requires original static shape");
             helper.setBlock(branch,Blocks.AIR.defaultBlockState());
         });
         helper.runAtTickTime(20,()->{
@@ -186,6 +190,7 @@ public final class HalfAdderGameTests {
             var predicted=((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(helper.getLevel(),canonical,helper.absolutePos(wire));
             helper.assertTrue(!Blueprint.matches(canonical,actual),"Removing a branch changes static wire arms, not just power");
             helper.assertTrue(Blueprint.matches(predicted,actual),"Native read-only projection explains the owned branch removal");
+            helper.assertTrue(ConnectedWireUndo.matches(plan,change,actual,helper.getLevel()),"Canonical connected undo accepts owned native arm transition");
             helper.assertTrue(helper.getBlockState(wire).equals(before),"Projection does not mutate world state");
             var dot=actual;
             for(var property:java.util.List.of(BlockStateProperties.NORTH_REDSTONE,BlockStateProperties.SOUTH_REDSTONE,BlockStateProperties.EAST_REDSTONE,BlockStateProperties.WEST_REDSTONE))
@@ -196,6 +201,7 @@ public final class HalfAdderGameTests {
             var dot=helper.getBlockState(wire);
             var predicted=((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(helper.getLevel(),canonical,helper.absolutePos(wire));
             helper.assertTrue(!Blueprint.matches(predicted,dot),"A player's manual dot differs from native branch-removal projection");
+            helper.assertTrue(!ConnectedWireUndo.matches(plan,change,dot,helper.getLevel()),"Connected undo preserves manual dot edits");
             helper.assertTrue(helper.getBlockState(wire).equals(dot),"Rejected player edit remains untouched");
             helper.succeed();
         });
