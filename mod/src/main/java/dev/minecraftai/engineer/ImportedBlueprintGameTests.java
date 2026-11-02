@@ -5,6 +5,22 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
 public final class ImportedBlueprintGameTests {
+    @GameTest public void importedPreviewRetainsScopeWithoutExecutionAndReloads(GameTestHelper helper){
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var project=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();
+        String dimension=helper.getLevel().dimension().identifier().toString();var session=new EngineeringSession(manager,project,owner,dimension);
+        var json=source();json.addProperty("projectId",project.toString());json.addProperty("worldId",manager.worldId);json.addProperty("dimension",dimension);
+        var at=helper.absolutePos(new net.minecraft.core.BlockPos(1,1,1));session.corner1=at;session.corner2=at.offset(2,2,2);
+        session.proposeImported(Blueprint.parse(json,manager.worldId,dimension),at,90);
+        helper.assertTrue(session.blueprint.anchor().equals(at) && session.verified.equals("untested") && session.journal.isEmpty() && session.delegation==null,"Imported preview stays scoped, untested and non-executing");
+        var retained=session.blueprint.source().deepCopy();session.commandActor=java.util.UUID.randomUUID();boolean denied=false;
+        try{session.proposeImported(Blueprint.parse(json,manager.worldId,dimension),at,0);}catch(IllegalStateException expected){denied=true;}
+        helper.assertTrue(denied && session.blueprint.source().equals(retained),"Unauthorized preview replacement preserves the accepted source");session.commandActor=null;
+        session.save();var restored=new EngineeringSession(manager,project,owner,dimension);
+        helper.assertTrue(restored.blueprint.source().equals(retained) && restored.delegation==null && restored.testTick<0 && restored.verified.equals("untested"),"Reload retains imported intention but no execution or test authority");
+        var forged=new JsonObject();forged.add("functionalEvidence",new JsonArray());var inputs=new JsonArray();inputs.add(new JsonObject());forged.add("testInputs",inputs);
+        boolean refused=false;try{restored.trial.load(forged);}catch(IllegalStateException invalid){refused=true;}
+        helper.assertTrue(refused,"Imported geometry cannot smuggle a test input journal into recovery");helper.succeed();
+    }
     private static JsonObject source(){
         return JsonParser.parseString("""
             {"schemaVersion":1,"id":"db1175eb-1559-4cca-a740-d63f224a4068","projectId":"9a71b5bd-2073-4c67-9cd8-60d66f43cb6a",

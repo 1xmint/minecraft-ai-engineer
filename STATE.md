@@ -17,6 +17,26 @@ extent/fractional-position/component injection. Not wired to acceptance/build ye
 proposal, permissions, placement ordering, isolation, undo/restart and real
 in-game proof remain. Do not claim schematic construction complete.
 
+Imported core Outcomes:
+- I1: authorized users can preview exact imported geometry in their selected
+  workspace without execution or functional claims. Native source-injection,
+  permission denial, containment and saved-session reload are the proof.
+- I2: approved construction uses existing ownership/journal/reservation/isolation
+  paths with backing blocks first; edits, revocation and unloaded dependencies
+  pause. Prove real dedicated build/interruption/undo/restart, including failures.
+- I3: Claude's real library/chat reaches that core path and SQLite retains the
+  intended/observed distinction. Prove actual import->preview->approved build->
+  interrupt->undo/export with denied players. No unsupported functional pass.
+
+I1/I2 implementation now adds proposeImported(candidate,anchor,rotation), exact
+current world/project checks, workspace containment and backing-block-first order.
+ComponentTree recognizes strict imported source; execution reserves a loaded clear
+two-block isolation margin. Existing generic block limits remain unchanged.
+Imported engineering contract has no ports or cases; FunctionalTrial refuses to
+start it and rejects imported evidence/input-control recovery claims. Added native
+preview/unauthorized replacement/saved-session reload tests. Full I2/I3 gameplay,
+companion schema admission and Claude feature hook remain incomplete.
+
 ## Parallel ownership — 2026-11-02
 
 Josh requested sustained milestone ownership for Claude, rather than another

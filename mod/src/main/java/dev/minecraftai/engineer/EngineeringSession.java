@@ -162,7 +162,7 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Explicitly delegate this component with component build "+activeComponent);
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
-        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action));
+        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action)) || ImportedBlueprint.describes(reservationBlueprint(action).source());
         if((!test || purpose==MechanicalPurpose.CONSTRUCTION) && action==ProjectAccess.Permission.BUILD && task.executor.equals("unassigned"))task.assign(actor(),"assistant");
         delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
     }
@@ -180,7 +180,7 @@ final class EngineeringSession implements BuildExecutor {
     private static Set<BlockPos> dependencyPositions(Blueprint source,String component,boolean isolation) {
         if(ShutterDesign.describes(source.source())){ComponentTree.component(source,component);return ShutterDesign.read(source.source()).readCells();}
         Set<BlockPos> result=new LinkedHashSet<>();
-        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source))?2:1,new HashSet<>(),result);
+        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source) || ImportedBlueprint.describes(source.source()))?2:1,new HashSet<>(),result);
         return result;
     }
     private static void collectDependencies(Blueprint source,String id,int margin,Set<String> visited,Set<BlockPos> result) {
@@ -451,7 +451,7 @@ final class EngineeringSession implements BuildExecutor {
             if (!actual.isAir() && !Blueprint.matches(b.state(), actual)) throw new IllegalStateException("Occupied or incorrect block at " + b.pos().toShortString() + "; move the preview or correct it yourself");
             proposedBaseline.put(b.pos(), actual);
         }
-        if(GeneratedBlueprint.isGenerated(blueprint))validateGeneratedBuildMargin();
+        if(GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source()))validateGeneratedBuildMargin();
         boolean mechanical=ShutterDesign.describes(blueprint.source());
         if(mechanical)ShutterEnvironment.validateConstruction(level(),ShutterDesign.read(blueprint.source()),dependencyPositions(true));
         var proposedDependencies=captureDependencies();
@@ -601,7 +601,7 @@ final class EngineeringSession implements BuildExecutor {
                     return ConnectedWireUndo.matchesValidated(connectedOperation,owned,actual,level());
             }
         }
-        if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint)) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
+        if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source())) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
         return Blueprint.matches(expected,actual);
     }
     void reconcile() {
@@ -963,10 +963,34 @@ final class EngineeringSession implements BuildExecutor {
         }
         return anchor();
     }
+    void proposeImported(Blueprint candidate,BlockPos at,int angle){
+        access.require(actor(),ProjectAccess.Permission.EDIT);ImportedBlueprint.validate(candidate);
+        if(!candidate.worldId().equals(worldId) || !candidate.dimension().equals(dimension) || !candidate.projectId().equals(projectId.toString()))
+            throw new IllegalArgumentException("Imported design belongs to another project or world");
+        if(corner1==null || corner2==null)throw new IllegalStateException("Mark both workspace corners before previewing an imported design");
+        if(hasBuiltStructure())throw new IllegalStateException("Reconcile existing construction before replacing it with imported geometry");
+        var source=candidate.source().deepCopy();source.add("anchor",Blueprint.jsonPos(at));source.addProperty("rotation",angle);
+        source.addProperty("id",UUID.randomUUID().toString());
+        var ordered=new ArrayList<JsonObject>();for(var item:source.getAsJsonArray("blocks"))ordered.add(item.getAsJsonObject());
+        ordered.sort(Comparator.comparingInt((JsonObject cell)->{
+            var state=Blueprint.state(cell.get("state").getAsString());
+            return state.is(net.minecraft.world.level.block.Blocks.STONE) || state.is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?0:1;
+        }).thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getY())
+          .thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getZ()).thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getX()));
+        var blocks=new JsonArray();ordered.forEach(blocks::add);source.add("blocks",blocks);
+        var proposed=Blueprint.parse(source,worldId,dimension);ImportedBlueprint.validate(proposed);
+        if(proposed.blocks().stream().anyMatch(block->!contains(block.pos())))throw new IllegalArgumentException("Imported geometry does not fit the selected workspace at that anchor and rotation");
+        reviseProposal(proposed); // Preview acceptance grants no BUILD permission or execution lease.
+    }
     boolean reviseProposal(Blueprint candidate) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(ImportedBlueprint.describes(candidate.source())){
+            ImportedBlueprint.validate(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Reconcile existing imported construction before replacing its preview");
+            accept(candidate);return true;
+        }
         if(ConnectedIntention.describes(candidate.source())) {
             ConnectedIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
