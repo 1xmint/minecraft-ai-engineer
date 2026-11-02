@@ -117,6 +117,7 @@ public final class HalfAdderGameTests {
             int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
             var intention=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",new BlockPos(24,2,24),angle);
             var source=intention.source();
+            System.out.println("ENGINEER_CONNECTED_INTENTION "+source);
             helper.assertTrue(ConnectedIntention.read(source,"test","minecraft:overworld",identity).source().equals(source),"Canonical connected source round-trips independently of execution");
             for(String corruption:new String[]{"owner","verified","geometry","role","edge","digest","bounds"}){
                 var forged=source.deepCopy();

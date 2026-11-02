@@ -1,0 +1,6027 @@
+{
+  "graph": {
+    "schemaVersion": 1,
+    "function": "half-adder",
+    "signal": "boolean",
+    "nodes": [
+      {
+        "id": "a",
+        "operation": "control"
+      },
+      {
+        "id": "b",
+        "operation": "control"
+      },
+      {
+        "id": "n1",
+        "operation": "nand"
+      },
+      {
+        "id": "n2",
+        "operation": "nand"
+      },
+      {
+        "id": "n3",
+        "operation": "nand"
+      },
+      {
+        "id": "sum",
+        "operation": "nand"
+      },
+      {
+        "id": "carry",
+        "operation": "not"
+      },
+      {
+        "id": "sum-light",
+        "operation": "receiver"
+      },
+      {
+        "id": "carry-light",
+        "operation": "receiver"
+      }
+    ],
+    "nets": [
+      {
+        "id": "a-net",
+        "from": "a:out",
+        "to": ["n1:in0", "n2:in0"],
+        "route": [
+          {
+            "pos": {
+              "x": 2,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 3,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 5,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 6,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 7,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 8,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 9,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 10,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 11,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 12,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 13,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 15,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 16,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 17,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 18,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 19,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 0
+            },
+            "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 1
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 1
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 2
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 2
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 3
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 3
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 4
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 4
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 21,
+              "y": 1,
+              "z": 4
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 22,
+              "y": 1,
+              "z": 4
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 5
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 7
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 9
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 10
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 11
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 5,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 6,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          }
+        ]
+      },
+      {
+        "id": "b-net",
+        "from": "b:out",
+        "to": ["n1:in1", "n3:in1"],
+        "route": [
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 5,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 6,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 17
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 18
+            },
+            "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 19
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 21
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 23
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 24
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 24
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 21,
+              "y": 1,
+              "z": 24
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 22,
+              "y": 1,
+              "z": 24
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 25
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 25
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 26
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 26
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 27
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 27
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 28
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 28
+            },
+            "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 29
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 29
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 30
+            },
+            "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 30
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 31
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 31
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 32
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 32
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 33
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 33
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 34
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 34
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 35
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 35
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 2,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 3,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 4,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 5,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 6,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 7,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 8,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 9,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 10,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 11,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 12,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 13,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 15,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 16,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 17,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 18,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 19,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 36
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+          }
+        ]
+      },
+      {
+        "id": "n1-net",
+        "from": "n1:out",
+        "to": ["n2:in1", "n3:in0", "carry:in"],
+        "route": [
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 15,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 16,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 17,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 18,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 19,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 21,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 22,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 9
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 10
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 11
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 13
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 12,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 13,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 15
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 17
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 18
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 19
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 14,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 15,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 16,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 17,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 18,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 19,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 20,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 21,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 22,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          }
+        ]
+      },
+      {
+        "id": "n2-net",
+        "from": "n2:out",
+        "to": ["sum:in0"],
+        "route": [
+          {
+            "pos": {
+              "x": 28,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 29,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 30,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 31,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 32,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 33,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 6
+            },
+            "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 7
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 8
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 9
+            },
+            "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 10
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 11
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 35,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 36,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 37,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 38,
+              "y": 1,
+              "z": 12
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          }
+        ]
+      },
+      {
+        "id": "n3-net",
+        "from": "n3:out",
+        "to": ["sum:in1"],
+        "route": [
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 35,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 36,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 37,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 38,
+              "y": 1,
+              "z": 16
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 17
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 18
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 19
+            },
+            "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 20
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 21
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 28,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 29,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 30,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 31,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 32,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 33,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 34,
+              "y": 1,
+              "z": 22
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+          }
+        ]
+      },
+      {
+        "id": "sum-light-net",
+        "from": "sum:out",
+        "to": ["sum-light:in"],
+        "route": [
+          {
+            "pos": {
+              "x": 44,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 45,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_lamp[lit=false]"
+          }
+        ]
+      },
+      {
+        "id": "carry-light-net",
+        "from": "carry:out",
+        "to": ["carry-light:in"],
+        "route": [
+          {
+            "pos": {
+              "x": 18,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 19,
+              "y": 1,
+              "z": 14
+            },
+            "state": "minecraft:redstone_lamp[lit=false]"
+          }
+        ]
+      }
+    ],
+    "ports": [
+      {
+        "id": "a:control",
+        "node": "a",
+        "role": "external_control",
+        "physical": "lever",
+        "signal": "boolean",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "facing": "none"
+      },
+      {
+        "id": "a:out",
+        "node": "a",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 0
+        },
+        "facing": "east"
+      },
+      {
+        "id": "b:control",
+        "node": "b",
+        "role": "external_control",
+        "physical": "lever",
+        "signal": "boolean",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": 36
+        },
+        "facing": "none"
+      },
+      {
+        "id": "b:out",
+        "node": "b",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 2,
+          "y": 1,
+          "z": 36
+        },
+        "facing": "east"
+      },
+      {
+        "id": "n1:in0",
+        "node": "n1",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 6,
+          "y": 1,
+          "z": 12
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n1:in1",
+        "node": "n1",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 6,
+          "y": 1,
+          "z": 16
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n1:out",
+        "node": "n1",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 12,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "east"
+      },
+      {
+        "id": "n2:in0",
+        "node": "n2",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 22,
+          "y": 1,
+          "z": 4
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n2:in1",
+        "node": "n2",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 22,
+          "y": 1,
+          "z": 8
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n2:out",
+        "node": "n2",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 28,
+          "y": 1,
+          "z": 6
+        },
+        "facing": "east"
+      },
+      {
+        "id": "n3:in0",
+        "node": "n3",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 22,
+          "y": 1,
+          "z": 20
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n3:in1",
+        "node": "n3",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 22,
+          "y": 1,
+          "z": 24
+        },
+        "facing": "west"
+      },
+      {
+        "id": "n3:out",
+        "node": "n3",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 28,
+          "y": 1,
+          "z": 22
+        },
+        "facing": "east"
+      },
+      {
+        "id": "sum:in0",
+        "node": "sum",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 38,
+          "y": 1,
+          "z": 12
+        },
+        "facing": "west"
+      },
+      {
+        "id": "sum:in1",
+        "node": "sum",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 38,
+          "y": 1,
+          "z": 16
+        },
+        "facing": "west"
+      },
+      {
+        "id": "sum:out",
+        "node": "sum",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 44,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "east"
+      },
+      {
+        "id": "carry:in",
+        "node": "carry",
+        "role": "signal_input",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 14,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "west"
+      },
+      {
+        "id": "carry:out",
+        "node": "carry",
+        "role": "signal_output",
+        "physical": "wire",
+        "signal": "boolean",
+        "pos": {
+          "x": 18,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "east"
+      },
+      {
+        "id": "sum-light:in",
+        "node": "sum-light",
+        "role": "result",
+        "physical": "lamp",
+        "signal": "boolean",
+        "pos": {
+          "x": 45,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "west"
+      },
+      {
+        "id": "carry-light:in",
+        "node": "carry-light",
+        "role": "result",
+        "physical": "lamp",
+        "signal": "boolean",
+        "pos": {
+          "x": 19,
+          "y": 1,
+          "z": 14
+        },
+        "facing": "west"
+      }
+    ],
+    "settleGameTicks": 48,
+    "stableSamples": 8
+  },
+  "geometry": [
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 1
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 1
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 2
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 2
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 3
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 3
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 5
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 5
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 27,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 28,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 29,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 30,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 31,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 32,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 33,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 6
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 7
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 7
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 7
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 9
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 9
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 9
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 10
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 10
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 10
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 11
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 11
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 11
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 35,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 36,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 37,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 38,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 39,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 40,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 41,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 0,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 13
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 13
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 0,
+        "z": 13
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 43,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 44,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 45,
+        "y": 0,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 15
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 15
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 0,
+        "z": 15
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 35,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 36,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 37,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 38,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 39,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 40,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 41,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 0,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 17
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 17
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 17
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 18
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 18
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 18
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 19
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 19
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 19
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 21
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 21
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 21
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 27,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 28,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 29,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 30,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 31,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 32,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 33,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 0,
+        "z": 22
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 23
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 23
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 0,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 25
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 25
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 26
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 26
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 27
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 27
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 28
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 28
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 29
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 29
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 30
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 30
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 31
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 31
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 32
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 32
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 33
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 33
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 34
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 34
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 35
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 35
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 0,
+        "z": 36
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "support"
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+      "stage": "controls",
+      "component": "a"
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "controls",
+      "component": "a"
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "controls",
+      "component": "a"
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 1
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 1
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 2
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 2
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 3
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 4
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 5
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 5
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 27,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 28,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 29,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 30,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 31,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 32,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 33,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 6
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 7
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 7
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 7
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n2"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 8
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 9
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 9
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 9
+      },
+      "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 10
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 10
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 10
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 11
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 11
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 11
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "a-net"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 35,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 36,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 37,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 38,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n2-net"
+    },
+    {
+      "pos": {
+        "x": 39,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 40,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 41,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 1,
+        "z": 12
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 13
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 13
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 1,
+        "z": 13
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "carry"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "carry"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "carry"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "carry"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_lamp[lit=false]",
+      "stage": "outputs",
+      "component": "carry-light"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 43,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 44,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 45,
+        "y": 1,
+        "z": 14
+      },
+      "state": "minecraft:redstone_lamp[lit=false]",
+      "stage": "outputs",
+      "component": "sum-light"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 15
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 15
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 1,
+        "z": 15
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n1"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 35,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 36,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 37,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 38,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 39,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 40,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 41,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 42,
+        "y": 1,
+        "z": 16
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "sum"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 17
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 17
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 17
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 18
+      },
+      "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 18
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 18
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 19
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 19
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 19
+      },
+      "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n1-net"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 20
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 21
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 21
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 21
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 27,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 28,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 29,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 30,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 31,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 32,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 33,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 34,
+        "y": 1,
+        "z": 22
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "n3-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 23
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 23
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 21,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 22,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 23,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 24,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:stone",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 25,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 26,
+        "y": 1,
+        "z": 24
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "logic",
+      "component": "n3"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 25
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 25
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 26
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 26
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 27
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 27
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 28
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 28
+      },
+      "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 29
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 29
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 30
+      },
+      "state": "minecraft:repeater[delay=1,facing=south,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 30
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 31
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 31
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 32
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 32
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 33
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 33
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 34
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 34
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 35
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 35
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:lever[face=floor,facing=east,powered=false]",
+      "stage": "controls",
+      "component": "b"
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "controls",
+      "component": "b"
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "controls",
+      "component": "b"
+    },
+    {
+      "pos": {
+        "x": 3,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 5,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 6,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 7,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 8,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 9,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 10,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 11,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 13,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 14,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 15,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 16,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 17,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 18,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 19,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    },
+    {
+      "pos": {
+        "x": 20,
+        "y": 1,
+        "z": 36
+      },
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]",
+      "stage": "connections",
+      "component": "b-net"
+    }
+  ],
+  "graphDigest": "09ca765f3035a77b021a97f5e3fbebf4dd0cb2821869acf0af50b31f759b83ee"
+}

@@ -236,3 +236,14 @@ digest/bounds tampering, world/dimension/project rebinding and overflowing ancho
 and verify defensive snapshots. These new proofs await CI after the existing
 5387f0d run finishes. No production Blueprint.parse admission is enabled yet;
 companion parity and construction guards remain required.
+
+Companion connected-intention.ts now regenerates identity-bound source using a
+shared expanded intended definition extracted from native recipe generation.
+Decision: avoid a second implementation of Minecraft wire-shape rules. The native
+recipe still independently regenerates every block/route/port; fresh exported
+sources in four orientations must exactly match the companion's shared definition
+in CI. Both half-adder catalogs are now explicitly packaged and paired-jar bytes
+checked. Added tampering, rebinding, rotated bounds and defensive-copy tests.
+Scoped TypeScript/format/syntax checks passed; behavioral proofs await CI. New
+source is not yet admitted to production planning/building. Existing runs remain
+live and must finish before dispatching another same-branch run.

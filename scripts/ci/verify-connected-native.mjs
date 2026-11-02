@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readConnectedTrace } from "../../dist/companion/src/connected-trace.js";
+import { readConnectedIntention } from "../../dist/companion/src/connected-intention.js";
 
 if (process.env.CI !== "true")
   throw new Error("Replay native observations on GitHub CI, not Josh's PC.");
@@ -72,6 +73,19 @@ for (const report of reports("ENGINEER_HALF_ADDER_PROBE ")) {
   }
 }
 assert.deepEqual(seen, rotations);
+const intentions = reports("ENGINEER_CONNECTED_INTENTION ");
+assert.equal(intentions.length, 4);
+const angles = new Set();
+for (const raw of intentions) {
+  const intention = readConnectedIntention(raw, {
+    worldId: "test",
+    dimension: "minecraft:overworld",
+    projectId: "db1175eb-1559-4cca-a740-d63f224a4068",
+  });
+  assert.ok(!angles.has(intention.rotation));
+  angles.add(intention.rotation);
+}
+assert.deepEqual(angles, new Set([0, 90, 180, 270]));
 assert.deepEqual(reports("ENGINEER_HALF_ADDER_NEGATIVE "), [
   {
     vector: 2,
