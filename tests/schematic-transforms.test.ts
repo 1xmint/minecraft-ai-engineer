@@ -23,6 +23,21 @@ import {
 const INT32_MIN = -2147483648;
 const INT32_MAX = 2147483647;
 
+test("maximal empty boxes skip traversal for every transform", () => {
+  for (const size of [
+    { x: 0, y: 32767, z: 32767 },
+    { x: 32767, y: 0, z: 32767 },
+    { x: 32767, y: 32767, z: 0 },
+  ]) {
+    const input = geo(size, { x: 0, y: 0, z: 0 }, ["minecraft:air"], []);
+    for (const transform of GEOMETRY_TRANSFORMS) {
+      const result = transformGeometry(input, transform);
+      assert.deepEqual(result.blocks, []);
+      assert.equal(result.size.y, size.y);
+    }
+  }
+});
+
 function geo(
   size: Vec3,
   offset: Vec3,

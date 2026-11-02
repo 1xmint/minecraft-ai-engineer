@@ -57,7 +57,7 @@ export function transformGeometry(
   const blocks = new Array<number>(g.blocks.length);
   const layer = outSize.x * outSize.z;
   let i = 0;
-  for (let y = 0; y < size.y; y++)
+  for (let y = 0; g.blocks.length > 0 && y < size.y; y++)
     for (let z = 0; z < size.z; z++)
       for (let x = 0; x < size.x; x++) {
         const lx = a * x + b * z + tx;
