@@ -2,15 +2,14 @@
 
 ## Multiplayer development branch
 
-PR #10 implements the dedicated-server foundation. All five checks passed in
-[the dedicated acceptance run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/40418092324).
-The published alpha below remains single-player-only.
-On the development branch, run one companion beside the Fabric server, using
-the same private `MCE_CONFIG_DIR`. Use `./gradlew runServer` from `mod/` for a
-development server and accept Minecraft's EULA yourself. Keep production
-`online-mode=true`. Start a matching client and connect locally. The optional
-client mod adds previews; ordinary commands and text teaching are server-side.
-No public hosting or port forwarding is needed for local play.
+The [published multiplayer preview](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2)
+contains the compiled mod and companion. Start with the [installation guide](install.md).
+Run one companion beside the Fabric server using the same private `MCE_CONFIG_DIR`.
+For source development, use `./gradlew runServer` from `mod/` and accept
+Minecraft's EULA yourself. Keep `online-mode=true`. Start a matching client and
+connect locally. The optional client mod adds previews; normal chat, fallback
+commands and text teaching are server-side. Local play needs no public hosting
+or port forwarding. The older solo alpha.1 remains a historical reference.
 
 An operator can create a private project with `/engineer project new`, or grant
 another player creation access with `/engineer permit <name-or-UUID>`. Use
@@ -52,7 +51,7 @@ delegations, and multiple owned projects require an explicit `project use`.
 
 ## Talking to Engineer (development source)
 
-Project setup also uses ordinary chat in the development source:
+Project setup uses ordinary chat in the published preview and current source:
 
 1. Say `Engineer, start a new project`. Creation still requires the operator's
    existing creation grant; the project starts private.
@@ -683,3 +682,9 @@ invalidates pending reasoning; it approves no construction. Notes are shared
 with authorized project members.
 Ambiguous requests such as `remember that` ask for explicit note text instead
 of silently guessing what to save. Commands remain a fallback.
+
+![Shared project notes read through actual player chat](images/project-memory.png)
+
+Captured from [the verified multiplayer run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41367933778).
+The notes remain owner-authored requirements; the chat does not imply a new model
+request, world inspection or functional test.
