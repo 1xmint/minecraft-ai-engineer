@@ -4,6 +4,16 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical source d3b664a / CI41533955802 completed SUCCESS. Downloaded/inspected
+work/physical-proof-41533955802: pinned jar checksum matched; both required native
+tests passed and actual survival placement consumed1 item, empty/reach attempts
+refused, mining succeeded. This is feasibility evidence only. Corrected-ray source
+fb30765 / CI41534173950 is now live. Follow-up candidate uses the actor's actual
+tick-driven Carpet action pack (not a separately driven pack), then requires real
+walking and exact1-item pickup from the mined drop. No inventory injection after
+mining. Scoped Java compilation passed; this expanded proof still needs CI after
+the current run finishes. Project authority/navigation/cancellation remain open.
+
 Physical probe41533955802/sourced3b664a is live in native execution. Fresh fixture
 inspection found its far-target ray shared the placed dirt's axis: a legitimate
 nearer hit could consume an item and make the reach negative ambiguous. Candidate

@@ -42,7 +42,7 @@ public final class PhysicalBuilderGameTests {
         actor.snapTo(origin.getX()+0.5,origin.getY(),origin.getZ()+0.5,0,0);
         for(int x=0;x<6;x++)for(int z=0;z<6;z++)helper.setBlock(new BlockPos(x,0,z),Blocks.STONE);
         var support=helper.absolutePos(new BlockPos(1,0,3));var placed=support.above();
-        Object pack=Class.forName("carpet.helpers.EntityPlayerActionPack").getConstructor(ServerPlayer.class).newInstance(actor);
+        Object pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);
         actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,2));
         look(pack,new Vec3(support.getX()+0.5,support.getY()+1,support.getZ()+0.5));action(pack,"USE","once");update(pack);
         helper.assertTrue(level.getBlockState(placed).is(Blocks.DIRT) && actor.getMainHandItem().getCount()==1,"Actual survival item use places one dirt and consumes exactly one item");
@@ -56,13 +56,26 @@ public final class PhysicalBuilderGameTests {
         helper.assertTrue(level.getBlockState(far.above()).isAir() && actor.getMainHandItem().getCount()==1,"Out-of-reach item use does not place or consume");
         stop(pack);actor.setItemInHand(InteractionHand.MAIN_HAND,ItemStack.EMPTY);
         look(pack,Vec3.atCenterOf(placed));action(pack,"ATTACK","continuous");
-        for(int tick=1;tick<=50;tick++)helper.runAtTickTime(tick,()->{try{update(pack);}catch(Exception failed){throw new RuntimeException(failed);}});
+        // The actor's own action pack advances from Carpet's native player tick.
         helper.runAtTickTime(55,()->{
             try{
                 stop(pack);
                 helper.assertTrue(level.getBlockState(placed).isAir(),"Actual survival attack mines the placed dirt over native ticks");
                 helper.assertTrue(level.getBlockState(support).is(Blocks.STONE),"Stopping attack retains the supporting block");
-                System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true");
+                helper.assertTrue(!actor.getInventory().contains(new ItemStack(Items.DIRT)),"Mined material is not injected into inventory");
+                pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);
+                pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);
+            }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
+        });
+        helper.runAtTickTime(80,()->{
+            try{
+                stop(pack);
+                helper.assertTrue(actor.getZ()>origin.getZ()+1.25,"Actor walks toward the mined material through native movement");
+                int collected=0;for(int slot=0;slot<actor.getInventory().getContainerSize();slot++){
+                    var stack=actor.getInventory().getItem(slot);if(stack.is(Items.DIRT))collected+=stack.getCount();
+                }
+                helper.assertTrue(collected==1,"Exactly one mined drop is collected through physical pickup");
+                System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1");
                 server.getPlayerList().remove(actor);helper.succeed();
             }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
         });
