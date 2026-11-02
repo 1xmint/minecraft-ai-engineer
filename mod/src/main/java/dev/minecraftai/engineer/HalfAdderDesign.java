@@ -20,6 +20,7 @@ final class HalfAdderDesign {
     private final JsonArray nodes=new JsonArray(),nets=new JsonArray();
     private final JsonObject graph=new JsonObject();
     private final BlockPos origin;
+    private final String graphDigest;
 
     HalfAdderDesign(){
         var spec=recipe();origin=Blueprint.pos(spec.getAsJsonObject("origin"));
@@ -94,11 +95,29 @@ final class HalfAdderDesign {
             port.addProperty("signal","boolean");port.add("pos",Blueprint.jsonPos(pin.pos()));port.addProperty("facing",pin.facing()==null?"none":pin.facing().getSerializedName());ports.add(port);
         }
         graph.add("ports",ports);graph.addProperty("settleGameTicks",48);graph.addProperty("stableSamples",8);
+        try{
+            String definition="connected-half-adder-v1|minecraft=26.3|"+canonical(graph)+"|"+canonical(geometry());
+            graphDigest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(definition.getBytes(StandardCharsets.UTF_8)));
+        }catch(java.security.NoSuchAlgorithmException unavailable){throw new IllegalStateException("Missing SHA256",unavailable);}
+
     }
     List<Cell> cells(){return cells.values().stream().sorted(Comparator.comparing((Cell c)->c.pos().getY()).thenComparing(c->c.pos().getZ()).thenComparing(c->c.pos().getX())).toList();}
     List<Pin> pins(){return List.copyOf(pins.values());}
     BlockPos control(String id){var pin=pins.get(id+":control");if(pin==null || pin.role()!=Role.EXTERNAL_CONTROL)throw new IllegalArgumentException("Not an external control");return pin.pos();}
     JsonObject graph(){return graph.deepCopy();}
+    String graphDigest(){return graphDigest;}
+    JsonArray geometry(){
+        var out=new JsonArray();for(var cell:cells()){
+            var item=new JsonObject();item.add("pos",Blueprint.jsonPos(cell.pos()));item.addProperty("state",Blueprint.describe(cell.state()));
+            item.addProperty("stage",cell.stage());item.addProperty("component",cell.component());out.add(item);
+        }return out;
+    }
+    private static String canonical(JsonElement value){
+        if(value.isJsonArray())return "["+String.join(",",value.getAsJsonArray().asList().stream().map(HalfAdderDesign::canonical).toList())+"]";
+        if(value.isJsonObject())return "{"+String.join(",",value.getAsJsonObject().keySet().stream().sorted().map(key->new JsonPrimitive(key).toString()+":"+canonical(value.getAsJsonObject().get(key))).toList())+"}";
+        return value.toString();
+    }
+
     private void node(String id,String operation){var node=new JsonObject();node.addProperty("id",id);node.addProperty("operation",operation);nodes.add(node);}
     private void pin(String id,String node,Role role,Physical physical,int x,int z,Direction facing){if(pins.putIfAbsent(id,new Pin(id,node,role,physical,at(x,z),facing))!=null)throw new IllegalStateException("Duplicate typed port");}
     private BlockPos at(int x,int z){return new BlockPos(x,1,z).subtract(origin);}

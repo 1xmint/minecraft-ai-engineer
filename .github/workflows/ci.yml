@@ -64,6 +64,7 @@ jobs:
           npm ci
           npm run build
           node scripts/ci/verify-analog-native.mjs mod/build/native-gametest.log | tee mod/build/analog-native-replay.json
+          node scripts/ci/verify-connected-native.mjs mod/build/native-gametest.log | tee mod/build/connected-native-replay.json
       - name: Verify catalog bytes in the Fabric jar
         run: |
           jar_file=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -print -quit)
@@ -92,6 +93,7 @@ jobs:
             mod/build/test-results/
             mod/build/native-gametest.log
             mod/build/analog-native-replay.json
+            mod/build/connected-native-replay.json
             mod/run/gametest/logs/latest.log
           if-no-files-found: warn
           retention-days: 14

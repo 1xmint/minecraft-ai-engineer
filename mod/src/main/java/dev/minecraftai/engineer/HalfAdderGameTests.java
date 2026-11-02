@@ -66,19 +66,58 @@ public final class HalfAdderGameTests {
         row.addProperty("a",a);row.addProperty("b",b);row.add("ports",ports);return row;
     }
     private static void arithmetic(GameTestHelper helper,Rotation rotation){
-        var design=new HalfAdderDesign();build(helper,design,rotation);var samples=new JsonArray();long[] started={0};
+        var design=new HalfAdderDesign();build(helper,design,rotation);var samples=new JsonArray();long[] started={0};var traces=new ConnectedTrace[8];
         for(int index=0;index<8;index++){
             int current=index,base=8+index*64,vector=index<4?index:7-index;
-            helper.runAtTickTime(base,()->{drive(helper,design,rotation,(vector&2)!=0,(vector&1)!=0);started[0]=helper.getLevel().getGameTime();samples.add(sample(helper,design,rotation,current,0,started[0]));});
-            for(int elapsed=1;elapsed<=55;elapsed++){int offset=elapsed;helper.runAtTickTime(base+elapsed,()->samples.add(sample(helper,design,rotation,current,offset,started[0])));}
+            helper.runAtTickTime(base,()->{
+                drive(helper,design,rotation,(vector&2)!=0,(vector&1)!=0);started[0]=helper.getLevel().getGameTime();
+                traces[current]=new ConnectedTrace(design.graphDigest(),(vector&2)!=0,(vector&1)!=0,started[0]);
+                var frame=sample(helper,design,rotation,current,0,started[0]);samples.add(frame);traces[current].sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));
+            });
+            for(int elapsed=1;elapsed<=55;elapsed++){int offset=elapsed;helper.runAtTickTime(base+elapsed,()->{
+                var frame=sample(helper,design,rotation,current,offset,started[0]);samples.add(frame);traces[current].sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));
+            });}
         }
         helper.runAtTickTime(8+8*64,()->{
             helper.assertTrue(samples.size()==448 && design.pins().size()==20,"All eight vectors retain every clock frame and all twenty pin observations");
             helper.assertTrue(!lever(helper,at(design.control("a"),rotation)) && !lever(helper,at(design.control("b"),rotation)),"Both original external controls are restored");
             var report=new JsonObject();report.addProperty("schemaVersion",1);report.addProperty("rotation",rotation.name());report.addProperty("cells",design.cells().size());
             report.addProperty("authority","native prototype only; no admitted project or functional pass");report.add("graph",design.graph());report.add("samples",samples);
+            report.addProperty("graphDigest",design.graphDigest());report.add("geometry",design.geometry());var cases=new JsonArray();
+            for(int index=0;index<8;index++){
+                int vector=index<4?index:7-index;
+                helper.assertTrue(traces[index].passed() && ConnectedTrace.read(traces[index].json(),design.graphDigest(),(vector&2)!=0,(vector&1)!=0).passed(),"Actual complete pin/clock evidence replays against separately supplied canonical graph and inputs");
+                cases.add(traces[index].json());
+            }
+            report.add("cases",cases);
+            var valid=traces[0].json();
+            for(String fault:new String[]{"owner","gap","graph","input","timing","clock","pin"}){
+                var forged=valid.deepCopy();
+                switch(fault){
+                    case "owner" -> forged.addProperty("owner","trusted");
+                    case "gap" -> forged.getAsJsonArray("samples").remove(10);
+                    case "graph" -> forged.addProperty("graphDigest","f".repeat(64));
+                    case "input" -> forged.addProperty("a",true);
+                    case "timing" -> forged.addProperty("settleGameTicks",0);
+                    case "clock" -> forged.addProperty("startGameTick",ConnectedTrace.MAX_TICK);
+                    case "pin" -> forged.getAsJsonArray("samples").get(0).getAsJsonObject().getAsJsonObject("ports").addProperty("a:control",0);
+                }
+                rejects(helper,()->ConnectedTrace.read(forged,design.graphDigest(),false,false),"Reject invented connected evidence: "+fault);
+            }
+            var frames=valid.getAsJsonArray("samples");long start=valid.get("startGameTick").getAsLong();
+            var replay=new ConnectedTrace(design.graphDigest(),false,false,start);
+            replay.sample(start,frames.get(0).getAsJsonObject().getAsJsonObject("ports"));var before=replay.json();
+            var malformed=frames.get(2).getAsJsonObject().getAsJsonObject("ports").deepCopy();malformed.remove("sum:out");
+            rejects(helper,()->replay.sample(start+2,malformed),"Rejected sample cannot introduce a sticky gap");
+            helper.assertTrue(replay.json().equals(before),"Malformed samples leave all captured facts unchanged");
+            for(int index=1;index<56;index++){var frame=frames.get(index).getAsJsonObject();replay.sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));}
+            helper.assertTrue(replay.passed(),"A rejected malformed sample cannot poison a later complete physical trace");
+
             System.out.println("ENGINEER_HALF_ADDER_PROBE "+report);helper.succeed();
         });
+    }
+    private static void rejects(GameTestHelper helper,Runnable action,String message){
+        boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);
     }
     @GameTest(structure="engineer:analog_lab",maxTicks=110)
     public void oneCorrectReceiverCannotCertifyABrokenWholeCircuit(GameTestHelper helper){

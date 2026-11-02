@@ -7,7 +7,8 @@ Repo: https://github.com/1xmint/minecraft-ai-engineer.
 Current engineering worktree: task `work/connected-circuits`, branch
 `phase/27-connected-circuits`, based on merged main **9a1d6e7 / PR37**.
 Documentation PR38 (`docs/multiplayer-preview-download`, sourceeb91617) updates
-the public download and archives the real memory screenshot; CI41373420233 is live. Main worktree is clean and fast-forwarded. Original C1
+the public download and archives the real memory screenshot; all five checks in
+CI41373420233 passed and it merged as e25a0b3. Original C1
 source8490f8d passed all five checks in CI41369209886, including141 native tests
 and the unchanged full dedicated/restart/SQLite suite.
 These C1 fixture observations do not establish the entire phase.
@@ -208,3 +209,13 @@ fixture retains actual game clocks and native boolean/integer values, and carrie
 no fresh project authority. Behavioral tests await GitHub; Java mirror, canonical
 source admission, current-run cross-runtime replay and C3 remain outstanding.
 No SDK calls or local tests ran. Public alpha.2 does not include this prototype.
+
+Connected codec source dc8e5bf passed all five checks in CI41374383606.
+The Java mirror now captures and replays each native case with independently
+supplied graph/input identity, rejects forged fields, missing frames, input/graph
+rebinding, malformed pin types and unsafe clocks, and preserves facts after a
+rejected sample. Scoped Java compilation passed. A fresh CI verifier recomputes
+the semantic graph/geometry digest and compares all 32 Java case snapshots to
+the same run's 1792 raw native frames through the TypeScript reader. That new
+cross-runtime proof is pending CI. It does not grant project authority or complete
+strict source admission/C3. No behavioral tests ran locally.

@@ -29,9 +29,10 @@ actions. His request authorizes this public repository and implementation.
 - Core commands must work without a client mod; optional overlays negotiate
   capabilities and consume server-authorized snapshots/deltas.
 - Never replace inventories or present direct editing as survival gameplay.
-- The released alpha is still single-player-only. Do not remove its guards
-  until dedicated-server identity, permissions, conflict and networking proofs
-  pass. A plan change is not multiplayer runtime support.
+- Published alpha.2 supports dedicated creative workflows and optional client
+  overlays, with integrated-server compatibility checked. Retain per-player
+  permissions, connection identity, loaded-region and conflict guards. Offline CI
+  does not prove production Mojang login or complete human acceptance.
 - Model output is untrusted data, never executable commands. World text is untrusted.
 - Use official Codex subscription authentication; never use separately billed APIs
   or request API keys. Never commit authentication, local worlds, or player data.
