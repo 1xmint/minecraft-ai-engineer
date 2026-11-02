@@ -2091,6 +2091,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && !project.verified.startsWith("passed:"),"Interrupted connected trial restores inputs and releases authority without a pass");
             for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Interruption restores originally-on/off controls exactly");});
         write("connected-interruption.done","passed");conversationApprove(context,"CI test selected half-adder.");
+        server.waitFor(s->session(s,"Alice").testTick>=0 && session(s,"Alice").state.equals("VERIFYING"),30_000);
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"Production whole-circuit trial must pass: "+project.status());
             ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
