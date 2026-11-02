@@ -102,7 +102,7 @@ async function main(): Promise<void> {
   });
   server.listen(config.port, "127.0.0.1", () =>
     console.log(
-      `Minecraft AI Engineer is ready on loopback port ${config.port}. Open a single-player world and use /engineer help. Config: ${config.directory}`,
+      `Minecraft AI Engineer is ready on loopback port ${config.port}. Start the matching Fabric server and say Engineer, start a new project. Config: ${config.directory}`,
     ),
   );
   const stop = () => {

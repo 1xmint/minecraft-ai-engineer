@@ -4,21 +4,66 @@
 AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current integration worktree: task `work/schematic-analysis-review`, branch
-`fix/schematic-analysis-empty`. Main is **3978f88**, merged PR33 at
-2026-11-01T23:51:45Z. Exact comparator source **7e27fd7** passed all five checks in
-**CI41362325852**, all136 native tests and the complete dedicated/SQLite proof.
-All12 analog markers passed, including actual saved-server restart, fresh subtract
-retest and latest-repair-only undo. Evidence: `work/analog-final-41362325852`;
-actual screenshot inspected and archived in docs/images/comparator-tested.png.
+Current worktree: `work/installable-bundles`, branch
+`phase/26-installable-bundles`. Main870fc91 includes shipped schematic analysis
+PR35: source5067bdc/all5 CI41364625681,209 companion tests (208 passed,1 existing
+skip), all136 native and full dedicated/restart/SQLite proof. Evidence inspected
+at `work/schematic-analysis-final-41364625681`.
 
-Claude PR34 merged **885748e**, exact source55ca74c/all5 CI41360384747, with21
-schematic proofs. Claude PR35 adds standalone read-only geometry analysis/diff;
-sourcef04fac3 passed all five checks in CI41363193634. Parent found valid zero-volume
-shapes could do billions of empty loop iterations. Fix3b01112 skips cell walks
-when there are no blocks; maximal-dimension regressions cover both input orders.
-Scoped type/format checks pass; the new regression awaits GitHub. The integration
-branch merges current main; PR35 now needs exact combined-head CI before merge.
+Memory PR36 source0ef5c6d passed all five checks in CI41364946648, all137 native
+tests and full dedicated/restart/SQLite proof. Actual chat saved goal/decision,
+read shared notes, clarified polite ambiguity, denied editor writes/revoked reads,
+and recovered notes plus a fresh constraint after restart. Four knowledge markers
+and strict literal-note/count/no-world-authority assertions passed. Evidence
+inspected at `work/conversation-memory-final-41364946648`.
+
+This branch integrates that exact memory implementation and main870fc91 with
+packaging. Only STATE conflicted; production Java is unchanged from the proved
+memory source. PR36 will be closed as integrated only after this combined branch
+passes and merges. One combined run proves the actual release pair with both
+features. Do not launch a redundant CI run on the prepared PR36 merge branch.
+
+Original packaging cd316fa/CI41365754400: extracted Linux/Windows production
+runtime and rejection checks passed; Fabric packaging caught the existing CI
+chmod changing tracked gradlew100644 to100755. Fix169f081 tracks it executable,
+keeping the clean-source guard. Its dedicated job passed and the run is terminal. The sole failed step was the
+clean-checkout packaging guard. Promote the combined source for exact-head CI.
+
+Phase26 Outcomes (serves release/setup):
+
+- R1: an allowlisted, compiled companion bundle installs without TypeScript/Java
+  build tools. Proof: extract it, install production dependencies and start the
+  actual entry point on both Linux and Windows; authenticated health succeeds.
+- R2: the deployable mod and companion are paired from one checkout/run with source
+  identity and SHA256 hashes. Proof: Fabric CI produces both in one artifact;
+  smoke verifies archive contents, identity and actual runtime imports/launcher.
+- R3: multiplayer installation instructions cover one private server companion,
+  current pinned runtimes, server/client placement and normal chat. Missing build
+  inputs, symlinks and existing output reject; no user data enters the archive.
+
+Decision: repeatable allowlist packaging beats stale source-only instructions or
+untracked manual zips. Reuse existing npm lock and launcher; no dependencies,
+automatic credentials, paid service, model call or public endpoint. CI artifacts
+are candidates, not a release endorsement. Publish only artifacts from an exact
+successful main run with all five checks. GPT-6-Luna's focused architecture
+challenge confirmed compiled catalog/launcher layout, production optional Codex
+binary dependencies, authenticated health and same-run pairing are essential.
+
+Phase25 (serves E1/E4) outcomes:
+
+- M1: owners save literal goals, constraints, preferences and decisions through
+  addressed chat, preserving case and punctuation. Proof: grammar negatives and
+  actual chat writes into the existing durable note flow.
+- M2: authorized players read notes through chat; editors cannot author, revoked
+  members cannot read. Proof: actual two-player denial/read and server restart.
+- M3: memory chat spends no model quota, changes no world/blueprint or functional
+  evidence, and never executes note contents. Proof: existing exact SQLite note,
+  interpretation-count and no-world-authority assertions with native chat inputs.
+
+Decision: reuse ProjectKnowledgeClient and its scoped owner-only writes; add only
+explicit local memory intent routing. No new storage/schema/model action. Generic
+"remember that" asks which literal text/kind; never guesses a durable requirement.
+This closes the command-only entry gap, not broader retrieval or automatic summaries.
 
 The downloadable v0.1.0-alpha.1 remains the older solo alpha. Full in-game
 schematic integration, release packaging and the overall roadmap remain pending.
@@ -28,7 +73,7 @@ PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
 Gradle `--max-workers=1`. Preserve pins and push progress. Memory only in AGENTS.md
 and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
 
-## Current phase24 Outcomes (E2/E3)
+## Shipped phase24 Outcomes (E2/E3)
 
 - A1: physical selectors produce independent strengths0..15. Proof: actual native
   calibration279 samples; compare/subtract boundary probes in four rotations.
@@ -225,3 +270,57 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
   resources/latency/reliability optimization; multiple coordinated builders.
 
 Do not mark the overall goal complete after any one phase or file-codec milestone.
+
+Phase25 implementation: local explicit note-kind/colon parser, literal payloads,
+shared-note read phrases and ambiguous remember prompts. Existing native knowledge
+flows now use actual addressed chat for owner writes, editor denial, authorized
+reads, revoked reads and restart recovery. No provider replies/counts or production
+permissions changed. Native grammar proof covers four kinds, exact payload,
+negative/quoted/command contents and bounds. GPT-6-Luna/high focused review found
+polite ambiguous requests could fall through to model interpretation; both plain
+and polite prefixes now clarify locally, with grammar and actual-client coverage.
+Final scoped main/client compilation and format/diff checks passed. GitHub CI
+must now prove the changed native grammar and dedicated flows. No local tests
+or SDK calls.
+
+Phase26 implementation: tracked-source allowlist packager writes a fresh companion
+zip, optional deployable jar pair, source/run BUILD manifests and SHA256SUMS.
+No repository/config/world snapshots or node_modules are copied. Linux and Windows
+CI extract, install locked production dependencies, prepare the actual platform
+launcher, start the actual entry point with isolated config and authenticate health;
+no Codex binary execution or model call. Smoke also proves missing/symlink inputs,
+existing-output preservation and exclusion of a stray private-looking runtime file.
+Fabric job pairs both compiled outputs from its own checkout. Installation docs
+use Fabric's official server installer and keep online-mode, per-player grants,
+operator-only model access and private localhost topology. Local JS/Python syntax
+and scoped format/diff checks pass; no behavioral tests ran. Exact CI remains needed.
+
+GPT-6-Luna/high focused implementation follow-up found no concrete packaging,
+file-preservation, runtime-layout or Windows launch blocker. Inspection only;
+actual cross-platform runtime proof remains required from GitHub CI.
+
+First phase26 sourcecd316fa/CI41365754400 proved extracted production startup,
+launcher preparation, authenticated health and all packaging rejection checks on
+both Linux and Windows. Fabric passed native tests/replay but packaging rejected
+its dirty checkout: mod/gradlew was tracked100644, while the existing CI chmod
+made it100755. Correct the tracked executable bit to100755 rather than weaken
+the clean-source guard. The same run's dedicated job remains live; observe it to
+terminal before updating PR37. The prepared fix is backed up separately.
+
+Next engineering slice (E2, not yet implemented): actual typed signal connections
+and whole-circuit evidence, beginning with a native producer-to-consumer port
+probe without a consumer lever, then a curated half-adder (SUM/CARRY). Existing
+ComponentTree dependencies order construction; they are not electrical nets.
+GPT-6-Luna's read-only scout identified external stimulus vs internally driven
+ports, backfeed/isolation, graph-scoped stale evidence and union read/write leases
+as the key boundaries. Preserve register banks, memory, arithmetic, displays and
+redstone computers in the full goal; no island test substitutes for connectivity.
+
+Original packaging CI41365754400 is terminal: Dedicated multiplayer passed with
+full restart/SQLite verification; Companion, Windows planner and Minecraft client
+also passed. Fabric passed native/replay/catalog checks before the packaging-only
+mode rejection. Combined main870fc91 + memory0ef5c6d + executable-bit fix now has
+full TS and scoped Java/client compilation, JS/Python syntax and scoped format/diff
+checks passing. It adds an actual native memory screenshot to the fixture; no
+production memory Java differs from the proved original. Push PR37 for a fresh
+combined run; publish no candidate until all five and exact main proof pass.
