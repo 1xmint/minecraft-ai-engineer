@@ -26,8 +26,8 @@ features. Do not launch a redundant CI run on the prepared PR36 merge branch.
 Original packaging cd316fa/CI41365754400: extracted Linux/Windows production
 runtime and rejection checks passed; Fabric packaging caught the existing CI
 chmod changing tracked gradlew100644 to100755. Fix169f081 tracks it executable,
-keeping the clean-source guard. Its dedicated job is still live; wait for terminal
-before updating PR37 with the combined source.
+keeping the clean-source guard. Its dedicated job passed and the run is terminal. The sole failed step was the
+clean-checkout packaging guard. Promote the combined source for exact-head CI.
 
 Phase26 Outcomes (serves release/setup):
 
@@ -315,3 +315,12 @@ GPT-6-Luna's read-only scout identified external stimulus vs internally driven
 ports, backfeed/isolation, graph-scoped stale evidence and union read/write leases
 as the key boundaries. Preserve register banks, memory, arithmetic, displays and
 redstone computers in the full goal; no island test substitutes for connectivity.
+
+Original packaging CI41365754400 is terminal: Dedicated multiplayer passed with
+full restart/SQLite verification; Companion, Windows planner and Minecraft client
+also passed. Fabric passed native/replay/catalog checks before the packaging-only
+mode rejection. Combined main870fc91 + memory0ef5c6d + executable-bit fix now has
+full TS and scoped Java/client compilation, JS/Python syntax and scoped format/diff
+checks passing. It adds an actual native memory screenshot to the fixture; no
+production memory Java differs from the proved original. Push PR37 for a fresh
+combined run; publish no candidate until all five and exact main proof pass.
