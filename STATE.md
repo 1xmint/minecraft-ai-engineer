@@ -5,10 +5,29 @@ AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
 Current worktree: `work/installable-bundles`, branch
-`phase/26-installable-bundles`, based on main3978f88 (merged PR33).
-Comparator exact source7e27fd7/all5 CI41362325852 shipped with all136 native tests
-and dedicated/restart/SQLite proof. Parallel PR35/source5067bdc/CI41364625681 and
-PR36/source0ef5c6d/CI41364946648 remain live; never cancel their runs for this work.
+`phase/26-installable-bundles`. Main870fc91 includes shipped schematic analysis
+PR35: source5067bdc/all5 CI41364625681,209 companion tests (208 passed,1 existing
+skip), all136 native and full dedicated/restart/SQLite proof. Evidence inspected
+at `work/schematic-analysis-final-41364625681`.
+
+Memory PR36 source0ef5c6d passed all five checks in CI41364946648, all137 native
+tests and full dedicated/restart/SQLite proof. Actual chat saved goal/decision,
+read shared notes, clarified polite ambiguity, denied editor writes/revoked reads,
+and recovered notes plus a fresh constraint after restart. Four knowledge markers
+and strict literal-note/count/no-world-authority assertions passed. Evidence
+inspected at `work/conversation-memory-final-41364946648`.
+
+This branch integrates that exact memory implementation and main870fc91 with
+packaging. Only STATE conflicted; production Java is unchanged from the proved
+memory source. PR36 will be closed as integrated only after this combined branch
+passes and merges. One combined run proves the actual release pair with both
+features. Do not launch a redundant CI run on the prepared PR36 merge branch.
+
+Original packaging cd316fa/CI41365754400: extracted Linux/Windows production
+runtime and rejection checks passed; Fabric packaging caught the existing CI
+chmod changing tracked gradlew100644 to100755. Fix169f081 tracks it executable,
+keeping the clean-source guard. Its dedicated job is still live; wait for terminal
+before updating PR37 with the combined source.
 
 Phase26 Outcomes (serves release/setup):
 
@@ -30,12 +49,31 @@ successful main run with all five checks. GPT-6-Luna's focused architecture
 challenge confirmed compiled catalog/launcher layout, production optional Codex
 binary dependencies, authenticated health and same-run pairing are essential.
 
+Phase25 (serves E1/E4) outcomes:
+
+- M1: owners save literal goals, constraints, preferences and decisions through
+  addressed chat, preserving case and punctuation. Proof: grammar negatives and
+  actual chat writes into the existing durable note flow.
+- M2: authorized players read notes through chat; editors cannot author, revoked
+  members cannot read. Proof: actual two-player denial/read and server restart.
+- M3: memory chat spends no model quota, changes no world/blueprint or functional
+  evidence, and never executes note contents. Proof: existing exact SQLite note,
+  interpretation-count and no-world-authority assertions with native chat inputs.
+
+Decision: reuse ProjectKnowledgeClient and its scoped owner-only writes; add only
+explicit local memory intent routing. No new storage/schema/model action. Generic
+"remember that" asks which literal text/kind; never guesses a durable requirement.
+This closes the command-only entry gap, not broader retrieval or automatic summaries.
+
+The downloadable v0.1.0-alpha.1 remains the older solo alpha. Full in-game
+schematic integration, release packaging and the overall roadmap remain pending.
+
 Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
 PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
 Gradle `--max-workers=1`. Preserve pins and push progress. Memory only in AGENTS.md
 and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
 
-## Current phase24 Outcomes (E2/E3)
+## Shipped phase24 Outcomes (E2/E3)
 
 - A1: physical selectors produce independent strengths0..15. Proof: actual native
   calibration279 samples; compare/subtract boundary probes in four rotations.
@@ -50,8 +88,8 @@ and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
   Proof: actual chat/private approval flow, denied viewer, revoked editor, static
   repair, real server restart, native screenshot and exact interpretation counts.
 
-A1 and the canonical/native foundation are proved. A2/A3/A4 production integration
-is implemented but its complete dedicated/restart/SQLite proof is still pending.
+A1–A4 passed on exact source7e27fd7/all5 CI41362325852, including the complete
+dedicated/restart/SQLite proof.
 No settled transfer claims latency, all4096 combinations, or arbitrary analog
 wiring. Component composition does not yet accept analog leaves.
 
@@ -110,17 +148,17 @@ Current implementation:
   work/analog-shared-failure-41332437714 and work/analog-wire-proof-41332437714.
 - **cc0cbed / CI41360150254:** fixture now observes actual VERIFYING/testTick
   before accepting completion in all three full analog waits. No production
-  behavior or pass criterion changed. All13 analog markers passed, including shared
+  behavior or pass criterion changed. All12 analog markers passed, including shared
   repair, saved-server fresh retest and latest-operation undo. The process cap
   expired later during the existing pending-stop/restart tail. Full job/SQLite
   verification is still required. Evidence: work/analog-trial-start-proof-41360150254.
   Local client compile passed.
 
-Next: inspect the same live handles to terminal (observation timeout is not
-failure). Validate every analog marker and actual SQLite source/scope/actor/
-case replay, including at least two subtract epochs. Inspect/archive fresh native
-screenshot. Fix failures without weakening proof. Finish docs and merge only the
-exact green combined head; then update this note with the shipped outcomes.
+Final **7e27fd7 / CI41362325852** passed all five checks, all136 native tests,
+8 rotated canonical intentions,144 measured windows and both66-case native suites.
+The dedicated flow passed every marker and strict SQLite verification, including
+separate compare/subtract scopes and fresh subtract evidence in distinct epochs.
+Merged as3978f88/PR33. Native screenshot inspected; no model calls or local tests.
 
 Dedicated fixture explicitly covers compare chat build/test/stop/restoration/
 blocked-edit undo/full owned undo; subtract viewer denial/editor revocation/
@@ -215,8 +253,9 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
 
 ## Overall remaining goals
 
-- E2: finish analog/comparators; actual connections and larger multicomponent/
-  piston systems, update-order/interference and adapting existing structures.
+- E2: actual connections and larger multicomponent/piston systems, register banks,
+  memory, arithmetic and display circuits, update-order/interference and adapting
+  existing structures. Canonical comparator workbenches shipped in PR33.
 - E1: broader natural references/retrieval beyond literal saved-intention search,
   durable rationale/summaries and preferences.
 - E3: richer connection/timing/interference/inconclusive diagnosis and repair;
@@ -232,15 +271,17 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
 
 Do not mark the overall goal complete after any one phase or file-codec milestone.
 
-Combined-source preparation: PR34/source55ca74c is merged as885748e; code merged
-cleanly into this branch and the sole STATE conflict retains both outcomes. The
-pinned test-only prismarine-nbt dependency was installed locally without scripts
-or manifest/lock changes to permit type checking; no behavioral tests ran. Combined
-TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt before
-20min process expiry in the later existing pending-review/restart tail, so the
-CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
-consent/101sec expiry proof and every existing assertion remain unchanged. Next:
-commit this combined source with docs and run its required exact-head proof.
+Phase25 implementation: local explicit note-kind/colon parser, literal payloads,
+shared-note read phrases and ambiguous remember prompts. Existing native knowledge
+flows now use actual addressed chat for owner writes, editor denial, authorized
+reads, revoked reads and restart recovery. No provider replies/counts or production
+permissions changed. Native grammar proof covers four kinds, exact payload,
+negative/quoted/command contents and bounds. GPT-6-Luna/high focused review found
+polite ambiguous requests could fall through to model interpretation; both plain
+and polite prefixes now clarify locally, with grammar and actual-client coverage.
+Final scoped main/client compilation and format/diff checks passed. GitHub CI
+must now prove the changed native grammar and dedicated flows. No local tests
+or SDK calls.
 
 Phase26 implementation: tracked-source allowlist packager writes a fresh companion
 zip, optional deployable jar pair, source/run BUILD manifests and SHA256SUMS.
@@ -265,3 +306,12 @@ its dirty checkout: mod/gradlew was tracked100644, while the existing CI chmod
 made it100755. Correct the tracked executable bit to100755 rather than weaken
 the clean-source guard. The same run's dedicated job remains live; observe it to
 terminal before updating PR37. The prepared fix is backed up separately.
+
+Next engineering slice (E2, not yet implemented): actual typed signal connections
+and whole-circuit evidence, beginning with a native producer-to-consumer port
+probe without a consumer lever, then a curated half-adder (SUM/CARRY). Existing
+ComponentTree dependencies order construction; they are not electrical nets.
+GPT-6-Luna's read-only scout identified external stimulus vs internally driven
+ports, backfeed/isolation, graph-scoped stale evidence and union read/write leases
+as the key boundaries. Preserve register banks, memory, arithmetic, displays and
+redstone computers in the full goal; no island test substitutes for connectivity.

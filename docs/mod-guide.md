@@ -668,3 +668,18 @@ Actual client after a completed observer trial; timing evidence is recorded
 separately in the game-tick trace:
 
 ![Native observer construction after its pulse trial](images/observer-tested.png)
+
+## Remember project requirements through chat
+
+Say `Engineer, remember my preference: Keep the wiring visible.` Use `goal`,
+`constraint`, `preference` or `decision` before the colon. The bot saves your
+literal text without a model request. Only the project owner can write these
+shared notes. Authorized members can ask
+`Engineer, what do you remember about this project?` to read recent notes.
+
+Notes survive server and companion restarts. They are requirements authored by
+the owner, not observations or proof that a circuit works. Writing a requirement
+invalidates pending reasoning; it approves no construction. Notes are shared
+with authorized project members.
+Ambiguous requests such as `remember that` ask for explicit note text instead
+of silently guessing what to save. Commands remain a fallback.
