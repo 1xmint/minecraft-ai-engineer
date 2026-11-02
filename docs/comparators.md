@@ -82,3 +82,12 @@ the conflict and preserves the work. Native dust connection changes caused by
 owned removals are checked against Minecraft's connection rules, while player
 edits and dependencies remain protected. Comparator entity data is never restored
 from a project journal.
+
+## Native Minecraft proof
+
+![Compare workbench after its actual 66-case trial](images/comparator-tested.png)
+
+Captured from the dedicated-server run on source `7e27fd7`,
+[CI41362325852](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41362325852).
+The chat reports the measured suite and restored selectors. This scripted native
+flow is separate from complete human acceptance and production account login.

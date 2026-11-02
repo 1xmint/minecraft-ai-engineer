@@ -4,23 +4,24 @@
 AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: task `work/analog-comparators`, branch
-`phase/24-analog-comparators`. Runtime source **cc0cbed / CI41360150254** passed four checks and every new analog
-marker, then reached the CI process cap during the remaining approval/restart tail.
-Local **9f96d81** adds prepared docs and is backed up at
-`origin/backup/analog-rotations`; do not push docs merely to cancel that live run.
-Main is **885748e** (merged PR34, schematic file foundation). The downloadable v0.1.0-alpha.1 is still
-the older solo alpha; source capabilities are broader than that release.
+Current integration worktree: task `work/schematic-analysis-review`, branch
+`fix/schematic-analysis-empty`. Main is **3978f88**, merged PR33 at
+2026-11-01T23:51:45Z. Exact comparator source **7e27fd7** passed all five checks in
+**CI41362325852**, all136 native tests and the complete dedicated/SQLite proof.
+All12 analog markers passed, including actual saved-server restart, fresh subtract
+retest and latest-repair-only undo. Evidence: `work/analog-final-41362325852`;
+actual screenshot inspected and archived in docs/images/comparator-tested.png.
 
-Claude's schematic foundation **PR34** merged as **885748e** on
-2026-11-01T23:24:42Z. Exact source **55ca74c** passed all five checks in
-**CI41360384747**, all117 native tests and177 companion tests (176 passed, one
-existing skip), including21 schematic tests and full dedicated/restart proof.
-Review worktree: `work/schematic-review`, branch `fix/schematic-boundaries`.
-The main worktree is clean and fast-forwarded. This branch is merging that main
-with prepared comparator docs; source files merged cleanly, and this note resolves
-the sole conflict by retaining both outcomes. Complete the combined-source CI
-before merging PR33. Full in-game schematic integration is still pending.
+Claude PR34 merged **885748e**, exact source55ca74c/all5 CI41360384747, with21
+schematic proofs. Claude PR35 adds standalone read-only geometry analysis/diff;
+sourcef04fac3 passed all five checks in CI41363193634. Parent found valid zero-volume
+shapes could do billions of empty loop iterations. Fix3b01112 skips cell walks
+when there are no blocks; maximal-dimension regressions cover both input orders.
+Scoped type/format checks pass; the new regression awaits GitHub. The integration
+branch merges current main; PR35 now needs exact combined-head CI before merge.
+
+The downloadable v0.1.0-alpha.1 remains the older solo alpha. Full in-game
+schematic integration, release packaging and the overall roadmap remain pending.
 
 Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
 PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
@@ -42,8 +43,8 @@ and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
   Proof: actual chat/private approval flow, denied viewer, revoked editor, static
   repair, real server restart, native screenshot and exact interpretation counts.
 
-A1 and the canonical/native foundation are proved. A2/A3/A4 production integration
-is implemented but its complete dedicated/restart/SQLite proof is still pending.
+A1–A4 passed on exact source7e27fd7/all5 CI41362325852, including the complete
+dedicated/restart/SQLite proof.
 No settled transfer claims latency, all4096 combinations, or arbitrary analog
 wiring. Component composition does not yet accept analog leaves.
 
@@ -102,17 +103,17 @@ Current implementation:
   work/analog-shared-failure-41332437714 and work/analog-wire-proof-41332437714.
 - **cc0cbed / CI41360150254:** fixture now observes actual VERIFYING/testTick
   before accepting completion in all three full analog waits. No production
-  behavior or pass criterion changed. All13 analog markers passed, including shared
+  behavior or pass criterion changed. All12 analog markers passed, including shared
   repair, saved-server fresh retest and latest-operation undo. The process cap
   expired later during the existing pending-stop/restart tail. Full job/SQLite
   verification is still required. Evidence: work/analog-trial-start-proof-41360150254.
   Local client compile passed.
 
-Next: inspect the same live handles to terminal (observation timeout is not
-failure). Validate every analog marker and actual SQLite source/scope/actor/
-case replay, including at least two subtract epochs. Inspect/archive fresh native
-screenshot. Fix failures without weakening proof. Finish docs and merge only the
-exact green combined head; then update this note with the shipped outcomes.
+Final **7e27fd7 / CI41362325852** passed all five checks, all136 native tests,
+8 rotated canonical intentions,144 measured windows and both66-case native suites.
+The dedicated flow passed every marker and strict SQLite verification, including
+separate compare/subtract scopes and fresh subtract evidence in distinct epochs.
+Merged as3978f88/PR33. Native screenshot inspected; no model calls or local tests.
 
 Dedicated fixture explicitly covers compare chat build/test/stop/restoration/
 blocked-edit undo/full owned undo; subtract viewer denial/editor revocation/
@@ -207,8 +208,9 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
 
 ## Overall remaining goals
 
-- E2: finish analog/comparators; actual connections and larger multicomponent/
-  piston systems, update-order/interference and adapting existing structures.
+- E2: actual connections and larger multicomponent/piston systems, register banks,
+  memory, arithmetic and display circuits, update-order/interference and adapting
+  existing structures. Canonical comparator workbenches shipped in PR33.
 - E1: broader natural references/retrieval beyond literal saved-intention search,
   durable rationale/summaries and preferences.
 - E3: richer connection/timing/interference/inconclusive diagnosis and repair;
@@ -223,13 +225,3 @@ result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
   resources/latency/reliability optimization; multiple coordinated builders.
 
 Do not mark the overall goal complete after any one phase or file-codec milestone.
-
-Combined-source preparation: PR34/source55ca74c is merged as885748e; code merged
-cleanly into this branch and the sole STATE conflict retains both outcomes. The
-pinned test-only prismarine-nbt dependency was installed locally without scripts
-or manifest/lock changes to permit type checking; no behavioral tests ran. Combined
-TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt before
-20min process expiry in the later existing pending-review/restart tail, so the
-CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
-consent/101sec expiry proof and every existing assertion remain unchanged. Next:
-commit this combined source with docs and run its required exact-head proof.
