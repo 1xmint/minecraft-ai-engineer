@@ -1,326 +1,204 @@
 # Now
 
-2026-11-01. Active goal: **complete all milestones**: the entire Phase1 Minecraft
-AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
-incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
+2026-11-01 local date. Active goal: **complete all milestones**: all Phase1 and
+all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
+Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: `work/installable-bundles`, branch
-`phase/26-installable-bundles`. Main870fc91 includes shipped schematic analysis
-PR35: source5067bdc/all5 CI41364625681,209 companion tests (208 passed,1 existing
-skip), all136 native and full dedicated/restart/SQLite proof. Evidence inspected
-at `work/schematic-analysis-final-41364625681`.
+Active engineering worktree: task `work/connected-circuits`, branch
+`phase/27-connected-circuits`, based on merged main **9a1d6e7 / PR37**.
+Documentation worktree `work/release-download-docs` updates the public download
+and archives the real memory screenshot. Main worktree is clean and fast-forwarded. Original C1
+source8490f8d passed all five checks in CI41369209886, including141 native tests
+and the unchanged full dedicated/restart/SQLite suite.
+These C1 fixture observations do not establish the entire phase.
 
-Memory PR36 source0ef5c6d passed all five checks in CI41364946648, all137 native
-tests and full dedicated/restart/SQLite proof. Actual chat saved goal/decision,
-read shared notes, clarified polite ambiguity, denied editor writes/revoked reads,
-and recovered notes plus a fresh constraint after restart. Four knowledge markers
-and strict literal-note/count/no-world-authority assertions passed. Evidence
-inspected at `work/conversation-memory-final-41364946648`.
+Release source57b1d65 passed all five checks in CI41367933778, all137 native
+and209 companion tests (208 passed,0 failed,1 existing platform skip), plus full
+dedicated/shared/restart/SQLite verification. PR37 merged2026-11-02T01:05:36Z as9a1d6e7; PR36 closed as incorporated.
+**Main CI41370616555 passed all five checks** on that exact source.
+Published [v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2)
+is the multiplayer development preview. Its tag was read back at9a1d6e7, and
+GitHub's uploaded asset digests match the locally verified same-run files:
 
-This branch integrates that exact memory implementation and main870fc91 with
-packaging. Only STATE conflicted; production Java is unchanged from the proved
-memory source. PR36 will be closed as integrated only after this combined branch
-passes and merges. One combined run proves the actual release pair with both
-features. Do not launch a redundant CI run on the prepared PR36 merge branch.
+- companion73cf14bcd6dadad14ddba0acf6288410228697a5c5fdb5e63bb2edac164b6d33
+- jar6c14f8781c7499f0b01799e7dd66791f9dd3383a077fcb7cc770e19ad47d4c1b
 
-Original packaging cd316fa/CI41365754400: extracted Linux/Windows production
-runtime and rejection checks passed; Fabric packaging caught the existing CI
-chmod changing tracked gradlew100644 to100755. Fix169f081 tracks it executable,
-keeping the clean-source guard. Its dedicated job passed and the run is terminal. The sole failed step was the
-clean-checkout packaging guard. Promote the combined source for exact-head CI.
+Main assets: `work/main-release-41370616555`. The old alpha.1 remains archived.
 
-Phase26 Outcomes (serves release/setup):
+Josh: **skip heavy reviews; build and ship**. Public pushes, releases and exact
+all-green merges are authorized. Tests run on GitHub, never on this slow PC.
+Local scoped compile/type/format/syntax only; Gradle --max-workers=1. Keep
+memory only in AGENTS.md and STATE.md; CLAUDE.md is @AGENTS.md. Older history is Git.
 
-- R1: an allowlisted, compiled companion bundle installs without TypeScript/Java
-  build tools. Proof: extract it, install production dependencies and start the
-  actual entry point on both Linux and Windows; authenticated health succeeds.
-- R2: the deployable mod and companion are paired from one checkout/run with source
-  identity and SHA256 hashes. Proof: Fabric CI produces both in one artifact;
-  smoke verifies archive contents, identity and actual runtime imports/launcher.
-- R3: multiplayer installation instructions cover one private server companion,
-  current pinned runtimes, server/client placement and normal chat. Missing build
-  inputs, symlinks and existing output reject; no user data enters the archive.
+## Phase27 Outcomes (E2/E3)
 
-Decision: repeatable allowlist packaging beats stale source-only instructions or
-untracked manual zips. Reuse existing npm lock and launcher; no dependencies,
-automatic credentials, paid service, model call or public endpoint. CI artifacts
-are candidates, not a release endorsement. Publish only artifacts from an exact
-successful main run with all five checks. GPT-6-Luna's focused architecture
-challenge confirmed compiled catalog/launcher layout, production optional Codex
-binary dependencies, authenticated health and same-run pairing are essential.
+- C1: external controls and internally driven signal pins have actual native
+  connectivity, direction and isolation. Prove consecutive producer/route/
+  consumer/receiver observations in four orientations, unwired-control changes,
+  broken-link and reversed-consumer negatives. Never toggle an internal pin.
+- C2: a curated half-adder exposes shared A/B controls and SUM/CARRY, typed ports,
+  exact routes/graph identity and strict canonical admission. Prove all four rows
+  forward/reverse at consecutive stable ticks; reject altered roles, edges,
+  geometry and fabricated leaf-derived whole passes.
+- C3: normal chat preview/lesson/build/test operates on the whole connected design
+  with union write/read reservations, player conflicts, revocation, interruption,
+  input restoration, undo and restart. Prove native shared flows and SQLite
+  scopes. Leaf passes never certify a connected graph.
 
-Phase25 (serves E1/E4) outcomes:
+Decision: bounded canonical connected designs retain trusted regeneration and
+external-control restoration. Old ComponentTree dependencies order construction,
+not electrical signals; their lever-input contracts remain unchanged. Arbitrary
+model netlists are premature before topology/isolation validation. New graph
+identity must bind canonical geometry, typed endpoints and exact routes; changes
+stale whole-circuit evidence. GPT-6-Luna scout and independent challenge checked
+actual ComponentTree, FunctionalTrial, assignments and reservations. Both called
+out internal vs external roles, full pin traces, graph scope and union footprints.
 
-- M1: owners save literal goals, constraints, preferences and decisions through
-  addressed chat, preserving case and punctuation. Proof: grammar negatives and
-  actual chat writes into the existing durable note flow.
-- M2: authorized players read notes through chat; editors cannot author, revoked
-  members cannot read. Proof: actual two-player denial/read and server restart.
-- M3: memory chat spends no model quota, changes no world/blueprint or functional
-  evidence, and never executes note contents. Proof: existing exact SQLite note,
-  interpretation-count and no-world-authority assertions with native chat inputs.
+C1 physical proof: ConnectedGameTests uses real external/noise levers and two
+native repeaters. No consumer lever or forced runtime wire POWER. All141 required
+native tests passed in CI41369209886 on8490f8d. Raw reports inspected at
+`work/connected-port-proof-41369209886`: four rotations,360 frames each/1440 total.
+For every rotation the intact route measured producer0/15, consumer0/14 and
+receiver0/15 with both lamp states. A gap kept receiver0/lampoff; reversed consumer
+kept its input0/14 but receiver0/lampoff. Unwired-control phases stayed isolated
+on every tick. Both original external controls ended off. Full C1 CI is now green.
+These are fixture observations, not a project pass or complete human acceptance.
 
-Decision: reuse ProjectKnowledgeClient and its scoped owner-only writes; add only
-explicit local memory intent routing. No new storage/schema/model action. Generic
-"remember that" asks which literal text/kind; never guesses a durable requirement.
-This closes the command-only entry gap, not broader retrieval or automatic summaries.
+C2 is in progress: catalog/half-adder.json and HalfAdderDesign.java
+prototype a four-NAND plus NOT half-adder. Shared signals have explicit buffered
+routes, external controls, internal pins and two receivers. No project parser,
+provider, construction or verification admission exists yet. Complete native
+whole-circuit truth proof before integrating strict source/graph/evidence codecs.
+C3 has not started. Do not merge this phase as complete after the fixture alone.
 
-The downloadable v0.1.0-alpha.1 remains the older solo alpha. Full in-game
-schematic integration, release packaging and the overall roadmap remain pending.
+## Shipped source and evidence
 
-Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
-PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
-Gradle `--max-workers=1`. Preserve pins and push progress. Memory only in AGENTS.md
-and STATE.md; CLAUDE.md is `@AGENTS.md`. Older development detail is in Git.
+- Phase25 memory: owner saves goal/constraint/preference/decision through addressed
+  chat; authorized members read. Polite ambiguity clarifies locally. Source0ef5c6d
+  passed all5 CI41364946648 and was incorporated in final57b1d65/all5 CI41367933778.
+  Actual chat writes/reads, editor denial, revoked reads, note recovery and a fresh
+  post-restart constraint passed four knowledge markers and strict literal-note/
+  count/no-world-authority assertions. No model call. Evidence:
+  `work/conversation-memory-final-41364946648`, `work/release-final-41367933778`.
+  Actual memory screenshot0003_engineer-project-memory.png inspected in final run.
+  GPT-6-Luna found/fixed polite remember falling through to model interpretation.
+- Phase26 packaging: tracked-source allowlist produces compiled companion zip,
+  deployable jar pair, BUILD manifests and SHA256SUMS. Linux/Windows extraction,
+  production dependency install, launcher preparation and authenticated health
+  passed; anonymous health rejects. Missing/symlink inputs, existing-output
+  preservation and stray-data exclusion passed. No Codex execution/inference.
+  Gradle launcher is now correctly tracked100755, preserving clean-source guard.
+  Candidate `work/release-candidate-41367933778` has77 zip entries and verified
+  pair hashes; checkoutcb3f976d27deb29dc02c661949f396c6c5dd1109 is a PR merge, not
+  the publishable main checkout. Installation guide: docs/install.md. GPT-6-Luna
+  architecture challenge and focused implementation review found no remaining gap.
+- Schematic analysis PR35 merged870fc91; source5067bdc/all5 CI41364625681,209
+  companion tests and full native/dedicated/SQLite proof. Exact state/block counts,
+  offset-aware bounded diff, explicit air vs outside volume, no world authority.
+  Maximal-dimension zero volumes skip empty loops. Evidence inspected:
+  `work/schematic-analysis-final-41364625681`. Full in-game integration unfinished.
+- Schematic codec PR34 merged885748e; source55ca74c/all5 CI41360384747,21 schematic
+  proofs, independent third-party fixtures/dev-only prismarine-nbt2.8.0 oracle.
+  Sponge v3 bounded NBT/gzip; no entities, explicit reported optional BE/biome
+  discard. Neutral geometry has no grants/pass. CLI protects input aliases and
+  existing output, bounds actual reads and rejects sparse arrays. docs/schematics.md.
+- Comparators PR33 merged3978f88; source7e27fd7/all5 CI41362325852,136 native and
+  all12 analog markers. Canonical compare/subtract139-cell workbenches,45 physical
+  selectors,66-case actual numeric suites with exact restoration, shared guards,
+  repair, native dust-arm/player-edit-safe undo, fresh restart/subtract evidence.
+  Eight rotated intentions,144 windows and132 native suite cases replayed across
+  Java/TS. No latency/all4096-combination claim; analog composition still closed.
+  Evidence `work/analog-final-41362325852`; docs/images/comparator-tested.png.
+- Conversational setup PR32/merged9bde62/source1561555/all5 CI41276307352: actual
+  private creation, authorized choices/paging, feet corners and local previews.
+  Conversation PR31/mergeb7e3e26/sourcebd39067/all5 CI41273958762: approvals, real
+  101-second expiry, reconnect and restart invalidation; strict10/17 model starts.
+- Observer PR30/merge3ae2232/source4d4a1de/all5 CI41268319917: native edge timing,
+  restoration, shared/restart/composed-leaf evidence. Mechanical repair PR28/
+  merge5b29a9c/sourcee881d73/all5 CI41151376521. Natural actions PR29/mergecaa7de6/
+  source0f78de1/all5 CI41223355084. Detailed historical development remains in Git.
 
-## Shipped phase24 Outcomes (E2/E3)
+## Boundaries and runtime
 
-- A1: physical selectors produce independent strengths0..15. Proof: actual native
-  calibration279 samples; compare/subtract boundary probes in four rotations.
-- A2: players preview/build canonical compare/subtract workbenches. Proof: strict
-  identity-bound139-cell/45-selector intention, rotated native placement, fitting
-  and rejection checks, guarded creative construction and player-preserving undo.
-- A3: real numeric tests restore original controls and survive interruption,
-  permission changes, player conflicts and restart. Proof:66 declared cases per
-  mode, samples at actual elapsed8/9/10, strict Java/TS replay, scoped SQLite
-  reports, restored45 original controls and fresh evidence in a new server epoch.
-- A4: normal chat, lessons/materials, model/catalog routing and shared views work.
-  Proof: actual chat/private approval flow, denied viewer, revoked editor, static
-  repair, real server restart, native screenshot and exact interpretation counts.
+Dedicated Fabric server owns connection identity, project grants, reservations,
+loaded-world execution and tests. One private localhost companion beside it on
+Josh's PC owns SQLite and Codex. Optional authorized overlays; text clients work.
+Keep intention, observation and verification separate. Untrusted model/world/
+schematic text never becomes commands, ownership or a pass. Recheck grants,
+revision, actor/connection, dimension and epoch during work. Player conflicts
+pause. Restart restores descriptions, never leases, callbacks, consent or a live
+pass. Creative execution never claims survival gathering or inventory consumption.
 
-A1–A4 passed on exact source7e27fd7/all5 CI41362325852, including the complete
-dedicated/restart/SQLite proof.
-No settled transfer claims latency, all4096 combinations, or arbitrary analog
-wiring. Component composition does not yet accept analog leaves.
+Only the configured account-owning operator can request model reasoning. Use
+ChatGPT sign-in through the official SDK; no paid API fallback, keys, hosting or
+credential sharing. General shared-subscription eligibility remains unresolved;
+operator approval is not provider permission. Offline CI players do not prove
+production Mojang login. Scripted native flows do not prove full human acceptance.
 
-Current implementation:
+Pins: MC26.3, Java25, FabricLoader0.20.1/API0.165.0+26.3, Loom1.17.21, Gradle9.6,
+Node24.14, TS7.0.2, SDK/CLI0.164.0. Leave unrelated Dependabot PR6 alone.
 
-- AnalogDesign/AnalogIntention regenerate exact bounded geometry and metadata.
-  Compare passes rear when rear>=both sides; subtract clamps rear-strongest side
-  at zero. Materials:47 stone,45 levers,46 dust,1 comparator. Base workspace17x3x31;
-  rotated workspace31x3x17. No inventories or forced wire POWER generate signals.
-- AnalogTrace and AnalogEvidence strictly replay separate intended mode/stimuli,
-  real clocks and bounded data. Missing ticks stay inconclusive; wrong mode/input/
-  output fails; unknown fields/authority/false pass claims reject. Suite ownership,
-  project/revision/component/basis and epoch remain separately server-authoritative.
-- FunctionalTrial uses existing per-input WAL/restoration and permission checks.
-  All45 original selector states must restore before pass. Recovery restores facts,
-  never a callback/lease/pass. Canonical comparator entity handling admits only
-  its exact cell/mode/facing/native backing type; no entity NBT/cached OutputSignal
-  is imported. Journal creation requires air-before/exact canonical-after, checked
-  before save and against captured operation on load. Containers remain protected.
-- Normal local previews: `show me a comparator` / `show me a subtracting comparator`.
-  High-level planning offers both modes with delay1 and fitting rotations. Lessons
-  distinguish intention, snapshot and stored test evidence. Generic static
-  diagnosis/repair handles ordinary missing wiring using fresh existing guards;
-  an existing wrong-mode comparator or replacement inventory stays protected.
-- Undo preserves player comparator/dust support. Initial preflight stays strict.
-  After durable undo intent, owned canonical wires use pinned native read-only
-  connection calculation to recognize arms changed by earlier owned removals.
-  Manual dot changes still block. Projected native connection checks protect
-  non-owned neighboring dust. New WireConnectionMixin exposes calculation only.
-- Prepared docs: docs/comparators.md, updated source overview/mod/acceptance guides.
-
-## Phase24 evidence and immediate next actions
-
-- **0697462 / CI41320293103:** all120 native tests, calibration279 and boundary
-  measurements54+54. Exact historical data in
-  tests/fixtures/analog-native-probe.json is feasibility data only, not live
-  authority, a saved production pass or fresh inference. Pinned DiodeBlock reads
-  pos.relative(FACING): WEST rear/EAST output is correct; initial challenger
-  opposite-facing suggestion was corrected against the pinned bytecode.
-- **384a4b4 / CI41321820187:** all five checks/all120 native passed after inherited
-  chat fixture receipt fix. **33f2e3c / CI41326285930:** all five/all121 native and
-  actual36 transfer windows through Java/TS passed; dedicated17m19s.
-- **37b1bfa / CI41328039790:** all five/all129 native; eight actual canonical
-  intentions and144 transfer windows/432 stable samples across four rotations.
-  Evidence: task work/analog-intention-proof-41328039790.
-- **b2bd6cb / CI41329949003:** four checks/all135 native passed, including both
-  actual66-case native suites. Real dedicated chat built139 cells, interrupted,
-  restored original-on/off controls and passed66 production cases. Undo then
-  exposed native dust-arm changes; Bob later timed out. Evidence:
-  work/analog-runtime-failure-41329949003; native screenshot inspected there.
-- **d43fdf7 / CI41332437714:** four checks/all136 native passed, including dust
-  undo/dot-edit reproduction and132 suite cases plus144 boundary windows. Real
-  dedicated compare flow now completed full139-cell undo; viewer/revocation/
-  conflict/static repair markers passed. Shared test assertion raced its queued
-  command and saw the prior repair's COMPLETED/untested state. Evidence:
-  work/analog-shared-failure-41332437714 and work/analog-wire-proof-41332437714.
-- **cc0cbed / CI41360150254:** fixture now observes actual VERIFYING/testTick
-  before accepting completion in all three full analog waits. No production
-  behavior or pass criterion changed. All12 analog markers passed, including shared
-  repair, saved-server fresh retest and latest-operation undo. The process cap
-  expired later during the existing pending-stop/restart tail. Full job/SQLite
-  verification is still required. Evidence: work/analog-trial-start-proof-41360150254.
-  Local client compile passed.
-
-Final **7e27fd7 / CI41362325852** passed all five checks, all136 native tests,
-8 rotated canonical intentions,144 measured windows and both66-case native suites.
-The dedicated flow passed every marker and strict SQLite verification, including
-separate compare/subtract scopes and fresh subtract evidence in distinct epochs.
-Merged as3978f88/PR33. Native screenshot inspected; no model calls or local tests.
-
-Dedicated fixture explicitly covers compare chat build/test/stop/restoration/
-blocked-edit undo/full owned undo; subtract viewer denial/editor revocation/
-owner recovery/player conflict/missing-wire repair/test/actual saved-server restart/
-fresh test/latest-repair-only undo. Bob follows actual phase receipts. Fixed added
-native trials justify CI-only client23min/harness1440sec/job30min budgets;
-production deadlines, quotas and permissions are unchanged. Fixed provider replies
-are routing fixtures, not additional SDK inference or complete human acceptance.
-
-GPT-6-Luna/high supplied only standalone TS intention/evidence modules in isolated
-worktrees. Parent owns proofs and reviewed sparse-array fixes. Focused independent
-reviews found the concrete player-support/neighbor-dust hazards and validated the
-narrow entity and native-connection boundaries. No broad review loop is needed.
-
-## Parallel schematic work
-
-PR34 is a standalone Sponge v3 .schem/neutral-geometry codec and CLI, separate from
-world/server blueprints. Dimensions/offsets/DataVersion/block IDs/properties and
-supported untrusted metadata survive. Entity payloads reject; explicit optional
-block-entity/biome discards are reported. Imports carry no owner/grants/pass.
-No in-game import/export, DataVersion upgrade or registry validation is claimed.
-
-- Claude source **7ec6659 / CI41327833280:** all five checks;18 independent-format,
-  rejection and CLI tests passed. Production uses bounded custom NBT; pinned
-  prismarine-nbt2.8.0 is a dev-only oracle. Fixtures/license sources documented.
-- Parent **d09295d / CI41333273366:** added input-alias protection before output
-  truncation, actual bounded reads even if input grows, and sparse-array rejection.
-  Three new boundary tests passed with four checks. Dedicated reproduced inherited
-  ordinary-chat send/disconnect race, unrelated to codec behavior.
-- Parent **55ca74c / all5 CI41360384747, merged PR34/885748e:** applies the proved384a4b4 sender/
-  recipient receipt handshake and required marker. No production chat, privacy,
-  timeout or quota changes. Scoped compile/type/format/syntax checks pass. A
-  focused GPT-6-Luna/high file-preservation review found no concrete overwrite or
-  byte-bound gap. All21 schematic tests and full dedicated/restart proof passed; the file foundation is shipped.
-
-Josh requested Claude's next goal. Reserved offered lane: read-only analysis and
-geometry diff in **companion/src/schematic-analysis/**,
-_*tests/schematic-analysis*.test.ts_*, **docs/schematic-analysis.md**, branch
-claude/schematic-analysis, own worktree. Base on updated PR34 or main after merge.
-No manifests, existing codec, core/server/auth/storage/CI/memory edits. Exact raw
-block/state counts are geometry metrics, not item costs or functional optimization.
-Diff applies offsets, rejects DataVersion mismatch, distinguishes outside-volume
-from air, bounds details with exact totals and never iterates vast empty gaps.
-CLI consumes neutral JSON and writes reports to stdout only. No world authority,
-paid services, keys or model calls. Claude delivers a draft PR; Codex integrates.
-
-## Shipped foundation and decisions
-
-- Dedicated Fabric server owns projects, authenticated connection identity,
-  VIEW/EDIT/BUILD/UNDO/PLAN, world mutations and reservations. One private localhost
-  companion on Josh's PC owns SQLite memory and the operator's Codex connection.
-  Optional authorized client overlays; shared lessons have personal cursors.
-- Creative execution supports lamp/NOT/OR, observer pulses, generated timed buffers
-  and up-to-four-input Boolean truth tables, canonical sticky-piston shutter/static
-  repair, bounded teaching/build/stop/reconcile/test/undo, grounded discussion,
-  literal retrieval, owner notes and permission-scoped inventory snapshots.
-- Phase19 mechanical repair: PR28/merge5b29a9c/sourcee881d73/all5 CI41151376521,
-  all103 native tests; real restart/repair/SQLite proof.
-- Phase20 natural action flow: PR29/mergecaa7de6/source0f78de1/all5 CI41223355084;
-  foundation8214fbd and actual natural/diagnosis/restart evidence.
-- Phase21 observers: PR30/merge3ae2232/source4d4a1de/all5 CI41268319917,
-  all113 native tests; exact edge timing/restoration/shared/restart/composed-leaf
-  proof. Screenshot docs/images/observer-tested.png.
-- Phase22 conversational engineering: PR31/mergeb7e3e26/sourcebd39067/all5
-  CI41273958762, all116 native,12 chat markers, strict SQLite10/17 starts and actual
-  generated8/10-block traces. Real101-second expiry, reconnect/new stamp and
-  saved-server restart invalidate approvals. Screenshot conversation-tested.png.
-- Phase23 conversational setup: PR32/merged9bde62/source1561555/all5 CI41276307352,
-  all117 native and four setup markers. Private creation, scoped names/numbers/
-  paging/ambiguity, feet-based corners, permissions/fit negatives, preserved built
-  intentions and local unbuilt previews. Screenshot conversation-setup-preview.png.
-
-Model output/world text/imported geometry are untrusted. Keep intended, observed
-and verified state separate. Recheck current grants/revision/connection/epoch at
-execution; human conflicts pause rather than overwrite. Restart never restores
-leases, callbacks, consent or live passes. Operator-only model admission remains:
-general shared-subscription eligibility is unresolved, and operator consent is
-not provider permission. Never introduce paid API fallback or credential sharing.
-
-Pinned: Minecraft26.3, Java25, FabricLoader0.20.1/API0.165.0+26.3, Loom1.17.21,
-Gradle9.6, Node24.14, TypeScript7.0.2, SDK/CLI0.164.0. Unrelated Dependabot PR6
-is not this task. Keep motion-specific handling separate from ordinary circuits.
-
-Signed-in Phase20 acceptance on8214fbd passed CI41221809497/response41222705526:
-exactly one gpt-6-luna SDK0.164.0 call (11519 input/0 cached/73 output), choosing
-diagnose/root and making no observed-world claim. All earlier structural/Boolean/
-discussion/natural receipts are consumed. Private exclusive receipts remain in
-AppData/Roaming/minecraft-ai-engineer/acceptance. Never read/print auth credentials,
-replay archived replies as fresh inference, or dispatch unnecessary probes.
+All prior signed-in structural/Boolean/discussion/natural receipts are consumed.
+Phase20 acceptance8214fbd passed CI41221809497/response41222705526: one gpt-6-luna
+SDK0.164.0 call,11519 input/0 cached/73 output, diagnose/root, no observed claim.
 Request digest c5ccb5a673603fd217fce2a188bfdd6654683755610409c3cfb63eb7ec3416d9;
 result658e247247fdc76c1f301919ff70ba2c8e67307a05c0d369674b96fe77bb2bc9.
+Private exclusive receipts remain local in AppData/Roaming/minecraft-ai-engineer/
+acceptance. Never read/print credentials, replay archival inference as fresh, or
+launch unnecessary model probes. Current work needs no SDK call.
 
-## Overall remaining goals
+## Full remaining roadmap
 
-- E2: actual connections and larger multicomponent/piston systems, register banks,
-  memory, arithmetic and display circuits, update-order/interference and adapting
-  existing structures. Canonical comparator workbenches shipped in PR33.
-- E1: broader natural references/retrieval beyond literal saved-intention search,
-  durable rationale/summaries and preferences.
+- E2: actual connected circuits and larger multicomponent/piston systems, register
+  banks, memory, arithmetic, displays and redstone computers; update ordering,
+  interference and adapting existing structures. Half-adder is only the first slice.
+- E1: richer natural references/project retrieval, durable rationale, preferences
+  and conversation summaries beyond literal owner notes/search.
 - E3: richer connection/timing/interference/inconclusive diagnosis and repair;
-  clear mechanical pose overlays beyond supported canonical designs.
+  clearer mechanical pose overlays beyond canonical designs.
 - E4: signed-in preview -> actual human functional section -> AI remainder ->
-  interrupt/change/resume -> actual test -> service/game restart -> later
-  explanation and visual proof. Scripted fixtures do not complete this experience.
-- Multiplayer packaging/release/setup, real production Mojang authentication and
-  provider eligibility evidence. Offline fixtures do not prove production login.
-- Phase2: voice conversation; physical NPC; genuine survival gathering/placement;
-  full in-game schematic import/export (file foundation in PR34); measured size/
-  resources/latency/reliability optimization; multiple coordinated builders.
+  interrupt/change/resume -> real test -> service/game restart -> later explanation
+  and visual proof. Entire original10-step acceptance remains required.
+- Multiplayer public download/setup (main release proof pending), production
+  account-login evidence and subscription eligibility evidence.
+- Phase2 all six: voice; physical NPC; genuine survival gathering/placement;
+  full in-game schematic import/export; measured size/resources/latency/reliability
+  optimization; coordinated multiple builders. File interchange/analysis alone
+  does not complete the schematic feature.
 
-Do not mark the overall goal complete after any one phase or file-codec milestone.
+Claude's offered independent lane remains schematic transforms only:
+companion/src/schematic-transforms/**, tests/schematic-transforms*.test.ts,
+docs/schematic-transforms.md. No mod/core/auth/storage/provider/CI/memory changes.
+No delivery seen yet. Do not edit those reserved paths.
 
-Phase25 implementation: local explicit note-kind/colon parser, literal payloads,
-shared-note read phrases and ambiguous remember prompts. Existing native knowledge
-flows now use actual addressed chat for owner writes, editor denial, authorized
-reads, revoked reads and restart recovery. No provider replies/counts or production
-permissions changed. Native grammar proof covers four kinds, exact payload,
-negative/quoted/command contents and bounds. GPT-6-Luna/high focused review found
-polite ambiguous requests could fall through to model interpretation; both plain
-and polite prefixes now clarify locally, with grammar and actual-client coverage.
-Final scoped main/client compilation and format/diff checks passed. GitHub CI
-must now prove the changed native grammar and dedicated flows. No local tests
-or SDK calls.
+Next: finish the README/download documentation checks, watch C2 full41371755386
+to terminal without restarts, and continue strict connected source/evidence work.
+Continue C2 native half-adder proof and strict graph/source/evidence integration,
+then actual C3 flows. Keep the full goal active; no single slice completes it.
 
-Phase26 implementation: tracked-source allowlist packager writes a fresh companion
-zip, optional deployable jar pair, source/run BUILD manifests and SHA256SUMS.
-No repository/config/world snapshots or node_modules are copied. Linux and Windows
-CI extract, install locked production dependencies, prepare the actual platform
-launcher, start the actual entry point with isolated config and authenticate health;
-no Codex binary execution or model call. Smoke also proves missing/symlink inputs,
-existing-output preservation and exclusion of a stray private-looking runtime file.
-Fabric job pairs both compiled outputs from its own checkout. Installation docs
-use Fabric's official server installer and keep online-mode, per-player grants,
-operator-only model access and private localhost topology. Local JS/Python syntax
-and scoped format/diff checks pass; no behavioral tests ran. Exact CI remains needed.
+C2 prototype now has parent-owned native proof fixtures for all four rotations,
+eight forward/reverse vectors, all twenty typed pin observations at every tick,
+and eight stable frames at elapsed48..55. An independent arithmetic oracle checks
+SUM/CARRY and internal NAND relations. A missing A-to-N2 wire must make SUM wrong
+while CARRY remains apparently correct, showing one receiver cannot certify the
+whole circuit. Initial wire arms are computed using the existing read-only pinned
+native connection accessor over intended geometry; no signal is simulated and no
+runtime POWER is forced. A native post-settle static geometry check covers arms.
+No parser/provider/construction admission yet. Shared recipe is included in the
+mod resources. Final scoped Java compilation and format/diff checks passed; the
+actual native results are recorded below. No behavioral tests ran locally.
 
-GPT-6-Luna/high focused implementation follow-up found no concrete packaging,
-file-preservation, runtime-layout or Windows launch blocker. Inspection only;
-actual cross-platform runtime proof remains required from GitHub CI.
+When C2 becomes a companion-admitted family, explicitly add its third shared
+catalog to the production bundle and paired-jar catalog parity check. The current
+prototype is only a mod fixture resource; no companion module imports it yet.
 
-First phase26 sourcecd316fa/CI41365754400 proved extracted production startup,
-launcher preparation, authenticated health and all packaging rejection checks on
-both Linux and Windows. Fabric passed native tests/replay but packaging rejected
-its dirty checkout: mod/gradlew was tracked100644, while the existing CI chmod
-made it100755. Correct the tracked executable bit to100755 rather than weaken
-the clean-source guard. The same run's dedicated job remains live; observe it to
-terminal before updating PR37. The prepared fix is backed up separately.
-
-Next engineering slice (E2, not yet implemented): actual typed signal connections
-and whole-circuit evidence, beginning with a native producer-to-consumer port
-probe without a consumer lever, then a curated half-adder (SUM/CARRY). Existing
-ComponentTree dependencies order construction; they are not electrical nets.
-GPT-6-Luna's read-only scout identified external stimulus vs internally driven
-ports, backfeed/isolation, graph-scoped stale evidence and union read/write leases
-as the key boundaries. Preserve register banks, memory, arithmetic, displays and
-redstone computers in the full goal; no island test substitutes for connectivity.
-
-Original packaging CI41365754400 is terminal: Dedicated multiplayer passed with
-full restart/SQLite verification; Companion, Windows planner and Minecraft client
-also passed. Fabric passed native/replay/catalog checks before the packaging-only
-mode rejection. Combined main870fc91 + memory0ef5c6d + executable-bit fix now has
-full TS and scoped Java/client compilation, JS/Python syntax and scoped format/diff
-checks passing. It adds an actual native memory screenshot to the fixture; no
-production memory Java differs from the proved original. Push PR37 for a fresh
-combined run; publish no candidate until all five and exact main proof pass.
+C2 native source6a5c07a/Fabric in CI41371755386 passed all146 required tests.
+Reports inspected at `work/half-adder-native-41371755386`:436 cells,20 pins,
+448 consecutive frames per rotation and64 stable frames covering all four input
+vectors forward/reverse. Every rotation produced SUM/CARRY00->00,01->10,
+10->10,11->01. The missing A-to-N2 wire showed expectedSUMtrue/observedSUMfalse
+while CARRY stayedfalse. Static native wire-arm checks passed. Full CI is still
+live. This proves the physical prototype, not C2 strict admission or C3 gameplay.
+GPT-6-Luna supplied standalone connected-trace.ts at local7aaad74; parent still
+owes scoped typing, rejection proofs, Java mirror and actual native replay. No
+SDK calls or local tests ran. Public alpha.2 does not include this prototype.
