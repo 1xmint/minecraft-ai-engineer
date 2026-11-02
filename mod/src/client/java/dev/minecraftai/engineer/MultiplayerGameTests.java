@@ -1908,8 +1908,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer select1 2200 120 0");send(context,"engineer select2 2231 121 0");
         server.waitFor(s->new BlockPos(2200,120,0).equals(session(s,"Alice").corner1) && new BlockPos(2231,121,0).equals(session(s,"Alice").corner2));
         server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");var previous=project.commandActor;
-            try{project.commandActor=player(s,"Bob").getUUID();boolean denied=false;try{project.manager.schematics.handle(project,SchematicText.parse("preview design "+design));}catch(IllegalStateException expected){denied=true;}
-                check(denied && project.blueprint==null && project.journal.isEmpty(),"Real connected viewer cannot accept an imported preview");
+            try{project.commandActor=player(s,"Bob").getUUID();
+                for(String request:List.of("import schematic safe","rotate design "+design+" by 90","export selection as viewer-denied","preview design "+design)){
+                    boolean denied=false;try{project.manager.schematics.handle(project,SchematicText.parse(request));}catch(IllegalStateException expected){denied=true;}
+                    check(denied && project.blueprint==null && project.journal.isEmpty() && project.delegation==null,"Real connected viewer cannot mutate schematic state: "+request);
+                }
             }finally{project.commandActor=previous;}});
         MESSAGES.clear();memorySay(context,"Engineer, preview design "+design);expectChat(context,"Preview ready: Imported design "+design);
         server.runOnServer(s->{var project=session(s,"Alice");check(ImportedBlueprint.describes(project.blueprint.source()) && project.blueprint.blocks().size()==35 && project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Imported preview is geometry only, without construction or pass");});
