@@ -4,6 +4,12 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Imported CI41530710501/sourceb4faabc Companion and Windows jobs now passed; native,
+client and dedicated jobs remain live. Adapter now rejects fractional, numeric-
+string and out-of-int-range coordinates before Blueprint.parse, rather than
+truncating/coercing them into apparently valid cells. Added native regression for
+all three; scoped Java compilation passed. Latest adapter change awaits fresh CI.
+
 Focused feedback source48bbc12 / CI41530452349 passed7 tests,0 failures: all five
 real HTTP schematic-library cases plus two imported-admission cases. The prior
 409 failures came from fixture regeneration of blueprint ID at the same intended

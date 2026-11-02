@@ -33,12 +33,16 @@ final class SchematicBlueprint {
             var entry=element.getAsJsonObject();var pos=entry.getAsJsonArray("pos");
             if(pos.size()!=3)throw new IllegalArgumentException("Design placement position must have three coordinates");
             var block=new JsonObject();var at=new JsonObject();
-            at.addProperty("x",pos.get(0).getAsInt());at.addProperty("y",pos.get(1).getAsInt());at.addProperty("z",pos.get(2).getAsInt());
+            at.addProperty("x",coordinate(pos.get(0)));at.addProperty("y",coordinate(pos.get(1)));at.addProperty("z",coordinate(pos.get(2)));
             block.add("pos",at);block.addProperty("state",entry.get("state").getAsString());block.addProperty("stage","design");block.addProperty("component","root");
             blocks.add(block);
         }
         json.add("blocks",blocks);
         return json;
+    }
+    private static int coordinate(JsonElement value){
+        if(value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException("Schematic placement coordinates must be numeric integers");
+        try{return value.getAsBigDecimal().intValueExact();}catch(ArithmeticException invalid){throw new IllegalArgumentException("Schematic placement coordinate is fractional or outside integer range",invalid);}
     }
 
     /** Block ids in the candidate that the execution core's safe build library does not accept, sorted. */

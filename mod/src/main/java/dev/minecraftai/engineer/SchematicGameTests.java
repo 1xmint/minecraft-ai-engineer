@@ -8,6 +8,14 @@ import net.minecraft.world.level.block.Blocks;
 
 /** Schematic chat grammar, the blueprint adapter and region capture. Companion authority is proven by the multiplayer flow. */
 public final class SchematicGameTests {
+    @GameTest public void schematicPlacementCannotTruncateOrCoerceCoordinates(GameTestHelper helper){
+        for(var value:java.util.List.of(new JsonPrimitive(0.75),new JsonPrimitive("1"),new JsonPrimitive(2147483648L))){
+            var placement=new JsonArray();var item=block(0,0,0,"minecraft:stone");item.getAsJsonArray("pos").set(0,value);placement.add(item);
+            boolean rejected=false;try{SchematicBlueprint.candidate(placement,1,"a".repeat(64),"b".repeat(64),"test","minecraft:overworld","00000000-0000-0000-0000-000000000001");}catch(IllegalArgumentException invalid){rejected=true;}
+            helper.assertTrue(rejected,"Malformed coordinate must fail before becoming an apparently valid native cell: "+value);
+        }
+        helper.succeed();
+    }
     @GameTest public void schematicRequestsAreExplicitAndKeepFileNames(GameTestHelper helper){
         var inspect=SchematicText.parse("Inspect schematic Castle_Gate.schem");
         helper.assertTrue(inspect.action().equals("inspect") && inspect.name().equals("Castle_Gate"),"File names keep their case and drop only the extension");
