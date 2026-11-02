@@ -70,6 +70,13 @@ requires untested35-placement checkpoints across at least two server epochs and
 restart/undo completion markers. No extra boot or local behavioral tests added.
 These latest restart/conflict proofs are pending exact-source CI.
 
+Added companion imported-admission regressions with hand-calculated three-block
+bounds/resources: owner/pass/port/test injection, altered counts/bounds, inventory,
+invalid lever direction, duplicate cells, rotated world-height overflow, foreign
+project/world and stale server revision all reject. Type/format checks passed;
+behavioral tests await the next exact-source CI. These complement actual native
+source replay and dedicated gameplay rather than replace them.
+
 PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
 real connected build paused at2004,101,0 after223 records. Native final geometry
 and149 tests passed; partial owned-wire reconciliation at a junction is the live
