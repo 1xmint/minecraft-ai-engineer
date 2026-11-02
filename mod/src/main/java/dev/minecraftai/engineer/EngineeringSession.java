@@ -590,17 +590,33 @@ final class EngineeringSession implements BuildExecutor {
         for (Change c : journal) if(c.operation().equals(activeOperation)) expected.put(c.pos(), c.after());
         return expected;
     }
-    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual) {
+    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual,Blueprint connectedOperation) {
+        if(ConnectedIntention.describes(blueprint.source())){
+            if(expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
+            if(expected.is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && connectedOperation!=null){
+                // Only assistant-written cells may use native partial-construction arms.
+                // Adopted player wires retain the original exact static comparison.
+                Change owned=null;for(var change:journal)if(change.operation().equals(activeOperation) && change.pos().equals(pos))owned=change;
+                if(owned!=null && Blueprint.matches(owned.after(),expected))
+                    return ConnectedWireUndo.matchesValidated(connectedOperation,owned,actual,level());
+            }
+        }
         if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint)) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
         return Blueprint.matches(expected,actual);
     }
     void reconcile() {
         requireCreative();
         if (undoRequested) throw new IllegalStateException("Undo was interrupted; use /engineer undo to reconcile it");
+        Blueprint connectedOperation=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
+            ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
+        if(connectedOperation!=null){
+            var reads=new HashSet<BlockPos>(expectedNow().keySet());reads.addAll(dependencies.keySet());
+            for(var pos:reads)if(!level().hasChunkAt(pos))throw new IllegalStateException("Connected reconciliation needs all recorded cells and dependencies loaded");
+        }
         for (Map.Entry<BlockPos, BlockState> entry : expectedNow().entrySet()) {
             validateTarget(entry.getKey());
             BlockState actual = level().getBlockState(entry.getKey());
-            if (!matchesExpected(entry.getKey(),entry.getValue(), actual)) {
+            if (!matchesExpected(entry.getKey(),entry.getValue(), actual,connectedOperation)) {
                 // A crash between journal flush and placement may leave before-state. It is safe to retry only that case.
                 Change pending = journal.isEmpty() ? null : journal.getLast();
                 if (pendingPlacement && pending != null && pending.operation().equals(activeOperation) && pending.pos().equals(entry.getKey()) && actual.equals(pending.before())) {

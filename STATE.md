@@ -344,3 +344,11 @@ reload proof with two pending controls, A originally on and B off: original vs
 last stimulus survives, no delegation/callback/trial resumes, and an internal pin
 in a recovery record rejects. Scoped Java compilation passed. This pending native
 proof does not establish actual authorized restoration or full user acceptance.
+
+Connected build reconciliation now uses native shape projection only for cells
+written by the assistant in the captured current operation. Adopted player wires
+stay strict; changed external levers conflict exactly. Canonical operation is
+regenerated once per reconciliation, not once per wire. Existing dependency,
+permission and ownership checks remain. Actual session conflict/undo proof pending.
+Prior source5387f0d CI41472491344 is now completed SUCCESS; fresh source needs its
+own CI before claiming any of the subsequent integration proven.
