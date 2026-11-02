@@ -17,6 +17,9 @@ final class ConnectedWireUndo {
         if(!actual.is(Blocks.REDSTONE_WIRE) || !change.after().is(Blocks.REDSTONE_WIRE))return false;
         var owned=canonical.blocks().stream().filter(block->block.pos().equals(change.pos())).findFirst().orElse(null);
         if(owned==null || !Blueprint.matches(owned.state(),change.after()))return false;
+        // A just-written wire may retain its exact recorded arms until a later
+        // neighbor update. Accept that finite state as well as native evolution.
+        if(Blueprint.matches(change.after(),actual))return true;
         var predicted=((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(level,change.after(),change.pos());
         return Blueprint.matches(predicted,actual);
     }
