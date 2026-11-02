@@ -1,5 +1,7 @@
 # Install the multiplayer development preview
 
+[Download v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2).
+
 This preview uses one dedicated Fabric server and one private companion on the
 server owner's computer, even when playing alone. The older `alpha.1` download
 is a separate single-player reference. CI artifacts are build candidates; use a
