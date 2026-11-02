@@ -7,7 +7,8 @@ Repo: https://github.com/1xmint/minecraft-ai-engineer.
 Current worktree: task `work/connected-circuits`, branch
 `phase/27-connected-circuits`. Integrating merged main **9a1d6e7 / PR37**;
 only STATE conflicted. Main worktree is clean and fast-forwarded. Original C1
-source8490f8d is running CI41369209886; Fabric passed all141 native tests.
+source8490f8d passed all five checks in CI41369209886, including141 native tests
+and the unchanged full dedicated/restart/SQLite suite.
 Do not confuse this native-only proof with the entire phase being complete.
 
 Release source57b1d65 passed all five checks in CI41367933778, all137 native
@@ -53,10 +54,10 @@ native tests passed in CI41369209886 on8490f8d. Raw reports inspected at
 For every rotation the intact route measured producer0/15, consumer0/14 and
 receiver0/15 with both lamp states. A gap kept receiver0/lampoff; reversed consumer
 kept its input0/14 but receiver0/lampoff. Unwired-control phases stayed isolated
-on every tick. Both original external controls ended off. Full CI remains live.
+on every tick. Both original external controls ended off. Full C1 CI is now green.
 These are fixture observations, not a project pass or complete human acceptance.
 
-C2 is starting: local untracked catalog/half-adder.json and HalfAdderDesign.java
+C2 is starting: catalog/half-adder.json and HalfAdderDesign.java
 prototype a four-NAND plus NOT half-adder. Shared signals have explicit buffered
 routes, external controls, internal pins and two receivers. No project parser,
 provider, construction or verification admission exists yet. Complete native
@@ -168,3 +169,19 @@ For a green exact main, inspect same-run pair/source/hash manifests, publish a
 clearly bounded multiplayer prerelease and update README download guidance.
 Continue C2 native half-adder proof and strict graph/source/evidence integration,
 then actual C3 flows. Keep the full goal active; no single slice completes it.
+
+C2 prototype now has parent-owned native proof fixtures for all four rotations,
+eight forward/reverse vectors, all twenty typed pin observations at every tick,
+and eight stable frames at elapsed48..55. An independent arithmetic oracle checks
+SUM/CARRY and internal NAND relations. A missing A-to-N2 wire must make SUM wrong
+while CARRY remains apparently correct, showing one receiver cannot certify the
+whole circuit. Initial wire arms are computed using the existing read-only pinned
+native connection accessor over intended geometry; no signal is simulated and no
+runtime POWER is forced. A native post-settle static geometry check covers arms.
+No parser/provider/construction admission yet. Shared recipe is included in the
+mod resources. Final scoped Java compilation and format/diff checks passed. Fresh GitHub native
+proof is required; no behavioral tests ran locally.
+
+When C2 becomes a companion-admitted family, explicitly add its third shared
+catalog to the production bundle and paired-jar catalog parity check. The current
+prototype is only a mod fixture resource; no companion module imports it yet.
