@@ -27,7 +27,7 @@ final class SchematicClient {
     private static final class Frame {
         final EngineeringSession session;final UUID actor,epoch;final ServerPlayer player;
         final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
-        final String connectionId;final int revision;final long authorization,startedNanos=System.nanoTime();
+        final String connectionId;int revision;final long authorization,startedNanos=System.nanoTime();
         CompletableFuture<JsonObject> future;
         Frame(EngineeringSession s,ServerPlayer p,String id){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();}
     }
@@ -58,23 +58,29 @@ final class SchematicClient {
 
     void handle(EngineeringSession s,SchematicText.Request r){
         var body=new JsonObject();
-        boolean editing=Set.of("import","transform","export").contains(r.action());
+        boolean editing=Set.of("import","transform","export","preview").contains(r.action());
         switch(r.action()){
             case "inspect" -> body.addProperty("name",r.name());
             case "import" -> {body.addProperty("name",r.name());body.addProperty("discard",r.discard());body.add("transform",JsonNull.INSTANCE);}
-            case "design" -> body.addProperty("designId",r.design());
+            case "design","preview" -> body.addProperty("designId",r.design());
             case "transform" -> {body.addProperty("designId",r.design());body.addProperty("transform",r.transform());}
             case "compare" -> {body.addProperty("designId",r.design());body.addProperty("otherId",r.other());}
             case "export" -> {body.addProperty("name",r.name());body.add("geometry",capture(s,r.discard()));}
             default -> { }
         }
         var f=start(s,editing?ProjectAccess.Permission.EDIT:ProjectAccess.Permission.VIEW);
-        try{f.future=Companion.gateway(s,"/v2/schematic/"+r.action(),body,f.actor);}catch(RuntimeException failure){finish(f);throw failure;}
+        try{f.future=Companion.gateway(s,"/v2/schematic/"+(r.action().equals("preview")?"design":r.action()),body,f.actor);}catch(RuntimeException failure){finish(f);throw failure;}
         f.future.whenComplete((reply,error)->manager.server.execute(()->{
             if(!current(f)){finish(f);return;}
             try{
                 if(error!=null){tell(f,refusal(error));return;}
-                tell(f,describe(r,reply,s));
+                if(r.action().equals("preview")){
+                    s.access.require(f.actor,ProjectAccess.Permission.EDIT);var previous=s.commandActor;
+                    try{s.commandActor=f.actor;var message=preview(reply,s);
+                        f.revision=s.revision(); // Advance only after this frame's own accepted preview.
+                        tell(f,message);
+                    }finally{s.commandActor=previous;}
+                }else tell(f,describe(r,reply,s));
             }catch(RuntimeException invalid){tell(f,"The companion's schematic answer was not understood, so nothing was used. Ask again.");}
             finally{finish(f);}
         }));
@@ -126,6 +132,17 @@ final class SchematicClient {
                 +(parts.isEmpty()?"They use the same materials.":"Material changes: "+String.join(", ",parts)+(delta.size()>6?", +"+(delta.size()-6)+" more":"")+".")
                 +" Geometry only: neither design is tested, and a difference in shape is not a difference in behaviour.";
     }
+    private static String preview(JsonObject reply,EngineeringSession s){
+        if(!reply.get("status").getAsString().equals("shared"))throw new IllegalArgumentException("Expected an authorized stored design");
+        var placement=reply.getAsJsonObject("placement");
+        if(!placement.get("available").getAsBoolean())return placement.get("reason").getAsString();
+        var design=reply.getAsJsonObject("design");int id=design.get("designId").getAsInt();
+        var source=SchematicBlueprint.candidate(placement.getAsJsonArray("blocks"),id,design.get("digest").getAsString(),design.getAsJsonObject("source").get("sha256").getAsString(),s.worldId,s.dimension,s.projectId.toString());
+        var unsupported=SchematicBlueprint.unsupported(source);
+        if(!unsupported.isEmpty())return "This design cannot be built with the current safe block library: "+String.join(", ",unsupported.subList(0,Math.min(6,unsupported.size())))+". You can still inspect and export it.";
+        s.proposeImported(Blueprint.parse(source,s.worldId,s.dimension),s.anchor(),0);
+        return "Preview ready: Imported design "+id+". No blocks were placed. It is untested and has no functional test contract. Ask me to build it for a separate approval.";
+    }
     private static String shared(JsonObject reply,EngineeringSession s){
         var design=reply.getAsJsonObject("design");var placement=reply.getAsJsonObject("placement");int id=design.get("designId").getAsInt();
         String head="Design "+id+transforms(design)+": "+shape(reply);
@@ -133,7 +150,7 @@ final class SchematicClient {
         var candidate=SchematicBlueprint.candidate(placement.getAsJsonArray("blocks"),id,design.get("digest").getAsString(),design.getAsJsonObject("source").get("sha256").getAsString(),s.worldId,s.dimension,s.projectId.toString());
         var unsupported=SchematicBlueprint.unsupported(candidate);
         if(!unsupported.isEmpty())return head+" It uses blocks outside the safe build library ("+String.join(", ",unsupported.subList(0,Math.min(6,unsupported.size())))+(unsupported.size()>6?", +"+(unsupported.size()-6)+" more":"")+"), so it can be inspected and exported but not built.";
-        return head+" Every block is in the safe build library, but building imported designs waits on the core build hook. It stays untested.";
+        return head+" Every block is in the safe build library. Say 'preview design "+id+"' to prepare it in your marked workspace. Preview and construction remain untested.";
     }
 
     /** Copies the authorized selection, air included, in Sponge order. Never reads entities or block-entity data. */

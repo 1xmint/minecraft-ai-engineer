@@ -38,6 +38,19 @@ start it and rejects imported evidence/input-control recovery claims. Added nati
 preview/unauthorized replacement/saved-session reload tests. Full I2/I3 gameplay,
 companion schema admission and Claude feature hook remain incomplete.
 
+Integrated Claude PR44 snapshotd07ff3a into this isolated branch (not main/44),
+preserving connected/imported/schematic test registrations and both dedicated
+flows. Added explicit preview design N as EDIT-only, keeping show/inspect VIEW-only.
+Preview uses the captured actor and advances the async frame revision only after
+its own accepted preview; no build starts. Type/client compilation passed.
+This integration still needs end-to-end proof and clearer refusal handling.
+
+PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
+real connected build paused at2004,101,0 after223 records. Native final geometry
+and149 tests passed; partial owned-wire reconciliation at a junction is the live
+failure. Investigate actual native intermediate arms; do not blanket-ignore wire
+arms or weaken manual-dot/player edit guards. Fix45 before claiming C3 complete.
+
 PR44 import request mismatch traced to Companion.encodeBody: default Gson omits
 explicit transform:null while the schematic endpoint requires that exact field.
 Core transport now preserves JSON nulls for /v2/schematic/import, as already done

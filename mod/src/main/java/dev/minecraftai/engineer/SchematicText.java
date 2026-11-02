@@ -12,7 +12,8 @@ final class SchematicText {
     private static final String NAME="([a-z0-9][a-z0-9_-]{0,63})(?:\\.schem)?";
     private static final Pattern INSPECT=Pattern.compile("^(?:inspect|check|look at) (?:the )?schematic "+NAME+"$",Pattern.CASE_INSENSITIVE);
     private static final Pattern IMPORT=Pattern.compile("^import (?:the )?schematic "+NAME+"( and (?:drop|dropping|discard|discarding) (?:its |the )?block (?:entities|contents))?$",Pattern.CASE_INSENSITIVE);
-    private static final Pattern SHOW=Pattern.compile("^(?:show|inspect|preview) (?:imported )?design #?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
+    private static final Pattern PREVIEW=Pattern.compile("^preview (?:imported )?design #?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
+    private static final Pattern SHOW=Pattern.compile("^(?:show|inspect) (?:imported )?design #?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
     private static final Pattern ROTATE=Pattern.compile("^rotate (?:imported )?design #?(\\d{1,9}) (?:by )?(90|180|270)(?: degrees)?(?: clockwise)?$",Pattern.CASE_INSENSITIVE);
     private static final Pattern MIRROR=Pattern.compile("^(?:mirror|flip) (?:imported )?design #?(\\d{1,9}) (east-west|north-south|east west|north south)$",Pattern.CASE_INSENSITIVE);
     private static final Pattern COMPARE=Pattern.compile("^compare (?:imported )?designs? #?(\\d{1,9}) (?:with|and|to) (?:design )?#?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
@@ -31,6 +32,8 @@ final class SchematicText {
         if(m.matches())return new Request("inspect",m.group(1),0,0,null,false);
         m=IMPORT.matcher(text);
         if(m.matches())return new Request("import",m.group(1),0,0,null,m.group(2)!=null);
+        m=PREVIEW.matcher(text);
+        if(m.matches())return new Request("preview",null,id(m.group(1)),0,null,false);
         m=SHOW.matcher(text);
         if(m.matches())return new Request("design",null,id(m.group(1)),0,null,false);
         m=ROTATE.matcher(text);
