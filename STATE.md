@@ -4,6 +4,16 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Focused GPT-6-Luna source review found one expiry boundary error: prototype
+accepted now==expires, unlike core reservations. Candidate now rejects >=expiry;
+native proof adds exact-expiry refusal and permits a live now+1 placement ticket.
+Review found no further fail-open within deliberately narrow dirt place/destroy
+scope, but that is not execution proof. Production callback must capture exact
+target/world/revisions and call validateMutation(BUILD,target), not only general
+authority; cleanup must stop/despawn before forgetting actor denial registration.
+Current guard CI41535130532 remains live in cleanup; its native action step passed,
+but do not report whole run or newer expiry candidate as proven yet.
+
 Cancellation source68b5e70 / CI41534623537 passed both required native tests;
 inspected actual cancelled=true marker together with mining/walking/exact pickup.
 New CI-only PhysicalActionGate plus placement/game-mode/entity mixins intercept

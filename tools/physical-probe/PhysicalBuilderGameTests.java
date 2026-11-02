@@ -96,9 +96,9 @@ public final class PhysicalBuilderGameTests {
         var allowed=new java.util.concurrent.atomic.AtomicBoolean(true);var written=new java.util.concurrent.atomic.AtomicInteger();
         Runnable authority=()->{if(!allowed.get())throw new IllegalStateException("Human delegation revoked");};
         Runnable wal=written::incrementAndGet;
-        for(String fault:java.util.List.of("missing","revoked","expired","wrong-target","edited","write-ahead-failed")){
+        for(String fault:java.util.List.of("missing","revoked","expired","expiry-boundary","wrong-target","edited","write-ahead-failed")){
             level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,1));allowed.set(!fault.equals("revoked"));
-            if(!fault.equals("missing"))PhysicalActionGate.arm(actor,"place",fault.equals("wrong-target")?support:target,Blocks.AIR.defaultBlockState(),fault.equals("expired")?now-1:now+100,authority,
+            if(!fault.equals("missing"))PhysicalActionGate.arm(actor,"place",fault.equals("wrong-target")?support:target,Blocks.AIR.defaultBlockState(),fault.equals("expired")?now-1:fault.equals("expiry-boundary")?now:now+100,authority,
                 fault.equals("write-ahead-failed")?()->{throw new IllegalStateException("Persistence unavailable");}:wal);
             if(fault.equals("edited"))level.setBlockAndUpdate(target,Blocks.COBBLESTONE.defaultBlockState());
             var before=level.getBlockState(target);
@@ -106,7 +106,7 @@ public final class PhysicalBuilderGameTests {
             helper.assertTrue(level.getBlockState(target).equals(before) && actor.getMainHandItem().getCount()==1 && written.get()==0,"Native placement refuses "+fault+" without changing world/items or committing WAL");
         }
         level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());allowed.set(true);
-        PhysicalActionGate.arm(actor,"place",target,Blocks.AIR.defaultBlockState(),now+100,authority,wal);
+        PhysicalActionGate.arm(actor,"place",target,Blocks.AIR.defaultBlockState(),now+1,authority,wal);
         actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
         helper.assertTrue(level.getBlockState(target).is(Blocks.DIRT) && actor.getMainHandItem().isEmpty() && written.get()==1,"Live exact-destination ticket persists before actual survival placement");
         helper.assertTrue(!actor.gameMode.destroyBlock(target) && level.getBlockState(target).is(Blocks.DIRT),"Consumed placement ticket cannot authorize mining");

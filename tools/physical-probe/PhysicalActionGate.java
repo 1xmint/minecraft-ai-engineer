@@ -40,7 +40,7 @@ public final class PhysicalActionGate {
             if(!(player instanceof ServerPlayer actor) || entry.actor!=actor || entry.connection!=actor.connection || actor.hasDisconnected())throw new IllegalStateException("Actor connection changed");
             thread(actor);
             if(ticket==null || !ticket.operation.equals(operation) || !ticket.target.equals(target)
-                || actor.level().getServer().getTickCount()>ticket.expires || !actor.level().hasChunkAt(target)
+                || actor.level().getServer().getTickCount()>=ticket.expires || !actor.level().hasChunkAt(target)
                 || !actor.level().getBlockState(target).equals(ticket.before))throw new IllegalStateException("No current exact-cell ticket");
             ticket.authority.run();
             if(consume){entry.ticket=null;ticket.writeAhead.run();}
