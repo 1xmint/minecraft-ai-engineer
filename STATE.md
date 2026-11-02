@@ -12,6 +12,14 @@ replay passed32 cases/1792 frames in4 rotations. This does not prove the dedicat
 player flow; its job is still live, and later restart/admission-test changes are
 not in that source. No local behavior tests ran.
 
+Next material expansion decision (I2): focused GPT-6-Luna read-only challenge
+supports a separate pinned imported-family set, leaving generic/model admission
+unchanged. Probe native vanilla exact Block.class IDs with no BE, signal/analog
+output or fluid and full collision; retain existing device exceptions. Derive a
+registry snapshot on CI and compare native/TS membership before admission. This
+excludes gravity/absorption/interactive subclasses; it is not universal safety or
+all-block support. Do not broaden runtime admission before those native proofs.
+
 2026-11-02 parallel core slice: work/imported-core, phase/28-imported-core,
 based on pending PR45 source915139e. Claude's PR44 remains his feature lane;
 its last dedicated run failed at import request-schema mismatch and Companion
