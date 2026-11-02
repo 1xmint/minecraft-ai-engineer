@@ -967,6 +967,11 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(ConnectedIntention.describes(candidate.source())) {
+            ConnectedIntention.validated(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
+            accept(candidate);return true;
+        }
         if(AnalogIntention.describes(candidate.source())) {
             AnalogIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built analog designs cannot be replaced by another preview; reconcile their existing work first");
