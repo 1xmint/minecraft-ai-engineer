@@ -46,6 +46,7 @@ const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
   token: config.token,
   store,
+  schematicDirectory: join(config.directory, "schematics"),
   // Fixed synthetic stages can burst across several projects in this suite.
   // This provider cannot invoke the SDK; production retains its default4/minute.
   actorPlansPerMinute: 24,
