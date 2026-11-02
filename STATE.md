@@ -433,3 +433,13 @@ negative injects one wrong stable internal output into otherwise actual samples
 with correct root receivers and requires failed verdict plus pin/clock diagnosis.
 Added docs/connected-circuits.md with flow, electrical graph, actual material list,
 truth table, test-window limits and explicit pending gameplay/not-alpha.2 status.
+
+Integration update: prior connected source43fc56c CI41476541185 completed all5
+SUCCESS. PR42 merged asb9d7be4 after its updated protected-branch checks; PR43
+source9ac26ecd passed all5 and merged as5e2425e. Reviewed CLI's bounded reads,
+explicit formats/discards and open-handle alias/no-truncate-before-validation
+guards. Both are file-tool foundations, not full in-game schematics. Connected
+branch merged current main through5e2425e; kept its ongoing STATE decisions when
+resolving the documentation-only memory conflict. Opening a draft phase27 PR for
+fresh combined-source CI, including the new actual conversational/shared/restart
+flows. Do not reuse prior149-native proof as proof of the newer full C3 flow.
