@@ -200,7 +200,6 @@ test("a player inspects, imports, transforms, compares and lists a real WorldEdi
       context: context({ actorId: EDITOR }),
       name: "castle.schem",
       discard: true,
-      transform: null,
     });
     assert.equal(imported.status, 200, JSON.stringify(imported.body));
     assert.equal(imported.body.design.designId, 1);
@@ -326,6 +325,27 @@ test("non-members, viewers, revoked editors and disconnected requests get nothin
         })
       ).status,
       400,
+    );
+
+    // Only transform is optional; omission never implies consent to discard.
+    for (const fields of [
+      { name: "castle" },
+      { discard: true },
+      { name: "castle", discard: true, transform: "unknown" },
+    ])
+      assert.equal(
+        (
+          await f.post("/v2/schematic/import", {
+            context: context(),
+            ...fields,
+          })
+        ).status,
+        400,
+      );
+    assert.deepEqual(
+      (await f.post("/v2/schematic/designs", { context: context() })).body
+        .designs,
+      [],
     );
 
     const owner = await importAs(context());

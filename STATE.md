@@ -4,6 +4,14 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Integrated Claude's later import compatibility fix2dd20c2 as4cfe78e: only the
+empty transform field may be omitted; explicit null remains supported. Kept the
+core's existing null-preserving transport and preview hooks. HTTP proof now uses
+an omitted-transform successful import and rejects missing name/discard or an
+unknown transform without storing a design. Local type/format checks passed;
+new regression awaits focused CI. Full runs41530574368 and41530710501 remain
+authoritatively live with four other jobs green; no restart or merge yet.
+
 Expanded-material feedback source3b2ed50 / CI41531718943 passed8 tests,0 failures.
 This includes pinned cobblestone admission and sand refusal plus HTTP library/
 restart/permission cases; it is not native runtime or multiplayer proof. Added
