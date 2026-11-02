@@ -26,6 +26,14 @@ server/connection/store closure before setup assertions, retaining explicit clos
 for restart cases. Failed assertions must report without a leaked listening
 server keeping the test worker alive. Type/format checks passed; no local tests.
 
+Companion job125560890205 ended cancelled at its10-minute timeout, while the
+other integration jobs remain live. Added focused Schematic feedback workflow
+for the two relevant HTTP/admission test files with30-second test bounds, using
+pinned actions and its own concurrency/check name. Push work/schematic-feedback
+to run it before the workflow lands on main. This check is not a required full-CI
+job, never substitutes for native/dedicated proof, and does not cancel either
+active full run. Purpose: reveal actual failures after deterministic cleanup.
+
 Added read-only native material probe: enumerate pinned vanilla exact Block.class
 single-state full cubes without BE/fluid/signal/analog behavior. Requires ordinary
 cobblestone/planks, rejects representative dynamic/interactive/partial/invisible
