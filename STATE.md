@@ -4,6 +4,36 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+## Parallel ownership — 2026-11-02
+
+Josh requested sustained milestone ownership for Claude, rather than another
+small CLI task. This supersedes the old transforms-only delegation below.
+Claude's track: finish schematic tools and their in-game feature integration;
+richer durable project knowledge/reference retrieval; local offline voice;
+engineering candidate comparison/optimization with honestly measured evidence.
+Codex's track: connected/larger functional engineering, diagnosis/repair and
+teaching; authoritative construction core; physical NPC; genuine survival;
+multiple builders; shared integrations and final original ten-step acceptance.
+These are roughly balanced workstreams, not a claim of equal estimated effort.
+
+Claude owns new schematic/memory/voice/optimization feature modules and their
+tests/docs. Existing shared protocol/provider/storage/registration entry points
+are integration seams: changes stay in isolated PRs, with exact touched files
+and contracts called out; Codex integrates against current engineering work.
+Do not rewrite execution, permission, journal, reservation or verification cores.
+Read actual existing memory/knowledge infrastructure before extending it; reuse
+SQLite, provider authentication and normal conversational interaction. All new
+features must reach actual user flows, not stop at standalone libraries. Native
+hooks owned by Codex must be explicitly tracked as incomplete until integrated.
+No separately billed service/API key, credential sharing, model-call loops or
+local behavioral tests. Voice must prove a viable offline path before adding a
+large dependency; inability to meet constraints blocks voice only, not the track.
+Optimization must separate estimated geometry cost from native-measured timing/
+reliability, and never recommend untested candidates as verified machines.
+Each milestone needs success/failure evidence on its exact CI source and a
+focused PR. Claude can continue later independent milestones while CI runs;
+Codex owns final merging and STATE reconciliation, with proposed updates in PRs.
+
 Current engineering worktree: task `work/connected-circuits`, branch
 `phase/27-connected-circuits`, based on merged main **9a1d6e7 / PR37**.
 Documentation PR38 (`docs/multiplayer-preview-download`, sourceeb91617) updates
