@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { MemoryStore } from "../companion/src/memory.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
-import { validateProjectNote } from "../companion/src/project-knowledge.js";
+import {
+  readProjectNote,
+  validateProjectNote,
+} from "../companion/src/project-knowledge.js";
 import type {
   GatewayContext,
   ProjectMember,
@@ -67,7 +70,7 @@ test("project notes preserve literal human text and cannot supply authorship or 
   assert.equal(Object.isFrozen(accepted), true);
   for (const patch of [
     { kind: "verified" },
-    { schemaVersion: 2 },
+    { schemaVersion: 3 },
     { text: " " },
     { text: "x".repeat(513) },
     { text: "\u0000bad" },
@@ -78,6 +81,56 @@ test("project notes preserve literal human text and cannot supply authorship or 
     { authority: true },
   ])
     assert.throws(() => validateProjectNote({ ...note, ...patch }));
+});
+test("version 2 notes keep a literal reason and an optional replacement; absent keys stay absent", () => {
+  const decision = {
+    schemaVersion: 2,
+    kind: "decision",
+    text: "use repeaters",
+  };
+  const reasoned = validateProjectNote({
+    ...decision,
+    rationale: " they stay visible ",
+    supersedes: 1,
+  });
+  assert.equal(reasoned.schemaVersion, 2);
+  assert.equal(
+    "rationale" in reasoned && reasoned.rationale,
+    " they stay visible ",
+  );
+  assert.equal("supersedes" in reasoned && reasoned.supersedes, 1);
+  const plain = validateProjectNote(decision);
+  assert.equal("rationale" in plain, false);
+  assert.equal("supersedes" in plain, false);
+  for (const patch of [
+    { rationale: "" },
+    { rationale: null },
+    { rationale: "x".repeat(513) },
+    { supersedes: 0 },
+    { supersedes: null },
+    { supersedes: "1" },
+    { writtenAtRevision: 4 },
+  ])
+    assert.throws(() => validateProjectNote({ ...decision, ...patch }));
+  assert.throws(() =>
+    validateProjectNote({ ...note, rationale: "v1 has none" }),
+  );
+});
+test("stored version 1 notes read back with exactly their original keys", () => {
+  const stored = {
+    ...note,
+    id: OWNER,
+    revision: 1,
+    authorId: OWNER,
+    createdAt: 1,
+    source: "owner-authored",
+  };
+  assert.deepEqual(Object.keys(readProjectNote(stored)), Object.keys(stored));
+  assert.throws(() => readProjectNote({ ...stored, writtenAtRevision: 0 }));
+  const v2 = { ...stored, schemaVersion: 2, writtenAtRevision: 0 };
+  assert.equal(readProjectNote(v2).schemaVersion, 2);
+  const { writtenAtRevision: _dropped, ...missing } = v2;
+  assert.throws(() => readProjectNote(missing));
 });
 test("only the current connected owner can append; readers, optimistic revisions and replay remain fenced", () => {
   const store = new MemoryStore(":memory:");
