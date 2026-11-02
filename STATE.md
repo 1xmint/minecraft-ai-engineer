@@ -352,3 +352,9 @@ regenerated once per reconciliation, not once per wire. Existing dependency,
 permission and ownership checks remain. Actual session conflict/undo proof pending.
 Prior source5387f0d CI41472491344 is now completed SUCCESS; fresh source needs its
 own CI before claiming any of the subsequent integration proven.
+
+Latest connected source43fc56c has fresh CI41476541185 live (do not replace it).
+PR42 sourcee314a4b passed all five CI41472675876 checks. Ready/merge encountered
+the protected-main up-to-date requirement; requested GitHub update-branch and
+automatic squash merge after its new checks pass. No bypass/admin merge used.
+PR43 remains separate and its dedicated CI was still live at last observation.
