@@ -108,6 +108,7 @@ final class FunctionalTrial {
             vector++;int value=ConnectedEvidence.vector(vector);
             apply(Map.of("a:control",(value&2)!=0,"b:control",(value&1)!=0));
             connected=new ConnectedTrace(connectedDesign.graphDigest(),(value&2)!=0,(value&1)!=0,now);
+            phaseStart=now;
             evidence.add(connected.json());
         }
         var ports=new JsonObject();var blueprint=s.executionBlueprint();
@@ -120,8 +121,9 @@ final class FunctionalTrial {
                 case LAMP->{if(!actual.is(Blocks.REDSTONE_LAMP))throw new IllegalStateException("Connected receiver changed");ports.addProperty(pin.id(),actual.getValue(BlockStateProperties.LIT));}
             }
         }
+        if(now-phaseStart>ConnectedTrace.END)throw new IllegalStateException("inconclusive: connected game-tick observation window missed");
         connected.sample(now,ports);evidence.set(vector,connected.json());s.save();
-        if(connected.verdict().equals("failed"))throw new IllegalStateException("Connected pin disagrees with intended half-adder logic");
+        if(connected.verdict().equals("failed"))throw new IllegalStateException(connected.failure());
         if(!connected.passed())return;
         ConnectedEvidence.validate(evidence,connectedDesign.graphDigest(),false);
         if(vector<7){connected=null;return;}

@@ -426,3 +426,10 @@ built connected projects must reconcile existing work before replacement. Static
 diagnosis selects the connected engineering contract instead of the leaf catalog.
 No shape match or diagnosis creates a functional pass. These hooks are covered
 by the pending full conversational dedicated flow, not yet executed on CI.
+
+Connected failure reports now retain first wrong pin, expected state, observed
+value and actual clock; missed windows are explicitly inconclusive. Native replay
+negative injects one wrong stable internal output into otherwise actual samples
+with correct root receivers and requires failed verdict plus pin/clock diagnosis.
+Added docs/connected-circuits.md with flow, electrical graph, actual material list,
+truth table, test-window limits and explicit pending gameplay/not-alpha.2 status.

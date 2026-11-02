@@ -43,6 +43,11 @@ final class ConnectedTrace {
         var row=new JsonObject();row.addProperty("gameTick",gameTick);row.addProperty("elapsedTicks",elapsed);row.add("ports",ports);samples.add(row);last=(int)elapsed;
     }
     boolean passed(){return verdict().equals("passed");}
+    String failure(){
+        if(mismatch==null)return "inconclusive: connected observation window is incomplete";
+        return "Connected pin "+mismatch.get("pin").getAsString()+" expected "+(mismatch.get("expected").getAsBoolean()?"on":"off")
+            +", observed "+mismatch.get("observed")+" at game tick "+mismatch.get("gameTick").getAsLong()+" (elapsed "+mismatch.get("elapsedTicks").getAsInt()+")";
+    }
     String verdict(){return mismatch!=null?"failed":!gap && samples.size()==END+1 && last==END?"passed":"inconclusive";}
     JsonObject json(){
         var out=new JsonObject();out.addProperty("schemaVersion",1);out.addProperty("function","half-adder");out.addProperty("graphDigest",digest);

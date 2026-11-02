@@ -120,6 +120,13 @@ public final class HalfAdderGameTests {
             helper.assertTrue(replay.json().equals(before),"Malformed samples leave all captured facts unchanged");
             for(int index=1;index<56;index++){var frame=frames.get(index).getAsJsonObject();replay.sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));}
             helper.assertTrue(replay.passed(),"A rejected malformed sample cannot poison a later complete physical trace");
+            var failed=new ConnectedTrace(design.graphDigest(),false,false,start);
+            for(int index=0;index<56;index++){
+                var frame=frames.get(index).getAsJsonObject();var observed=frame.getAsJsonObject("ports").deepCopy();
+                if(index==48)observed.addProperty("n1:out",0);
+                failed.sample(frame.get("gameTick").getAsLong(),observed);
+            }
+            helper.assertTrue(failed.verdict().equals("failed") && failed.failure().contains("n1:out") && failed.failure().contains(Long.toString(start+48)),"A wrong internal signal fails despite correct root receivers and retains its first physical clock/pin diagnosis");
 
             var identity=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
             int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
