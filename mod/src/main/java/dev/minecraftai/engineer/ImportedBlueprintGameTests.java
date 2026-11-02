@@ -5,6 +5,11 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
 public final class ImportedBlueprintGameTests {
+    @GameTest public void schematicImportTransportRetainsExplicitNoTransform(GameTestHelper helper){
+        var body=new JsonObject();body.addProperty("name","signs");body.addProperty("discard",false);body.add("transform",JsonNull.INSTANCE);
+        var encoded=JsonParser.parseString(Companion.encodeBody("/v2/schematic/import",body)).getAsJsonObject();
+        helper.assertTrue(encoded.has("transform") && encoded.get("transform").isJsonNull() && !encoded.get("discard").getAsBoolean(),"Wire request retains explicit no-transform without inventing discard consent");helper.succeed();
+    }
     @GameTest public void importedPreviewRetainsScopeWithoutExecutionAndReloads(GameTestHelper helper){
         var manager=EngineerMod.managerFor(helper.getLevel().getServer());var project=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();
         String dimension=helper.getLevel().dimension().identifier().toString();var session=new EngineeringSession(manager,project,owner,dimension);

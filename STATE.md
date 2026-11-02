@@ -38,6 +38,13 @@ start it and rejects imported evidence/input-control recovery claims. Added nati
 preview/unauthorized replacement/saved-session reload tests. Full I2/I3 gameplay,
 companion schema admission and Claude feature hook remain incomplete.
 
+PR44 import request mismatch traced to Companion.encodeBody: default Gson omits
+explicit transform:null while the schematic endpoint requires that exact field.
+Core transport now preserves JSON nulls for /v2/schematic/import, as already done
+for interpretation. Native regression checks the actual encoded request retains
+no-transform and discard:false. Claude's branch/files remain untouched. Fix is
+pending fresh CI and integration with44; this does not establish import gameplay.
+
 CI41525271966 found two concrete failures: STATE formatting and native imported
 preview acceptance expected a catalog template in ComponentTree.nodes. Fixed
 imported root descriptor to schematic-geometry (no ports or behavior) and retained
