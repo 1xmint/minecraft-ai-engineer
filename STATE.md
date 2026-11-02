@@ -20,6 +20,12 @@ registry snapshot on CI and compare native/TS membership before admission. This
 excludes gravity/absorption/interactive subclasses; it is not universal safety or
 all-block support. Do not broaden runtime admission before those native proofs.
 
+Added read-only native material probe: enumerate pinned vanilla exact Block.class
+single-state full cubes without BE/fluid/signal/analog behavior. Requires ordinary
+cobblestone/planks, rejects representative dynamic/interactive/partial/invisible
+blocks, exports sorted IDs as ENGINEER_IMPORTED_MATERIAL_PROBE. It grants no
+runtime admission; native source proof and pinned native/TS snapshot still needed.
+
 2026-11-02 parallel core slice: work/imported-core, phase/28-imported-core,
 based on pending PR45 source915139e. Claude's PR44 remains his feature lane;
 its last dedicated run failed at import request-schema mismatch and Companion

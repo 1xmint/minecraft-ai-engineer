@@ -5,6 +5,30 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
 public final class ImportedBlueprintGameTests {
+    private static boolean inertMaterial(net.minecraft.world.level.block.state.BlockState state,GameTestHelper helper){
+        return state.getBlock().getClass()==net.minecraft.world.level.block.Block.class
+            && net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace().equals("minecraft")
+            && state.getBlock().getStateDefinition().getPossibleStates().size()==1
+            && !state.hasBlockEntity() && !state.isSignalSource() && !state.hasAnalogOutputSignal() && state.getFluidState().isEmpty()
+            && state.isCollisionShapeFullBlock(helper.getLevel(),helper.absolutePos(net.minecraft.core.BlockPos.ZERO));
+    }
+    @GameTest public void enumeratePinnedInertImportedMaterialsWithoutAdmittingThem(GameTestHelper helper){
+        helper.assertTrue(inertMaterial(net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState(),helper)
+            && inertMaterial(net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState(),helper),"Ordinary full building cubes meet the candidate native gate");
+        for(var block:java.util.List.of(net.minecraft.world.level.block.Blocks.SPONGE,net.minecraft.world.level.block.Blocks.SAND,
+            net.minecraft.world.level.block.Blocks.CAKE,net.minecraft.world.level.block.Blocks.CRAFTING_TABLE,
+            net.minecraft.world.level.block.Blocks.SLIME_BLOCK,net.minecraft.world.level.block.Blocks.HONEY_BLOCK,
+            net.minecraft.world.level.block.Blocks.POWDER_SNOW,net.minecraft.world.level.block.Blocks.CHEST,
+            net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK,net.minecraft.world.level.block.Blocks.WATER,
+            net.minecraft.world.level.block.Blocks.OAK_SLAB,net.minecraft.world.level.block.Blocks.BARRIER))
+            helper.assertTrue(!inertMaterial(block.defaultBlockState(),helper),"Interactive, dynamic, partial or invisible block remains outside candidate gate: "+block);
+        var ids=new java.util.TreeSet<String>();
+        for(var block:net.minecraft.core.registries.BuiltInRegistries.BLOCK)if(inertMaterial(block.defaultBlockState(),helper))
+            ids.add(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).toString());
+        helper.assertTrue(ids.size()>5,"Probe enumerates real ordinary building materials, not the old circuit subset");
+        var report=new JsonObject();report.addProperty("minecraft","26.3");report.addProperty("authority","probe only; no runtime admission");
+        var values=new JsonArray();ids.forEach(values::add);report.add("ids",values);System.out.println("ENGINEER_IMPORTED_MATERIAL_PROBE "+report);helper.succeed();
+    }
     @GameTest public void schematicImportTransportRetainsExplicitNoTransform(GameTestHelper helper){
         var body=new JsonObject();body.addProperty("name","signs");body.addProperty("discard",false);body.add("transform",JsonNull.INSTANCE);
         var encoded=JsonParser.parseString(Companion.encodeBody("/v2/schematic/import",body)).getAsJsonObject();
