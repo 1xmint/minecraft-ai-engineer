@@ -4,6 +4,21 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Cancellation source68b5e70 / CI41534623537 passed both required native tests;
+inspected actual cancelled=true marker together with mining/walking/exact pickup.
+New CI-only PhysicalActionGate plus placement/game-mode/entity mixins intercept
+resolved BlockItem destination and final destroyBlock. Managed actors require an
+ephemeral exact-cell before-state/expiry/connection ticket and synchronous live
+authority callback; consumption calls writeAhead before vanilla mutation. Generic
+item-on-block is limited to dirt over stone; air-item/entity use denies. Native
+candidate asserts missing/revoked/expired/wrong-destination/edited/WAL-failure,
+reuse and bucket refusal, plus actual live item placement/destruction. Callback
+and persistence are explicitly fixture Boolean/counter, not real project lease or
+durable WAL proof. This seam remains CI-only, no product dependency/registration;
+does not claim arbitrary items, movement containment, item toss or secondary
+simulation safety. Scoped Java compilation passed. Focused helper review and
+fresh native CI pending before adopting the seam.
+
 Walking/pickup sourceed766a8 / CI41534414651 passed both required native tests;
 inspected actual marker walked=true,collected=1. Cancellation source68b5e70 /
 CI41534623537 is live. Focused read-only GPT-6-Luna authority challenge confirms

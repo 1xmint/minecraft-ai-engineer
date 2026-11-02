@@ -25,12 +25,18 @@ jobs:
           curl --fail --location --retry 3 'https://github.com/gnembon/fabric-carpet/releases/download/v26.3/fabric-carpet-26.3%2Bv260915.jar' -o "$RUNNER_TEMP/carpet.jar"
           echo '7c40b93e807ed914064176898037117097446c6cc76e6a80a856c8bf7f7659f9  '"$RUNNER_TEMP/carpet.jar" | sha256sum --check
           cp tools/physical-probe/PhysicalBuilderGameTests.java mod/src/main/java/dev/minecraftai/engineer/
+          cp tools/physical-probe/PhysicalActionGate.java mod/src/main/java/dev/minecraftai/engineer/
+          cp tools/physical-probe/*Mixin.java mod/src/main/java/dev/minecraftai/engineer/mixin/
           python - <<'PY'
           import json, os, pathlib
           path = pathlib.Path('mod/src/main/resources/fabric.mod.json')
           doc = json.loads(path.read_text())
           doc['entrypoints']['fabric-gametest'] = ['dev.minecraftai.engineer.PhysicalBuilderGameTests']
           path.write_text(json.dumps(doc))
+          mixins = pathlib.Path('mod/src/main/resources/engineer.mixins.json')
+          config = json.loads(mixins.read_text())
+          config['mixins'].extend(['PhysicalPlaceMixin', 'PhysicalGameModeMixin', 'PhysicalEntityMixin'])
+          mixins.write_text(json.dumps(config))
           build = pathlib.Path('mod/build.gradle')
           build.write_text(build.read_text() + '\ndependencies { runtimeOnly files("' + os.environ['RUNNER_TEMP'] + '/carpet.jar") }\n')
           PY
@@ -41,6 +47,7 @@ jobs:
           mkdir -p mod/build
           mod/gradlew -p mod --console=plain --no-daemon --max-workers=2 runGameTest 2>&1 | tee mod/build/physical-probe.log
           grep -F 'ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1 cancelled=true' mod/build/physical-probe.log
+          grep -F 'ENGINEER_PHYSICAL_AUTHORITY missing=denied revoked=denied expired=denied wrong-destination=denied edited=denied wal-failure=denied one-use=true bucket=denied live-place=true live-mine=true' mod/build/physical-probe.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

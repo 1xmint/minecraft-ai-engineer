@@ -84,9 +84,39 @@ public final class PhysicalBuilderGameTests {
                     var stack=actor.getInventory().getItem(slot);if(stack.is(Items.DIRT))collected+=stack.getCount();
                 }
                 helper.assertTrue(collected==1,"Exactly one mined drop is collected through physical pickup");
+                gatedActions(helper,actor,support,placed);
                 System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1 cancelled=true");
-                server.getPlayerList().remove(actor);helper.succeed();
-            }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
+                PhysicalActionGate.forget(actor);server.getPlayerList().remove(actor);helper.succeed();
+            }catch(Exception failed){PhysicalActionGate.forget(actor);server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
         });
+    }
+    private static void gatedActions(GameTestHelper helper,ServerPlayer actor,BlockPos support,BlockPos target){
+        PhysicalActionGate.register(actor);var level=actor.level();long now=level.getServer().getTickCount();
+        var hit=new net.minecraft.world.phys.BlockHitResult(new Vec3(support.getX()+0.5,support.getY()+1,support.getZ()+0.5),net.minecraft.core.Direction.UP,support,false);
+        var allowed=new java.util.concurrent.atomic.AtomicBoolean(true);var written=new java.util.concurrent.atomic.AtomicInteger();
+        Runnable authority=()->{if(!allowed.get())throw new IllegalStateException("Human delegation revoked");};
+        Runnable wal=written::incrementAndGet;
+        for(String fault:java.util.List.of("missing","revoked","expired","wrong-target","edited","write-ahead-failed")){
+            level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,1));allowed.set(!fault.equals("revoked"));
+            if(!fault.equals("missing"))PhysicalActionGate.arm(actor,"place",fault.equals("wrong-target")?support:target,Blocks.AIR.defaultBlockState(),fault.equals("expired")?now-1:now+100,authority,
+                fault.equals("write-ahead-failed")?()->{throw new IllegalStateException("Persistence unavailable");}:wal);
+            if(fault.equals("edited"))level.setBlockAndUpdate(target,Blocks.COBBLESTONE.defaultBlockState());
+            var before=level.getBlockState(target);
+            actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
+            helper.assertTrue(level.getBlockState(target).equals(before) && actor.getMainHandItem().getCount()==1 && written.get()==0,"Native placement refuses "+fault+" without changing world/items or committing WAL");
+        }
+        level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());allowed.set(true);
+        PhysicalActionGate.arm(actor,"place",target,Blocks.AIR.defaultBlockState(),now+100,authority,wal);
+        actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
+        helper.assertTrue(level.getBlockState(target).is(Blocks.DIRT) && actor.getMainHandItem().isEmpty() && written.get()==1,"Live exact-destination ticket persists before actual survival placement");
+        helper.assertTrue(!actor.gameMode.destroyBlock(target) && level.getBlockState(target).is(Blocks.DIRT),"Consumed placement ticket cannot authorize mining");
+        PhysicalActionGate.arm(actor,"mine",target,Blocks.DIRT.defaultBlockState(),now+100,authority,wal);allowed.set(false);
+        helper.assertTrue(!actor.gameMode.destroyBlock(target) && level.getBlockState(target).is(Blocks.DIRT) && written.get()==1,"Revocation after mining start is rechecked at final destruction");
+        allowed.set(true);PhysicalActionGate.arm(actor,"mine",target,Blocks.DIRT.defaultBlockState(),now+100,authority,wal);
+        helper.assertTrue(actor.gameMode.destroyBlock(target) && level.getBlockState(target).isAir() && written.get()==2,"Fresh live mining ticket permits actual native destruction");
+        actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.WATER_BUCKET));
+        actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
+        helper.assertTrue(level.getBlockState(target).isAir() && actor.getMainHandItem().is(Items.WATER_BUCKET),"Unsupported bucket cannot bypass the placement ticket gate");
+        System.out.println("ENGINEER_PHYSICAL_AUTHORITY missing=denied revoked=denied expired=denied wrong-destination=denied edited=denied wal-failure=denied one-use=true bucket=denied live-place=true live-mine=true");
     }
 }
