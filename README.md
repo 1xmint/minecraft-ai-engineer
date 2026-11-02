@@ -30,6 +30,16 @@ The downloadable alpha below is still the older single-player reference.
 
 ![Reference blueprint preview captured from the actual Minecraft client CI test](docs/images/reference-preview.png)
 
+## Installable build candidates
+
+CI creates an `installable-preview` artifact containing a compiled companion zip,
+matching mod jar, source/run identity and SHA256 checksums. Its companion runtime
+is exercised after extraction on Linux and Windows, without a model request.
+Use artifacts only from a successful main run with all five required checks;
+PR artifacts are development candidates. Follow the bundled `START-HERE.md` or
+[installation guide](docs/install.md). The published download below remains the
+older solo alpha until a verified multiplayer prerelease is published.
+
 ## Try it
 
 For the multiplayer source build, start with the [dedicated-server instructions](docs/mod-guide.md#multiplayer-development-branch).

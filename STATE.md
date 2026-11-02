@@ -4,23 +4,31 @@
 AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: task `work/analog-comparators`, branch
-`phase/24-analog-comparators`. Runtime source **cc0cbed / CI41360150254** passed four checks and every new analog
-marker, then reached the CI process cap during the remaining approval/restart tail.
-Local **9f96d81** adds prepared docs and is backed up at
-`origin/backup/analog-rotations`; do not push docs merely to cancel that live run.
-Main is **885748e** (merged PR34, schematic file foundation). The downloadable v0.1.0-alpha.1 is still
-the older solo alpha; source capabilities are broader than that release.
+Current worktree: `work/installable-bundles`, branch
+`phase/26-installable-bundles`, based on main3978f88 (merged PR33).
+Comparator exact source7e27fd7/all5 CI41362325852 shipped with all136 native tests
+and dedicated/restart/SQLite proof. Parallel PR35/source5067bdc/CI41364625681 and
+PR36/source0ef5c6d/CI41364946648 remain live; never cancel their runs for this work.
 
-Claude's schematic foundation **PR34** merged as **885748e** on
-2026-11-01T23:24:42Z. Exact source **55ca74c** passed all five checks in
-**CI41360384747**, all117 native tests and177 companion tests (176 passed, one
-existing skip), including21 schematic tests and full dedicated/restart proof.
-Review worktree: `work/schematic-review`, branch `fix/schematic-boundaries`.
-The main worktree is clean and fast-forwarded. This branch is merging that main
-with prepared comparator docs; source files merged cleanly, and this note resolves
-the sole conflict by retaining both outcomes. Complete the combined-source CI
-before merging PR33. Full in-game schematic integration is still pending.
+Phase26 Outcomes (serves release/setup):
+
+- R1: an allowlisted, compiled companion bundle installs without TypeScript/Java
+  build tools. Proof: extract it, install production dependencies and start the
+  actual entry point on both Linux and Windows; authenticated health succeeds.
+- R2: the deployable mod and companion are paired from one checkout/run with source
+  identity and SHA256 hashes. Proof: Fabric CI produces both in one artifact;
+  smoke verifies archive contents, identity and actual runtime imports/launcher.
+- R3: multiplayer installation instructions cover one private server companion,
+  current pinned runtimes, server/client placement and normal chat. Missing build
+  inputs, symlinks and existing output reject; no user data enters the archive.
+
+Decision: repeatable allowlist packaging beats stale source-only instructions or
+untracked manual zips. Reuse existing npm lock and launcher; no dependencies,
+automatic credentials, paid service, model call or public endpoint. CI artifacts
+are candidates, not a release endorsement. Publish only artifacts from an exact
+successful main run with all five checks. GPT-6-Luna's focused architecture
+challenge confirmed compiled catalog/launcher layout, production optional Codex
+binary dependencies, authenticated health and same-run pairing are essential.
 
 Josh: **skip heavy reviews; build and ship**. Tests run on GitHub, never on this
 PC. Local scoped Java/main+client compile, TS, format and syntax checks only;
@@ -233,3 +241,19 @@ TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt befor
 CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
 consent/101sec expiry proof and every existing assertion remain unchanged. Next:
 commit this combined source with docs and run its required exact-head proof.
+
+Phase26 implementation: tracked-source allowlist packager writes a fresh companion
+zip, optional deployable jar pair, source/run BUILD manifests and SHA256SUMS.
+No repository/config/world snapshots or node_modules are copied. Linux and Windows
+CI extract, install locked production dependencies, prepare the actual platform
+launcher, start the actual entry point with isolated config and authenticate health;
+no Codex binary execution or model call. Smoke also proves missing/symlink inputs,
+existing-output preservation and exclusion of a stray private-looking runtime file.
+Fabric job pairs both compiled outputs from its own checkout. Installation docs
+use Fabric's official server installer and keep online-mode, per-player grants,
+operator-only model access and private localhost topology. Local JS/Python syntax
+and scoped format/diff checks pass; no behavioral tests ran. Exact CI remains needed.
+
+GPT-6-Luna/high focused implementation follow-up found no concrete packaging,
+file-preservation, runtime-layout or Windows launch blocker. Inspection only;
+actual cross-platform runtime proof remains required from GitHub CI.
