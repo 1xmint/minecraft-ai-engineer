@@ -4,30 +4,43 @@
 AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: `work/installable-bundles`, branch
-`phase/26-installable-bundles`. Main870fc91 includes shipped schematic analysis
-PR35: source5067bdc/all5 CI41364625681,209 companion tests (208 passed,1 existing
-skip), all136 native and full dedicated/restart/SQLite proof. Evidence inspected
-at `work/schematic-analysis-final-41364625681`.
+Current worktree: `work/connected-circuits`, branch
+`phase/27-connected-circuits`, stacked on release candidate57b1d65/PR37.
+PR37 CI41367933778 is live. Companion/Fabric/Windows passed, including paired
+artifacts and extracted runtime checks. Do not modify/cancel that run from here.
+Candidate downloaded at `work/release-candidate-41367933778`: paired checkout
+cb3f976d27deb29dc02c661949f396c6c5dd1109/run41367933778; both SHA256 values match
+SHA256SUMS. Companion zip inventory inspected:77 entries, runtime main, both
+catalogs, launcher sources and START-HERE. This is a PR candidate, not published.
+Memory original0ef5c6d/all5 CI41364946648 proved137 native and dedicated/restart/
+SQLite; schematic analysis PR35 is shipped870fc91/all5 CI41364625681.
 
-Memory PR36 source0ef5c6d passed all five checks in CI41364946648, all137 native
-tests and full dedicated/restart/SQLite proof. Actual chat saved goal/decision,
-read shared notes, clarified polite ambiguity, denied editor writes/revoked reads,
-and recovered notes plus a fresh constraint after restart. Four knowledge markers
-and strict literal-note/count/no-world-authority assertions passed. Evidence
-inspected at `work/conversation-memory-final-41364946648`.
+Phase27 Outcomes (serves E2/E3):
 
-This branch integrates that exact memory implementation and main870fc91 with
-packaging. Only STATE conflicted; production Java is unchanged from the proved
-memory source. PR36 will be closed as integrated only after this combined branch
-passes and merges. One combined run proves the actual release pair with both
-features. Do not launch a redundant CI run on the prepared PR36 merge branch.
+- C1: typed external controls and internally driven signal pins have actual native
+  connectivity, direction and isolation. Proof: consecutive producer/route/consumer/
+  receiver observations in four orientations, unwired control changes, broken link
+  and reversed consumer negatives. Native proof precedes graph/product admission.
+- C2: a curated half-adder exposes shared A/B controls and SUM/CARRY outputs with
+  explicit typed ports, exact connection graph/routes and graph-bound identity.
+  Prove all four input rows forward/reverse at actual stable ticks; reject altered
+  edges, role/type/geometry mismatches and fabricated leaf-derived whole passes.
+- C3: normal chat preview/lesson/build/test supports the whole connected design,
+  with union write/read reservations, player edits, revocation, interruption,
+  restoration, undo and restart. Prove actual native shared flow and scoped SQLite
+  evidence; leaf passes never certify the whole graph.
 
-Original packaging cd316fa/CI41365754400: extracted Linux/Windows production
-runtime and rejection checks passed; Fabric packaging caught the existing CI
-chmod changing tracked gradlew100644 to100755. Fix169f081 tracks it executable,
-keeping the clean-source guard. Its dedicated job passed and the run is terminal. The sole failed step was the
-clean-checkout packaging guard. Promote the combined source for exact-head CI.
+Decision: a bounded canonical connected family keeps trusted regeneration and
+external-control restoration intact. Merely adapting old catalog leaves would
+break their lever-input invariant; arbitrary generated netlists expand geometry
+trust before isolation/topology are proved. Doing nothing leaves required actual
+connections/arithmetic unsolved. Keep old contracts unchanged; use separate graph
+identity for whole-circuit evidence and invalidate it when ports/routes change.
+GPT-6-Luna's scout and independent challenge checked actual ComponentTree,
+FunctionalTrial, assignments and reservation interfaces. Both identified external
+stimulus vs internal driven ports, full endpoint traces and union footprints as
+critical. First implement the parent-owned native C1 proof. No product admission
+or half-adder claim until C2/C3 pass. Native fixture proof is not human acceptance.
 
 Phase26 Outcomes (serves release/setup):
 
@@ -324,3 +337,13 @@ full TS and scoped Java/client compilation, JS/Python syntax and scoped format/d
 checks passing. It adds an actual native memory screenshot to the fixture; no
 production memory Java differs from the proved original. Push PR37 for a fresh
 combined run; publish no candidate until all five and exact main proof pass.
+
+C1 proof implementation: ConnectedGameTests schedules actual root/noise lever
+changes and consecutive native producer, route, consumer-output and lamp samples
+for intact, broken-route and reversed-consumer fixtures in all four orientations.
+No consumer lever or forced runtime wire POWER exists. Unwired-control phases
+must remain isolated even during transients, and both original controls end off.
+All samples are emitted as fixture-only ENGINEER_CONNECTION_PROBE records, never
+project pass/authority. Initial scoped Java compilation passed. Only fixture and
+native registration change; production graph/half-adder admission is not built.
+Run native proofs on GitHub before implementing C2; no local tests or model calls.
