@@ -671,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
           try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
-            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);}
+            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);importedRestartRecovery(context,server);}
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1925,6 +1925,24 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer test");expectChat(context,"no independently defined functional test contract");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && project.verified.equals("untested"),"No generic imported test can manufacture a pass or input-control lease");});
         assertPersisted(server);write("imported-build-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("imported-build.done","passed");
+        write("imported-source",server.computeOnServer(s->session(s,"Alice").blueprint.source().toString()));
+        // Leave the real construction in the saved world for the existing third boot.
+    }
+    private static void importedRestartRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("imported-build-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runOnServer(s->{var project=session(s,"Alice");ImportedBlueprint.validate(project.blueprint);
+            check(project.blueprint.source().equals(JsonParser.parseString(read("imported-source"))) && project.journal.size()==35,"Saved imported source and exact owned history survive a real server restart");
+            check(project.delegation==null && project.testTick<0 && !project.hasPendingTest() && project.verified.equals("untested"),"Imported recovery resumes neither construction nor test authority");
+            check(project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Actual imported geometry survives the saved-server restart");
+            project.checkpoint();});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"no independently defined functional test contract");
+        final var edited=new BlockPos(2200,120,0);
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(edited,Blocks.DIORITE.defaultBlockState()));
+        connectedAction(server,project->{boolean denied=false;try{project.undo();}catch(IllegalStateException conflict){denied=conflict.getMessage().contains("Undo blocked by later edit");}
+            check(denied && project.journal.size()==35 && project.level().getBlockState(edited).is(Blocks.DIORITE) && project.delegation==null,"Imported post-restart undo preserves a later player block edit and all owned records");});
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(edited,Blocks.STONE.defaultBlockState()));
+        assertPersisted(server);write("imported-restarted.done","passed");
         connectedAction(server,EngineeringSession::undo);
         server.waitFor(s->session(s,"Alice").journal.isEmpty(),60_000);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()) && !project.verified.startsWith("passed:"),"Imported undo removes only owned geometry without a behavior claim");});

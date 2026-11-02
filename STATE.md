@@ -61,6 +61,15 @@ WorldEdit six-sign fixture remains for independent interchange/discard coverage.
 Native/client compile and script syntax checks are local only; this new combined
 gameplay flow is still pending CI. Full imported saved-server restart remains.
 
+Imported gameplay now leaves the built structure for the existing third server
+boot, then requires exact source/35-record/actual geometry recovery, untested state
+and no lease/callback/input journal. Ordinary testing remains refused. A real
+diorite edit must block undo without losing any record or overwriting that edit;
+after explicit conflict resolution, owned undo removes the structure. SQLite
+requires untested35-placement checkpoints across at least two server epochs and
+restart/undo completion markers. No extra boot or local behavioral tests added.
+These latest restart/conflict proofs are pending exact-source CI.
+
 PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
 real connected build paused at2004,101,0 after223 records. Native final geometry
 and149 tests passed; partial owned-wire reconciliation at a junction is the live
