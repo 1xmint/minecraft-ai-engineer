@@ -4,6 +4,14 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Inspected source29785a2 / CI41533141692 Fabric artifact at
+work/imported-native-41533141692: all158 required native tests passed. This source
+includes imported182-material runtime admission and exact snapshot parity,
+coordinate rejection and canonical imported preview/reload tests. Cross-runtime
+connected replay passed32 cases/1792 frames across4 rotations. Four full jobs are
+green; dedicated multiplayer remains live. These native results do not establish
+the imported chat/build/restart flow or the later export-overflow correction.
+
 Physical-builder feasibility research (2026-11-02): Mineflayer's upstream README
 lists support only through26.1; discussion4190 says26.3 support remains unreleased.
 Do not choose protocol translation/proxy/login workarounds as the foundation.
