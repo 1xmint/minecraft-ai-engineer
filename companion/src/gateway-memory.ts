@@ -144,9 +144,14 @@ export class GatewayMemory {
           "Project knowledge changed; read it before authoring another note.",
           409,
         );
+      if (input.schemaVersion === 2 && input.supersedes !== undefined)
+        this.assertReplaceable(context, input.supersedes, input.kind);
       this.claim(context, "project-note");
       const note = readProjectNote({
         ...input,
+        ...(input.schemaVersion === 2
+          ? { writtenAtRevision: expectedRevision }
+          : {}),
         id: randomUUID(),
         revision: expectedRevision + 1,
         authorId: context.actorId,
@@ -172,6 +177,64 @@ export class GatewayMemory {
       });
       return note;
     });
+  }
+  private storedNote(
+    context: GatewayContext,
+    revision: number,
+  ): ProjectNote | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT document FROM gateway_project_notes WHERE server_id=? AND project_id=? AND note_revision=?",
+      )
+      .get(context.serverId, context.projectId, revision) as
+      { document: string } | undefined;
+    if (!row) return undefined;
+    const note = readProjectNote(JSON.parse(row.document));
+    if (note.revision !== revision)
+      throw new RequestError(
+        "Stored project-note revision is inconsistent.",
+        409,
+      );
+    return note;
+  }
+  /** The newer note that replaced this one, if any. History is append-only, so both stay readable. */
+  replacedBy(context: GatewayContext, revision: number): number | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT MIN(note_revision) AS revision FROM gateway_project_notes WHERE server_id=? AND project_id=? AND json_extract(document,'$.supersedes')=?",
+      )
+      .get(context.serverId, context.projectId, revision) as {
+      revision: number | null;
+    };
+    return row.revision ?? undefined;
+  }
+  private replacedRevisions(context: GatewayContext): number[] {
+    return (
+      this.db
+        .prepare(
+          "SELECT DISTINCT json_extract(document,'$.supersedes') AS revision FROM gateway_project_notes WHERE server_id=? AND project_id=? AND json_extract(document,'$.supersedes') IS NOT NULL ORDER BY 1",
+        )
+        .all(context.serverId, context.projectId) as { revision: number }[]
+    ).map((row) => row.revision);
+  }
+  private assertReplaceable(
+    context: GatewayContext,
+    revision: number,
+    kind: ProjectNote["kind"],
+  ): void {
+    const target = this.storedNote(context, revision);
+    if (!target)
+      throw new RequestError(`No note #${revision} in this project.`, 404);
+    if (target.kind !== kind)
+      throw new RequestError(
+        `Note #${revision} is a ${target.kind}; say 'replace ${target.kind} ${revision}: ...'.`,
+      );
+    const newer = this.replacedBy(context, revision);
+    if (newer !== undefined)
+      throw new RequestError(
+        `Note #${revision} was already replaced by #${newer}; replace #${newer} instead.`,
+        409,
+      );
   }
   knowledge(context: GatewayContext, limit = 32): ProjectKnowledge {
     this.assertCurrent(context, "read");
@@ -875,6 +938,7 @@ export class GatewayMemory {
     if (knowledge.revision === 0)
       return Object.freeze({ knowledgeRevision: 0, text: legacy });
     const notes = knowledge.notes.slice(-8);
+    const replaced = this.replacedRevisions(context);
     return Object.freeze({
       knowledgeRevision: knowledge.revision,
       text: JSON.stringify({
@@ -886,6 +950,8 @@ export class GatewayMemory {
           notes,
           hasEarlier:
             knowledge.hasEarlier || knowledge.notes.length > notes.length,
+          // Absent for version 1 projects so recorded planning text stays byte-identical.
+          ...(replaced.length ? { replaced } : {}),
         },
       }),
     });
