@@ -4,13 +4,27 @@
 AI Engineer and all six Phase2 features in `docs/product-brief.md`. Overall goal
 incomplete. Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: task `work/analog-comparators`, branch
-`phase/24-analog-comparators`. Runtime source **cc0cbed / CI41360150254** passed four checks and every new analog
-marker, then reached the CI process cap during the remaining approval/restart tail.
-Local **9f96d81** adds prepared docs and is backed up at
-`origin/backup/analog-rotations`; do not push docs merely to cancel that live run.
-Main is **885748e** (merged PR34, schematic file foundation). The downloadable v0.1.0-alpha.1 is still
-the older solo alpha; source capabilities are broader than that release.
+Current worktree: task `work/conversation-memory`, branch
+`phase/25-conversation-memory`, based on shipped main3978f88/PR33. Comparator
+source7e27fd7 passed all five checks in CI41362325852, all136 native tests and
+complete dedicated/SQLite proof. PR35 combined source5067bdc is running
+CI41364625681 in a separate integration worktree; observe it to terminal.
+
+Phase25 (serves E1/E4) outcomes:
+
+- M1: owners save literal goals, constraints, preferences and decisions through
+  addressed chat, preserving case and punctuation. Proof: grammar negatives and
+  actual chat writes into the existing durable note flow.
+- M2: authorized players read notes through chat; editors cannot author, revoked
+  members cannot read. Proof: actual two-player denial/read and server restart.
+- M3: memory chat spends no model quota, changes no world/blueprint or functional
+  evidence, and never executes note contents. Proof: existing exact SQLite note,
+  interpretation-count and no-world-authority assertions with native chat inputs.
+
+Decision: reuse ProjectKnowledgeClient and its scoped owner-only writes; add only
+explicit local memory intent routing. No new storage/schema/model action. Generic
+"remember that" asks which literal text/kind; never guesses a durable requirement.
+This closes the command-only entry gap, not broader retrieval or automatic summaries.
 
 Claude's schematic foundation **PR34** merged as **885748e** on
 2026-11-01T23:24:42Z. Exact source **55ca74c** passed all five checks in
@@ -233,3 +247,15 @@ TS/diff checks pass. Actual cc0cbed logs show every analog feature receipt befor
 CI-only allowance is now23min/client,1440sec/harness,30min/job. Production100sec
 consent/101sec expiry proof and every existing assertion remain unchanged. Next:
 commit this combined source with docs and run its required exact-head proof.
+
+Phase25 implementation: local explicit note-kind/colon parser, literal payloads,
+shared-note read phrases and ambiguous remember prompts. Existing native knowledge
+flows now use actual addressed chat for owner writes, editor denial, authorized
+reads, revoked reads and restart recovery. No provider replies/counts or production
+permissions changed. Native grammar proof covers four kinds, exact payload,
+negative/quoted/command contents and bounds. GPT-6-Luna/high focused review found
+polite ambiguous requests could fall through to model interpretation; both plain
+and polite prefixes now clarify locally, with grammar and actual-client coverage.
+Final scoped main/client compilation and format/diff checks passed. GitHub CI
+must now prove the changed native grammar and dedicated flows. No local tests
+or SDK calls.

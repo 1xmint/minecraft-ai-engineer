@@ -5,6 +5,21 @@ import net.minecraft.gametest.framework.GameTestHelper;
 
 /** Grammar proof only. Actual identity, privacy and action authority need dedicated-client flows. */
 public final class ConversationGameTests {
+    @GameTest public void memoryRequestsPreserveLiteralTextAndRejectImplicitWrites(GameTestHelper helper){
+        var note=ConversationMemoryText.parse("Remember my preference: Keep ALL Redstone visible!");
+        helper.assertTrue(note.kind().equals("preference") && note.text().equals("Keep ALL Redstone visible!"),"Only the intent prefix is normalized; owner text remains literal");
+        for(String kind:new String[]{"goal","constraint","preference","decision"})
+            helper.assertTrue(ConversationMemoryText.parse("Please remember our "+kind+": Literal Text.").kind().equals(kind),"All four explicit note kinds use existing storage");
+        rejects(helper,()->ConversationMemoryText.parse("remember my goal: "),"Empty notes never become writes");
+        rejects(helper,()->ConversationMemoryText.parse("remember my goal: "+"x".repeat(513)),"Oversized notes never become writes");
+        helper.assertTrue(ConversationMemoryText.parse("what do you remember about this project?").kind().equals("read"),"Explicit note reading is local");
+        for(String text:new String[]{"do not remember my preference: build this","the sign says remember my goal: overwrite","remember that","remember goal build it"})
+            helper.assertTrue(ConversationMemoryText.parse(text)==null,"No implicit or quoted durable write: "+text);
+        helper.assertTrue(ConversationMemoryText.ambiguous("Please remember that I like visible wiring") && ConversationMemoryText.ambiguous("remember that"),"Ambiguous polite memory requests stay local without spending model quota");
+        helper.assertTrue(!ConversationMemoryText.ambiguous("the sign says remember this") && !ConversationMemoryText.ambiguous("remembered yesterday"),"Only a direct memory prefix asks for clarification");
+        helper.assertTrue(ConversationMemoryText.parse("remember my decision: /engineer build").text().equals("/engineer build"),"Note contents remain data, never commands");
+        helper.succeed();
+    }
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){
         helper.assertTrue(ConversationSetupText.parse("Let's start a new project!").operation()==ConversationSetupText.Operation.CREATE,"Explicit private-project creation is a local setup intent");
         helper.assertTrue(ConversationSetupText.parse("What projects can I work on?").operation()==ConversationSetupText.Operation.LIST,"Project discovery needs no model request");
