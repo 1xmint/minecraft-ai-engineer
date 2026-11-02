@@ -257,3 +257,11 @@ and scoped format/diff checks pass; no behavioral tests ran. Exact CI remains ne
 GPT-6-Luna/high focused implementation follow-up found no concrete packaging,
 file-preservation, runtime-layout or Windows launch blocker. Inspection only;
 actual cross-platform runtime proof remains required from GitHub CI.
+
+First phase26 sourcecd316fa/CI41365754400 proved extracted production startup,
+launcher preparation, authenticated health and all packaging rejection checks on
+both Linux and Windows. Fabric passed native tests/replay but packaging rejected
+its dirty checkout: mod/gradlew was tracked100644, while the existing CI chmod
+made it100755. Correct the tracked executable bit to100755 rather than weaken
+the clean-source guard. The same run's dedicated job remains live; observe it to
+terminal before updating PR37. The prepared fix is backed up separately.
