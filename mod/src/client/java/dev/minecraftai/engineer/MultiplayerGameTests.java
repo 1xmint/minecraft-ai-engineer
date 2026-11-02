@@ -652,7 +652,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);conversationWorkFlows(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1867,6 +1867,41 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(activeRejected,"Even an empty pending undo must keep its operation's original component label");
     }
 
+    /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
+    private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        MESSAGES.clear();memorySay(context,"Engineer, list schematics");expectChat(context,"Schematic library (1): signs.");
+        MESSAGES.clear();memorySay(context,"Engineer, inspect schematic signs");expectChat(context,"say 'import schematic signs and drop block entities'");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic signs");expectChat(context,"Nothing was stored.");
+        MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"No designs are imported in this project yet.");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic ../signs");expectChat(context,"For schematics, say for example");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic signs and drop block entities");expectChat(context,"Untrusted and untested.");int first=storedDesign();
+        MESSAGES.clear();memorySay(context,"Engineer, rotate design "+first+" by 90");expectChat(context,"(rotate-90)");int second=storedDesign();
+        check(first!=second,"A transform is stored as a new design, never an edit of the original");
+        MESSAGES.clear();memorySay(context,"Engineer, compare design "+first+" with "+second);expectChat(context,"Geometry only: neither design is tested");
+        MESSAGES.clear();memorySay(context,"Engineer, show design "+second);expectChat(context,"Design "+second+" (rotate-90)");
+        check(MESSAGES.stream().anyMatch(message->message.contains("not built") || message.contains("waits on the core build hook")),"Previewing an imported design never builds it");
+        MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"Imported designs (2)");
+        final var stone=new BlockPos(700,100,0);final var chest=new BlockPos(701,100,0);
+        server.runCommand("tp Alice 700 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").level().hasChunkAt(stone) && session(s,"Alice").level().hasChunkAt(chest.above()));
+        server.runOnServer(s->{s.overworld().setBlockAndUpdate(stone,Blocks.STONE.defaultBlockState());s.overworld().setBlockAndUpdate(chest,Blocks.CHEST.defaultBlockState());});
+        send(context,"engineer select1 700 100 0");send(context,"engineer select2 701 101 0");
+        server.waitFor(s->stone.equals(session(s,"Alice").corner1) && chest.above().equals(session(s,"Alice").corner2));
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate");expectChat(context,"and drop block contents' to export the blocks without them.");
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate and drop block contents");expectChat(context,"Exported ci-gate.schem");
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate and drop block contents");expectChat(context,"already exists and was left unchanged");expectChat(context,"Nothing in the world changed.");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.isEmpty() && project.delegation==null && !project.pendingPlacement && project.blueprint==null,"Schematic chat never plans, delegates or places anything");
+            check(project.level().getBlockState(stone).is(Blocks.STONE) && project.level().getBlockState(chest).is(Blocks.CHEST),"Export reads the selection and leaves it exactly as it was");});
+        context.takeScreenshot("engineer-schematic-export");
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+    private static int storedDesign(){
+        for(var message:MESSAGES){var match=java.util.regex.Pattern.compile("Stored as design (\\d+)").matcher(message);if(match.find())return Integer.parseInt(match.group(1));}
+        throw new AssertionError("Expected a stored design number; received "+MESSAGES);
+    }
     private static void assertKnowledgeHasNoWorldAuthority(EngineeringSession project) {
         check(project.journal.isEmpty() && project.verified.equals("untested") && saved(project).getAsJsonArray("functionalEvidence").isEmpty(),"Literal notes cannot create construction or verified evidence");
         check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Note commands never place intended blocks");

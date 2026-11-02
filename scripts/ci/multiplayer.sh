@@ -91,6 +91,10 @@ restart_companion() {
   mv "$coord/$receipt_prefix-restart.done.tmp" "$coord/$receipt_prefix-restart.done"
   echo "Actual companion restarted: $old_pid -> $companion_pid, same private SQLite/config directory"
 }
+# The in-game schematic flow reads a real WorldEdit export (six signs) from the
+# companion's library folder and writes its own export beside it.
+mkdir -p -m 700 "$temporary/config-alice/schematics/library"
+install -m 600 "$repo/tests/fixtures/schematics/worldedit-fabric-7.3.schem" "$temporary/config-alice/schematics/library/signs.schem"
 start_companion
 
 launch() {
@@ -162,6 +166,12 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
     [[ -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/accepted.json" && ! -f "$MCE_ACCEPTANCE_EXCHANGE_DIR/unexpected-inference" ]] || { echo "Live exchange was not accepted exactly once" >&2; exit 1; }
   fi
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
+fi
+if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
+  export_file="$temporary/config-alice/schematics/exports/ci-gate.schem"
+  [[ -s "$export_file" && "$(head -c2 "$export_file" | od -An -tx1 | tr -d ' ')" == 1f8b ]] || { echo "In-game export did not write a gzip schematic" >&2; exit 1; }
+  [[ "$(find "$temporary/config-alice/schematics/exports" -type f | wc -l)" -eq 1 ]] || { echo "The refused duplicate export wrote a file" >&2; exit 1; }
+  cp "$export_file" "$evidence/"
 fi
 node "$repo/scripts/ci/verify-memory.mjs" "$temporary/config-alice/projects.sqlite" "$coord" >"$evidence/memory-proof.json"
 find "$repo/mod/build/run/mp-alice" -type f \( -name '*.png' -o -name '*.log' \) -exec cp --parents '{}' "$evidence" \;
