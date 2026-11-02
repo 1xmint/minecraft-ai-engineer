@@ -671,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
           try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
-            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);}
+            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);}
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1095,7 +1095,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             // Follow actual phase receipts before starting the later conversation wait.
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
-            awaitFile(context,"connected-functional.done");awaitFile(context,"connected-undo.done");
+            awaitFile(context,"connected-functional.done");
             awaitFile(context,"connected-interruption.done");awaitFile(context,"connected-player-edit.done");
             awaitFile(context,"connected-revocation.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
@@ -2095,6 +2095,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connectedAction(server,project->{boolean blocked=false;try{project.undo();}catch(IllegalStateException expected){blocked=expected.getMessage().contains("Undo blocked by later edit");}
             check(blocked && project.journal.size()==436 && project.delegation==null,"Undo preflight preserves all construction when the player's originally-on lever differs from assistant after-state");});
         write("connected-player-edit.done","passed");
+        // Keep the real constructed and tested world for the existing third boot.
+    }
+    private static void connectedRestartRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("connected-functional-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("stale:") && project.delegation==null && project.testTick<0 && !project.hasPendingTest() && project.journal.size()==436,"Saved connected project retains history and ownership, never a live pass or callback");
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);});
+        connectedAction(server,EngineeringSession::test);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"New server epoch establishes fresh connected observations: "+project.status());
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
+            check(!project.hasPendingTest() && project.delegation==null,"Restarted connected test restores inputs and releases its fresh lease");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Restarted trial retains exact original A-on/B-off controls");});
+        assertPersisted(server);write("connected-restarted.done","passed");
         server.runOnServer(s->{var project=session(s,"Alice");var port=EngineeringContracts.contract(project.blueprint).ports().stream().filter(input->input.name().equals("a:control")).findFirst().orElseThrow();
             var actual=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),port.pos(),player(s,"Alice"));});
         context.waitTicks(12);connectedAction(server,EngineeringSession::undo);

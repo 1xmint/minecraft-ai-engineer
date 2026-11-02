@@ -528,12 +528,22 @@ try {
         "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:half-adder:8 cases@%' ORDER BY id",
       )
       .all(server.serverId, connectedProject);
+    assert.equal(
+      readFileSync(`${coordination}/connected-restarted.done`, "utf8").trim(),
+      "passed",
+    );
+    assert.equal(
+      readFileSync(`${coordination}/connected-undo.done`, "utf8").trim(),
+      "passed",
+    );
+    const connectedEpochs = new Set();
     assert.ok(
       connectedPasses.length > 0,
       "Actual production connected pass reaches durable SQLite audit",
     );
     for (const row of connectedPasses) {
       const document = JSON.parse(row.document);
+      connectedEpochs.add(document.context.serverEpoch);
       const observed = document.checkpoint.observed;
       assert.equal(observed.testScope.projectId, connectedProject);
       assert.equal(
@@ -551,6 +561,10 @@ try {
         8,
       );
     }
+    assert.ok(
+      connectedEpochs.size >= 2,
+      "Connected functional proof is fresh before and after actual saved-server restart",
+    );
     const analogProject = readFileSync(
       `${coordination}/analog-functional-project`,
       "utf8",

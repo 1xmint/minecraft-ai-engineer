@@ -399,3 +399,13 @@ trial; Alice revokes him and recovery remains pending without authority; Bob's
 resume denies; Alice explicitly restores A-on/B-off without resuming a trial or
 recording a pass. Required connected-revocation marker gates client completion.
 This remains pending the next exact-source CI, not established multiplayer proof.
+
+Connected test now keeps the actual tested structure until the existing third
+saved-server boot. Recovery must retain436 owned cells and valid historical
+observations but only a stale pass, no callback/lease/pending trial. A new real
+trial must restore A-on/B-off and pass before post-restart undo removes the owned
+structure. SQLite now requires complete valid observations in at least two server
+epochs and both restart/undo completion markers. No extra boot added; no local
+behavioral tests run. Scoped client compilation/script syntax checks passed.
+PR43 original source7f9c537 CI41474306862 is now completed SUCCESS; integrate
+after its parent PR42's protected-branch update finishes.
