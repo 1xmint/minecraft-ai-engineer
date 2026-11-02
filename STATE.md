@@ -409,3 +409,13 @@ epochs and both restart/undo completion markers. No extra boot added; no local
 behavioral tests run. Scoped client compilation/script syntax checks passed.
 PR43 original source7f9c537 CI41474306862 is now completed SUCCESS; integrate
 after its parent PR42's protected-branch update finishes.
+
+Connected preview/lesson integration now recognizes “show me a half-adder” via
+the local conversational setup path, with intended SUM/CARRY explanation and
+explicit20-pin/eight-case/48-tick/eight-stable-sample contract. Preview has no
+execution authority or pass. Dedicated flow now creates/marks workspace/previews
+through actual chat and uses existing conversational approval for build and final
+test, instead of direct source injection. Offline provider fixtures add only those
+two scoped choices; SQLite asserts exactly build/test replies for that project.
+Scoped client compile/script syntax passed. These latest player flows are pending
+CI, not claimed proven. SDK/model provider advertisement is still unchanged.

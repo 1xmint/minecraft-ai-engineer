@@ -528,6 +528,17 @@ try {
         "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:half-adder:8 cases@%' ORDER BY id",
       )
       .all(server.serverId, connectedProject);
+    const connectedReplies = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='interpretation-reply' ORDER BY id",
+      )
+      .all(server.serverId, connectedProject)
+      .map((row) => JSON.parse(row.document));
+    assert.deepEqual(
+      connectedReplies.map((row) => row.reply.action),
+      ["build", "test"],
+      "Connected conversational actions use the existing approval path; local preview/lessons/recovery need no model interpretation",
+    );
     assert.equal(
       readFileSync(`${coordination}/connected-restarted.done`, "utf8").trim(),
       "passed",
