@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readConnectedTrace } from "../../dist/companion/src/connected-trace.js";
 import { readConnectedIntention } from "../../dist/companion/src/connected-intention.js";
+import { readConnectedEvidence } from "../../dist/companion/src/connected-evidence.js";
 
 if (process.env.CI !== "true")
   throw new Error("Replay native observations on GitHub CI, not Josh's PC.");
@@ -48,6 +49,13 @@ for (const report of reports("ENGINEER_HALF_ADDER_PROBE ")) {
     )
     .digest("hex");
   assert.equal(report.graphDigest, digest);
+  assert.equal(readConnectedEvidence(report.cases, digest, true).length, 8);
+  assert.throws(() =>
+    readConnectedEvidence(report.cases.slice(0, 7), digest, true),
+  );
+  const reused = structuredClone(report.cases);
+  reused[4] = structuredClone(reused[3]);
+  assert.throws(() => readConnectedEvidence(reused, digest, true));
   for (const [index, vector] of vectors.entries()) {
     const a = (vector & 2) !== 0;
     const b = (vector & 1) !== 0;

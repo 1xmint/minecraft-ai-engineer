@@ -288,3 +288,11 @@ FunctionalTrial inspection confirms contract selection and evidence recovery mus
 be extended together before generic source admission; otherwise a saved connected
 project would fail reload. Keep the family out of the normal planning menu until
 that complete path is implemented and proven.
+
+ConnectedEvidence Java/TS now replay the bounded eight-case whole suite against
+independently supplied graph identity and forward/reverse stimuli. Completion
+requires all eight complete traces; nonfinal cases must already pass, clocks must
+advance beyond the prior window, and same-stimulus cases cannot reuse old windows.
+Native and current-run TS replay include missing/reordered/reused-case negatives.
+This is observation validation, not input restoration or project authority. Scoped
+TypeScript checks passed; new behavior awaits the next exact-source CI run.

@@ -94,6 +94,10 @@ public final class HalfAdderGameTests {
                 cases.add(traces[index].json());
             }
             report.add("cases",cases);
+            ConnectedEvidence.validate(cases,design.graphDigest(),true);
+            var missing=cases.deepCopy();missing.remove(7);rejects(helper,()->ConnectedEvidence.validate(missing,design.graphDigest(),true),"Partial connected suite cannot claim completion");
+            var reordered=cases.deepCopy();reordered.set(1,cases.get(2).deepCopy());rejects(helper,()->ConnectedEvidence.validate(reordered,design.graphDigest(),true),"Case reordering cannot certify the whole circuit");
+            var reused=cases.deepCopy();reused.set(4,cases.get(3).deepCopy());rejects(helper,()->ConnectedEvidence.validate(reused,design.graphDigest(),true),"Repeated same-stimulus case cannot reuse its earlier clock window");
             var valid=traces[0].json();
             for(String fault:new String[]{"owner","gap","graph","input","timing","clock","pin"}){
                 var forged=valid.deepCopy();
