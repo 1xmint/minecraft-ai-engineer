@@ -543,3 +543,39 @@ test("a note claiming a pass changes no task, verification or blueprint state", 
     store.close();
   }
 });
+test("a reason and a replacement survive a restart and still refuse a second replacement", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mce-knowledge-v2-")),
+    file = join(dir, "memory.sqlite");
+  let store = new MemoryStore(file);
+  try {
+    sync(store);
+    store.gateway.rememberNote(
+      frame(),
+      decision("use repeaters", { rationale: "they stay visible" }),
+      0,
+    );
+    const replacement = store.gateway.rememberNote(
+      frame(),
+      decision("use comparators", { rationale: "smaller", supersedes: 1 }),
+      1,
+    );
+    store.close();
+    store = new MemoryStore(file);
+    const c = frame({ serverEpoch: "epoch-two" });
+    sync(store, c);
+    assert.deepEqual(store.gateway.knowledge(c).notes[1], replacement);
+    assert.equal(store.gateway.replacedBy(c, 1), 2);
+    assert.throws(
+      () =>
+        store.gateway.rememberNote(c, decision("again", { supersedes: 1 }), 2),
+      /already replaced by #2/,
+    );
+    assert.deepEqual(
+      JSON.parse(store.gateway.reasoning(c).text).knowledge.replaced,
+      [1],
+    );
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
