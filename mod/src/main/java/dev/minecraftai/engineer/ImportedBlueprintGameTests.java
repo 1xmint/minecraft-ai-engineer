@@ -13,6 +13,7 @@ public final class ImportedBlueprintGameTests {
         session.proposeImported(Blueprint.parse(json,manager.worldId,dimension),at,90);
         helper.assertTrue(session.blueprint.anchor().equals(at) && session.verified.equals("untested") && session.journal.isEmpty() && session.delegation==null,"Imported preview stays scoped, untested and non-executing");
         var retained=session.blueprint.source().deepCopy();session.commandActor=java.util.UUID.randomUUID();boolean denied=false;
+        System.out.println("ENGINEER_IMPORTED_INTENTION "+retained);
         try{session.proposeImported(Blueprint.parse(json,manager.worldId,dimension),at,0);}catch(IllegalStateException expected){denied=true;}
         helper.assertTrue(denied && session.blueprint.source().equals(retained),"Unauthorized preview replacement preserves the accepted source");session.commandActor=null;
         session.save();var restored=new EngineeringSession(manager,project,owner,dimension);

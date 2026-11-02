@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { readConnectedTrace } from "../../dist/companion/src/connected-trace.js";
 import { readConnectedIntention } from "../../dist/companion/src/connected-intention.js";
 import { readConnectedEvidence } from "../../dist/companion/src/connected-evidence.js";
+import { readImportedIntention } from "../../dist/companion/src/imported-intention.js";
 
 if (process.env.CI !== "true")
   throw new Error("Replay native observations on GitHub CI, not Josh's PC.");
@@ -14,6 +15,19 @@ const reports = (marker) =>
     const index = line.indexOf(marker);
     return index < 0 ? [] : [JSON.parse(line.slice(index + marker.length))];
   });
+const imported = reports("ENGINEER_IMPORTED_INTENTION ");
+assert.equal(imported.length, 1);
+for (const raw of imported) {
+  const context = {
+    worldId: raw.worldId,
+    dimension: raw.dimension,
+    projectId: raw.projectId,
+  };
+  assert.deepEqual(readImportedIntention(raw, context), raw);
+  const forged = structuredClone(raw);
+  forged.verification = "passed:foreign";
+  assert.throws(() => readImportedIntention(forged, context));
+}
 const canonical = (value) => {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value !== null && typeof value === "object")

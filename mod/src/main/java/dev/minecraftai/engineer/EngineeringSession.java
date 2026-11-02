@@ -964,7 +964,7 @@ final class EngineeringSession implements BuildExecutor {
         return anchor();
     }
     void proposeImported(Blueprint candidate,BlockPos at,int angle){
-        access.require(actor(),ProjectAccess.Permission.EDIT);ImportedBlueprint.validate(candidate);
+        access.require(actor(),ProjectAccess.Permission.EDIT);candidate=ImportedBlueprint.protocol(candidate);
         if(!candidate.worldId().equals(worldId) || !candidate.dimension().equals(dimension) || !candidate.projectId().equals(projectId.toString()))
             throw new IllegalArgumentException("Imported design belongs to another project or world");
         if(corner1==null || corner2==null)throw new IllegalStateException("Mark both workspace corners before previewing an imported design");

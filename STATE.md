@@ -44,6 +44,17 @@ imported root descriptor to schematic-geometry (no ports or behavior) and retain
 the failing native preview/reload proof. Full run is still live; save fixes after
 scoped checks and dispatch a fresh run only when it terminates.
 
+Protocol integration: native imported previews now derive the normal blueprint
+envelope (bounds/materials, fixed geometry-only explanation, empty ports/tests and
+prerequisites). Strict validation compares all derived fields back to geometry;
+minimal Claude adapter candidates remain accepted only as input to normalization.
+Companion imported-intention.ts independently checks exact normalized source,
+current world/project, bounded rotated cells, supported property values, resources
+and empty behavior metadata. Gateway admits it only after its existing revision
+check. Native preview is exported for exact current-run TypeScript replay plus
+forged-pass rejection. Scoped TypeScript/format/syntax checks passed. Actual
+Claude feature integration and dedicated imported construction remain pending.
+
 ## Parallel ownership — 2026-11-02
 
 Josh requested sustained milestone ownership for Claude, rather than another
