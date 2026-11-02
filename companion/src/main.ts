@@ -92,6 +92,7 @@ async function main(): Promise<void> {
     token: config.token,
     store,
     provider,
+    schematicDirectory: join(config.directory, "schematics"),
   });
   server.on("error", () => {
     console.error(

@@ -21,6 +21,7 @@ import {
   type GatewayContext,
 } from "./gateway-types.js";
 import { PlanningQueue } from "./planning-queue.js";
+import type { SchematicRoutes } from "./schematic-library/routes.js";
 import { validateInventory } from "./inventory.js";
 import {
   text,
@@ -40,6 +41,7 @@ export interface GatewayOptions {
   queue: PlanningQueue;
   actorPlansPerMinute?: number;
   serverPlansPerHour?: number;
+  schematics?: SchematicRoutes;
 }
 
 /** Called only after native loopback/host/token checks in the HTTP server. */
@@ -127,6 +129,17 @@ export class ServerGateway {
           identifier(query.get("worldId"), "worldId"),
         ),
       };
+    }
+    if (method === "POST" && pathname.startsWith("/v2/schematic/")) {
+      const v = object(value),
+        context = gatewayContext(v.context);
+      this.requireEpoch(context);
+      if (!this.options.schematics)
+        throw new RequestError(
+          "The schematic library is not configured on this companion.",
+          404,
+        );
+      return this.options.schematics.handle(pathname, v, context);
     }
     if (
       method !== "POST" ||
