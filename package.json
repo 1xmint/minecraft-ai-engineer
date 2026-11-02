@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/1xmint/minecraft-ai-engineer#readme",
   "dependencies": {
-    "@openai/codex-sdk": "0.164.0"
+    "@openai/codex-sdk": "0.166.0"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
