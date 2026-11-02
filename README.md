@@ -22,11 +22,11 @@ Larger engineering designs and broader features in the [product brief](docs/prod
 still in development.
 See [STATE.md](STATE.md) for evidence, limits and the next work.
 
-**Multiplayer-first source build:** one dedicated Fabric server owns projects,
+**Multiplayer-first:** one dedicated Fabric server owns projects,
 player permissions and construction. Authorized players share blueprints and
 keep separate lessons; client overlays are optional. The same core also passes
 integrated single-player checks. Follow the [dedicated-server guide](docs/mod-guide.md#multiplayer-development-branch).
-The downloadable alpha below is still the older single-player reference.
+The multiplayer development preview is available below.
 
 ![Reference blueprint preview captured from the actual Minecraft client CI test](docs/images/reference-preview.png)
 
@@ -37,40 +37,46 @@ matching mod jar, source/run identity and SHA256 checksums. Its companion runtim
 is exercised after extraction on Linux and Windows, without a model request.
 Use artifacts only from a successful main run with all five required checks;
 PR artifacts are development candidates. Follow the bundled `START-HERE.md` or
-[installation guide](docs/install.md). The published download below remains the
-older solo alpha until a verified multiplayer prerelease is published.
+[installation guide](docs/install.md). The published preview below comes from an
+exact main run that passed all five required checks.
 
 ## Try it
 
-For the multiplayer source build, start with the [dedicated-server instructions](docs/mod-guide.md#multiplayer-development-branch).
-The following download and walkthrough describe the published solo alpha.
+Download the [multiplayer development preview v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2).
+Get its companion zip, matching mod jar, `BUILD.json` and `SHA256SUMS`, then follow
+`START-HERE.md` inside the zip or the [installation guide](docs/install.md).
+The companion contains compiled JavaScript: install its pinned runtime dependencies
+with `npm ci --omit=dev`; no TypeScript or Java compiler is needed.
 
-Start with the [downloadable development preview](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1):
-get the mod jar and companion zip, then follow `START-HERE.txt` inside the zip.
-The companion bundle already contains compiled JavaScript; no TypeScript or
-Java compiler is needed to run that bundle. The steps below launch from source.
+Use a disposable creative world on a dedicated local server. Minecraft Java
+**26.3**, Fabric Loader **0.20.1**, Fabric API **0.165.0+26.3**, Java **25** and
+Node **24.14.0** are pinned. Run one private companion beside the server with the
+same data directory. Keep `online-mode=true`; this preview's CI uses scripted
+offline players and does not prove production account login or full human acceptance.
 
-Use a disposable single-player creative world with commands enabled. Minecraft
-Java **26.3**, Fabric Loader **0.20.1**, Fabric API **0.165.0+26.3**, Java **25**
-and Node **24.14.0** are pinned. Remote/LAN worlds and survival construction are
-not supported.
+After following the server/operator setup in the installation guide:
 
-1. Sign in to the official Codex CLI using **ChatGPT** (`codex login`). No API key
-   or separately billed service is used. Planning consumes your subscription's
-   available quota.
-2. In this repo, run `npm ci`, `npm run build`, then `npm run doctor`.
-   `npm run doctor -- --probe` checks one real structured model request.
-3. Run `npm start` and leave it running.
-4. In another terminal, run `cd mod` and `./gradlew runClient` on Linux/macOS,
-   or `.\gradlew.bat runClient` on Windows, with Java 25 selected. Create a
-   disposable creative world. Development uses its own game directory.
-5. Use `/engineer help` and follow the [reference handoff walkthrough](docs/mod-guide.md#reference-handoff-flow).
+1. Join `localhost` and say `Engineer, start a new project`.
+2. Stand at the first workspace corner and say `Engineer, mark the first corner here`.
+   Move to the opposite upper corner and say `Engineer, mark the second corner here`.
+3. Say `Engineer, show me a signal lamp`, then `Engineer, explain how this works`.
+4. Ask the bot to build or test when ready, and review its separate confirmation.
+   Say `Engineer, stop` to interrupt work. A preview places no blocks.
+5. Save a requirement with `Engineer, remember my preference: Keep the wiring visible.`
+   Ask `Engineer, what do you remember about this project?` to read shared notes.
 
-The [companion guide](docs/companion-guide.md) explains account limits,
-configuration and memory. The [mod guide](docs/mod-guide.md) includes installation
-in a matching Fabric launcher profile, commands, undo and restart behavior.
+Codex reasoning uses the configured account-owning operator's ChatGPT sign-in and
+subscription quota. No API key or separately billed API service is used. Other
+members never receive that login or direct model access. Survival construction,
+voice and a physical NPC remain unfinished.
 
-## What the reference supports
+The [companion guide](docs/companion-guide.md) covers configuration and memory.
+The [mod guide](docs/mod-guide.md) covers sharing, lessons, conflict protection,
+undo and restart. Commands remain a manual fallback. The older
+[solo alpha.1](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.1)
+is retained as a historical reference.
+
+## What the preview supports
 
 - Exact block-state inspection of a selected region, including orientation.
 - Translucent block-bound previews with names, direction arrows, current-step
@@ -87,7 +93,7 @@ in a matching Fabric launcher profile, commands, undo and restart behavior.
 
 ![Completed reference circuit after save/reopen and the actual off/on/off test](docs/images/tested-build.png)
 
-General mechanism generation, large component projects, deeper world-aware
+Broader mechanism generation, large component projects, deeper world-aware
 redstone debugging and broad revision propagation remain phase 1 work. Voice,
 a visible NPC companion, survival gathering, schematic exchange, advanced
 optimization and multiple builders belong to **phase 2**.
