@@ -38,6 +38,9 @@ const FIELDS: Record<string, readonly string[]> = {
   "/v2/schematic/compare": ["context", "designId", "otherId"],
   "/v2/schematic/export": ["context", "name", "geometry"],
 };
+const OPTIONAL: Record<string, readonly string[]> = {
+  "/v2/schematic/import": ["transform"],
+};
 const MAX_MATERIALS = 48;
 const UNTESTED =
   "Imported geometry is untrusted and untested: it says nothing about whether it works in game.";
@@ -67,8 +70,13 @@ export class SchematicRoutes {
     const allowed = FIELDS[pathname];
     if (!allowed)
       throw new RequestError("Unknown schematic route or method.", 404);
+    // The mod's JSON writer omits null values, so an import with no transform
+    // arrives without the key; every other field stays required.
+    const required = allowed.filter(
+      (key) => !(OPTIONAL[pathname] ?? []).includes(key),
+    );
     if (
-      Object.keys(v).length !== allowed.length ||
+      required.some((key) => !(key in v)) ||
       Object.keys(v).some((key) => !allowed.includes(key))
     )
       throw new RequestError("Invalid schematic request fields.");
@@ -117,7 +125,9 @@ export class SchematicRoutes {
           if (typeof v.discard !== "boolean")
             throw new RequestError("discard must be true or false.");
           const transform =
-            v.transform === null ? null : transformName(v.transform);
+            v.transform === undefined || v.transform === null
+              ? null
+              : transformName(v.transform);
           const file = this.files.read(name, IN_GAME_LIMITS.maxCompressedBytes);
           const preview = importFile(file.bytes, true);
           const needsDiscard =
