@@ -4,6 +4,24 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical-builder feasibility research (2026-11-02): Mineflayer's upstream README
+lists support only through26.1; discussion4190 says26.3 support remains unreleased.
+Do not choose protocol translation/proxy/login workarounds as the foundation.
+Carpet upstream has an exact26.3 release (GitHub API verifiedv26.3 asset
+fabric-carpet-26.3+v260915.jar): https://github.com/gnembon/fabric-carpet/releases/tag/v26.3.
+Next physical milestone is an isolated compatibility probe, not a shipped NPC:
+P1 actual fake-player lifecycle and legal item-use placement/mining with inventory
+change on the pinned server; P2 unreachable targets, depleted items and cancellation
+make no unauthorized changes; P3 owner/grant/revision/region remain core authority,
+never fake-player identity. Require native CI evidence before dependency adoption.
+Fresh-look challenge: Carpet supplies player actions, not a bounded navigation or
+resource-acquisition planner; spawning a character alone completes neither NPC nor
+survival. Native PathfinderMob APIs exist in the pinned jar but do not supply player
+inventory/item-use semantics. Compare the probe against a native actor only after
+actual action/recovery evidence; no new runtime dependency or credentials added.
+Sources: https://github.com/PrismarineJS/mineflayer and
+https://github.com/PrismarineJS/mineflayer/discussions/4190.
+
 Current full checks: combined source29785a2 / CI41533141692 is live (Companion
 and Windows passed); parentee8ff98 / CI41533180250 is live. Earlier parent run
 41530574368 terminated with the same pre-start PAUSED assertion as imported run,
