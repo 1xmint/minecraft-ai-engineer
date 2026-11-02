@@ -4,6 +4,12 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical probe41533955802/sourced3b664a is live in native execution. Fresh fixture
+inspection found its far-target ray shared the placed dirt's axis: a legitimate
+nearer hit could consume an item and make the reach negative ambiguous. Candidate
+now uses a separate perpendicular ray. Keep the original running source intact;
+do not restart it. This candidate needs its own CI after the current run ends.
+
 Physical probe work is isolated in work/physical-probe, phase/29-physical-probe.
 CI-only source tools/physical-probe/PhysicalBuilderGameTests.java is copied into
 the mod only by its separate feedback workflow; normal registration/dependencies

@@ -50,7 +50,8 @@ public final class PhysicalBuilderGameTests {
         var emptyTarget=helper.absolutePos(new BlockPos(3,0,3));look(pack,new Vec3(emptyTarget.getX()+0.5,emptyTarget.getY()+1,emptyTarget.getZ()+0.5));action(pack,"USE","once");update(pack);
         helper.assertTrue(level.getBlockState(emptyTarget.above()).isAir(),"Empty hand cannot create a building block");
         stop(pack);actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,1));
-        var far=origin.offset(0,-1,12);level.setBlockAndUpdate(far,Blocks.STONE.defaultBlockState());
+        // Use a separate ray: the previously placed dirt must not be a nearer hit.
+        var far=origin.offset(12,-1,0);level.setBlockAndUpdate(far,Blocks.STONE.defaultBlockState());
         look(pack,new Vec3(far.getX()+0.5,far.getY()+1,far.getZ()+0.5));action(pack,"USE","once");update(pack);
         helper.assertTrue(level.getBlockState(far.above()).isAir() && actor.getMainHandItem().getCount()==1,"Out-of-reach item use does not place or consume");
         stop(pack);actor.setItemInHand(InteractionHand.MAIN_HAND,ItemStack.EMPTY);
