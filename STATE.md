@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+2026-11-02 parallel core slice: work/imported-core, phase/28-imported-core,
+based on pending PR45 source915139e. Claude's PR44 remains his feature lane;
+its last dedicated run failed at import request-schema mismatch and Companion
+was cancelled. No merge of44 yet. Parent starts imported core boundary in this
+separate worktree while45 runs: ImportedBlueprint validates exact geometry-only
+schema/provenance, canonical identity and current world, rejects authority/pass/
+behavior metadata, and reparses through unchanged registry/block/extent limits.
+Hashes are descriptive provenance, not permission or behavior evidence. Added
+native rejection proof for owner/pass/grant/behavior/foreign-world/inventory/
+extent/fractional-position/component injection. Not wired to acceptance/build yet;
+proposal, permissions, placement ordering, isolation, undo/restart and real
+in-game proof remain. Do not claim schematic construction complete.
+
 ## Parallel ownership — 2026-11-02
 
 Josh requested sustained milestone ownership for Claude, rather than another
