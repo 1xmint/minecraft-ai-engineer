@@ -7,7 +7,7 @@ export interface ConnectedTraceIntent {
   b: boolean;
 }
 
-export type ConnectedVerdict = "running" | "inconclusive" | "failed" | "passed";
+export type ConnectedVerdict = "inconclusive" | "failed" | "passed";
 
 export interface ConnectedMismatch {
   elapsedTicks: number;
@@ -236,17 +236,17 @@ export class ConnectedTrace {
       throw new RequestError(
         "Connected trace ticks must advance within elapsed ticks 0 through 55.",
       );
-    if (
+    const observedPorts = portsValue(ports);
+    const row = frozenSample(tick, elapsed, observedPorts);
+    const hasGap =
       elapsed !==
-      (this.rows.length === 0 ? 0 : this.rows.at(-1)!.elapsedTicks + 1)
-    )
-      this.gap = true;
-    const row = frozenSample(tick, elapsed, portsValue(ports));
+      (this.rows.length === 0 ? 0 : this.rows.at(-1)!.elapsedTicks + 1);
+    const mismatch =
+      this.mismatch ??
+      mismatchFor(row, expectedPorts(this.expected.a, this.expected.b));
+    if (hasGap) this.gap = true;
     this.rows.push(row);
-    this.mismatch ??= mismatchFor(
-      row,
-      expectedPorts(this.expected.a, this.expected.b),
-    );
+    this.mismatch = mismatch;
     return row;
   }
 
@@ -259,7 +259,7 @@ export class ConnectedTrace {
       this.rows[55]!.elapsedTicks === 55
     )
       return "passed";
-    return "running";
+    return "inconclusive";
   }
 
   passed(): boolean {
@@ -326,8 +326,8 @@ export function readConnectedTrace(
   );
   if (
     !Array.isArray(v.samples) ||
-    !isPlainJsonArray(v.samples) ||
-    v.samples.length > 56
+    v.samples.length > 56 ||
+    !isPlainJsonArray(v.samples)
   )
     throw new RequestError("Invalid bounded connected samples.");
   const replay = new ConnectedTrace(trusted, start);
