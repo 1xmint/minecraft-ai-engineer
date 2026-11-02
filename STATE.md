@@ -326,3 +326,13 @@ advance beyond the prior window, and same-stimulus cases cannot reuse old window
 Native and current-run TS replay include missing/reordered/reused-case negatives.
 This is observation validation, not input restoration or project authority. Scoped
 TypeScript checks passed; new behavior awaits the next exact-source CI run.
+
+Live FunctionalTrial now has a connected path: contract exposes only A/B levers
+and both result lamps; every native tick captures all20 typed pins, all8 ordered
+cases must pass replay, and exact original lever states are independently checked
+after restoration before recording a pass. Saved connected traces load through
+ConnectedEvidence rather than generic leaf cases, with recovery ports from the
+same canonical contract. Native fixture checks external-only contract selection.
+This code still requires actual EngineeringSession success/interruption/restart/
+conflict proof. Generic parser/provider admission remains disabled pending that
+integration. Do not call this complete or expose it through normal planning yet.

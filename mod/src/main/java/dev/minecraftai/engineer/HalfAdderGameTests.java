@@ -126,6 +126,9 @@ public final class HalfAdderGameTests {
             var intention=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",new BlockPos(24,2,24),angle);
             var source=intention.source();
             var planned=intention.blueprint();
+            var contract=EngineeringContracts.contract(planned);
+            helper.assertTrue(contract.ports().size()==4 && contract.ports().stream().filter(MechanismCatalog.Port::input).count()==2,"Connected trial exposes only two external controls and both results");
+            helper.assertTrue(contract.ports().stream().filter(MechanismCatalog.Port::input).allMatch(port->port.name().equals("a:control") || port.name().equals("b:control")),"No internally driven pin enters the lever stimulus contract");
             helper.assertTrue(planned.blocks().size()==436 && planned.stages().size()==5,"Connected contract converts into complete native planning geometry");
             for(var cell:design.cells()){
                 var pos=cell.pos().rotate(rotation).offset(new BlockPos(24,2,24));
