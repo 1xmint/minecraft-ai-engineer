@@ -4,19 +4,26 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Current worktree: task `work/connected-circuits`, branch
-`phase/27-connected-circuits`. Integrating merged main **9a1d6e7 / PR37**;
-only STATE conflicted. Main worktree is clean and fast-forwarded. Original C1
+Current engineering worktree: task `work/connected-circuits`, branch
+`phase/27-connected-circuits`, based on merged main **9a1d6e7 / PR37**.
+Documentation PR38 (`docs/multiplayer-preview-download`, sourceeb91617) updates
+the public download and archives the real memory screenshot; CI41373420233 is live. Main worktree is clean and fast-forwarded. Original C1
 source8490f8d passed all five checks in CI41369209886, including141 native tests
 and the unchanged full dedicated/restart/SQLite suite.
-Do not confuse this native-only proof with the entire phase being complete.
+These C1 fixture observations do not establish the entire phase.
 
 Release source57b1d65 passed all five checks in CI41367933778, all137 native
 and209 companion tests (208 passed,0 failed,1 existing platform skip), plus full
-dedicated/shared/restart/SQLite verification. PR37 merged2026-11-02T01:05:36Z as
-9a1d6e7. Memory PR36 was closed as incorporated. **Main CI41370616555 is live**;
-only publish artifacts from that exact successful push-to-main/all-five run.
-The published v0.1.0-alpha.1 remains the older solo alpha. No new release yet.
+dedicated/shared/restart/SQLite verification. PR37 merged2026-11-02T01:05:36Z as9a1d6e7; PR36 closed as incorporated.
+**Main CI41370616555 passed all five checks** on that exact source.
+Published [v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2)
+is the multiplayer development preview. Its tag was read back at9a1d6e7, and
+GitHub's uploaded asset digests match the locally verified same-run files:
+
+- companion73cf14bcd6dadad14ddba0acf6288410228697a5c5fdb5e63bb2edac164b6d33
+- jar6c14f8781c7499f0b01799e7dd66791f9dd3383a077fcb7cc770e19ad47d4c1b
+
+Main assets: `work/main-release-41370616555`. The old alpha.1 remains archived.
 
 Josh: **skip heavy reviews; build and ship**. Public pushes, releases and exact
 all-green merges are authorized. Tests run on GitHub, never on this slow PC.
@@ -57,7 +64,7 @@ kept its input0/14 but receiver0/lampoff. Unwired-control phases stayed isolated
 on every tick. Both original external controls ended off. Full C1 CI is now green.
 These are fixture observations, not a project pass or complete human acceptance.
 
-C2 is starting: catalog/half-adder.json and HalfAdderDesign.java
+C2 is in progress: catalog/half-adder.json and HalfAdderDesign.java
 prototype a four-NAND plus NOT half-adder. Shared signals have explicit buffered
 routes, external controls, internal pins and two receivers. No project parser,
 provider, construction or verification admission exists yet. Complete native
@@ -164,9 +171,8 @@ companion/src/schematic-transforms/**, tests/schematic-transforms*.test.ts,
 docs/schematic-transforms.md. No mod/core/auth/storage/provider/CI/memory changes.
 No delivery seen yet. Do not edit those reserved paths.
 
-Next: watch main41370616555 and C1 full41369209886 to terminal without restarts.
-For a green exact main, inspect same-run pair/source/hash manifests, publish a
-clearly bounded multiplayer prerelease and update README download guidance.
+Next: finish the README/download documentation checks, watch the new connected-codec run
+to terminal without restarts, and continue strict connected source/evidence work.
 Continue C2 native half-adder proof and strict graph/source/evidence integration,
 then actual C3 flows. Keep the full goal active; no single slice completes it.
 
@@ -179,9 +185,26 @@ whole circuit. Initial wire arms are computed using the existing read-only pinne
 native connection accessor over intended geometry; no signal is simulated and no
 runtime POWER is forced. A native post-settle static geometry check covers arms.
 No parser/provider/construction admission yet. Shared recipe is included in the
-mod resources. Final scoped Java compilation and format/diff checks passed. Fresh GitHub native
-proof is required; no behavioral tests ran locally.
+mod resources. Final scoped Java compilation and format/diff checks passed; the
+actual native results are recorded below. No behavioral tests ran locally.
 
 When C2 becomes a companion-admitted family, explicitly add its third shared
 catalog to the production bundle and paired-jar catalog parity check. The current
 prototype is only a mod fixture resource; no companion module imports it yet.
+
+C2 native source6a5c07a/Fabric in CI41371755386 passed all146 required tests.
+Reports inspected at `work/half-adder-native-41371755386`:436 cells,20 pins,
+448 consecutive frames per rotation and64 stable frames covering all four input
+vectors forward/reverse. Every rotation produced SUM/CARRY00->00,01->10,
+10->10,11->01. The missing A-to-N2 wire showed expectedSUMtrue/observedSUMfalse
+while CARRY stayedfalse. Static native wire-arm checks passed. Full CI41371755386 is now all-five green
+on source6a5c07a, including the unchanged dedicated/shared/restart/SQLite suite. This proves the physical prototype, not C2 strict admission or C3 gameplay.
+GPT-6-Luna supplied standalone connected-trace.ts at7aaad74 and fixed partial
+verdict semantics, rejected-sample immutability and early array bounds in8ba8209.
+Parent type checking passes with the shared dependency junction. Eight parent-owned
+CI tests now use four actual archived native vectors plus clock/gap/rebinding/
+metadata/false-pass/sparse/oversize/immutability rejection proofs. The normalized
+fixture retains actual game clocks and native boolean/integer values, and carries
+no fresh project authority. Behavioral tests await GitHub; Java mirror, canonical
+source admission, current-run cross-runtime replay and C3 remain outstanding.
+No SDK calls or local tests ran. Public alpha.2 does not include this prototype.
