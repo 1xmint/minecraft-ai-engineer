@@ -530,3 +530,13 @@ branch merged current main through5e2425e; kept its ongoing STATE decisions when
 resolving the documentation-only memory conflict. Opening a draft phase27 PR for
 fresh combined-source CI, including the new actual conversational/shared/restart
 flows. Do not reuse prior149-native proof as proof of the newer full C3 flow.
+
+PR45 CI41524156179 terminated FAILURE in dedicated construction: a partial A-net
+junction at2004,101,0 conflicted after223 owned records. Four other jobs passed.
+Candidate correction: ConnectedWireUndo/matchesValidated accepts the exact
+canonical recorded after-state as well as the pinned native projection. Previously
+it accepted only the latter, excluding legitimate just-written arms before later
+neighbor updates. Still requires canonical ownership/block/state; manual dots are
+not broadly ignored. New partial-junction native proof plus unchanged real failing
+construction flow remain the regression gates. Scoped Java compilation pending
+final check; fresh source requires CI, not claimed fixed gameplay yet.

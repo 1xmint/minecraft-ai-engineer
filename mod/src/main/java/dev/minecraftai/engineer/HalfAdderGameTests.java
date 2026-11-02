@@ -212,6 +212,21 @@ public final class HalfAdderGameTests {
             helper.succeed();
         });
     }
+    @GameTest(structure="engineer:analog_lab")
+    public void partialOwnedJunctionAcceptsItsExactRecordedState(GameTestHelper helper){
+        var design=new HalfAdderDesign();var identity=java.util.UUID.randomUUID();
+        var plan=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",helper.absolutePos(at(BlockPos.ZERO,Rotation.NONE)),0).blueprint();
+        for(int x=0;x<=4;x++){
+            var relative=new BlockPos(x,1,0);var cell=design.cells().stream().filter(value->value.pos().equals(relative)).findFirst().orElseThrow();
+            helper.setBlock(at(relative.below(),Rotation.NONE),Blocks.STONE.defaultBlockState());helper.setBlock(at(relative,Rotation.NONE),cell.state());
+        }
+        var relative=new BlockPos(4,1,0);var wire=helper.absolutePos(at(relative,Rotation.NONE));
+        var intended=design.cells().stream().filter(cell->cell.pos().equals(relative)).findFirst().orElseThrow().state();
+        var change=new EngineeringSession.Change(wire,Blocks.AIR.defaultBlockState(),intended,"proof","root");var actual=helper.getLevel().getBlockState(wire);
+        helper.assertTrue(ConnectedWireUndo.matches(plan,change,actual,helper.getLevel()),"A partial junction's legitimate just-written/native state must reconcile without pretending its future branch exists: "+actual);
+        var dot=actual;for(var property:java.util.List.of(BlockStateProperties.NORTH_REDSTONE,BlockStateProperties.SOUTH_REDSTONE,BlockStateProperties.EAST_REDSTONE,BlockStateProperties.WEST_REDSTONE))dot=dot.setValue(property,net.minecraft.world.level.block.state.properties.RedstoneSide.NONE);
+        helper.assertTrue(!ConnectedWireUndo.matches(plan,change,dot,helper.getLevel()),"Accepting the recorded shape does not accept an invented manual dot");helper.succeed();
+    }
     @GameTest(structure="engineer:analog_lab",maxTicks=80)
     public void nativeWireTransitionsRemainDistinctFromPlayerDots(GameTestHelper helper){
         var design=new HalfAdderDesign();build(helper,design,Rotation.NONE);
