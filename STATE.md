@@ -51,6 +51,16 @@ Preview refusal reports its native reason without placing blocks. Native grammar
 proof distinguishes EDIT preview design from VIEW show design. Dedicated stale
 request and denied-preview player flows remain required; not claimed proven yet.
 
+Added pending actual importedBuildFlow after the existing real WorldEdit library/
+discard/export proof. A separate synthetic35-block safe .schem exercises chat
+import/preview, connected viewer preview denial, reviewed build, genuine partial
+interruption/resume, exact final geometry, functional-test refusal and owned undo.
+Synthetic fixture is not third-party codec evidence. SQLite must retain the actual
+35-placement completion as untested with empty evidence/input journals. Existing
+WorldEdit six-sign fixture remains for independent interchange/discard coverage.
+Native/client compile and script syntax checks are local only; this new combined
+gameplay flow is still pending CI. Full imported saved-server restart remains.
+
 PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
 real connected build paused at2004,101,0 after223 records. Native final geometry
 and149 tests passed; partial owned-wire reconciliation at a junction is the live

@@ -1874,7 +1874,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
-        MESSAGES.clear();memorySay(context,"Engineer, list schematics");expectChat(context,"Schematic library (1): signs.");
+        MESSAGES.clear();memorySay(context,"Engineer, list schematics");expectChat(context,"Schematic library (2): safe, signs.");
         MESSAGES.clear();memorySay(context,"Engineer, inspect schematic signs");expectChat(context,"say 'import schematic signs and drop block entities'");
         MESSAGES.clear();memorySay(context,"Engineer, import schematic signs");expectChat(context,"Nothing was stored.");
         MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"No designs are imported in this project yet.");
@@ -1899,7 +1899,36 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.journal.isEmpty() && project.delegation==null && !project.pendingPlacement && project.blueprint==null,"Schematic chat never plans, delegates or places anything");
             check(project.level().getBlockState(stone).is(Blocks.STONE) && project.level().getBlockState(chest).is(Blocks.CHEST),"Export reads the selection and leaves it exactly as it was");});
         context.takeScreenshot("engineer-schematic-export");
+        importedBuildFlow(context,server);
         send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+    private static void importedBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic safe");expectChat(context,"Untrusted and untested.");int design=storedDesign();
+        server.runCommand("forceload add 2192 -16 2256 32");
+        send(context,"engineer select1 2200 120 0");send(context,"engineer select2 2231 121 0");
+        server.waitFor(s->new BlockPos(2200,120,0).equals(session(s,"Alice").corner1) && new BlockPos(2231,121,0).equals(session(s,"Alice").corner2));
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");var previous=project.commandActor;
+            try{project.commandActor=player(s,"Bob").getUUID();boolean denied=false;try{project.manager.schematics.handle(project,SchematicText.parse("preview design "+design));}catch(IllegalStateException expected){denied=true;}
+                check(denied && project.blueprint==null && project.journal.isEmpty(),"Real connected viewer cannot accept an imported preview");
+            }finally{project.commandActor=previous;}});
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+design);expectChat(context,"Preview ready: Imported design "+design);
+        server.runOnServer(s->{var project=session(s,"Alice");check(ImportedBlueprint.describes(project.blueprint.source()) && project.blueprint.blocks().size()==35 && project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Imported preview is geometry only, without construction or pass");});
+        conversationApprove(context,"CI build imported design.");
+        server.waitFor(s->session(s,"Alice").journal.size()>=3 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("EXECUTING") && project.journal.size()<35,"Interruption reaches a genuinely incomplete imported build");});
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.state.equals("PAUSED") && project.verified.equals("untested"),"Imported construction interruption releases authority and remains untested");});
+        connectedAction(server,EngineeringSession::resume);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),60_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==35 && project.verified.equals("untested"),"Production imported build completes only geometry: "+project.status());
+            check(project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Every imported block reaches its intended state");});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"no independently defined functional test contract");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && project.verified.equals("untested"),"No generic imported test can manufacture a pass or input-control lease");});
+        assertPersisted(server);write("imported-build-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("imported-build.done","passed");
+        connectedAction(server,EngineeringSession::undo);
+        server.waitFor(s->session(s,"Alice").journal.isEmpty(),60_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()) && !project.verified.startsWith("passed:"),"Imported undo removes only owned geometry without a behavior claim");});
+        write("imported-undo.done","passed");
     }
     private static int storedDesign(){
         for(var message:MESSAGES){var match=java.util.regex.Pattern.compile("Stored as design (\\d+)").matcher(message);if(match.find())return Integer.parseInt(match.group(1));}

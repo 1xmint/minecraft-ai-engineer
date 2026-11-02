@@ -95,6 +95,7 @@ restart_companion() {
 # companion's library folder and writes its own export beside it.
 mkdir -p -m 700 "$temporary/config-alice/schematics/library"
 install -m 600 "$repo/tests/fixtures/schematics/worldedit-fabric-7.3.schem" "$temporary/config-alice/schematics/library/signs.schem"
+node "$repo/scripts/ci/schematic-build-fixture.mjs" "$temporary/config-alice/schematics/library/safe.schem"
 start_companion
 
 launch() {
