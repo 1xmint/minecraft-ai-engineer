@@ -4,6 +4,14 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Corrected-ray sourcefb30765 / CI41534173950 passed both required native tests;
+actual marker inspected. Submitted walking/pickup sourceed766a8 to the feedback
+branch after that run became terminal. Follow-up cancellation proof stops a
+partially running survival attack at tick2, requires the dirt still present at
+tick20, then starts a fresh attack. No delayed destruction may survive stopAll.
+This later cancellation proof is pending its own CI; no project authority is
+granted by these isolated actor actions.
+
 Physical source d3b664a / CI41533955802 completed SUCCESS. Downloaded/inspected
 work/physical-proof-41533955802: pinned jar checksum matched; both required native
 tests passed and actual survival placement consumed1 item, empty/reach attempts

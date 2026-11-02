@@ -57,6 +57,15 @@ public final class PhysicalBuilderGameTests {
         stop(pack);actor.setItemInHand(InteractionHand.MAIN_HAND,ItemStack.EMPTY);
         look(pack,Vec3.atCenterOf(placed));action(pack,"ATTACK","continuous");
         // The actor's own action pack advances from Carpet's native player tick.
+        helper.runAtTickTime(2,()->{
+            try{stop(pack);}catch(Exception failed){throw new RuntimeException(failed);}
+        });
+        helper.runAtTickTime(20,()->{
+            try{
+                helper.assertTrue(level.getBlockState(placed).is(Blocks.DIRT),"Cancelled partial mining performs no delayed block destruction");
+                look(pack,Vec3.atCenterOf(placed));action(pack,"ATTACK","continuous");
+            }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
+        });
         helper.runAtTickTime(55,()->{
             try{
                 stop(pack);
@@ -75,7 +84,7 @@ public final class PhysicalBuilderGameTests {
                     var stack=actor.getInventory().getItem(slot);if(stack.is(Items.DIRT))collected+=stack.getCount();
                 }
                 helper.assertTrue(collected==1,"Exactly one mined drop is collected through physical pickup");
-                System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1");
+                System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1 cancelled=true");
                 server.getPlayerList().remove(actor);helper.succeed();
             }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
         });

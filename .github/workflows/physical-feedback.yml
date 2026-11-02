@@ -40,7 +40,7 @@ jobs:
           chmod +x mod/gradlew
           mkdir -p mod/build
           mod/gradlew -p mod --console=plain --no-daemon --max-workers=2 runGameTest 2>&1 | tee mod/build/physical-probe.log
-          grep -F 'ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1' mod/build/physical-probe.log
+          grep -F 'ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1 cancelled=true' mod/build/physical-probe.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
