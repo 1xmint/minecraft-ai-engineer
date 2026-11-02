@@ -256,3 +256,10 @@ these and rejects altered quantities/stage dependencies. Scoped compile/type che
 passed. Construction review confirms strict static wire-arm comparisons during
 partial placement and undo need native transition proof; do not weaken generic
 Blueprint.matches or admit the new family before resolving player-edit safety.
+
+Added two native half-adder construction proofs, pending CI:436 single writes in
+the five teaching stages must all have physical support, overwrite only air and
+settle to exact canonical static geometry; removing A's physical branch must
+change wire arms in the read-only native projection while a manual dot remains
+distinct and untouched. These fixtures do not yet exercise EngineeringSession
+journals, permissions, interruption or undo; C3 remains incomplete.

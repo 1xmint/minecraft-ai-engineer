@@ -144,6 +144,55 @@ public final class HalfAdderGameTests {
     private static void rejects(GameTestHelper helper,Runnable action,String message){
         boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);
     }
+    @GameTest(structure="engineer:analog_lab",maxTicks=550)
+    public void stagedSingleWritesReachCanonicalGeometry(GameTestHelper helper){
+        var design=new HalfAdderDesign();int tick=1;
+        for(String stage:new String[]{"foundation","controls","logic","connections","outputs"})for(var cell:design.cells()){
+            if(!cell.stage().equals(stage))continue;
+            helper.runAtTickTime(tick++,()->{
+                var local=at(cell.pos(),Rotation.NONE);var absolute=helper.absolutePos(local);
+                helper.assertTrue(helper.getBlockState(local).isAir(),"Single staged write never overwrites an occupied cell");
+                helper.assertTrue(cell.state().canSurvive(helper.getLevel(),absolute),"Stage ordering supplies required physical support");
+                helper.setBlock(local,cell.state());
+            });
+        }
+        helper.assertTrue(tick==437,"Every canonical cell is scheduled exactly once");
+        helper.runAtTickTime(510,()->{
+            for(var cell:design.cells())helper.assertTrue(Blueprint.matches(cell.state(),helper.getBlockState(at(cell.pos(),Rotation.NONE))),"One-write-per-tick construction reaches canonical static geometry");
+            helper.succeed();
+        });
+    }
+    @GameTest(structure="engineer:analog_lab",maxTicks=80)
+    public void nativeWireTransitionsRemainDistinctFromPlayerDots(GameTestHelper helper){
+        var design=new HalfAdderDesign();build(helper,design,Rotation.NONE);
+        // A's physical branch junction: east/west bus with a southbound branch.
+        var relative=new BlockPos(4,1,0);var wire=at(relative,Rotation.NONE);
+        var branch=at(relative.south(),Rotation.NONE);
+        var intended=design.cells().stream().filter(cell->cell.pos().equals(relative)).findFirst().orElseThrow().state();
+        var canonical=intended;
+        helper.runAtTickTime(10,()->{
+            helper.assertTrue(Blueprint.matches(canonical,helper.getBlockState(wire)),"Complete branch starts with canonical arms");
+            helper.setBlock(branch,Blocks.AIR.defaultBlockState());
+        });
+        helper.runAtTickTime(20,()->{
+            var actual=helper.getBlockState(wire);var before=actual;
+            var predicted=((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(helper.getLevel(),canonical,helper.absolutePos(wire));
+            helper.assertTrue(!Blueprint.matches(canonical,actual),"Removing a branch changes static wire arms, not just power");
+            helper.assertTrue(Blueprint.matches(predicted,actual),"Native read-only projection explains the owned branch removal");
+            helper.assertTrue(helper.getBlockState(wire).equals(before),"Projection does not mutate world state");
+            var dot=actual;
+            for(var property:java.util.List.of(BlockStateProperties.NORTH_REDSTONE,BlockStateProperties.SOUTH_REDSTONE,BlockStateProperties.EAST_REDSTONE,BlockStateProperties.WEST_REDSTONE))
+                dot=dot.setValue(property,net.minecraft.world.level.block.state.properties.RedstoneSide.NONE);
+            helper.setBlock(wire,dot);
+        });
+        helper.runAtTickTime(21,()->{
+            var dot=helper.getBlockState(wire);
+            var predicted=((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(helper.getLevel(),canonical,helper.absolutePos(wire));
+            helper.assertTrue(!Blueprint.matches(predicted,dot),"A player's manual dot differs from native branch-removal projection");
+            helper.assertTrue(helper.getBlockState(wire).equals(dot),"Rejected player edit remains untouched");
+            helper.succeed();
+        });
+    }
     @GameTest(structure="engineer:analog_lab",maxTicks=110)
     public void oneCorrectReceiverCannotCertifyABrokenWholeCircuit(GameTestHelper helper){
         var design=new HalfAdderDesign();build(helper,design,Rotation.NONE);
