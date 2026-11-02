@@ -2,8 +2,8 @@
 
 `companion/src/schematic-transforms/` turns or mirrors neutral schematic
 geometry (the `SchematicGeometry` produced by `companion/src/schematics/`).
-It is a standalone, read-only library: nothing here reads files, places
-blocks, talks to the mod, or grants anything.
+It is a standalone library plus a file-only command line tool: nothing here
+places blocks, talks to the mod, or grants anything.
 
 ## API
 
@@ -33,6 +33,51 @@ The input is never changed. `dataVersion`, `format`, `formatVersion` and
 `untrustedMetadata` are copied as they are. The output has exactly the same
 fields as any other geometry: there is no ownership, permission, trust or
 verification field, and the validator would reject one.
+
+## Command line
+
+Build first (`npm run build`), then run the compiled entry point:
+
+```sh
+node dist/companion/src/schematic-transforms/cli.js <operation>   --from <schem|json> --to <schem|json> <input> <output>   [--force] [--discard-block-entities] [--discard-biomes]
+```
+
+`<operation>` is one of `rotate-90`, `rotate-180`, `rotate-270`,
+`mirror-east-west` or `mirror-north-south`. For example, to turn a WorldEdit
+export a quarter turn clockwise into a new `.schem`:
+
+```sh
+node dist/companion/src/schematic-transforms/cli.js rotate-90   --from schem --to schem house.schem house-east.schem --discard-block-entities
+```
+
+- **Formats are explicit.** `--from` and `--to` are both required; the tool
+  never guesses from a file name. `schem` means a gzip-compressed Sponge v3
+  file, `json` the neutral geometry JSON from `companion/src/schematics/`.
+  Any pairing is allowed.
+- **Same codec, same limits.** Input is read through the existing importer or
+  JSON parser with their size limits (16 MiB `.schem`, 96 MiB JSON, 8 Mi
+  blocks, 65 536 palette entries). Reads stop at the byte limit.
+- **What is kept.** `DataVersion` and the supported metadata (name, author,
+  date, required mods) are carried over. The output never gains ownership,
+  permission, trust or verification fields.
+- **What is dropped, only when asked.** A `.schem` with block entities (sign
+  text, chest contents, commands) fails with `E_BLOCK_ENTITIES`, and one with
+  biomes fails with `E_BIOMES`, unless `--discard-block-entities` or
+  `--discard-biomes` is given. Every discarded block entity (id and position),
+  discarded biome data and unsupported metadata field is listed on stderr.
+  The discard options are refused with `--from json`. Entities (mobs, item
+  frames) always fail with `E_ENTITIES`.
+- **Nothing is written until everything has worked.** Reading, validating,
+  transforming and encoding all finish before the output is opened, so a
+  rejected input leaves any existing output untouched.
+- **Existing outputs are protected.** An existing output is refused unless
+  `--force` is given. The output may never be the input: the same path, a
+  hard link to it, or a symbolic link is refused even with `--force`. Output
+  paths that are symbolic links are always refused.
+
+Exit codes: `0` written, `1` the input or output was rejected (the message
+starts with the error code, such as `E_UNSUPPORTED_STATE`), `2` a usage
+mistake (the usage text is printed).
 
 ## How size and offset change
 
@@ -116,7 +161,8 @@ never returns half-transformed geometry.
   geometry, so they are not transformed here.
 - Stair shapes, fence connections and similar are transformed as stored. Once
   placed in a world, neighbour updates may reshape them.
-- Library only: there is no CLI command and nothing writes files.
+- The command line tool only converts files. It does not import into or
+  export from a running game.
 - Nothing here places blocks, verifies a build, or grants ownership or
   permissions.
 
@@ -126,5 +172,14 @@ never returns half-transformed geometry.
 five transforms, the restore laws (4 × 90°, mirror twice, compositions) for
 both geometry and every supported state value, unchanged inputs, rejection of
 unsupported states, bad arguments, malformed geometry and offset overflow,
-and 300 seeded random cases checked against a naive position-map oracle. It
-uses no network, models, paid services or keys.
+and 300 seeded random cases checked against a naive position-map oracle.
+
+`tests/schematic-transforms-cli.test.ts` drives the command line tool on temp
+files: every operation from and to both formats against hand-calculated
+sizes, offsets, cells and directional states (stairs, logs, chests), with
+exported `.schem` files read back by the independent `prismarine-nbt` reader.
+It also covers zero-volume geometry at the maximal 65 535 dimensions,
+block-entity and biome discards, bad arguments, malformed, oversized and
+unsupported inputs, output collisions, hard-link and symbolic-link aliases,
+that failures leave existing files unchanged, and the compiled program run on
+its own. None of it uses the network, models, paid services or keys.
