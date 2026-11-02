@@ -4,6 +4,17 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical probe work is isolated in work/physical-probe, phase/29-physical-probe.
+CI-only source tools/physical-probe/PhysicalBuilderGameTests.java is copied into
+the mod only by its separate feedback workflow; normal registration/dependencies
+are unchanged. Pinned Carpetv26.3 commitc6d48ab and published jar SHA256
+7c40b93e807ed914064176898037117097446c6cc76e6a80a856c8bf7f7659f9.
+Uses respawnFake plus local fake connection, avoiding public createFake's profile
+resolver. Probe requires survival item consumption, empty-hand/reach refusal and
+native-tick mining before its success marker. It does not prove navigation,
+resource pickup, core authorization integration or a completed NPC/survival feature.
+No local game tests run; behavior awaits the isolated CI workflow.
+
 Physical-builder feasibility research (2026-11-02): Mineflayer's upstream README
 lists support only through26.1; discussion4190 says26.3 support remains unreleased.
 Do not choose protocol translation/proxy/login workarounds as the foundation.
