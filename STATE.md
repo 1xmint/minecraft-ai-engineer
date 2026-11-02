@@ -4,6 +4,26 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Walking/pickup sourceed766a8 / CI41534414651 passed both required native tests;
+inspected actual marker walked=true,collected=1. Cancellation source68b5e70 /
+CI41534623537 is live. Focused read-only GPT-6-Luna authority challenge confirms
+the existing claim/ProjectManager.validate/validateMutation fences cover human
+controller/connection, assignment, revisions, lease and reserved exact targets, but
+do not intercept Carpet's autonomous native player tick. Decision for P3: optional
+server-owned PhysicalActorController bound to the human's existing delegation;
+denial-only actor registration and ephemeral one-use action tickets. Enforce at
+actual placement destination (BlockItem.place context), destroyBlock and entry
+interaction gates; never grant project rights to actor UUID. Validate intended
+target and loaded reserved read closure, persist WAL before action, check actual
+post-state. Changed permissions/disconnect/revision/epoch/expiry invalidate tickets
+and stop the pack; restart restores no actor action/lease. END tick is cleanup,
+not authority. Initially allow only explicitly gated block actions and inert
+bounded walking corridors; unsupported item/entity interactions must deny.
+Next proof before production integration: revoked/expired/missing/wrong-target
+tickets refuse actual native placement/mining, including support-inside but
+placement-outside case, with unchanged item count/world. Existing creative
+requireCreative remains intact. No runtime Carpet adoption or completed NPC claim.
+
 Corrected-ray sourcefb30765 / CI41534173950 passed both required native tests;
 actual marker inspected. Submitted walking/pickup sourceed766a8 to the feedback
 branch after that run became terminal. Follow-up cancellation proof stops a
