@@ -4,6 +4,14 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Focused feedback source48bbc12 / CI41530452349 passed7 tests,0 failures: all five
+real HTTP schematic-library cases plus two imported-admission cases. The prior
+409 failures came from fixture regeneration of blueprint ID at the same intended
+revision during sync/restart; fixture now reuses the immutable source. Production
+revision guards were not relaxed. This focused check does not establish gameplay.
+Merged connected placement-loop correction6508367; its fresh full CI41530574368
+is live. Do not substitute the7 focused passes for required full integration CI.
+
 Verified current-run native evidence: source0a81172 / CI41528081343 Fabric passed
 all156 required tests. Artifact inspected at work/imported-native-41528081343:
 imported canonical preview/reload, request-null transport and partial-junction
