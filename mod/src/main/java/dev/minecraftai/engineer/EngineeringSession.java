@@ -762,10 +762,14 @@ final class EngineeringSession implements BuildExecutor {
                 if (server.getTickCount() < nextPlacement) return;
                 nextPlacement=server.getTickCount()+4;
                 if(operationKind.equals("STRUCTURAL")){tickStructural();return;}
+                Blueprint connectedBuild=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
+                    ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
                 for (Blueprint.PlannedBlock b : assignmentBlocks()) {
                     if(operationKind.equals("REPAIR") && !repairTargets.contains(b.pos()))continue;
                     BlockState actual = level().getBlockState(b.pos());
                     if (Blueprint.matches(b.state(),actual)) continue;
+                    if(connectedBuild!=null && operationKind.equals("BUILD") && b.state().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE)
+                        && matchesExpected(b.pos(),b.state(),actual,connectedBuild))continue;
                     BlockState after;
                     if(operationKind.equals("REPAIR")) {
                         if(!actual.isAir() && !actual.is(b.state().getBlock()))throw new IllegalStateException("Repair target changed to an unsupported block at "+b.pos().toShortString());
@@ -781,6 +785,9 @@ final class EngineeringSession implements BuildExecutor {
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save(); return;
+                }
+                if(connectedBuild!=null && assignmentBlocks().stream().anyMatch(block->!Blueprint.matches(block.state(),level().getBlockState(block.pos())))){
+                    detail="Waiting for native connected wire geometry to settle";return;
                 }
                 state="COMPLETED"; detail=ComponentTree.composite(blueprint)?"Component "+activeComponent+" geometry matches. Functional test still required.":operationKind.equals("REPAIR")?"Supported corrections applied. Functional test still required.":"Geometry matches the blueprint. Functional test still required.";manager.release(this); save(); checkpoint(); tell(detail);
             } catch (RuntimeException e) { pause(e.getMessage()); }

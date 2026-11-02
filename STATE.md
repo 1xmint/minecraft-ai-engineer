@@ -453,3 +453,11 @@ neighbor updates. Still requires canonical ownership/block/state; manual dots ar
 not broadly ignored. New partial-junction native proof plus unchanged real failing
 construction flow remain the regression gates. Scoped Java compilation pending
 final check; fresh source requires CI, not claimed fixed gameplay yet.
+
+CI41527288929 terminated FAILURE later in the same real build: placement loop
+revisited an owned wire at2014,101,14 after317 records. Four other jobs passed.
+The reconcile fix advanced beyond the original223-record junction, but placement
+still used only final static equality. BUILD now skips only canonically owned
+wire states accepted by the same recorded/native reconciliation, never unowned
+or arbitrary states. Completion still requires all final static geometry to match;
+otherwise waits for native settling. Keep the unchanged real build regression.
