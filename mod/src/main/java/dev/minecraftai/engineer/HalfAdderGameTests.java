@@ -162,6 +162,31 @@ public final class HalfAdderGameTests {
     private static void rejects(GameTestHelper helper,Runnable action,String message){
         boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);
     }
+    @GameTest(structure="engineer:analog_lab")
+    public void connectedRecoveryRetainsBothOriginalInputsWithoutAuthority(GameTestHelper helper){
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var project=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();
+        String dimension=helper.getLevel().dimension().identifier().toString();
+        var source=ConnectedIntention.create(java.util.UUID.randomUUID(),1,project,manager.worldId,dimension,helper.absolutePos(new BlockPos(1,1,1)),0);
+        var session=new EngineeringSession(manager,project,owner,dimension);session.blueprint=source.blueprint();
+        session.corner1=session.blueprint.anchor();session.corner2=session.blueprint.anchor().offset(45,1,36);
+        var saved=new JsonObject();var entries=new JsonArray();int index=0;
+        for(var port:EngineeringContracts.contract(session.blueprint).ports())if(port.input()){
+            var planned=session.blueprint.blocks().stream().filter(block->block.pos().equals(port.pos())).findFirst().orElseThrow().state();
+            var original=planned.setValue(BlockStateProperties.POWERED,index++==0);var entry=new JsonObject();
+            entry.addProperty("name",port.name());entry.add("pos",Blueprint.jsonPos(port.pos()));entry.addProperty("original",Blueprint.describe(original));
+            entry.addProperty("last",Blueprint.describe(planned));entry.addProperty("before",Blueprint.describe(original));entry.addProperty("pending",true);entries.add(entry);
+        }
+        saved.add("testInputs",entries);saved.add("functionalEvidence",new JsonArray());
+        var scope=new JsonObject();scope.addProperty("projectId",project.toString());scope.addProperty("blueprintId",session.blueprint.id());scope.addProperty("blueprintRevision",1);
+        scope.addProperty("component","root");scope.addProperty("basis",ComponentAssignments.basis(session.blueprint,"root"));scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);saved.add("functionalScope",scope);
+        session.trial.load(saved);session.state="PAUSED";session.save();var restored=new EngineeringSession(manager,project,owner,dimension);
+        helper.assertTrue(restored.trial.pending() && restored.trial.inputsSnapshot().size()==2 && restored.delegation==null && restored.testTick<0,"Both original controls survive without a callback, lease or resumed trial");
+        var first=restored.trial.inputsSnapshot().get(0).getAsJsonObject();
+        helper.assertTrue(first.get("original").getAsString().contains("powered=true") && first.get("last").getAsString().contains("powered=false"),"Initially-on control remains distinct from last assistant stimulus");
+        var internal=saved.deepCopy();internal.getAsJsonArray("testInputs").get(0).getAsJsonObject().addProperty("name","n1:in0");
+        boolean denied=false;try{restored.trial.load(internal);}catch(RuntimeException expected){denied=true;}
+        helper.assertTrue(denied,"An internal driven pin cannot enter the input recovery journal");helper.succeed();
+    }
     @GameTest(structure="engineer:analog_lab",maxTicks=550)
     public void stagedSingleWritesReachCanonicalGeometry(GameTestHelper helper){
         var design=new HalfAdderDesign();int tick=1;

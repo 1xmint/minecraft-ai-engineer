@@ -336,3 +336,11 @@ same canonical contract. Native fixture checks external-only contract selection.
 This code still requires actual EngineeringSession success/interruption/restart/
 conflict proof. Generic parser/provider admission remains disabled pending that
 integration. Do not call this complete or expose it through normal planning yet.
+
+Strict native Blueprint.parse/ComponentTree admission now delegates connected
+sources exclusively to canonical regeneration; the generic block allowlist is
+unchanged. Provider/menu admission remains disabled. Added actual saved-session
+reload proof with two pending controls, A originally on and B off: original vs
+last stimulus survives, no delegation/callback/trial resumes, and an internal pin
+in a recovery record rejects. Scoped Java compilation passed. This pending native
+proof does not establish actual authorized restoration or full user acceptance.
