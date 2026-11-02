@@ -45,6 +45,12 @@ Preview uses the captured actor and advances the async frame revision only after
 its own accepted preview; no build starts. Type/client compilation passed.
 This integration still needs end-to-end proof and clearer refusal handling.
 
+Async schematic frames now bind both marked corners as well as player connection,
+project revision and grants; changing the workspace invalidates pending results.
+Preview refusal reports its native reason without placing blocks. Native grammar
+proof distinguishes EDIT preview design from VIEW show design. Dedicated stale
+request and denied-preview player flows remain required; not claimed proven yet.
+
 PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
 real connected build paused at2004,101,0 after223 records. Native final geometry
 and149 tests passed; partial owned-wire reconciliation at a junction is the live

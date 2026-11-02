@@ -49,7 +49,7 @@ final class SchematicText {
     /** Mentions schematics but matched nothing exact: answer with the phrasing instead of guessing. */
     static boolean ambiguous(String message){
         String text=ConversationText.normalized(message);
-        return text.matches("^(?:import|inspect|export|rotate|mirror|flip|compare)\\b.*\\b(?:schematics?|designs?|selection)\\b.*");
+        return text.matches("^(?:import|inspect|preview|export|rotate|mirror|flip|compare)\\b.*\\b(?:schematics?|designs?|selection)\\b.*");
     }
     private static int id(String value){int id=Integer.parseInt(value);if(id<1)throw new IllegalArgumentException("Design numbers start at 1.");return id;}
 

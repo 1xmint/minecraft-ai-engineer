@@ -12,6 +12,7 @@ public final class SchematicGameTests {
         var inspect=SchematicText.parse("Inspect schematic Castle_Gate.schem");
         helper.assertTrue(inspect.action().equals("inspect") && inspect.name().equals("Castle_Gate"),"File names keep their case and drop only the extension");
         var plain=SchematicText.parse("import schematic castle");
+        helper.assertTrue(SchematicText.parse("preview design 4").action().equals("preview") && SchematicText.parse("show design 4").action().equals("design"),"Editable preview remains separate from read-only inspection");
         helper.assertTrue(plain.action().equals("import") && !plain.discard(),"Import never assumes a discard");
         helper.assertTrue(SchematicText.parse("Import schematic castle and drop block entities.").discard(),"A discard is stated in the same sentence");
         helper.assertTrue(SchematicText.parse("rotate design 2 by 90 degrees").transform().equals("rotate-90") && SchematicText.parse("Mirror design #3 East West").transform().equals("mirror-east-west"),"Transforms map to the companion's names");

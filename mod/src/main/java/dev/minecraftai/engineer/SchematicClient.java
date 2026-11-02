@@ -28,8 +28,9 @@ final class SchematicClient {
         final EngineeringSession session;final UUID actor,epoch;final ServerPlayer player;
         final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
         final String connectionId;int revision;final long authorization,startedNanos=System.nanoTime();
+        final BlockPos first,second;
         CompletableFuture<JsonObject> future;
-        Frame(EngineeringSession s,ServerPlayer p,String id){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();}
+        Frame(EngineeringSession s,ServerPlayer p,String id){session=s;actor=p.getUUID();epoch=s.manager.epoch;player=p;connection=p.connection;connectionId=id;revision=s.revision();authorization=s.access.revision();first=s.corner1;second=s.corner2;}
     }
     SchematicClient(ProjectManager manager){this.manager=manager;}
 
@@ -48,6 +49,7 @@ final class SchematicClient {
                 && manager.server.getPlayerList().getPlayer(f.actor)==f.player && f.player.connection==f.connection && !f.player.hasDisconnected()
                 && manager.connectionId(f.player).equals(f.connectionId) && Objects.equals(manager.selections.get(f.actor),s.projectId)
                 && s.revision()==f.revision && s.access.revision()==f.authorization && s.access.allows(f.actor,ProjectAccess.Permission.VIEW)
+                && Objects.equals(s.corner1,f.first) && Objects.equals(s.corner2,f.second)
                 && s.dimension.equals(f.player.level().dimension().identifier().toString())
                 && System.nanoTime()-f.startedNanos<=30_000_000_000L;
     }
@@ -81,7 +83,8 @@ final class SchematicClient {
                         tell(f,message);
                     }finally{s.commandActor=previous;}
                 }else tell(f,describe(r,reply,s));
-            }catch(RuntimeException invalid){tell(f,"The companion's schematic answer was not understood, so nothing was used. Ask again.");}
+            }catch(IllegalArgumentException | IllegalStateException refused){tell(f,"Schematic request refused: "+refused.getMessage()+". No blocks were placed.");}
+            catch(RuntimeException invalid){tell(f,"The companion's schematic answer was not understood, so nothing was used. Ask again.");}
             finally{finish(f);}
         }));
     }
