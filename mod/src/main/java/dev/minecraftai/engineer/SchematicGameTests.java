@@ -64,6 +64,12 @@ public final class SchematicGameTests {
         helper.assertTrue(name(SchematicClient.region(helper.getLevel(),a,b,true).getAsJsonArray("palette"),SchematicClient.region(helper.getLevel(),a,b,true).getAsJsonArray("blocks"),7).equals("minecraft:chest"),"With the stated discard the block itself is exported");
         boolean tooBig=false;try{SchematicClient.region(helper.getLevel(),a,a.offset(64,0,0),false);}catch(IllegalStateException expected){tooBig=true;}
         helper.assertTrue(tooBig,"Exports stay within 64 blocks a side");
+        for(int axis=0;axis<3;axis++){
+            var low=new BlockPos(axis==0?Integer.MIN_VALUE:0,axis==1?Integer.MIN_VALUE:0,axis==2?Integer.MIN_VALUE:0);
+            var high=new BlockPos(axis==0?Integer.MAX_VALUE:0,axis==1?Integer.MAX_VALUE:0,axis==2?Integer.MAX_VALUE:0);
+            boolean overflowRefused=false;try{SchematicClient.region(helper.getLevel(),low,high,false);}catch(IllegalStateException expected){overflowRefused=expected.getMessage().contains("64 blocks");}
+            helper.assertTrue(overflowRefused,"Extreme corner span is refused before integer overflow or any world reads on axis "+axis);
+        }
         helper.succeed();
     }
     private static JsonObject block(int x,int y,int z,String state){var o=new JsonObject();var pos=new JsonArray();pos.add(x);pos.add(y);pos.add(z);o.add("pos",pos);o.addProperty("state",state);return o;}

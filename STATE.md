@@ -4,6 +4,15 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Current full checks: combined source29785a2 / CI41533141692 is live (Companion
+and Windows passed); parentee8ff98 / CI41533180250 is live. Earlier parent run
+41530574368 terminated with the same pre-start PAUSED assertion as imported run,
+confirming the shared regression. Do not cancel/restart the current handles.
+Follow-up export fix uses long inclusive spans before the64-block check, rejecting
+extreme integer corners before overflow or world reads. Added all-three-axis
+native regression; scoped Java compilation passed. This later fix is not in the
+running source and needs fresh CI after it finishes.
+
 Focused CI41532825264/sourcecb0d832 passed8 tests,0 failures, including omitted
 transform import and missing-discard/name/unknown-transform refusals. Full imported
 CI41530710501 terminated FAILURE in the connected flow before schematic gameplay:

@@ -165,8 +165,9 @@ final class SchematicClient {
     static JsonObject region(ServerLevel level,BlockPos a,BlockPos b,boolean discard){
         BlockPos min=new BlockPos(Math.min(a.getX(),b.getX()),Math.min(a.getY(),b.getY()),Math.min(a.getZ(),b.getZ()));
         BlockPos max=new BlockPos(Math.max(a.getX(),b.getX()),Math.max(a.getY(),b.getY()),Math.max(a.getZ(),b.getZ()));
-        int sx=max.getX()-min.getX()+1,sy=max.getY()-min.getY()+1,sz=max.getZ()-min.getZ()+1;
-        if(sx>64 || sy>64 || sz>64)throw new IllegalStateException("Exports are limited to 64 blocks on each side; this selection is "+sx+"x"+sy+"x"+sz+".");
+        long width=(long)max.getX()-min.getX()+1,height=(long)max.getY()-min.getY()+1,depth=(long)max.getZ()-min.getZ()+1;
+        if(width>64 || height>64 || depth>64)throw new IllegalStateException("Exports are limited to 64 blocks on each side; this selection is "+width+"x"+height+"x"+depth+".");
+        int sx=(int)width,sy=(int)height,sz=(int)depth;
         var palette=new LinkedHashMap<String,Integer>();var entries=new JsonArray();var blocks=new JsonArray();int contents=0;
         for(int y=0;y<sy;y++)for(int z=0;z<sz;z++)for(int x=0;x<sx;x++){
             var pos=min.offset(x,y,z);
