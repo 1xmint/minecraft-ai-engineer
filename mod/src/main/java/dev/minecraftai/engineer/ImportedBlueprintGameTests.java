@@ -26,6 +26,8 @@ public final class ImportedBlueprintGameTests {
         for(var block:net.minecraft.core.registries.BuiltInRegistries.BLOCK)if(inertMaterial(block.defaultBlockState(),helper))
             ids.add(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).toString());
         helper.assertTrue(ids.size()>5,"Probe enumerates real ordinary building materials, not the old circuit subset");
+        helper.assertTrue(ids.equals(ImportedMaterials.ids()),"Pinned imported material snapshot exactly matches the native registry/class/state predicates");
+        helper.assertTrue(ImportedMaterials.supports(net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState()) && ImportedMaterials.supports(net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState()),"Validated ordinary building cubes enter only the imported family");
         var report=new JsonObject();report.addProperty("minecraft","26.3");report.addProperty("authority","probe only; no runtime admission");
         var values=new JsonArray();ids.forEach(values::add);report.add("ids",values);System.out.println("ENGINEER_IMPORTED_MATERIAL_PROBE "+report);helper.succeed();
     }
@@ -63,6 +65,10 @@ public final class ImportedBlueprintGameTests {
     private static void validate(JsonObject source){ImportedBlueprint.validate(Blueprint.parse(source,"test","minecraft:overworld"));}
     @GameTest public void importedGeometryCannotCarryAuthorityOrBehavior(GameTestHelper helper){
         validate(source());
+        var ordinary=source();ordinary.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:cobblestone");validate(ordinary);
+        ordinary.getAsJsonObject("provenance").addProperty("kind","curated");boolean genericDenied=false;
+        try{Blueprint.parse(ordinary,"test","minecraft:overworld");}catch(IllegalArgumentException expected){genericDenied=true;}
+        helper.assertTrue(genericDenied,"Imported material expansion does not broaden generic/model block admission");
         for(String fault:new String[]{"owner","pass","behavior","grant","foreign-world","inventory","unsafe-extent","fractional-cell","component"}){
             var value=source();
             switch(fault){

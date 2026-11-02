@@ -42,7 +42,7 @@ public final class SchematicGameTests {
         placement.add(block(2,0,0,"minecraft:oak_planks"));placement.add(block(3,0,0,"minecraft:chest[facing=north]"));placement.add(block(4,0,0,"minecraft:no_such_block"));
         var wider=SchematicBlueprint.candidate(placement,8,"d".repeat(64),"s".repeat(64),"world","minecraft:overworld","00000000-0000-0000-0000-000000000001");
         var unsupported=SchematicBlueprint.unsupported(wider);
-        helper.assertTrue(unsupported.contains("oak_planks") && unsupported.contains("chest") && unsupported.contains("no_such_block (unknown to this game version)"),"Unsupported and unknown blocks are named: "+unsupported);
+        helper.assertTrue(!unsupported.contains("oak_planks") && unsupported.contains("chest") && unsupported.contains("no_such_block (unknown to this game version)"),"Validated building cubes are supported while inventory and unknown blocks remain refused: "+unsupported);
         boolean refused=false;try{Blueprint.parse(wider,"world","minecraft:overworld");}catch(IllegalArgumentException expected){refused=true;}
         helper.assertTrue(refused,"The core parser still refuses blocks outside the safe library");
         helper.succeed();

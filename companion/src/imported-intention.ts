@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import materials from "../../catalog/imported-materials.json" with { type: "json" };
 import { parseBlockState } from "./schematics/index.js";
 import { rotatePosition } from "./geometry.js";
 import {
@@ -36,6 +37,9 @@ const properties: Record<string, Record<string, readonly string[]>> = {
   "minecraft:redstone_wall_torch": { facing: horizontal, lit: bool },
 };
 
+if (materials.schemaVersion !== 1 || materials.minecraft !== "26.3")
+  throw new TypeError("Unsupported imported material snapshot");
+for (const id of materials.ids) properties[id] = {};
 /** Exact server-normalized geometry. Descriptive hashes grant no authority or behavior. */
 export function readImportedIntention(
   value: unknown,

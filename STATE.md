@@ -4,6 +4,18 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Material evidence: sourceb4faabc / CI41530710501 Fabric passed all157 native tests.
+Inspected artifact work/imported-materials-41530710501: native candidate set has182
+vanilla single-state full cubes. Extracted catalog/imported-materials.json from
+that observed report. New imported-only admission requires pinned membership and
+native predicates; companion uses the same snapshot. Native test requires exact
+registry/snapshot equality; generic/model admission remains narrow. Release zip and
+paired jar must contain identical snapshot bytes. Gameplay fixture now uses16
+cobblestone/16 oak-plank supports plus3 devices (35 total), including restart/undo.
+Broadened runtime admission and gameplay are new changes pending fresh CI, not
+proved by the earlier candidate enumeration. Slabs, stairs, inventories, gravity,
+interactive/dynamic blocks and arbitrary redstone still remain outside this set.
+
 Imported CI41530710501/sourceb4faabc Companion and Windows jobs now passed; native,
 client and dedicated jobs remain live. Adapter now rejects fractional, numeric-
 string and out-of-int-range coordinates before Blueprint.parse, rather than

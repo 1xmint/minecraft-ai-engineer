@@ -51,6 +51,7 @@ public record Blueprint(String id, String projectId, int revision, String worldI
             BlockState state = state(b.get("state").getAsString()).rotate(rotation);
             if (state.isAir() || state.hasBlockEntity()) throw new IllegalArgumentException("Air and block entities cannot be built");
             if (!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP,Blocks.REDSTONE_WALL_TORCH).contains(state.getBlock())
+                    && !(ImportedBlueprint.describes(json) && ImportedMaterials.supports(state))
                     && !(state.is(Blocks.OBSERVER) && json.has("provenance") && json.getAsJsonObject("provenance").get("kind").getAsString().equals("curated")
                         && Set.of("observer-pulse","composition").contains(json.getAsJsonObject("provenance").get("template").getAsString())))
                 throw new IllegalArgumentException("Block is outside the supported safe circuit library");

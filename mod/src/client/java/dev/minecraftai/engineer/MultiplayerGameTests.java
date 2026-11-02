@@ -1941,7 +1941,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(edited,Blocks.DIORITE.defaultBlockState()));
         connectedAction(server,project->{boolean denied=false;try{project.undo();}catch(IllegalStateException conflict){denied=conflict.getMessage().contains("Undo blocked by later edit");}
             check(denied && project.journal.size()==35 && project.level().getBlockState(edited).is(Blocks.DIORITE) && project.delegation==null,"Imported post-restart undo preserves a later player block edit and all owned records");});
-        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(edited,Blocks.STONE.defaultBlockState()));
+        server.runOnServer(s->{var project=session(s,"Alice");var intended=project.blueprint.blocks().stream().filter(block->block.pos().equals(edited)).findFirst().orElseThrow().state();project.level().setBlockAndUpdate(edited,intended);});
         assertPersisted(server);write("imported-restarted.done","passed");
         connectedAction(server,EngineeringSession::undo);
         server.waitFor(s->session(s,"Alice").journal.isEmpty(),60_000);

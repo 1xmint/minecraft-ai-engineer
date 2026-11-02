@@ -53,7 +53,7 @@ final class SchematicBlueprint {
             String id=state.contains("[")?state.substring(0,state.indexOf('[')):state;
             try{
                 var block=Blueprint.state(state);
-                if(!Set.of(Blocks.STONE,Blocks.LEVER,Blocks.REPEATER,Blocks.REDSTONE_LAMP,Blocks.REDSTONE_WALL_TORCH).contains(block.getBlock()) || block.hasBlockEntity())out.add(id.replaceFirst("^minecraft:",""));
+                if(!ImportedMaterials.supports(block) || block.hasBlockEntity())out.add(id.replaceFirst("^minecraft:",""));
             }catch(IllegalArgumentException unknown){out.add(id.replaceFirst("^minecraft:","")+" (unknown to this game version)");}
         }
         return List.copyOf(out);

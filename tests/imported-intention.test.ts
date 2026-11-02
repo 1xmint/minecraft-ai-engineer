@@ -147,3 +147,20 @@ test("server gateway still requires the exact current revision for imported geom
     ),
   );
 });
+test("pinned ordinary building materials are admitted only as untested imported geometry", () => {
+  const value: any = source();
+  value.blocks[0].state = "minecraft:cobblestone";
+  value.resources = {
+    "minecraft:cobblestone": 1,
+    "minecraft:lever": 1,
+    "minecraft:redstone_lamp": 1,
+  };
+  assert.equal(readImportedIntention(value, context).verification, "untested");
+  value.blocks[0].state = "minecraft:sand";
+  value.resources = {
+    "minecraft:sand": 1,
+    "minecraft:lever": 1,
+    "minecraft:redstone_lamp": 1,
+  };
+  assert.throws(() => readImportedIntention(value, context));
+});

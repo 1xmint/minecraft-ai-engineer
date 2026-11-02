@@ -981,7 +981,7 @@ final class EngineeringSession implements BuildExecutor {
         var ordered=new ArrayList<JsonObject>();for(var item:source.getAsJsonArray("blocks"))ordered.add(item.getAsJsonObject());
         ordered.sort(Comparator.comparingInt((JsonObject cell)->{
             var state=Blueprint.state(cell.get("state").getAsString());
-            return state.is(net.minecraft.world.level.block.Blocks.STONE) || state.is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?0:1;
+            return ImportedMaterials.candidate(state) || state.is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?0:1;
         }).thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getY())
           .thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getZ()).thenComparingInt(cell->Blueprint.pos(cell.getAsJsonObject("pos")).getX()));
         var blocks=new JsonArray();ordered.forEach(blocks::add);source.add("blocks",blocks);
