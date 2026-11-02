@@ -61,7 +61,7 @@ final class SchematicClient {
         boolean editing=Set.of("import","transform","export").contains(r.action());
         switch(r.action()){
             case "inspect" -> body.addProperty("name",r.name());
-            case "import" -> {body.addProperty("name",r.name());body.addProperty("discard",r.discard());body.add("transform",JsonNull.INSTANCE);}
+            case "import" -> {body.addProperty("name",r.name());body.addProperty("discard",r.discard());}
             case "design" -> body.addProperty("designId",r.design());
             case "transform" -> {body.addProperty("designId",r.design());body.addProperty("transform",r.transform());}
             case "compare" -> {body.addProperty("designId",r.design());body.addProperty("otherId",r.other());}
