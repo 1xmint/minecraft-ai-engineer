@@ -4,6 +4,16 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Focused CI41532825264/sourcecb0d832 passed8 tests,0 failures, including omitted
+transform import and missing-discard/name/unknown-transform refusals. Full imported
+CI41530710501 terminated FAILURE in the connected flow before schematic gameplay:
+after436-cell construction, final asynchronous conversational test completion was
+checked against the preceding PAUSED state. Correctionee8ff98 first requires an
+actually VERIFYING trial, then retains the full pass/restoration assertions. No
+production guard changed. Added native connected-viewer denial for schematic
+import/rotate/export/preview. Scoped client compilation passed for both changes;
+fresh combined full CI is required. Parent41530574368 remains live; do not cancel.
+
 Integrated Claude's later import compatibility fix2dd20c2 as4cfe78e: only the
 empty transform field may be omitted; explicit null remains supported. Kept the
 core's existing null-preserving transport and preview hooks. HTTP proof now uses
