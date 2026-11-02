@@ -4,6 +4,14 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Verified current-run native evidence: source0a81172 / CI41528081343 Fabric passed
+all156 required tests. Artifact inspected at work/imported-native-41528081343:
+imported canonical preview/reload, request-null transport and partial-junction
+regressions passed; native imported source matched the companion reader. Connected
+replay passed32 cases/1792 frames in4 rotations. This does not prove the dedicated
+player flow; its job is still live, and later restart/admission-test changes are
+not in that source. No local behavior tests ran.
+
 2026-11-02 parallel core slice: work/imported-core, phase/28-imported-core,
 based on pending PR45 source915139e. Claude's PR44 remains his feature lane;
 its last dedicated run failed at import request-schema mismatch and Companion
