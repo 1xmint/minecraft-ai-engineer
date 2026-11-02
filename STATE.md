@@ -18,6 +18,7 @@ proposal, permissions, placement ordering, isolation, undo/restart and real
 in-game proof remain. Do not claim schematic construction complete.
 
 Imported core Outcomes:
+
 - I1: authorized users can preview exact imported geometry in their selected
   workspace without execution or functional claims. Native source-injection,
   permission denial, containment and saved-session reload are the proof.
@@ -36,6 +37,12 @@ Imported engineering contract has no ports or cases; FunctionalTrial refuses to
 start it and rejects imported evidence/input-control recovery claims. Added native
 preview/unauthorized replacement/saved-session reload tests. Full I2/I3 gameplay,
 companion schema admission and Claude feature hook remain incomplete.
+
+CI41525271966 found two concrete failures: STATE formatting and native imported
+preview acceptance expected a catalog template in ComponentTree.nodes. Fixed
+imported root descriptor to schematic-geometry (no ports or behavior) and retained
+the failing native preview/reload proof. Full run is still live; save fixes after
+scoped checks and dispatch a fresh run only when it terminates.
 
 ## Parallel ownership — 2026-11-02
 
