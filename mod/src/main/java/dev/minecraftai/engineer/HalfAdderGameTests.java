@@ -117,6 +117,13 @@ public final class HalfAdderGameTests {
             int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
             var intention=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",new BlockPos(24,2,24),angle);
             var source=intention.source();
+            var planned=intention.blueprint();
+            helper.assertTrue(planned.blocks().size()==436 && planned.stages().size()==5,"Connected contract converts into complete native planning geometry");
+            for(var cell:design.cells()){
+                var pos=cell.pos().rotate(rotation).offset(new BlockPos(24,2,24));
+                var block=planned.blocks().stream().filter(candidate->candidate.pos().equals(pos)).findFirst().orElseThrow();
+                helper.assertTrue(block.state().equals(cell.state().rotate(rotation)) && block.stage().equals(cell.stage()) && block.component().equals(cell.component()),"Native plan preserves rotated state, stage and component identity");
+            }
             System.out.println("ENGINEER_CONNECTED_INTENTION "+source);
             helper.assertTrue(ConnectedIntention.read(source,"test","minecraft:overworld",identity).source().equals(source),"Canonical connected source round-trips independently of execution");
             for(String corruption:new String[]{"owner","verified","geometry","role","edge","digest","bounds"}){

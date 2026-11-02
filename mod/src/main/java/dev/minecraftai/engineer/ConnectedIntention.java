@@ -9,6 +9,20 @@ final class ConnectedIntention {
     private final JsonObject source;
     private ConnectedIntention(JsonObject source){this.source=source.deepCopy();}
     JsonObject source(){return source.deepCopy();}
+    Blueprint blueprint(){
+        var anchor=Blueprint.pos(source.getAsJsonObject("anchor"));int angle=integer(source.get("rotation"));
+        var rotation=Blueprint.rotation(angle);var blocks=new java.util.ArrayList<Blueprint.PlannedBlock>();
+        for(var item:source.getAsJsonArray("blocks")){
+            var cell=item.getAsJsonObject();blocks.add(new Blueprint.PlannedBlock(Blueprint.pos(cell.getAsJsonObject("pos")).rotate(rotation).offset(anchor),
+                Blueprint.state(text(cell.get("state"))).rotate(rotation),text(cell.get("stage")),text(cell.get("component"))));
+        }
+        var stages=new java.util.ArrayList<Blueprint.Stage>();
+        for(var item:source.getAsJsonArray("stages")){
+            var stage=item.getAsJsonObject();stages.add(new Blueprint.Stage(text(stage.get("id")),text(stage.get("title")),text(stage.get("explanation"))));
+        }
+        return new Blueprint(text(source.get("id")),text(source.get("projectId")),integer(source.get("revision")),text(source.get("worldId")),text(source.get("dimension")),
+            text(source.get("name")),anchor,angle,java.util.List.copyOf(blocks),java.util.List.copyOf(stages),source());
+    }
 
     static ConnectedIntention create(UUID id,int revision,UUID project,String world,String dimension,BlockPos anchor,int angle){
         if(id==null || project==null || anchor==null || revision<1 || world==null || !world.matches("[a-zA-Z0-9_.:-]{1,256}")

@@ -263,3 +263,11 @@ settle to exact canonical static geometry; removing A's physical branch must
 change wire arms in the read-only native projection while a manual dot remains
 distinct and untouched. These fixtures do not yet exercise EngineeringSession
 journals, permissions, interruption or undo; C3 remains incomplete.
+
+ConnectedIntention now converts its already-regenerated contract to native
+Blueprint plans without broadening generic parser admission. Four-rotation native
+proofs check all436 positions/states/stage/component identities and five stages.
+Scoped Java compilation passed. Latest source still requires a fresh complete CI
+after41472491344 terminates; its Fabric/Companion/Windows/client jobs are green,
+dedicated multiplayer remains live. PR42's41472675876 has the same four green
+jobs and a live dedicated job. No merge or replacement run while these are live.
