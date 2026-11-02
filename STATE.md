@@ -392,3 +392,10 @@ retests. After a real pass, undo must reject the player's originally-on lever
 before touching any of436 records; only after the player resets it may undo
 continue. Both negative/success markers are required by client coordination.
 These are pending exact-source CI proofs, not reported as executed gameplay.
+
+Added actual Bob viewer/editor commands to the dedicated connected flow: viewer
+build/test/undo deny without a lease or changes; editor starts a real two-case
+trial; Alice revokes him and recovery remains pending without authority; Bob's
+resume denies; Alice explicitly restores A-on/B-off without resuming a trial or
+recording a pass. Required connected-revocation marker gates client completion.
+This remains pending the next exact-source CI, not established multiplayer proof.

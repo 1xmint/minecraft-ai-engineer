@@ -1097,6 +1097,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
             awaitFile(context,"connected-functional.done");awaitFile(context,"connected-undo.done");
             awaitFile(context,"connected-interruption.done");awaitFile(context,"connected-player-edit.done");
+            awaitFile(context,"connected-revocation.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
             MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
@@ -2066,7 +2067,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==436,"Production connected construction must complete: "+project.status());
             var input=EngineeringContracts.contract(project.blueprint).ports().stream().filter(port->port.name().equals("a:control")).findFirst().orElseThrow();
             var actual=project.level().getBlockState(input.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),input.pos(),player(s,"Alice"));});
-        context.waitTicks(12);connectedAction(server,EngineeringSession::test);
+        context.waitTicks(12);
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);
+            commandAs(s,"Bob","engineer build");commandAs(s,"Bob","engineer test");commandAs(s,"Bob","engineer undo");
+            check(project.journal.size()==436 && project.delegation==null && project.testTick<0,"Shared connected viewer gains no execution or test authority");
+            commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer test");});
+        server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick>=0 && project.trial.pending(),"Authorized shared editor actually starts the connected trial");
+            commandAs(s,"Alice","engineer project revoke Bob");check(project.delegation==null && project.trial.pending() && !project.verified.startsWith("passed:"),"Revocation retains recovery facts without mutation authority");
+            commandAs(s,"Bob","engineer resume");check(project.delegation==null && project.trial.pending(),"Revoked editor cannot restore connected inputs");});
+        connectedAction(server,EngineeringSession::resume);
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.trial.pending() && project.delegation==null && project.testTick<0,"Owner explicitly reconciles revoked connected trial without resuming it");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Owner restores original controls after revoked editor");});
+        write("connected-revocation.done","passed");connectedAction(server,EngineeringSession::test);
         server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 || session(s,"Alice").state.equals("PAUSED"),30_000);
         server.runOnServer(s->check(session(s,"Alice").testTick>=0,"Connected interruption must reach an actual running production trial"));
         MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
