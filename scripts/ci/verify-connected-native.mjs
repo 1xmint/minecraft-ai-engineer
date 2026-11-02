@@ -57,6 +57,11 @@ for (const report of reports("ENGINEER_HALF_ADDER_PROBE ")) {
       b,
     });
     assert.equal(trace.verdict, "passed");
+    assert.equal(
+      trace.startGameTick,
+      report.cases[0].startGameTick + index * 64,
+      "Native cases retain their actual ordered, disjoint clock windows",
+    );
     const frames = report.samples.slice(index * 56, (index + 1) * 56);
     assert.deepEqual(
       trace.samples,
@@ -71,6 +76,13 @@ for (const report of reports("ENGINEER_HALF_ADDER_PROBE ")) {
       }),
     );
   }
+  assert.deepEqual(report.restoration, {
+    gameTick: report.cases[0].startGameTick + 512,
+    originalA: false,
+    originalB: false,
+    observedA: false,
+    observedB: false,
+  });
 }
 assert.deepEqual(seen, rotations);
 const intentions = reports("ENGINEER_CONNECTED_INTENTION ");

@@ -84,6 +84,10 @@ public final class HalfAdderGameTests {
             var report=new JsonObject();report.addProperty("schemaVersion",1);report.addProperty("rotation",rotation.name());report.addProperty("cells",design.cells().size());
             report.addProperty("authority","native prototype only; no admitted project or functional pass");report.add("graph",design.graph());report.add("samples",samples);
             report.addProperty("graphDigest",design.graphDigest());report.add("geometry",design.geometry());var cases=new JsonArray();
+            var restoration=new JsonObject();restoration.addProperty("gameTick",helper.getLevel().getGameTime());
+            restoration.addProperty("originalA",false);restoration.addProperty("originalB",false);
+            restoration.addProperty("observedA",lever(helper,at(design.control("a"),rotation)));restoration.addProperty("observedB",lever(helper,at(design.control("b"),rotation)));
+            report.add("restoration",restoration);
             for(int index=0;index<8;index++){
                 int vector=index<4?index:7-index;
                 helper.assertTrue(traces[index].passed() && ConnectedTrace.read(traces[index].json(),design.graphDigest(),(vector&2)!=0,(vector&1)!=0).passed(),"Actual complete pin/clock evidence replays against separately supplied canonical graph and inputs");

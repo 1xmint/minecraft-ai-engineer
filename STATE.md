@@ -279,3 +279,12 @@ guards remain unchanged. The native branch/dot fixture now exercises this actual
 helper: initial exact shape, allowed owned branch transition, rejected manual dot,
 and read-only preservation. No generic parser admission or new live-pass authority.
 Full session undo/restart/conflict flow still needs C3 proof.
+
+Fresh native replay now also requires eight disjoint ordered64-tick case starts
+and an actual post-suite restoration observation at start+512, retaining both
+original and observed external control states. This fixture currently starts both
+off; initially-on input recovery still needs the actual C3 trial/restart proof.
+FunctionalTrial inspection confirms contract selection and evidence recovery must
+be extended together before generic source admission; otherwise a saved connected
+project would fail reload. Keep the family out of the normal planning menu until
+that complete path is implemented and proven.
