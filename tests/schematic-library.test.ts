@@ -12,7 +12,7 @@ import {
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import type {
   GatewayContext,
@@ -76,6 +76,7 @@ function workspace() {
 }
 
 async function start(
+  t: TestContext,
   dbPath: string,
   schematicDirectory: string | undefined,
   epoch = "epoch-one",
@@ -87,6 +88,20 @@ async function start(
     provider: noModel,
     ...(schematicDirectory === undefined ? {} : { schematicDirectory }),
   });
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    if (server.listening) {
+      const done = new Promise<void>((resolve) =>
+        server.close(() => resolve()),
+      );
+      server.closeAllConnections();
+      await done;
+    }
+    store.close();
+  };
+  t.after(close);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const post = async (route: string, value: unknown) => {
@@ -127,19 +142,13 @@ async function start(
       blueprint: makeReferenceBlueprint(design),
     });
   assert.equal((await sync()).status, 200);
-  const close = async () => {
-    const done = new Promise<void>((resolve) => server.close(() => resolve()));
-    server.closeAllConnections();
-    await done;
-    store.close();
-  };
   return { post, sync, close };
 }
 
-test("a player inspects, imports, transforms, compares and lists a real WorldEdit schematic, and it survives a restart", async () => {
+test("a player inspects, imports, transforms, compares and lists a real WorldEdit schematic, and it survives a restart", async (t) => {
   const w = workspace();
   try {
-    let f = await start(w.db, w.schematics);
+    let f = await start(t, w.db, w.schematics);
     copyFileSync(
       fixture("worldedit-fabric-7.3.schem"),
       join(w.library, "castle.schem"),
@@ -223,7 +232,7 @@ test("a player inspects, imports, transforms, compares and lists a real WorldEdi
 
     await f.close();
     // Restart: a new process, a new server epoch, the same SQLite file.
-    f = await start(w.db, w.schematics, "epoch-two");
+    f = await start(t, w.db, w.schematics, "epoch-two");
     const after = await f.post("/v2/schematic/designs", {
       context: context({ serverEpoch: "epoch-two", actorId: VIEWER }),
     });
@@ -262,10 +271,10 @@ test("a player inspects, imports, transforms, compares and lists a real WorldEdi
   }
 });
 
-test("non-members, viewers, revoked editors and disconnected requests get nothing and change nothing", async () => {
+test("non-members, viewers, revoked editors and disconnected requests get nothing and change nothing", async (t) => {
   const w = workspace();
   try {
-    const f = await start(w.db, w.schematics);
+    const f = await start(t, w.db, w.schematics);
     copyFileSync(
       fixture("worldedit-fabric-7.3.schem"),
       join(w.library, "castle.schem"),
@@ -372,10 +381,10 @@ test("non-members, viewers, revoked editors and disconnected requests get nothin
   }
 });
 
-test("oversized, entity-bearing, corrupt, linked and badly named files are refused with a reason and leave everything unchanged", async () => {
+test("oversized, entity-bearing, corrupt, linked and badly named files are refused with a reason and leave everything unchanged", async (t) => {
   const w = workspace();
   try {
-    const f = await start(w.db, w.schematics);
+    const f = await start(t, w.db, w.schematics);
     copyFileSync(
       fixture("hollowcube-2x2-chunk-vert.schem"),
       join(w.library, "tower.schem"),
@@ -434,10 +443,10 @@ test("oversized, entity-bearing, corrupt, linked and badly named files are refus
   }
 });
 
-test("export writes a new Sponge file once and never replaces an existing one", async () => {
+test("export writes a new Sponge file once and never replaces an existing one", async (t) => {
   const w = workspace();
   try {
-    const f = await start(w.db, w.schematics);
+    const f = await start(t, w.db, w.schematics);
     const geometry = {
       format: "minecraft-ai-engineer.schematic-geometry",
       formatVersion: 1,
@@ -487,10 +496,10 @@ test("export writes a new Sponge file once and never replaces an existing one", 
   }
 });
 
-test("schematic routes report that they are off when no library folder is configured", async () => {
+test("schematic routes report that they are off when no library folder is configured", async (t) => {
   const w = workspace();
   try {
-    const f = await start(w.db, undefined);
+    const f = await start(t, w.db, undefined);
     const off = await f.post("/v2/schematic/library", { context: context() });
     assert.equal(off.status, 404);
     assert.match(off.body.error, /not configured/);

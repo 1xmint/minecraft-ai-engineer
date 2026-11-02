@@ -20,6 +20,12 @@ registry snapshot on CI and compare native/TS membership before admission. This
 excludes gravity/absorption/interactive subclasses; it is not universal safety or
 all-block support. Do not broaden runtime admission before those native proofs.
 
+CI triage: schematic-library HTTP tests previously closed their server/SQLite
+only after all assertions passed. TestContext cleanup now registers idempotent
+server/connection/store closure before setup assertions, retaining explicit close
+for restart cases. Failed assertions must report without a leaked listening
+server keeping the test worker alive. Type/format checks passed; no local tests.
+
 Added read-only native material probe: enumerate pinned vanilla exact Block.class
 single-state full cubes without BE/fluid/signal/analog behavior. Requires ordinary
 cobblestone/planks, rejects representative dynamic/interactive/partial/invisible
