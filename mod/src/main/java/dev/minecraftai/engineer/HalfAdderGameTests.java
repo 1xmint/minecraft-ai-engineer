@@ -113,6 +113,30 @@ public final class HalfAdderGameTests {
             for(int index=1;index<56;index++){var frame=frames.get(index).getAsJsonObject();replay.sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));}
             helper.assertTrue(replay.passed(),"A rejected malformed sample cannot poison a later complete physical trace");
 
+            var identity=java.util.UUID.fromString("db1175eb-1559-4cca-a740-d63f224a4068");
+            int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
+            var intention=ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",new BlockPos(24,2,24),angle);
+            var source=intention.source();
+            helper.assertTrue(ConnectedIntention.read(source,"test","minecraft:overworld",identity).source().equals(source),"Canonical connected source round-trips independently of execution");
+            for(String corruption:new String[]{"owner","verified","geometry","role","edge","digest","bounds"}){
+                var forged=source.deepCopy();
+                switch(corruption){
+                    case "owner"->forged.addProperty("owner",identity.toString());
+                    case "verified"->forged.addProperty("verification","passed");
+                    case "geometry"->forged.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:air");
+                    case "role"->forged.getAsJsonObject("connected").getAsJsonArray("ports").get(0).getAsJsonObject().addProperty("role","signal_input");
+                    case "edge"->forged.getAsJsonObject("connected").getAsJsonArray("nets").remove(0);
+                    case "digest"->forged.addProperty("graphDigest","0".repeat(64));
+                    case "bounds"->forged.getAsJsonObject("bounds").getAsJsonObject("max").addProperty("x",0);
+                }
+                rejects(helper,()->ConnectedIntention.read(forged,"test","minecraft:overworld",identity),"Forged connected source rejects "+corruption);
+            }
+            rejects(helper,()->ConnectedIntention.read(source,"other-world","minecraft:overworld",identity),"World rebinding rejects");
+            rejects(helper,()->ConnectedIntention.read(source,"test","minecraft:the_nether",identity),"Dimension rebinding rejects");
+            rejects(helper,()->ConnectedIntention.read(source,"test","minecraft:overworld",new java.util.UUID(0,0)),"Project rebinding rejects");
+            rejects(helper,()->ConnectedIntention.create(identity,1,identity,"test","minecraft:overworld",new BlockPos(Integer.MAX_VALUE,0,Integer.MIN_VALUE),angle),"Overflowing placement rejects before coordinate addition");
+            source.addProperty("owner","external mutation");
+            helper.assertTrue(!intention.source().has("owner"),"Connected source snapshots are defensive copies");
             System.out.println("ENGINEER_HALF_ADDER_PROBE "+report);helper.succeed();
         });
     }

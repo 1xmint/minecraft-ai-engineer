@@ -167,10 +167,18 @@ launch unnecessary model probes. Current work needs no SDK call.
   optimization; coordinated multiple builders. File interchange/analysis alone
   does not complete the schematic feature.
 
-Claude's offered independent lane remains schematic transforms only:
+Claude delivered transforms in PR42 at58202dc, with all five CI41379536160
+checks green. Parent review found maximal zero-volume traversal; fixe314a4b
+skips traversal and adds all-axis/all-operation regressions. Updated CI41472675876
+is live; merge only its exact green head. Next offered Claude lane is a standalone
+file-only transform CLI in the same reserved paths, with explicit formats,
+bounded reads, alias/output preservation and independent NBT output checks.
+Codex retains in-game integration and memory ownership.
+
+Claude's independent lane remains schematic transforms only:
 companion/src/schematic-transforms/**, tests/schematic-transforms*.test.ts,
 docs/schematic-transforms.md. No mod/core/auth/storage/provider/CI/memory changes.
-No delivery seen yet. Do not edit those reserved paths.
+Do not overlap Claude's next CLI work in those paths.
 
 Next: finish the README/download documentation checks, watch the new connected-codec run
 to terminal without restarts, and continue strict connected source/evidence work.
@@ -219,3 +227,12 @@ the semantic graph/geometry digest and compares all 32 Java case snapshots to
 the same run's 1792 raw native frames through the TypeScript reader. That new
 cross-runtime proof is pending CI. It does not grant project authority or complete
 strict source admission/C3. No behavioral tests ran locally.
+
+ConnectedIntention.java now regenerates a bounded canonical half-adder source,
+binding exact geometry, typed graph/routes, digest, identity, anchor/orientation,
+bounds and untested provenance. Long arithmetic checks every rotated cell before
+coordinate addition. Native proofs now reject metadata/pass/geometry/role/edge/
+digest/bounds tampering, world/dimension/project rebinding and overflowing anchors,
+and verify defensive snapshots. These new proofs await CI after the existing
+5387f0d run finishes. No production Blueprint.parse admission is enabled yet;
+companion parity and construction guards remain required.
