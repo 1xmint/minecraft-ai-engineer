@@ -1096,6 +1096,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             // Follow actual phase receipts before starting the later conversation wait.
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
             awaitFile(context,"connected-functional.done");awaitFile(context,"connected-undo.done");
+            awaitFile(context,"connected-interruption.done");awaitFile(context,"connected-player-edit.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
             MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
@@ -2066,12 +2067,21 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var input=EngineeringContracts.contract(project.blueprint).ports().stream().filter(port->port.name().equals("a:control")).findFirst().orElseThrow();
             var actual=project.level().getBlockState(input.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),input.pos(),player(s,"Alice"));});
         context.waitTicks(12);connectedAction(server,EngineeringSession::test);
+        server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->check(session(s,"Alice").testTick>=0,"Connected interruption must reach an actual running production trial"));
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && !project.verified.startsWith("passed:"),"Interrupted connected trial restores inputs and releases authority without a pass");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Interruption restores originally-on/off controls exactly");});
+        write("connected-interruption.done","passed");connectedAction(server,EngineeringSession::test);
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"Production whole-circuit trial must pass: "+project.status());
             ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
             check(!project.hasPendingTest() && project.delegation==null,"Connected pass follows restoration and lease release");
             for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Exact originally-on/off controls restored");});
         assertPersisted(server);write("connected-functional-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("connected-functional.done","passed");
+        connectedAction(server,project->{boolean blocked=false;try{project.undo();}catch(IllegalStateException expected){blocked=expected.getMessage().contains("Undo blocked by later edit");}
+            check(blocked && project.journal.size()==436 && project.delegation==null,"Undo preflight preserves all construction when the player's originally-on lever differs from assistant after-state");});
+        write("connected-player-edit.done","passed");
         server.runOnServer(s->{var project=session(s,"Alice");var port=EngineeringContracts.contract(project.blueprint).ports().stream().filter(input->input.name().equals("a:control")).findFirst().orElseThrow();
             var actual=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),port.pos(),player(s,"Alice"));});
         context.waitTicks(12);connectedAction(server,EngineeringSession::undo);

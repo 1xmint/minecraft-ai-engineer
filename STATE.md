@@ -385,3 +385,10 @@ pending controls, then independently replays all8 cases against canonical digest
 Scoped client compilation and script syntax checks passed; full behavior awaits
 the next exact-source CI after41476541185 finishes. Shared Bob/revocation, full
 saved-server restart, human teaching and normal conversation planning remain.
+
+Dedicated connected flow now additionally interrupts a genuinely running trial
+after two cases, requires exact A-on/B-off restoration/no pass/no lease, then
+retests. After a real pass, undo must reject the player's originally-on lever
+before touching any of436 records; only after the player resets it may undo
+continue. Both negative/success markers are required by client coordination.
+These are pending exact-source CI proofs, not reported as executed gameplay.
