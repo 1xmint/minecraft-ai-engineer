@@ -4,6 +4,13 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Expanded-material feedback source3b2ed50 / CI41531718943 passed8 tests,0 failures.
+This includes pinned cobblestone admission and sand refusal plus HTTP library/
+restart/permission cases; it is not native runtime or multiplayer proof. Added
+docs/schematic-building.md explaining chat preview/approval, bounding-corner
+placement, supported materials, untested behavior, conflicts, recovery and export.
+Guide explicitly marks development/pending CI and absence from alpha.2.
+
 Material evidence: sourceb4faabc / CI41530710501 Fabric passed all157 native tests.
 Inspected artifact work/imported-materials-41530710501: native candidate set has182
 vanilla single-state full cubes. Extracted catalog/imported-materials.json from
