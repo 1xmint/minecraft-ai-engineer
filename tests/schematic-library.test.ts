@@ -43,6 +43,8 @@ const design = {
   anchor: { x: 0, y: 100, z: 0 },
   rotation: 0 as const,
 };
+// A server restart or permission sync does not create a new intended revision.
+const referenceBlueprint = makeReferenceBlueprint(design);
 const noModel: PlanningProvider = {
   async plan() {
     throw new Error("Schematic routes must never call a model");
@@ -139,7 +141,7 @@ async function start(
       dimension: design.dimension,
       name: "Imported designs",
       members: list,
-      blueprint: makeReferenceBlueprint(design),
+      blueprint: referenceBlueprint,
     });
   assert.equal((await sync()).status, 200);
   return { post, sync, close };
