@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  serverBlueprint,
+  type GatewayContext,
+} from "../companion/src/gateway-types.js";
+import {
   createConnectedIntention,
   readConnectedIntention,
 } from "../companion/src/connected-intention.js";
@@ -17,6 +21,36 @@ const input = {
   anchor: { x: 24, y: 2, z: 24 },
   rotation: 0 as const,
 };
+
+test("connected server admission binds the exact current project revision", () => {
+  const value = createConnectedIntention(input);
+  const gateway: GatewayContext = {
+    serverId: "server",
+    serverEpoch: "epoch",
+    actorId: id,
+    projectId: id,
+    projectRevision: 1,
+    authorizationRevision: 1,
+    requestId: "request",
+  };
+  assert.deepEqual(
+    serverBlueprint(value, gateway, "test", "minecraft:overworld"),
+    value,
+  );
+  assert.throws(() =>
+    serverBlueprint(
+      value,
+      { ...gateway, projectRevision: 2 },
+      "test",
+      "minecraft:overworld",
+    ),
+  );
+  const forged = structuredClone(value);
+  forged.blocks[0]!.state = "minecraft:chest";
+  assert.throws(() =>
+    serverBlueprint(forged, gateway, "test", "minecraft:overworld"),
+  );
+});
 test("canonical connected source rejects altered geometry, topology and authority", () => {
   const source = createConnectedIntention(input);
   assert.deepEqual(source.resources, {

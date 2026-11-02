@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import definition from "../../catalog/half-adder-definition.json" with { type: "json" };
 import recipe from "../../catalog/half-adder.json" with { type: "json" };
 import { rotatePosition } from "./geometry.js";
+import type { Blueprint } from "./types.js";
 import {
   integer,
   object,
@@ -19,6 +20,10 @@ export interface ConnectedIntentionInput {
   anchor: Position;
   rotation: Rotation;
 }
+export interface ConnectedIntention extends Blueprint {
+  connected: typeof definition.graph;
+  graphDigest: string;
+}
 const uuid = (value: unknown): string => {
   if (
     typeof value !== "string" ||
@@ -31,7 +36,9 @@ const uuid = (value: unknown): string => {
 };
 
 /** Intended geometry only. No execution admission, ownership or live verification. */
-export function createConnectedIntention(input: ConnectedIntentionInput) {
+export function createConnectedIntention(
+  input: ConnectedIntentionInput,
+): ConnectedIntention {
   const stageIds = [
     "foundation",
     "controls",
@@ -116,7 +123,27 @@ export function createConnectedIntention(input: ConnectedIntentionInput) {
     name: "Connected one-bit half-adder",
     explanation:
       "Two shared external controls drive four NAND gates and a carry inverter. SUM is A XOR B; CARRY is A AND B. Internal signal pins are observed, never stimulated. Geometry alone does not prove function.",
-    blocks: structuredClone(definition.geometry),
+    blocks: structuredClone(definition.geometry).map((cell) => {
+      const index = stageIds.indexOf(cell.stage);
+      return {
+        ...cell,
+        prerequisites: index > 0 ? [stageIds[index - 1]!] : [],
+      };
+    }),
+    ports: definition.graph.ports
+      .filter((pin) => pin.role === "external_control" || pin.role === "result")
+      .map((pin) => ({
+        name: pin.id,
+        pos: { ...pin.pos },
+        kind: pin.role === "external_control" ? "input" : "output",
+      })),
+    tests: [
+      {
+        id: "connected-half-adder",
+        description:
+          "Observe all twenty pins for eight forward/reverse input cases at consecutive game ticks and restore both original external controls. No latency claim.",
+      },
+    ],
     connected: structuredClone(definition.graph),
     graphDigest: definition.graphDigest,
     bounds: { min: { x: 0, y: 0, z: 0 }, max: { x: 45, y: 1, z: 36 } },

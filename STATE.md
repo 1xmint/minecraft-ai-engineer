@@ -358,3 +358,18 @@ PR42 sourcee314a4b passed all five CI41472675876 checks. Ready/merge encountered
 the protected-main up-to-date requirement; requested GitHub update-branch and
 automatic squash merge after its new checks pass. No bypass/admin merge used.
 PR43 remains separate and its dedicated CI was still live at last observation.
+
+CI41476541185 Fabric evidence inspected at work/connected-source-41476541185:
+all149 required native tests passed, including staged construction, branch/dot,
+canonical source, ordered suites and pending-input session reload. Fresh replay
+passed32 cases/1792 frames across4 rotations. This is native fixture/recovery
+proof, not the complete live shared C3 session flow. Companion job also passed;
+full run remains live until its dedicated job terminates.
+
+Subsequent unproven source adds the normal Blueprint shape to connected intentions:
+per-block stage prerequisites, external-only public ports and test description.
+Java/TS remain exact regenerated counterparts; graph digest still binds raw intended
+geometry and full electrical graph. Companion gateway now admits only this exact
+canonical source after current project/revision checks, with stale revision and
+inventory tampering regressions. Scoped Java/type/format checks passed. Planner
+menu/provider offer remains disabled until actual session flows are proven.

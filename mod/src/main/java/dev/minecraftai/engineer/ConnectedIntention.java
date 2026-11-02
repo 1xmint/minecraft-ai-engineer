@@ -57,6 +57,18 @@ final class ConnectedIntention {
             var required=new JsonArray();if(i>0)required.add(order[i-1]);stage.add("prerequisites",required);stages.add(stage);
         }
         out.add("stages",stages);
+        for(var item:out.getAsJsonArray("blocks")){
+            var block=item.getAsJsonObject();var prerequisites=new JsonArray();String stage=text(block.get("stage"));
+            for(int i=1;i<order.length;i++)if(order[i].equals(stage))prerequisites.add(order[i-1]);
+            block.add("prerequisites",prerequisites);
+        }
+        var ports=new JsonArray();
+        for(var pin:design.pins())if(pin.role()==HalfAdderDesign.Role.EXTERNAL_CONTROL || pin.role()==HalfAdderDesign.Role.RESULT){
+            var port=new JsonObject();port.addProperty("name",pin.id());port.add("pos",Blueprint.jsonPos(pin.pos()));
+            port.addProperty("kind",pin.role()==HalfAdderDesign.Role.EXTERNAL_CONTROL?"input":"output");ports.add(port);
+        }
+        out.add("ports",ports);var tests=new JsonArray();var test=new JsonObject();test.addProperty("id","connected-half-adder");
+        test.addProperty("description","Observe all twenty pins for eight forward/reverse input cases at consecutive game ticks and restore both original external controls. No latency claim.");tests.add(test);out.add("tests",tests);
         var resources=new java.util.TreeMap<String,Integer>();
         for(var cell:design.cells())resources.merge(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(cell.state().getBlock().asItem()).toString(),1,Integer::sum);
         var resourceJson=new JsonObject();resources.forEach(resourceJson::addProperty);out.add("resources",resourceJson);
