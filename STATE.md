@@ -247,3 +247,12 @@ checked. Added tampering, rebinding, rotated bounds and defensive-copy tests.
 Scoped TypeScript/format/syntax checks passed; behavioral proofs await CI. New
 source is not yet admitted to production planning/building. Existing runs remain
 live and must finish before dispatching another same-branch run.
+
+Added matching five-stage teaching text and exact item resource lists in Java/TS.
+Native registry item mapping is checked against the companion during fresh source
+replay, including dust->redstone and wall torch->redstone_torch. Intended counts:
+227 stone,171 redstone,25 repeaters,9 torches,2 levers,2 lamps. Regression asserts
+these and rejects altered quantities/stage dependencies. Scoped compile/type checks
+passed. Construction review confirms strict static wire-arm comparisons during
+partial placement and undo need native transition proof; do not weaken generic
+Blueprint.matches or admit the new family before resolving player-edit safety.

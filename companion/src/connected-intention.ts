@@ -32,6 +32,38 @@ const uuid = (value: unknown): string => {
 
 /** Intended geometry only. No execution admission, ownership or live verification. */
 export function createConnectedIntention(input: ConnectedIntentionInput) {
+  const stageIds = [
+    "foundation",
+    "controls",
+    "logic",
+    "connections",
+    "outputs",
+  ];
+  const titles = [
+    "Support the circuit",
+    "Add shared inputs",
+    "Build the logic gates",
+    "Connect the signal routes",
+    "Add both result lamps",
+  ];
+  const lessons = [
+    "Place all stone supports before adding devices.",
+    "Only A and B are external controls. Internal inputs receive signals from wiring.",
+    "Four NAND gates compute the sum; the carry inverter reads the first NAND output.",
+    "Connect the exact buffered routes. Separate circuits can interfere even when individual gates work.",
+    "Both SUM and CARRY must pass every input row. A matching shape or one correct lamp is insufficient.",
+  ];
+  const resources: Record<string, number> = {};
+  for (const cell of definition.geometry) {
+    const block = cell.state.split("[")[0]!;
+    const item =
+      block === "minecraft:redstone_wire"
+        ? "minecraft:redstone"
+        : block === "minecraft:redstone_wall_torch"
+          ? "minecraft:redstone_torch"
+          : block;
+    resources[item] = (resources[item] ?? 0) + 1;
+  }
   if (
     recipe.id !== "half-adder" ||
     recipe.minecraft !== "26.3" ||
@@ -67,6 +99,13 @@ export function createConnectedIntention(input: ConnectedIntentionInput) {
   }
   return {
     schemaVersion: 1,
+    stages: stageIds.map((id, index) => ({
+      id,
+      title: titles[index]!,
+      explanation: lessons[index]!,
+      prerequisites: index > 0 ? [stageIds[index - 1]!] : [],
+    })),
+    resources,
     id,
     projectId,
     revision,

@@ -19,8 +19,26 @@ const input = {
 };
 test("canonical connected source rejects altered geometry, topology and authority", () => {
   const source = createConnectedIntention(input);
+  assert.deepEqual(source.resources, {
+    "minecraft:stone": 227,
+    "minecraft:redstone": 171,
+    "minecraft:repeater": 25,
+    "minecraft:redstone_torch": 9,
+    "minecraft:lever": 2,
+    "minecraft:redstone_lamp": 2,
+  });
+  assert.deepEqual(
+    source.stages.map((stage) => stage.id),
+    ["foundation", "controls", "logic", "connections", "outputs"],
+  );
   assert.deepEqual(readConnectedIntention(source, context), source);
   const mutations = [
+    (v: any) => {
+      v.resources["minecraft:redstone"] = 0;
+    },
+    (v: any) => {
+      v.stages[3].prerequisites = [];
+    },
     (v: any) => {
       v.owner = id;
     },
