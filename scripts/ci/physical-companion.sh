@@ -42,8 +42,9 @@ launch() {
 launch "$repo" physical-alice Alice
 launch "$temporary/bob" physical-bob Bob
 for pid in "${pids[@]}"; do wait "$pid"; done
-for marker in physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done; do
+for marker in physical-oak.done physical-oak-restarted.done physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done; do
   [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing native receipt: $marker" >&2; exit 1; }
 done
 node scripts/ci/verify-physical-gather.mjs "$coord/gather-records"
+node scripts/ci/verify-physical-oak.mjs "$coord/oak-gather-records"
 echo 'Physical worker recovery proof passed: native mining/pickup, saved inventory reload under denial, plus companion chat and same-world reboot.'

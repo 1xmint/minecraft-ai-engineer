@@ -400,7 +400,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
-        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;
+        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery;
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -542,7 +542,39 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
             physicalBlueprintJobFlow(context,server);
             physicalBuildNavigationFlow(context,server);
+            oakRecovery=physicalOakFlow(context,server);
         }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            server.runOnServer(s->{var manager=EngineerMod.managerFor(s);check(manager.worldId.equals(oakRecovery.world()) && !manager.epoch.equals(oakRecovery.epoch()),"Oak proof restarts the same saved world under a fresh epoch");check(s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")),"Oak resources restore no actor or old tickets automatically");});
+            send(context,"engineer project use "+oakRecovery.project());server.waitFor(s->session(s,"Alice").projectId.toString().equals(oakRecovery.project()));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(oakRecovery.worker());check(body!=null && PhysicalWorkerStorage.inventory(body).equals(oakRecovery.inventory()) && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1,"Actual world restart preserves the exact oak inventory under the same native identity");check(s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native mined source remains absent after saved-world restart");check(!body.gameMode.destroyBlock(new BlockPos(2631,101,6)),"Restored oak inventory grants no native mining authority");});
+            MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"inventory saving was verified at completion");expectChat(context,"saved inventory matches the recorded snapshot");
+            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"Preloaded oak inventory refuses a second gather without clearing or replacing resources"));
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak-restarted.done","passed");
+        }
+    }
+    private record OakRecovery(String project,UUID worker,com.google.gson.JsonArray inventory,String world,UUID epoch) { }
+    private static OakRecovery physicalOakFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2624 -16 2656 32");server.runCommand("fill 2630 100 0 2635 100 9 minecraft:stone");server.runCommand("setblock 2631 101 4 minecraft:oak_log[axis=x]");server.runCommand("setblock 2631 101 6 minecraft:oak_log");server.runCommand("tp Alice 2634.5 101 8 180 0");
+        send(context,"engineer select1 2630 100 0");send(context,"engineer select2 2634 102 7");server.waitFor(s->new BlockPos(2634,102,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 4");expectChat(context,"Requested resource does not match");
+        server.runCommand("setblock 2631 102 4 minecraft:oak_leaves[persistent=true]");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved flat walking route");
+        server.runCommand("setblock 2631 102 4 minecraft:air");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
+        var recovery=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
+            int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==1 && s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native hand mining and exact pickup produce one retained oak log");
+            check(s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"The other original log is untouched");
+            try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==1,"Refused oak requests create no gather journals");var out=directory().resolve("oak-gather-records");Files.createDirectories(out);Files.copy(records.getFirst(),out.resolve("oak.json"));}catch(java.io.IOException failed){throw new IllegalStateException(failed);}
+            return new OakRecovery(project.projectId.toString(),worker,PhysicalWorkerStorage.inventory(body),manager.worldId,manager.epoch);
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak.done","passed");return recovery;
     }
     private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x){
         return setupPhysicalBlueprintJob(context,server,x,false);
@@ -627,7 +659,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 s.overworld().setBlockAndUpdate(changed,Blocks.AIR.defaultBlockState());
             }
         });
-        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"gather nearby dirt and build");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
         server.runOnServer(s->{var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
             check(body!=null && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2590,101,6)).isAir(),"Both original distant resources are consumed through real gather actions");
             check(s.overworld().getBlockState(new BlockPos(2583,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2583,101,4)).is(Blocks.DIRT),"Travel from resources returns retained inventory to both intended cells");
@@ -713,7 +745,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             throw new IllegalStateException("Native inventory worker could not be joined safely",failed);
         }
     }
-    private static int countDirt(ServerPlayer worker){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(net.minecraft.world.item.Items.DIRT))count+=stack.getCount();}return count;}
+    private static int countDirt(ServerPlayer worker){return countItem(worker,net.minecraft.world.item.Items.DIRT);}
+    private static int countItem(ServerPlayer worker,net.minecraft.world.item.Item item){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(item))count+=stack.getCount();}return count;}
     private static Object inventoryPack(ServerPlayer worker){try{return Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(worker);}catch(Exception failed){throw new IllegalStateException(failed);}}
     @SuppressWarnings({"rawtypes","unchecked"})
     private static void gatherAndSaveWorker(ClientGameTestContext context,TestDedicatedServerContext server,UUID id,String name){
