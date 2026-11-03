@@ -508,6 +508,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
+            MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");expectChat(context,"Observation only");
+            server.runOnServer(s->check(countDirt(s.getPlayerList().getPlayer(gatherer))==1 && session(s,"Alice").delegation==null,"Recovery inspection changes no inventory and restores no project lease"));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }
     }
@@ -517,6 +519,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"The companion is at");
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"Only the project owner");
         write("physical-peer-denied.done","passed");disconnect(context);
     }
 

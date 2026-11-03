@@ -63,3 +63,10 @@ inventory. Dismissal stops the task; explicit resummon retains saved resources
 without restoring action permission. Construction and general navigation remain
 unfinished. Interrupted or failed records require inspection; no automatic retry,
 creative compensation or atomic hard-crash recovery is provided.
+
+Say `Engineer, what happened to my gathered resources?` for an owner-only,
+read-only comparison of gather records, saved native inventory and currently
+visible source/drop state. `inspect companion recovery` is an equivalent phrase.
+Missing player data is reported as unavailable, never treated as an empty
+inventory. A missing drop does not prove it was picked up. Inspection grants no
+permission and never creates, removes, retries or compensates resources.

@@ -23,7 +23,7 @@ final class PhysicalCompanions {
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
         var gather=java.util.regex.Pattern.compile("gather dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
-        if(!gatherRequest && !Set.of("summon my companion","dismiss my companion","where is my companion").contains(text))return false;
+        if(!gatherRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
@@ -31,6 +31,7 @@ final class PhysicalCompanions {
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
+        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
         if(gatherRequest){
             var binding=actors.get(project.projectId);
             if(binding==null)throw new IllegalStateException("Summon your companion first");

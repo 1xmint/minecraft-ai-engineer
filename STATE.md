@@ -1001,3 +1001,21 @@ No crash-safe gathering claim or automatic compensation is permitted. A recovery
 flow must be implemented before treating arbitrary restart recovery as complete.
 Latest server/client compilation and shell syntax passed. Prior journal source
 20ba0f8 CI41683046469 SUCCESS; new owner-flow gameplay still pending.
+
+Phase33 recovery inspection: owner-only natural chat (what happened to my gathered
+resources / inspect companion recovery) reads at most128 bounded local records,
+checks exact scope/schema/stage order/private worker identity, loads native data
+into an unjoined player, and compares before/saved snapshots plus current source
+and drop visibility. It never joins/creates resources or restores authority.
+Unavailable native data is not empty; absent drop is not proof of consumption.
+CI adds owner inspection/no-inventory-or-lease-change and editor refusal. This
+exposes uncertainty but does not solve arbitrary crash compensation or restore an
+interrupted transaction. Server/client compilation passed before final phrase
+alias; latest gameplay CI pending. All milestones remain active.
+
+Evidence: owner-flow source867a5e1 CI41683990855 SUCCESS. Downloaded and inspected
+physical-gather.done plus actual chat logs: ownerSURVIVAL requested gather; native
+mining/walk/pickup completed, save verified and resummon retained one dirt with no
+worker BUILD grant. This proves the bounded slice, not general gathering or crash
+atomicity. Luna inspection review found no material privacy or mutation blocker.
+Final server/client compilation passed; new inspection source still needs CI.
