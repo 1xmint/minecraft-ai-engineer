@@ -66,9 +66,11 @@ final class PhysicalPlacementTask implements AutoCloseable {
     private void call(String name,Class<?>[] types,Object... args){try{pack.getClass().getMethod(name,types).invoke(pack,args);}catch(Exception failure){throw new IllegalStateException("Native placement action failed",failure);}}
     private void authority(){
         if(closed || worker.level()!=level || worker.connection!=connection || worker.hasDisconnected() || !worker.isAlive()
-            || level.getServer().getPlayerList().getPlayer(worker.getUUID())!=worker || !worker.blockPosition().equals(start)
-            || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || level.getServer().getTickCount()>=expires)
+            || level.getServer().getPlayerList().getPlayer(worker.getUUID())!=worker
+            || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL)
             throw new IllegalStateException("Placement worker authority changed");
+        if(!worker.blockPosition().equals(start))throw new IllegalStateException("Companion moved from its placement stance; inspect its position before retry");
+        if(level.getServer().getTickCount()>=expires)throw new IllegalStateException("Native placement expired before completion");
         lease.validate(target);
         intention.run();
     }

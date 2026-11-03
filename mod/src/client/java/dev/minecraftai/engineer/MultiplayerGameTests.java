@@ -525,7 +525,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(refused,"Changing a preceding intended support invalidates the physical blueprint step");
             });
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
-            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && body.getDeltaMovement().horizontalDistanceSqr()<1.0e-8 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring motion or grants");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");expectChat(context,"Observation only");
             server.runOnServer(s->check(countDirt(s.getPlayerList().getPlayer(gatherer))==1 && session(s,"Alice").delegation==null,"Recovery inspection changes no inventory and restores no project lease"));
             server.runCommand("setblock 2433 101 4 minecraft:redstone_wire");

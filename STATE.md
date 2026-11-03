@@ -145,3 +145,5 @@ source needs compilation and exact-source CI; prior proof is not reused as new.
 Combined PR52 Java/client compilation and shell syntax passed after preserving
 both parent gather-stop and child blueprint-stop tests plus the memory cases.
 Fresh full and focused CI are required before integration.
+
+Combined source a379a6b failed focused CI41700593882 during gather-to-place handoff: placement authority changed. Residual walking motion is the suspected cause, not yet proven. Gathering now keeps its lease and inventory snapshot until three stationary ticks, explicitly clears forward input, and summon clears prior velocity/fall progress. Placement stance and expiry diagnostics are separate; its guards remain strict. Scoped server/client compile and diff checks passed; fresh exact-source gameplay CI is required.

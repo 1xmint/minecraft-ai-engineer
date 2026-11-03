@@ -105,6 +105,7 @@ final class PhysicalCompanions {
             PhysicalActionGate.bindConnection(actor);
             actor.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
             actor.snapTo(spawn.getX()+0.5,spawn.getY(),spawn.getZ()+0.5,0,0);
+            actor.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);actor.resetFallDistance();
             if(!identity.restore() && !actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an unprivileged identity");
             var pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);pack.getClass().getMethod("stopAll").invoke(pack);
             PhysicalWorkerStorage.save(actor);
@@ -132,7 +133,7 @@ final class PhysicalCompanions {
         var job=jobs.remove(project);if(job!=null)try{job.close();}catch(RuntimeException stopped){failure=stopped;}
         var task=gathering.remove(project);if(task!=null)try{task.close();}catch(RuntimeException stopped){failure=stopped;}
         var placement=placing.remove(project);if(placement!=null)try{placement.close();}catch(RuntimeException stopped){failure=stopped;}
-        try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
+        try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);binding.pack.getClass().getMethod("setForward",float.class).invoke(binding.pack,0f);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
         PhysicalActionGate.cancel(binding.actor);return failure;
     }
     private void dismiss(UUID project){

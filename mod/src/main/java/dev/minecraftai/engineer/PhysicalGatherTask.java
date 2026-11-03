@@ -19,6 +19,9 @@ final class PhysicalGatherTask implements AutoCloseable {
     private net.minecraft.world.entity.item.ItemEntity pickupDrop;
     private final Runnable intention;
     private final boolean alongX;
+    private com.google.gson.JsonArray savedInventory;
+    private Vec3 settledPosition;
+    private int settledTicks;
 
     PhysicalGatherTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source) {
         this(manager,project,worker,pack,source,java.util.Set.of(),()->{});
@@ -73,6 +76,7 @@ final class PhysicalGatherTask implements AutoCloseable {
             throw new IllegalStateException("Gather worker or time limit changed");
         lease.validate(source);
         intention.run();
+        if(picking && !level.getBlockState(source).isAir())throw new IllegalStateException("Gather source changed after mining");
         var pos=worker.blockPosition();
         if(pos.getY()!=start.getY() || pos.getX()<(alongX?Math.min(start.getX(),source.getX()):source.getX()-1) || pos.getX()>(alongX?Math.max(start.getX(),source.getX()):source.getX()+1)
             || pos.getZ()<(alongX?source.getZ()-1:Math.min(start.getZ(),source.getZ())) || pos.getZ()>(alongX?source.getZ()+1:Math.max(start.getZ(),source.getZ())))
@@ -88,12 +92,23 @@ final class PhysicalGatherTask implements AutoCloseable {
             pickupDrop=drop;call("lookAt",new Class[]{Vec3.class},drop.position());call("setForward",new Class[]{float.class},1f);picking=true;
         }
         if(picking && !worker.getInventory().isEmpty()) {
-            call("stopAll",new Class[]{});journal.inventorySaved();close();return true;
+            call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);
+            if(savedInventory==null){journal.inventorySaved();savedInventory=PhysicalWorkerStorage.inventory(worker);}
+            else if(!savedInventory.equals(PhysicalWorkerStorage.inventory(worker)))throw new IllegalStateException("Gathered inventory changed before handoff");
+            // stopAll clears input, not vanilla momentum. Keep the original
+            // reserved corridor and live authority until the actual body settles.
+            var position=worker.position();
+            if(settledPosition!=null && position.distanceToSqr(settledPosition)<1.0e-8 && worker.getDeltaMovement().horizontalDistanceSqr()<1.0e-8)settledTicks++;
+            else settledTicks=0;
+            settledPosition=position;
+            if(settledTicks>=3){PhysicalWorkerStorage.save(worker);close();return true;}
+            return false;
         }
+        if(savedInventory!=null)throw new IllegalStateException("Gathered inventory disappeared before handoff");
         if(picking && pickupDrop.isAlive())call("lookAt",new Class[]{Vec3.class},pickupDrop.position());
         return false;
     }
     @Override public void close(){
-        try{call("stopAll",new Class[]{});}finally{closed=true;PhysicalActionGate.cancel(worker);lease.close();}
+        try{call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);}finally{closed=true;PhysicalActionGate.cancel(worker);lease.close();}
     }
 }
