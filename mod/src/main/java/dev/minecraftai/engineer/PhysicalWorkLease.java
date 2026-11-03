@@ -31,8 +31,6 @@ final class PhysicalWorkLease implements AutoCloseable {
         basis=assignment==null?null:assignment.basis;generation=assignment==null?0:assignment.generation;
         var all=new HashSet<BlockPos>();writes.forEach(p->all.add(p.immutable()));reads.forEach(p->all.add(p.immutable()));
         footprint=Set.copyOf(all);
-        if(project.delegation!=null || project.hasPendingTest() || project.shutterMotion!=null || project.state.equals("EXECUTING") || project.state.equals("PLANNING"))
-            throw new IllegalStateException("Stop and reconcile existing project work before physical delegation");
         authority();
         var observed=new java.util.HashMap<BlockPos,net.minecraft.world.level.block.state.BlockState>();
         // Mutable write cells have their own exact-before action tickets. Read-only
@@ -43,6 +41,9 @@ final class PhysicalWorkLease implements AutoCloseable {
     }
     private void authority() {
         if(!manager.server.isSameThread() || closed)throw new IllegalStateException("Physical authority is not current");
+        if(project.delegation!=null || project.hasPendingTest() || project.shutterMotion!=null
+            || Set.of("EXECUTING","PLANNING","VERIFYING").contains(project.state))
+            throw new IllegalStateException("Stop and reconcile existing project work before physical delegation");
         var human=manager.server.getPlayerList().getPlayer(owner);
         if(human==null || human.hasDisconnected() || human.connection!=connection || !project.owner.equals(owner)
             || !project.projectId.equals(manager.selections.get(owner)) || human.level()!=project.level()

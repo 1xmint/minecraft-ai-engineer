@@ -538,10 +538,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 pack.getClass().getMethod("start",type,action).invoke(pack,Enum.valueOf(type,"ATTACK"),action.getMethod("continuous").invoke(null));
             }catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->s.overworld().getBlockState(new BlockPos(2421,101,4)).isAir(),30_000);
+        server.waitFor(s->s.overworld().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new net.minecraft.world.phys.AABB(2420,100,3,2423,103,6)).stream().anyMatch(drop->!drop.hasPickUpDelay()),30_000);
+        server.runOnServer(s->{
+            var worker=s.getPlayerList().getPlayer(id);PhysicalActionGate.register(worker);
+            var drops=s.overworld().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new net.minecraft.world.phys.AABB(2420,100,3,2423,103,6));
+            check(drops.size()==1,"Capture the unique native drop before allowing pickup");var drop=drops.getFirst();
+            var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2421,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+100,()->{},()->{throw new AssertionError("Wrong drop must not write a pickup intent");});
+            check(!PhysicalActionGate.pickup(worker,unrelated),"Identical unrelated dirt is refused by exact entity identity");
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount(),()->{},()->{throw new AssertionError("Expired pickup must not write intent");});
+            check(!PhysicalActionGate.pickup(worker,drop),"Pickup at exact expiry is refused");
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+100,()->{throw new IllegalStateException("Revoked fixture authority");},()->{throw new AssertionError("Revoked pickup must not write intent");});
+            check(!PhysicalActionGate.pickup(worker,drop),"Revoked authority refuses pickup at event time");
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+100,()->{},()->{throw new IllegalStateException("Fixture disk failure");});
+            check(!PhysicalActionGate.pickup(worker,drop) && !PhysicalActionGate.pickup(worker,drop),"Failed pickup intent consumes permission and refuses retry");
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+1200,()->{},()->write("physical-pickup-prepared",drop.getUUID().toString()));
+        });
         server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);return countDirt(worker)==1 && worker.getZ()>2.25;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
-            check(countDirt(worker)==1,"Exactly one native mined drop is present before saving");PhysicalActionGate.register(worker);PhysicalWorkerStorage.save(worker);
+            check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");PhysicalWorkerStorage.save(worker);
             s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});
     }
 

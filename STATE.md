@@ -936,3 +936,15 @@ and edited support. Write cells remain exact-before native action tickets, not
 read snapshots. No production gather/build caller yet; no resource milestone
 completion claim. Server compilation passed; client compilation/CI pending.
 Scoped client compilation also passed for these assertions.
+
+Phase33 pickup primitive: default-deny ItemEntity hook now accepts only one-use
+exact entity+stack tickets for one dirt and empty survival inventory, current
+worker connection, expiry, live authority and successful pre-pickup intent write.
+Native pickup delay remains effective. Fixture captures the real mined drop,
+rejects an identical unrelated entity, exact expiry, revoked authority, WAL error
+and retry, then walks/picks up/saves/restarts. Mining in this fixture remains a
+raw native probe, not production gathering authorization. Production actors do
+not arm pickup tickets. Luna found no material bypass within this scope; future
+issuer must prove drop provenance from its authorized mining action. Physical
+lease now also rechecks competing project activity at every action. Server and
+client compilation passed before final delay-wait fixture adjustment; CI pending.

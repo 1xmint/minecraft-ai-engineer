@@ -15,10 +15,12 @@ import net.minecraft.world.phys.BlockHitResult;
 /** Managed actor actions fail closed; tickets never replace project authority. */
 public final class PhysicalActionGate {
     private record Ticket(String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead) { }
+    private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
     private static final class Entry {
         final ServerPlayer actor;
         Object connection;
         Ticket ticket;
+        Pickup pickup;
         Entry(ServerPlayer actor){this.actor=actor;connection=actor.connection;}
     }
     private static final Map<UUID,Entry> ACTORS=new java.util.concurrent.ConcurrentHashMap<>();
@@ -29,9 +31,30 @@ public final class PhysicalActionGate {
     public static boolean managed(Player actor){return actor!=null && ACTORS.containsKey(actor.getUUID());}
     static void arm(ServerPlayer actor,String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
-        if(entry==null || entry.actor!=actor || entry.ticket!=null)throw new IllegalStateException("No idle bound actor");
+        if(entry==null || entry.actor!=actor || entry.ticket!=null || entry.pickup!=null)throw new IllegalStateException("No idle bound actor");
         if(!Set.of("place","mine").contains(operation))throw new IllegalArgumentException("Unsupported action");
         entry.ticket=new Ticket(operation,target.immutable(),before,expires,authority,writeAhead);
+    }
+    static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || !actor.getInventory().isEmpty()
+            || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(Items.DIRT) || drop.getItem().getCount()!=1)
+            throw new IllegalStateException("Pickup requires one exact dirt drop and an empty bound inventory");
+        entry.pickup=new Pickup(drop,drop.getItem().copy(),expires,authority,writeAhead);
+    }
+    public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
+        if(!managed(player))return true;
+        var entry=ACTORS.get(player.getUUID());var ticket=entry.pickup;
+        try{
+            if(!(player instanceof ServerPlayer actor) || entry.actor!=actor || entry.connection!=actor.connection || actor.hasDisconnected())throw new IllegalStateException("Worker connection changed");
+            thread(actor);
+            if(ticket==null || ticket.drop!=drop || !drop.isAlive() || drop.level()!=actor.level()
+                || actor.level().getServer().getTickCount()>=ticket.expires || !actor.getInventory().isEmpty()
+                || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL
+                || !ItemStack.matches(ticket.stack,drop.getItem()))throw new IllegalStateException("No exact current pickup ticket");
+            if(drop.hasPickUpDelay())return false;
+            ticket.authority.run();entry.pickup=null;ticket.writeAhead.run();return true;
+        }catch(RuntimeException refused){entry.pickup=null;return false;}
     }
     private static void thread(ServerPlayer actor){if(!actor.level().getServer().isSameThread())throw new IllegalStateException("Server thread required");}
     private static boolean check(Player player,String operation,BlockPos target,boolean consume){
