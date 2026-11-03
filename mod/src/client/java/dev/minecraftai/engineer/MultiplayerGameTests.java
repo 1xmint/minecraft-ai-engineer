@@ -2515,7 +2515,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, replace decision 4: Use torches for the delay.");expectChat(context,"Note #4 was already replaced by #5; replace #5 instead. Nothing was saved.");
             MESSAGES.clear();memorySay(context,"Engineer, replace goal 5: Use torches for the delay.");expectChat(context,"Note #5 is a decision");
             MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Shared project notes, revision 5");
-            expectChat(context,"Note 5 (decision): Use comparators for the delay | Reason: they are smaller | Replaces note 4");
+            expectChat(context,"Note 5 (decision): Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }

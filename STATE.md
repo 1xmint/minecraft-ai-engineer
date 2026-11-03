@@ -4,6 +4,20 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Phase31 memory integration in work/memory-integration, phase/31-memory-integration,
+based on combined core0a5a077; merged Claude PR46 exact7c0b3ca in this own branch,
+not his branch/main. Outcomes: M1 owner literal reason and explicit replacement
+preserve full history without conferring a world pass; M2 same-project access,
+freshness and restart recovery remain enforced. Retain Claude's existing native,
+file-DB/HTTP privacy/replay/replacement proofs and actual dedicated note flow.
+Focused GPT-6-Luna review found no privacy/auth escalation in new source.
+PR46 CI41541270440 failures were fixtures: expected literal reason omitted period;
+syncing projectB reopens service and correctly invalidates projectA's old mirror.
+Own fixes keep literal period and assert stale mirror rejection before explicit
+resyncA/history read. No production guard change. Type/format checks passed;
+scoped Java/client compile and focused memory CI need current results. This slice
+does not finish richer retrieval/references/summaries or full E1 milestone.
+
 Inspected source29785a2 / CI41533141692 Fabric artifact at
 work/imported-native-41533141692: all158 required native tests passed. This source
 includes imported182-material runtime admission and exact snapshot parity,

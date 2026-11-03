@@ -476,6 +476,12 @@ test("replacing a note keeps both in history and names the replacement", () => {
         ),
       /No note #1 in this project/,
     );
+    // Opening the second project's service context retires every old mirror.
+    assert.throws(
+      () => store.gateway.knowledge(frame()),
+      /fresh server-owned synchronization/,
+    );
+    sync(store);
     const history = store.gateway.knowledge(frame()).notes;
     assert.deepEqual(
       history.map((n) => n.text),
