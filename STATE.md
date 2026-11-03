@@ -4,14 +4,24 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Journal sourced66c23a / CI41573449362 completed SUCCESS. Focused GPT-6-Luna
+durability review found no unauthorized write within the prototype, but clarified
+limits: equal native block/item facts do not prove this operation caused them;
+the common checkpoint's non-atomic fallback/no directory fsync is not universal
+power-loss safety. Follow-up renames inferred status BEFORE_MATCH/AFTER_MATCH,
+adds current-controller scope rejection, and keeps observation-only/no retry/undo.
+Operation UUID remains provenance, not a durable-operation authority table.
+Scoped Java compilation passed for these revisions; needs fresh native CI.
+
 Next physical proof adds CI-only PhysicalPlacementRecord: strict bounded inert
 dirt-placement facts bind world/dimension/project/blueprint/revision/component,
 human+worker UUID, exact cell and native block/item before/after counts. Real
-LocalFiles forced atomic checkpoint runs inside the gate's pre-mutation callback.
-Native candidate reloads PREPARED as UNAPPLIED before item use; after placement
-and lease release reloads APPLIED, persists OBSERVED, reloads again, and identifies
+LocalFiles checkpoint runs inside the gate's pre-mutation callback: forces temp
+file, attempts atomic rename, falls back to ordinary rename, no parent-dir fsync.
+Native candidate reloads PREPARED as BEFORE_MATCH before item use; after placement
+and lease release reloads AFTER_MATCH, persists OBSERVED, reloads again, and identifies
 a later block edit as CONFLICT. Injected lease fields are refused. Reload restores
-no ticket/lease and performs no retry or undo. OBSERVED cannot become UNAPPLIED.
+no ticket/lease and performs no retry or undo. OBSERVED cannot become BEFORE_MATCH.
 This is disk-reload proof, not an actual server/process restart or complete
 inventory/drop recovery. Scoped Java compilation passed; native CI and focused
 durability review pending. Full integration41573034326 has four green jobs and

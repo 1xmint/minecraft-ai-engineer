@@ -151,7 +151,7 @@ public final class PhysicalBuilderGameTests {
                     ()->project.validateMutation(ProjectAccess.Permission.BUILD,destination),()->{
                         if(scenario.equals("live")){
                             PhysicalPlacementRecord.prepare(project,actor,destination,recordFile);
-                            helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.UNAPPLIED,"Durable prepared record precedes native world/item mutation");
+                            helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.BEFORE_MATCH,"Prepared disk record precedes native world/item mutation");
                         }
                     });
                 if(scenario.equals("released"))manager.release(project);
@@ -164,9 +164,11 @@ public final class PhysicalBuilderGameTests {
                 manager.release(project);
                 if(live){
                     var recovered=PhysicalPlacementRecord.load(recordFile);
-                    helper.assertTrue(recovered.status(project,actor)==PhysicalPlacementRecord.Status.APPLIED && project.delegation==null,"Prepared record recovers matching native block/item facts without a lease");
+                    helper.assertTrue(recovered.status(project,actor)==PhysicalPlacementRecord.Status.AFTER_MATCH && project.delegation==null,"Prepared record recovers matching native block/item facts without a lease");
                     recovered.observed(project,actor,recordFile);
-                    helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.APPLIED,"Observed record survives a fresh disk read");
+                    helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.AFTER_MATCH,"Observed record survives a fresh disk read");
+                    var controller=project.controller;project.controller=UUID.randomUUID();
+                    helper.assertTrue(recovered.status(project,actor)==PhysicalPlacementRecord.Status.STALE,"Changed controller invalidates record scope without granting authority");project.controller=controller;
                     level.setBlockAndUpdate(destination,Blocks.COBBLESTONE.defaultBlockState());
                     helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.CONFLICT,"Later player edit is a conflict, never an authorized retry");
                     level.setBlockAndUpdate(destination,Blocks.DIRT.defaultBlockState());
@@ -178,7 +180,7 @@ public final class PhysicalBuilderGameTests {
             }
             helper.assertTrue(!actor.isCreative(),"Physical actor remains in survival while human permission uses the unchanged core");
             System.out.println("ENGINEER_PHYSICAL_PROJECT_AUTHORITY live=placed released=denied revoked=denied outside-reservation=denied disconnected=denied actor-grants=none");
-            System.out.println("ENGINEER_PHYSICAL_WAL prepared-before-write=true reloaded=applied observed-reloaded=true player-edit=conflict forged-authority=denied restored-lease=none");
+            System.out.println("ENGINEER_PHYSICAL_WAL prepared-before-write=true reloaded=after-match observed-reloaded=true player-edit=conflict forged-authority=denied restored-lease=none causal-proof=false");
         }finally{manager.release(project);manager.projects.remove(project.projectId);server.getPlayerList().remove(human);}
     }
 }

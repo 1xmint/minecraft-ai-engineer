@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.Blocks;
 
 /** CI-only durable facts for one inert survival placement. Never execution authority. */
 final class PhysicalPlacementRecord {
-    enum Status { UNAPPLIED, APPLIED, CONFLICT, UNLOADED, ACTOR_UNAVAILABLE, STALE }
+    enum Status { BEFORE_MATCH, AFTER_MATCH, CONFLICT, UNLOADED, ACTOR_UNAVAILABLE, STALE }
     private static final Set<String> FIELDS=Set.of("schemaVersion","worldId","dimension","projectId","blueprintId","revision","component","controller","worker","operation","pos","before","after","item","countBefore","countAfter","phase");
     private final JsonObject source;
     private PhysicalPlacementRecord(JsonObject source){this.source=source.deepCopy();validate();}
@@ -45,17 +45,19 @@ final class PhysicalPlacementRecord {
     }
     Status status(EngineeringSession project,ServerPlayer worker){
         if(!project.worldId.equals(text("worldId")) || !project.dimension.equals(text("dimension")) || !project.projectId.toString().equals(text("projectId"))
-            || project.blueprint==null || !project.blueprint.id().equals(text("blueprintId")) || project.revision()!=number("revision") || !project.activeComponent.equals(text("component")))return Status.STALE;
+            || project.blueprint==null || !project.blueprint.id().equals(text("blueprintId")) || project.revision()!=number("revision") || !project.activeComponent.equals(text("component"))
+            || !project.controller.toString().equals(text("controller")))return Status.STALE;
         if(worker==null || !worker.getUUID().toString().equals(text("worker")) || worker.hasDisconnected() || worker.level()!=project.level())return Status.ACTOR_UNAVAILABLE;
         var target=Blueprint.pos(source.getAsJsonObject("pos"));if(!project.level().hasChunkAt(target))return Status.UNLOADED;
         var block=project.level().getBlockState(target);var stack=worker.getMainHandItem();
         int count=stack.isEmpty()?0:stack.is(Items.DIRT)?stack.getCount():-1;
-        if(text("phase").equals("PREPARED") && block.isAir() && count==number("countBefore"))return Status.UNAPPLIED;
-        if(block.is(Blocks.DIRT) && count==number("countAfter"))return Status.APPLIED;
+        if(text("phase").equals("PREPARED") && block.isAir() && count==number("countBefore"))return Status.BEFORE_MATCH;
+        // Matching facts cannot establish causation or authorize retry/undo.
+        if(block.is(Blocks.DIRT) && count==number("countAfter"))return Status.AFTER_MATCH;
         return Status.CONFLICT;
     }
     PhysicalPlacementRecord observed(EngineeringSession project,ServerPlayer worker,Path file){
-        if(status(project,worker)!=Status.APPLIED)throw new IllegalStateException("Physical placement has no matching block/item observation");
+        if(status(project,worker)!=Status.AFTER_MATCH)throw new IllegalStateException("Physical placement has no matching block/item observation");
         if(!load(file).source.equals(source))throw new IllegalStateException("Physical record changed before observation");
         var updated=source.deepCopy();updated.addProperty("phase","OBSERVED");var record=new PhysicalPlacementRecord(updated);LocalFiles.write(file,record.source);return record;
     }
