@@ -182,7 +182,6 @@ try {
         "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
       )
       .get(server.serverId, knowledgeProject);
-    // The non-live run ends with a reference note written after the restart.
     const expectedNotes = liveDiscussion ? 3 : 6;
     assert.equal(
       counter?.revision,
@@ -233,15 +232,9 @@ try {
         ],
         "Reasons and replacement provenance persist exactly; refused replacements create no rows",
       );
-      assert.deepEqual(
-        [
-          notes[5].rationale ?? null,
-          notes[5].supersedes ?? null,
-          notes[5].writtenAtRevision,
-        ],
-        [null, null, 5],
-        "A note written after restart appends to the persisted history",
-      );
+      assert.equal(notes[5].writtenAtRevision, 5);
+      assert.equal(notes[5].rationale, undefined);
+      assert.equal(notes[5].supersedes, undefined);
     }
     const discussions = db
       .prepare(

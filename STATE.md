@@ -127,3 +127,18 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 Detailed historical logs, failed-run investigations and previous plans remain in
 Git history. This file describes current decisions and evidence, not every attempt.
+
+PR51 integration: sourceae01437 passed all five full checks and focused gameplay.
+This branch now incorporates PR50's memory integration and ordinary owner stop,
+including the separate actual-chat gather-stop scene. Preserve both the blueprint
+placement and gather-stop receipts. New combined source needs compile and CI;
+no previous green head is substituted for this combination.
+Combined PR51 server/client compilation and shell syntax passed. Fresh full and
+focused CI are required for this merge with memory and natural-stop coverage.
+
+PR50 landed as a067f25 from exact source5cec203; full CI41696617329 passed all five checks and focused CI41696644888 passed. PR51 source8563b16 passed full CI41699264227 and focused CI41699293611. Main is byte-identical to the merged parent source; squash ancestry conflicts were resolved by retaining this branch's already-tested extensions. New integration head requires fresh CI.
+
+## Memory retrieval integration (E1)
+
+Outcomes: owner/authorized viewer can show/search attributed current and replaced notes through conversation after restart; revoked/unknown connections reveal nothing; the final independent database proof requires exactly six notes, including the newly saved reference, while all refused writes leave no rows.
+Claude source70d973d (PR55) passed its compile, client, companion and planner checks and drove the full multiplayer flow; CI41729899854 failed only the final independent verifier, which still expected the five-note pre-retrieval fixture. Integrated current main9348e41 without changing Claude's branch. Updated verifier to require exact note6 reference text/schema/author/written-at revision and no invented reason/replacement; prior five notes and replacement provenance stay exact. GPT-6-Luna focused review found no concrete retrieval privacy issue. Fresh compile/format/syntax and combined-source CI required. M2/M3 remain separate and must bind current evidence to the full original scope rather than revision alone before integration.
