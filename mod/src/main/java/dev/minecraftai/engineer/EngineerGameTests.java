@@ -9,6 +9,50 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void flatRouteSearchUsesRealDetourAndRejectsMissingPaths(GameTestHelper helper){
+        var available=new java.util.HashSet<BlockPos>();
+        for(int x=0;x<=4;x++)for(int z=0;z<=4;z++)available.add(new BlockPos(x,0,z));
+        for(int z=0;z<4;z++)available.remove(new BlockPos(2,0,z));
+        var start=new BlockPos(0,0,0);var goal=new BlockPos(4,0,0);
+        var route=PhysicalRoutePlan.search(start,goal,available::contains);
+        helper.assertTrue(route.cells().size()==13 && route.cells().contains(new BlockPos(2,0,4)),"A wall requires the hand-worked twelve-step detour through its only opening");
+        helper.assertTrue(route.cells().stream().allMatch(available::contains),"Every route cell was admitted; no diagonal or obstacle shortcut");
+        reject(helper,()->route.cells().add(start),"A caller cannot expand the planned route");
+        available.remove(new BlockPos(2,0,4));
+        reject(helper,()->PhysicalRoutePlan.search(start,goal,available::contains),"A sealed wall has no route");
+        reject(helper,()->PhysicalRoutePlan.search(start,goal.above(),cell->true),"Flat navigation cannot invent a jump");
+        reject(helper,()->PhysicalRoutePlan.search(start,new BlockPos(65,0,0),cell->true),"Far destinations are bounded before search");
+        reject(helper,()->new PhysicalRoutePlan(java.util.List.of(start,goal)),"Externally assembled routes cannot skip swept cells");
+        var mutable=new BlockPos.MutableBlockPos(1,0,0);var copied=new PhysicalRoutePlan(java.util.List.of(start,mutable));mutable.set(50,0,0);
+        helper.assertTrue(copied.cells().getLast().equals(new BlockPos(1,0,0)),"Mutable Minecraft positions cannot change a captured route");
+        helper.succeed();
+    }
+    @GameTest public void movementOccupancyNeverGrantsMutation(GameTestHelper helper){
+        var leases=new RegionReservations(java.util.UUID.randomUUID());var owner=java.util.UUID.randomUUID();
+        var a=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
+        var b=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
+        var body=java.util.Set.of(BlockPos.ZERO,BlockPos.ZERO.above());var floor=java.util.Set.of(BlockPos.ZERO.below());
+        var motion=leases.acquireMovement(a,owner,1,1,body,floor,0);
+        leases.validateOccupancy(a,motion,owner,1,1,body,1);
+        reject(helper,()->leases.validateWrite(a,motion,owner,1,1,BlockPos.ZERO,1),"Standing in a cell grants no native block action");
+        reject(helper,()->leases.validateFootprint(a,motion,owner,1,1,body,floor,1),"Movement cannot authorize deferred block mutation");
+        helper.assertTrue(leases.permissionFootprint(a,motion,false,1).isEmpty(),"Movement has no block write footprint");
+        helper.assertTrue(leases.permissionFootprint(a,motion,true,1).containsAll(body),"Permission checks include the occupied body cells");
+        reject(helper,()->leases.acquireMovement(b,owner,1,1,body,floor,1),"Two workers cannot reserve the same swept body space");
+        reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,body,java.util.Set.of(),1),"A builder cannot edit an occupied route");
+        reject(helper,()->leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,java.util.Set.of(new BlockPos(8,0,0)),body,1),"A test read cannot overlap exclusive movement");
+        reject(helper,()->leases.validateOccupancy(a,motion,owner,1,1,java.util.Set.of(new BlockPos(2,0,0)),1),"Movement cannot expand its captured route");
+        leases.release(a,motion);
+        var build=leases.acquire(b,owner,1,1,ProjectAccess.Permission.BUILD,body,floor,2);
+        reject(helper,()->leases.acquireMovement(a,owner,1,1,body,floor,2),"A route cannot overlap an existing builder");
+        leases.release(b,build);
+        var fresh=leases.acquireMovement(a,owner,1,1,body,floor,3);
+        reject(helper,()->leases.validateOccupancy(a,motion,owner,1,1,body,3),"Replacing a movement lease invalidates its old fence");
+        leases.revoke(a);
+        reject(helper,()->leases.validateOccupancy(a,fresh,owner,1,1,body,4),"Revocation denies movement as well as actions");
+        reject(helper,()->leases.acquireMovement(a,owner,1,1,java.util.Set.of(),floor,4),"Empty occupancy is not a movement assignment");
+        helper.succeed();
+    }
     @GameTest public void naturalFollowupWirePreservesExplicitProjectTarget(GameTestHelper helper){
         var body=new com.google.gson.JsonObject();var recent=new com.google.gson.JsonObject();recent.addProperty("action","status");recent.add("componentId",com.google.gson.JsonNull.INSTANCE);body.add("recentAction",recent);
         var decoded=com.google.gson.JsonParser.parseString(Companion.encodeBody("/v2/interpret",body)).getAsJsonObject().getAsJsonObject("recentAction");
