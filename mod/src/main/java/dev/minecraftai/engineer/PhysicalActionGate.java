@@ -21,6 +21,8 @@ public final class PhysicalActionGate {
         Object connection;
         Ticket ticket;
         Pickup pickup;
+        BlockPos minedTarget;
+        net.minecraft.world.entity.item.ItemEntity minedDrop;
         Entry(ServerPlayer actor){this.actor=actor;connection=actor.connection;}
     }
     private static final Map<UUID,Entry> ACTORS=new java.util.concurrent.ConcurrentHashMap<>();
@@ -38,7 +40,7 @@ public final class PhysicalActionGate {
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || !actor.getInventory().isEmpty()
-            || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(Items.DIRT) || drop.getItem().getCount()!=1)
+            || entry.minedDrop!=drop || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(Items.DIRT) || drop.getItem().getCount()!=1)
             throw new IllegalStateException("Pickup requires one exact dirt drop and an empty bound inventory");
         entry.pickup=new Pickup(drop,drop.getItem().copy(),expires,authority,writeAhead);
     }
@@ -53,7 +55,7 @@ public final class PhysicalActionGate {
                 || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL
                 || !ItemStack.matches(ticket.stack,drop.getItem()))throw new IllegalStateException("No exact current pickup ticket");
             if(drop.hasPickUpDelay())return false;
-            ticket.authority.run();entry.pickup=null;ticket.writeAhead.run();return true;
+            ticket.authority.run();entry.pickup=null;entry.minedDrop=null;ticket.writeAhead.run();return true;
         }catch(RuntimeException refused){entry.pickup=null;return false;}
     }
     private static void thread(ServerPlayer actor){if(!actor.level().getServer().isSameThread())throw new IllegalStateException("Server thread required");}
@@ -89,6 +91,27 @@ public final class PhysicalActionGate {
     public static boolean mine(ServerPlayer actor,BlockPos target){
         if(!managed(actor))return true;
         if(!actor.level().getBlockState(target).is(Blocks.DIRT)){ACTORS.get(actor.getUUID()).ticket=null;return false;}
-        return check(actor,"mine",target,true);
+        var entry=ACTORS.get(actor.getUUID());entry.minedTarget=null;entry.minedDrop=null;
+        boolean permitted=check(actor,"mine",target,true);
+        if(permitted)entry.minedTarget=target.immutable();return permitted;
+    }
+    private record DropScope(ServerPlayer actor,BlockPos target,java.util.List<net.minecraft.world.entity.item.ItemEntity> drops) { }
+    private static final ThreadLocal<DropScope> DROP_SCOPE=new ThreadLocal<>();
+    public static void nativeDrops(ServerPlayer actor,BlockPos target,Runnable nativeDestroy){
+        if(!managed(actor)){nativeDestroy.run();return;}
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        if(entry.actor!=actor || !target.equals(entry.minedTarget) || DROP_SCOPE.get()!=null)throw new IllegalStateException("No authorized native drop scope");
+        entry.minedTarget=null;var scope=new DropScope(actor,target.immutable(),new java.util.ArrayList<>());DROP_SCOPE.set(scope);
+        try {
+            nativeDestroy.run();
+            if(scope.drops.size()==1){var drop=scope.drops.getFirst();
+                if(drop.isAlive() && drop.getItem().is(Items.DIRT) && drop.getItem().getCount()==1)entry.minedDrop=drop;
+            }
+        }finally{DROP_SCOPE.remove();}
+    }
+    public static void emittedDrop(net.minecraft.world.entity.Entity entity){
+        var scope=DROP_SCOPE.get();if(scope==null)return;
+        if(entity instanceof net.minecraft.world.entity.item.ItemEntity drop && drop.level()==scope.actor.level()
+            && drop.blockPosition().equals(scope.target))scope.drops.add(drop);
     }
 }

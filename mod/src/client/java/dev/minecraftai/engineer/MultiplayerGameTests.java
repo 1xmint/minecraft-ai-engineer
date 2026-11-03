@@ -533,6 +533,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");
         server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
             worker.snapTo(2421.5,101,1.5,0,0);
+            PhysicalActionGate.register(worker);
+            PhysicalActionGate.arm(worker,"mine",new BlockPos(2421,101,4),Blocks.DIRT.defaultBlockState(),s.getTickCount()+1200,()->{},()->write("physical-mine-prepared",id.toString()));
             try{var pack=inventoryPack(worker);pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,new net.minecraft.world.phys.Vec3(2421.5,101.5,4.5));
                 Class type=Class.forName("carpet.helpers.EntityPlayerActionPack$ActionType"),action=Class.forName("carpet.helpers.EntityPlayerActionPack$Action");
                 pack.getClass().getMethod("start",type,action).invoke(pack,Enum.valueOf(type,"ATTACK"),action.getMethod("continuous").invoke(null));
@@ -540,10 +542,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->s.overworld().getBlockState(new BlockPos(2421,101,4)).isAir(),30_000);
         server.waitFor(s->s.overworld().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new net.minecraft.world.phys.AABB(2420,100,3,2423,103,6)).stream().anyMatch(drop->!drop.hasPickUpDelay()),30_000);
         server.runOnServer(s->{
-            var worker=s.getPlayerList().getPlayer(id);PhysicalActionGate.register(worker);
+            var worker=s.getPlayerList().getPlayer(id);
             var drops=s.overworld().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new net.minecraft.world.phys.AABB(2420,100,3,2423,103,6));
             check(drops.size()==1,"Capture the unique native drop before allowing pickup");var drop=drops.getFirst();
             var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2421,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
+            boolean refused=false;
+            try{PhysicalActionGate.armPickup(worker,unrelated,s.getTickCount()+100,()->{},()->{});}catch(IllegalStateException expected){refused=true;}
+            check(refused,"An unrelated item cannot receive a mined-drop pickup ticket");
             PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+100,()->{},()->{throw new AssertionError("Wrong drop must not write a pickup intent");});
             check(!PhysicalActionGate.pickup(worker,unrelated),"Identical unrelated dirt is refused by exact entity identity");
             PhysicalActionGate.armPickup(worker,drop,s.getTickCount(),()->{},()->{throw new AssertionError("Expired pickup must not write intent");});

@@ -948,3 +948,17 @@ not arm pickup tickets. Luna found no material bypass within this scope; future
 issuer must prove drop provenance from its authorized mining action. Physical
 lease now also rechecks competing project activity at every action. Server and
 client compilation passed before final delay-wait fixture adjustment; CI pending.
+
+Phase33 provenance follow-up: native destroyBlock's Block.playerDestroy call is
+wrapped with a server-thread, try/finally drop scope after an exact mining ticket
+and successful intent write. A ServerLevel hook observes successful native item
+spawns inside that call at the source cell. Only its unique one-dirt drop can be
+issued a pickup ticket; unrelated items cannot even be armed. Nothing persists
+this authority. Dedicated fixture now gates mining before native attack, then
+uses real drop/walk/pickup/save/restart (fixture authority callbacks, not a live
+production owner task). Server/client compile passed before final negative case;
+new native hook requires CI. Prior pickup source6cdeb5c CI41584144627 SUCCESS;
+downloaded pickup-prepared, inventory-saved and inventory-restarted receipts.
+Final scoped client compile passed. Independent review found no direct bypass;
+provenance means sole matching item spawned synchronously during playerDestroy,
+not a guarantee against arbitrary other mods spawning inside that callback.
