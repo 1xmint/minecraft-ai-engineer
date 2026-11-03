@@ -55,6 +55,7 @@ public final class PhysicalBuilderGameTests {
         look(pack,new Vec3(far.getX()+0.5,far.getY()+1,far.getZ()+0.5));action(pack,"USE","once");update(pack);
         helper.assertTrue(level.getBlockState(far.above()).isAir() && actor.getMainHandItem().getCount()==1,"Out-of-reach item use does not place or consume");
         stop(pack);actor.setItemInHand(InteractionHand.MAIN_HAND,ItemStack.EMPTY);
+        helper.assertTrue(!actor.getInventory().contains(new ItemStack(Items.DIRT)),"No fixture dirt remains before native mining and pickup");
         look(pack,Vec3.atCenterOf(placed));action(pack,"ATTACK","continuous");
         // The actor's own action pack advances from Carpet's native player tick.
         helper.runAtTickTime(2,()->{
@@ -71,7 +72,6 @@ public final class PhysicalBuilderGameTests {
                 stop(pack);
                 helper.assertTrue(level.getBlockState(placed).isAir(),"Actual survival attack mines the placed dirt over native ticks");
                 helper.assertTrue(level.getBlockState(support).is(Blocks.STONE),"Stopping attack retains the supporting block");
-                helper.assertTrue(!actor.getInventory().contains(new ItemStack(Items.DIRT)),"Mined material is not injected into inventory");
                 pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);
                 pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);
             }catch(Exception failed){server.getPlayerList().remove(actor);throw new RuntimeException(failed);}

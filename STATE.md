@@ -4,6 +4,20 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Dedicated physical chat proof now has two actual client roles and its own CI
+workflow/runner. Alice's addressed chat summons a server actor; the actual client
+must receive its UUID entity and captures a screenshot. Bob is a shared editor
+and real chat summon/dismiss must deny while authorized location works. Alice
+dismisses, re-summons, then disconnects; server must remove its actor. Separate
+workflow pins/verifies Carpet jar and supplies it only through a CI init script;
+ordinary build dependencies/full multiplayer harness unchanged. Scoped client
+compile and shell syntax checks passed; native dedicated flow is pending CI.
+Native lifecycle run41575306520 failed on an invalid fixture timing assumption:
+vanilla item drops can be picked up before walking starts. Assertion now checks
+zero dirt before mining; no supply occurs thereafter and final pickup still
+requires exactly1 native dirt. Do not characterize legitimate early pickup as an
+inventory injection failure. Re-run focused native lifecycle after this change.
+
 Extended lifecycle sourcee79fb3b / CI41574979258 completed SUCCESS; inspected
 actual owner/editor/action/material/XP/dismiss/selection/grant/disconnect marker
 and both required native passes. These are production lifecycle methods driven

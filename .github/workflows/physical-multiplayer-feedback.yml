@@ -1,0 +1,39 @@
+name: Physical companion multiplayer
+on:
+  push:
+    branches: [work/physical-multiplayer-feedback]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: physical-multiplayer-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  multiplayer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+      - name: Prepare native software graphics
+        run: bash scripts/ci/graphics.sh
+      - name: Prepare pinned optional server dependency
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 'https://github.com/gnembon/fabric-carpet/releases/download/v26.3/fabric-carpet-26.3%2Bv260915.jar' -o "$RUNNER_TEMP/carpet.jar"
+          echo '7c40b93e807ed914064176898037117097446c6cc76e6a80a856c8bf7f7659f9  '"$RUNNER_TEMP/carpet.jar" | sha256sum --check
+          echo "MCE_PHYSICAL_CARPET_JAR=$RUNNER_TEMP/carpet.jar" >> "$GITHUB_ENV"
+      - name: Drive two real clients and companion chat
+        run: bash scripts/ci/physical-companion.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: physical-multiplayer-evidence
+          path: mod/build/physical-multiplayer-evidence/
+          if-no-files-found: warn
