@@ -2152,6 +2152,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
     /** Read-only comparison: chat, viewer sharing and revocation, unsupported targets, and no change to either project. */
     private static void designComparisonFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        UUID previousSelection=server.computeOnServer(s->session(s,"Alice").projectId);
         String[] ids=server.computeOnServer(s->{
             var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var dimension=s.overworld().dimension().identifier().toString();
             String[] out=new String[4];
@@ -2195,6 +2196,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         });
         String after=server.computeOnServer(fingerprint::apply);
         check(before.equals(after),"Comparison changed no project, revision, evidence, journal or state: "+before+" -> "+after);
+        send(context,"engineer project use "+previousSelection);
+        server.waitFor(s->previousSelection.equals(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID())));
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(var id:ids)manager.projects.remove(java.util.UUID.fromString(id));});
     }
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
