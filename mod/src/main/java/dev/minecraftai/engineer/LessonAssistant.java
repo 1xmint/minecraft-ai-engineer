@@ -8,8 +8,10 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Server-thread, requester-private teaching from intended data and stored evidence only. */
 final class LessonAssistant {
-    private enum Topic { DETAIL,TIMING,MATERIALS,STATUS }
+    private enum Topic { DETAIL,TIMING,MATERIALS,STATUS,RESUME,WHY }
     private static final Pattern EXPLICIT=Pattern.compile("explain (?:the )?(?:(timing|materials) for )?component ([a-z][a-z0-9_-]{0,31})");
+    private static final Pattern EXPLICIT_WHY=Pattern.compile("why did we choose component ([a-z][a-z0-9_-]{0,31})");
+    static final String NOT_OBSERVED="Observed: this answer did not inspect the world; run /engineer diagnose to compare the world with the design.";
     private LessonAssistant() { }
 
     static void ask(EngineeringSession s,String question) {
@@ -17,19 +19,24 @@ final class LessonAssistant {
         if(question==null || question.length()>240)throw new IllegalArgumentException("Keep lesson questions within 240 characters");
         String text=question.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();
         Topic topic;String target=null;
-        var explicit=EXPLICIT.matcher(text);
+        var explicit=EXPLICIT.matcher(text);var explicitWhy=EXPLICIT_WHY.matcher(text);
         if(explicit.matches()) {
             target=explicit.group(2);topic=explicit.group(1)==null?Topic.DETAIL:explicit.group(1).equals("timing")?Topic.TIMING:Topic.MATERIALS;
+        } else if(explicitWhy.matches()) {
+            target=explicitWhy.group(1);topic=Topic.WHY;
         } else {
             topic=switch(text) {
                 case "explain this part again","explain this part","what does this part do" -> Topic.DETAIL;
                 case "explain the timing","show me how the timing works" -> Topic.TIMING;
                 case "explain the materials" -> Topic.MATERIALS;
                 case "what are you working on" -> Topic.STATUS;
+                case "where did we leave off" -> Topic.RESUME;
+                case "why did we choose this" -> Topic.WHY;
                 default -> null;
             };
         }
-        if(topic==null) {s.tell("Please choose a lesson question: explain this part again; explain the timing; what are you working on; or explain component <id>. Questions do not start world work.");return;}
+        if(topic==null) {s.tell("Please choose a lesson question: explain this part again; explain the timing; where did we leave off; why did we choose this; what are you working on; or explain component <id>. Questions do not start world work.");return;}
+        if(topic==Topic.RESUME) {resume(s);return;}
         if(topic==Topic.STATUS) {
             s.tell("Assistant task: "+s.activeComponent+" | "+s.state+". This is project status, not a new inspection.");
             String current=currentComponent(s,false);
@@ -38,6 +45,11 @@ final class LessonAssistant {
         if(s.blueprint==null)throw new IllegalStateException("Load a design before asking for lesson details");
         if(target==null)target=currentComponent(s,true);
         Blueprint selected=ComponentTree.component(s.blueprint,target);
+        if(topic==Topic.WHY) {
+            s.tell((target.equals("root")?"Why this design was chosen":"Why component "+target+" was chosen")+": I answer only from decisions recorded in this project's notes, never from guesses about the design. Notes are not linked to components, so check which of them apply.");
+            s.manager.knowledge.find(s,new ConversationMemoryText.Lookup(0,null,"decision",false,true));
+            return;
+        }
         boolean mechanical=ShutterDesign.describes(selected.source());var contract=mechanical?null:EngineeringContracts.contract(selected);
         int delay=selected.source().has("parameters")?selected.source().getAsJsonObject("parameters").get("delay").getAsInt():1;
         boolean generated=GeneratedBlueprint.isGenerated(selected);
@@ -84,6 +96,43 @@ final class LessonAssistant {
         s.tell("Stored functional result for component "+target+": "+(task==null?"untested":task.verified));
         if(task!=null && task.lastPassedScope!=null)s.tell("Retained test evidence for component "+target+": design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong()+". This answer did not run a new test.");
         else s.tell("No actual pass is recorded for this component. This answer did not inspect or test the world.");
+        String stale=staleNote(task,s.blueprint.revision());if(stale!=null)s.tell("Warning: "+stale+".");
+        s.tell(built(s,target));
+        s.tell(NOT_OBSERVED);
+    }
+    /** The asker's own lesson, the assistant task and each component's recorded result, rebuilt from current records on every ask. */
+    private static void resume(EngineeringSession s) {
+        if(s.blueprint==null) {s.tell("Where we left off: no design is loaded in this project yet, so there is nothing to resume. Tell me what you want to make.");s.tell(NOT_OBSERVED);return;}
+        var components=ComponentTree.composite(s.blueprint)?ComponentTree.nodes(s.blueprint).stream().filter(node->node.kind().equals("mechanism")).map(ComponentTree.Node::id).toList():List.of("root");
+        s.tell("Where we left off (rebuilt from project records just now): "+s.blueprint.name()+", design revision "+s.blueprint.revision()+", "+components.size()+" component"+(components.size()==1?"":"s")+".");
+        var cursor=s.cursors.get(s.actor());String current=currentComponent(s,false);
+        if(cursor==null || cursor.stage<0 || cursor.stage>=s.blueprint.stages().size())s.tell("Your lesson: not started. Say 'Engineer, explain this part' to begin.");
+        else s.tell("Your lesson: "+(current==null?"":"component "+current+", ")+"step "+(cursor.stage+1)+"/"+s.blueprint.stages().size()+": "+s.blueprint.stages().get(cursor.stage).title()+" | "+(cursor.teaching?"following placements":"paused"));
+        s.tell("Assistant task: component "+s.activeComponent+" | "+s.state+" | "+s.detail);
+        for(String id:components.stream().limit(8).toList()) {
+            var task=s.assignments.tasks.get(id);
+            s.tell("Component "+id+": recorded status "+(task==null?"PENDING":task.status)+" | functional result: "+evidence(task,s.blueprint.revision()));
+        }
+        if(components.size()>8)s.tell((components.size()-8)+" more components; ask about one by name.");
+        s.tell("For decisions and changes, ask 'what did we decide', 'what changed' or 'why did we choose this'.");
+        s.tell(NOT_OBSERVED);
+    }
+    /** A stored functional result, marked stale when its pass belongs to an older design revision. */
+    static String evidence(ComponentAssignments.Task task,long revision) {
+        if(task==null)return "untested";
+        String stale=staleNote(task,revision);
+        if(stale!=null)return task.verified+", but "+stale;
+        return task.lastPassedScope==null?task.verified:task.verified+" at design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong();
+    }
+    private static String staleNote(ComponentAssignments.Task task,long revision) {
+        if(task==null || task.lastPassedScope==null)return null;
+        long passed=task.lastPassedScope.get("blueprintRevision").getAsLong();
+        return passed==revision?null:"its last pass was at design revision "+passed+" but the design is now revision "+revision+", so that pass may not describe the current design";
+    }
+    private static String built(EngineeringSession s,String target) {
+        var task=s.assignments.tasks.get(target);
+        long changes=s.journal.stream().filter(change->target.equals(change.component())).count();
+        return "Built (from records, not a fresh look): component "+target+" status "+(task==null?"PENDING":task.status)+"; "+changes+" assistant-recorded block change"+(changes==1?"":"s")+" for this component. Blocks a player places by hand are not recorded one by one.";
     }
     private static void materials(EngineeringSession s,String target,Blueprint canonical) {
         var counts=new ArrayList<String>();
