@@ -127,3 +127,5 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 Detailed historical logs, failed-run investigations and previous plans remain in
 Git history. This file describes current decisions and evidence, not every attempt.
+
+2026-11-03: PR50 merged as a067f25, exact source5cec203. Full CI41696617329 passed all five checks; focused CI41696644888 passed actual native resource gameplay. PR51 and PR52 remain unmerged. PR52 source2c1f07f waits for body settling before placement; its new gameplay CI is pending, so the handoff fix is not yet proven. Corrected companion instructions to distinguish new empty inventory from retained saved inventory.

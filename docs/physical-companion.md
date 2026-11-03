@@ -35,7 +35,7 @@ As project owner:
 4. Say **“Engineer, where is my companion?”** for its position, or
    **“Engineer, dismiss my companion.”** to remove it.
 
-The companion is an empty survival actor with a generated `Eng_…` name. It has no
+A new companion starts as an empty survival actor with a generated `Eng_…` name. It has no
 project permissions, cannot use items or mine without a separately checked action
 ticket, and cannot pick up dropped materials or experience orbs while idle. Authorized project
 viewers can ask for its location; only the owner can summon or dismiss it.
@@ -53,7 +53,7 @@ No permission, connection or action ticket is recovered. Production actors still
 require empty inventories while resource execution is unfinished. This does not
 provide atomic recovery across inventory and world files after a hard crash.
 
-Development gather slice (not yet gameplay-proven): an owner can say
+Bounded gathering (dedicated multiplayer CI proven): an owner can say
 `Engineer, gather dirt at X Y Z`. The target must be two to four blocks from the
 companion on one horizontal axis, at the same height, along a clear three-wide
 stone-supported path entirely in the selected workspace. Only one dirt block is
