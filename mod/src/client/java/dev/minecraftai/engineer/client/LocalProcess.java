@@ -65,11 +65,13 @@ final class LocalProcess {
         try {
             if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
                 kill();
+                awaitExit();
                 throw new Failure("took longer than " + timeoutSeconds + " seconds and was stopped");
             }
             reader.join(1000);
         } catch (InterruptedException interrupted) {
             kill();
+            awaitExit();
             Thread.currentThread().interrupt();
             throw new Failure("was interrupted");
         }
@@ -82,6 +84,12 @@ final class LocalProcess {
         killed = true;
         process.descendants().forEach(ProcessHandle::destroyForcibly);
         process.destroyForcibly();
+    }
+
+    /** After a kill, gives the program up to two seconds to let go of its files. */
+    private void awaitExit() {
+        try { process.onExit().get(2, TimeUnit.SECONDS); }
+        catch (Exception stillExiting) { /* best effort; the caller still deletes and retries */ }
     }
 
     boolean alive() { return process.isAlive(); }

@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import javax.sound.sampled.AudioFileFormat;
@@ -43,6 +44,21 @@ final class VoiceAdapters {
     interface Speaker {
         void speak(String text) throws Exception;
         void stop();
+    }
+
+    /** Removes recordings left behind by a crash: only engineer-voice-* folders holding nothing but speech.wav. */
+    static void removeStaleRecordings() {
+        Path temp = Path.of(System.getProperty("java.io.tmpdir"));
+        try (var folders = Files.newDirectoryStream(temp, "engineer-voice-*")) {
+            for (Path folder : folders) {
+                if (!Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) continue;
+                Path wav = folder.resolve("speech.wav");
+                try {
+                    if (Files.isRegularFile(wav, LinkOption.NOFOLLOW_LINKS)) Files.delete(wav);
+                    Files.delete(folder); // fails, and is left alone, if anything else is inside
+                } catch (IOException | SecurityException inUseOrNotOurs) { /* skip */ }
+            }
+        } catch (IOException | SecurityException unreadable) { /* nothing to clean */ }
     }
 
     static boolean microphonePresent() {
@@ -128,8 +144,8 @@ final class VoiceAdapters {
                 return running.finish(null, command.timeoutSeconds());
             } finally {
                 running = null;
-                Files.deleteIfExists(wav);
-                Files.deleteIfExists(dir);
+                delete(wav);
+                delete(dir);
             }
         }
 
@@ -139,6 +155,17 @@ final class VoiceAdapters {
             if (process != null) process.kill();
         }
 
+        /** Retries briefly (a just-killed program may still hold the file), then falls back to delete-on-exit. */
+        private static void delete(Path path) {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                try { Files.deleteIfExists(path); return; }
+                catch (IOException busy) {
+                    try { Thread.sleep(100); } catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); break; }
+                }
+            }
+            path.toFile().deleteOnExit();
+        }
+
         private static Path privateDirectory() throws IOException {
             if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix"))
                 return Files.createTempDirectory("engineer-voice-", PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
@@ -146,21 +173,25 @@ final class VoiceAdapters {
         }
     }
 
-    /** Sends the text on standard input to the player's speech program. */
+    /** Sends the text on standard input to the player's speech program. One instance per utterance: stop is final. */
     static final class ProcessSpeaker implements Speaker {
         private final VoiceConfig.Command command;
         private volatile LocalProcess running;
+        private volatile boolean stopped;
 
         ProcessSpeaker(VoiceConfig.Command command) { this.command = command; }
 
         @Override public void speak(String text) throws Exception {
+            if (stopped) throw new LocalProcess.Failure("was stopped");
             var process = LocalProcess.start(command.args(), null);
             running = process;
+            if (stopped) process.kill(); // stop() arrived while the program was starting
             try { process.finish(text, command.timeoutSeconds()); }
             finally { running = null; }
         }
 
         @Override public void stop() {
+            stopped = true;
             var process = running;
             if (process != null) process.kill();
         }

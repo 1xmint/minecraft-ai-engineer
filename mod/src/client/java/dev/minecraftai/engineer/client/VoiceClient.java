@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -57,6 +58,11 @@ public final class VoiceClient implements ClientModInitializer {
             controller.tick(talk.isDown(), client.gui.screen() != null, focus.getAsBoolean(), inWorld);
         });
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> playback.offer(message.getString(), overlay));
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            controller.cancel(null);
+            playback.stop();
+        });
+        Thread.ofPlatform().daemon().name("engineer-voice-cleanup").start(VoiceAdapters::removeStaleRecordings);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             controller.cancel(null);
             playback.stop();

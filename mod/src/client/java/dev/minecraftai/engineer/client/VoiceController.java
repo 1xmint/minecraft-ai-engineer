@@ -109,7 +109,7 @@ final class VoiceController {
     /** One line of plain text, no address prefix of its own, short enough for one chat message. */
     static String clean(String text) {
         if (text == null) return "";
-        String line = text.codePoints().map(c -> Character.isISOControl(c) ? ' ' : c)
+        String line = text.codePoints().map(c -> Character.isISOControl(c) || c == '\u00a7' || Character.getType(c) == Character.FORMAT ? ' ' : c)
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
                 .toString().replaceAll("\\s+", " ").strip();
         if (line.matches("^[\\[(][^\\])]*[\\])]$")) return ""; // e.g. [BLANK_AUDIO]

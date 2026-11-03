@@ -288,6 +288,7 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         check(VoiceController.clean("  [BLANK_AUDIO]\n").isEmpty() && VoiceController.clean("(music)").isEmpty(), "Recognizer markers are not words");
         check(VoiceController.clean("Engineer, build a lamp").equals("build a lamp") && VoiceController.clean("hey engineer: why").equals("why"), "A spoken address is not doubled");
         check(VoiceController.clean("line one\n\tline\u0007two").equals("line one line two"), "Control characters become spaces");
+        check(VoiceController.clean("red\u00a7cstone\u202e").equals("red cstone"), "Formatting codes are not passed on");
         check(("Engineer, " + VoiceController.clean("x".repeat(400))).length() == VoiceController.MAX_CHAT, "Transcripts fit one chat message");
     }
 
@@ -326,6 +327,22 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         speaker.stop();
         speaking.join(5000);
         check(!speaking.isAlive() && speakError.get() != null, "Stop ends playback at once");
+
+        var early = new VoiceAdapters.ProcessSpeaker(new VoiceConfig.Command(List.of("sh", "-c", "sleep 30"), 60));
+        early.stop();
+        long before = System.nanoTime();
+        try { early.speak("too late"); throw new AssertionError("A stopped speaker still spoke"); }
+        catch (LocalProcess.Failure expected) { check(System.nanoTime() - before < TimeUnit.SECONDS.toNanos(5), "Stop before start never plays"); }
+
+        Path stale = Files.createTempDirectory("engineer-voice-");
+        Files.write(stale.resolve("speech.wav"), new byte[44]);
+        Path foreign = Files.createTempDirectory("engineer-voice-");
+        Files.writeString(foreign.resolve("notes.txt"), "not ours");
+        VoiceAdapters.removeStaleRecordings();
+        check(!Files.exists(stale), "A recording left by a crash is removed at startup");
+        check(Files.exists(foreign.resolve("notes.txt")), "Folders holding anything else are left alone");
+        Files.delete(foreign.resolve("notes.txt"));
+        Files.delete(foreign);
     }
 
     private interface Action { void run() throws Exception; }
