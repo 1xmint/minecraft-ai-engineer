@@ -21,6 +21,9 @@ final class PhysicalMoveTask implements AutoCloseable {
     private boolean braking,closed;
 
     PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Runnable intention){
+        this(manager,project,worker,pack,destination,Set.of(),intention);
+    }
+    PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention){
         this.worker=worker;this.pack=pack;this.intention=intention;connection=worker.connection;level=worker.level();
         if(!manager.server.isSameThread() || level!=project.level())throw new IllegalStateException("Movement requires the current server workspace");
         PhysicalWorkLease.requireIdle(project);intention.run();
@@ -29,6 +32,7 @@ final class PhysicalMoveTask implements AutoCloseable {
         for(var cell:route.cells())for(int dx=-1;dx<=1;dx++)for(int dz=-1;dz<=1;dz++)for(int dy=-1;dy<=1;dy++){
             var pos=cell.offset(dx,dy,dz).immutable();reads.add(pos);if(dy>=0)occupied.add(pos);
         }
+        reads.addAll(planReads);
         occupancy=Set.copyOf(occupied);
         requireNoEntities();
         lease=PhysicalWorkLease.movement(manager,project,manager.server.getPlayerList().getPlayer(project.owner),occupancy,reads);

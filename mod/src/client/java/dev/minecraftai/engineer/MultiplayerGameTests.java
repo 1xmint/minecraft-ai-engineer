@@ -541,14 +541,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-blueprint.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
             physicalBlueprintJobFlow(context,server);
+            physicalBuildNavigationFlow(context,server);
         }
     }
     private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x){
+        return setupPhysicalBlueprintJob(context,server,x,false);
+    }
+    private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x,boolean routed){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         server.runCommand("forceload add "+(x-8)+" -16 "+(x+24)+" 32");server.runCommand("fill "+x+" 100 0 "+(x+5)+" 100 9 minecraft:stone");
         server.runCommand("setblock "+(x+1)+" 101 3 minecraft:dirt");server.runCommand("setblock "+(x+1)+" 101 5 minecraft:dirt");server.runCommand("tp Alice "+(x+4.5)+" 101 8 180 0");
         send(context,"engineer select1 "+x+" 100 0");send(context,"engineer select2 "+(x+4)+" 102 6");server.waitFor(s->new BlockPos(x+4,102,6).equals(session(s,"Alice").corner2));
+        if(routed){
+            server.runCommand("fill "+x+" 100 0 "+(x+15)+" 100 12 minecraft:stone");
+            server.runCommand("setblock "+(x+1)+" 101 3 minecraft:air");server.runCommand("setblock "+(x+1)+" 101 5 minecraft:air");
+            server.runCommand("setblock "+(x+10)+" 101 3 minecraft:dirt");server.runCommand("setblock "+(x+10)+" 101 6 minecraft:dirt");
+            server.runCommand("fill "+(x+6)+" 101 0 "+(x+6)+" 102 7 minecraft:stone");server.runCommand("tp Alice "+(x+14.5)+" 101 11 180 0");
+            send(context,"engineer select2 "+(x+15)+" 102 12");server.waitFor(s->new BlockPos(x+15,102,12).equals(session(s,"Alice").corner2));
+        }
         server.runOnServer(s->{var project=session(s,"Alice");var source=ImportedBlueprintGameTests.source();
             source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());source.addProperty("rotation",0);source.add("anchor",Blueprint.jsonPos(new BlockPos(x+3,101,3)));
             var template=source.getAsJsonArray("blocks").get(0).getAsJsonObject();var blocks=new com.google.gson.JsonArray();
@@ -604,6 +615,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Two native gathered resources become two intended cells without inventory supply");
             check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"Batch geometry fabricates neither functional proof nor creative history/lease");});
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-job.done","passed");
+    }
+    private static void physicalBuildNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID worker=setupPhysicalBlueprintJob(context,server,2580,true);
+        server.runOnServer(s->{
+            var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");
+            try(var job=new PhysicalBlueprintJob(EngineerMod.managerFor(s),project,body,inventoryPack(body))){
+                job.tick();var changed=new BlockPos(2583,101,4);s.overworld().setBlockAndUpdate(changed,Blocks.STONE.defaultBlockState());
+                boolean refused=false;try{job.tick();}catch(IllegalStateException expected){refused=true;}
+                check(refused && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).is(Blocks.DIRT),"A future blueprint-cell edit during resource travel stops the complete job before native resource action");
+                s.overworld().setBlockAndUpdate(changed,Blocks.AIR.defaultBlockState());
+            }
+        });
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"gather nearby dirt and build");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
+        server.runOnServer(s->{var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2590,101,6)).isAir(),"Both original distant resources are consumed through real gather actions");
+            check(s.overworld().getBlockState(new BlockPos(2583,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2583,101,4)).is(Blocks.DIRT),"Travel from resources returns retained inventory to both intended cells");
+            for(int z=0;z<=7;z++)for(int y=101;y<=102;y++)check(s.overworld().getBlockState(new BlockPos(2586,y,z)).is(Blocks.STONE),"Four native resource/build journeys preserve the separating wall");
+            check(project.verified.equals("untested") && project.journal.isEmpty(),"Navigation and geometry create no functional evidence or creative undo ownership");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-build-navigation.done","passed");
     }
     private static void physicalNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));

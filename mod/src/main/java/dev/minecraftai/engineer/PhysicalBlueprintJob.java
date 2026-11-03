@@ -18,7 +18,8 @@ final class PhysicalBlueprintJob implements AutoCloseable {
     private final String basis,component;
     private final Map<BlockPos,BlockState> expected=new LinkedHashMap<>();
     private final List<BlockPos> sources=new ArrayList<>();
-    private PhysicalGatherTask gather;
+    private PhysicalResourceTask gather;
+    private PhysicalMoveTask movement;
     private PhysicalPlacementTask place;
     private BlockPos building;
     private boolean closed;
@@ -67,28 +68,47 @@ final class PhysicalBlueprintJob implements AutoCloseable {
                 throw new IllegalStateException("A player or world update changed the blueprint; physical job paused");
         }
     }
-    private BlockPos sourceFor(BlockPos target){
+    private BlockPos sourceFor(){
         for(var source:sources){
             if(!project.level().hasChunkAt(source) || !project.level().getBlockState(source).is(Blocks.DIRT))continue;
-            if(Math.hypot((double)source.getX()-target.getX(),(double)source.getZ()-target.getZ())>2.5)continue;
-            try{PhysicalGatherTask.readFootprint(project,worker,source);return source;}catch(IllegalStateException inaccessible){/* Try another originally observed source; never alter it to fit. */}
+            try{PhysicalResourceTask.stance(project,worker,source);return source;}catch(IllegalStateException inaccessible){/* Try another originally observed source; never alter it to fit. */}
         }
-        throw new IllegalStateException("No accessible original dirt source remains near the next planned cell; inspect the path and resources");
+        throw new IllegalStateException("No original dirt source has an accessible flat gather route; inspect the path and resources");
+    }
+    private BlockPos placementStance(BlockPos target){
+        BlockPos best=null;int distance=Integer.MAX_VALUE;
+        for(var direction:List.of(net.minecraft.core.Direction.NORTH,net.minecraft.core.Direction.EAST,net.minecraft.core.Direction.SOUTH,net.minecraft.core.Direction.WEST)){
+            var candidate=target.relative(direction);
+            try{var route=PhysicalMoveTask.plan(project,worker,candidate);if(route.cells().size()<distance){best=candidate;distance=route.cells().size();}}
+            catch(IllegalStateException inaccessible){/* No new action permission is issued during route search. */}
+        }
+        if(best==null)throw new IllegalStateException("No flat walking route reaches a safe placement stance");return best;
     }
     boolean tick(){
         fence();
+        if(movement!=null){
+            if(movement.tick()){
+                movement=null;
+                var step=PhysicalBlueprintStep.select(project);
+                if(!step.target().equals(building))throw new IllegalStateException("Next blueprint target changed during walking");
+                place=new PhysicalPlacementTask(manager,project,worker,pack,building,expected.keySet(),()->{fence();step.intention().run();});
+            }
+            return false;
+        }
         if(gather!=null){if(gather.tick())gather=null;return false;}
         if(place!=null){if(place.tick()){expected.put(building,Blocks.DIRT.defaultBlockState());placed++;place=null;building=null;}return false;}
         boolean matches=blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos())));
         if(matches){close();owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: Companion placed "+placed+" planned dirt cells. Blueprint geometry now matches; functional behavior remains untested."));return true;}
         var step=PhysicalBlueprintStep.select(project);
-        if(worker.getInventory().isEmpty())gather=new PhysicalGatherTask(manager,project,worker,pack,sourceFor(step.target()),expected.keySet(),this::fence);
+        if(worker.getInventory().isEmpty())gather=new PhysicalResourceTask(manager,project,worker,pack,sourceFor(),expected.keySet(),this::fence);
         else{
-            building=step.target();place=new PhysicalPlacementTask(manager,project,worker,pack,building,expected.keySet(),()->{fence();step.intention().run();});
+            building=step.target();var stance=placementStance(building);
+            if(stance.equals(worker.blockPosition()))place=new PhysicalPlacementTask(manager,project,worker,pack,building,expected.keySet(),()->{fence();step.intention().run();});
+            else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,expected.keySet(),this::fence);
         }
         return false;
     }
     @Override public void close(){
-        try{if(gather!=null)gather.close();}finally{try{if(place!=null)place.close();}finally{closed=true;PhysicalActionGate.cancel(worker);}}
+        try{if(gather!=null)gather.close();}finally{try{if(movement!=null)movement.close();}finally{try{if(place!=null)place.close();}finally{closed=true;PhysicalActionGate.cancel(worker);}}}
     }
 }

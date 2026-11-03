@@ -1,12 +1,12 @@
 name: Physical worker resource recovery
 on:
   push:
-    branches: [work/physical-navigation-feedback]
+    branches: [work/physical-build-navigation-feedback]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: physical-navigation-${{ github.ref }}
+  group: physical-build-navigation-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   multiplayer:

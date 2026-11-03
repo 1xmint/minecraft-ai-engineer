@@ -17,10 +17,13 @@ final class PhysicalResourceTask implements AutoCloseable {
     private PhysicalGatherTask gather;
     private boolean closed;
     PhysicalResourceTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source){
-        this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;this.source=source.immutable();planReads=Set.of();intention=()->{};
+        this(manager,project,worker,pack,source,Set.of(),()->{});
+    }
+    PhysicalResourceTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source,Set<BlockPos> planReads,Runnable intention){
+        this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;this.source=source.immutable();this.planReads=Set.copyOf(planReads);this.intention=intention;
         var stance=stance(project,worker,source);
         if(stance.equals(worker.blockPosition()))gather=new PhysicalGatherTask(manager,project,worker,pack,source,planReads,intention);
-        else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,intention);
+        else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,planReads,intention);
     }
     static BlockPos stance(EngineeringSession project,ServerPlayer worker,BlockPos source){
         try{PhysicalGatherTask.readFootprint(project,worker,source);return worker.blockPosition().immutable();}catch(IllegalStateException notAdjacent){/* Search reachable original stances, never edit a path. */}
