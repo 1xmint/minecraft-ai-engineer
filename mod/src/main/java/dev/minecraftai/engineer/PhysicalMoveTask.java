@@ -16,7 +16,8 @@ final class PhysicalMoveTask implements AutoCloseable {
     private final Set<BlockPos> occupancy;
     private final long expires;
     private final Runnable intention;
-    private int step=1,settled;
+    private final Vec3 initialPosition;
+    private int step,settled;
     private Vec3 previous;
     private boolean braking,closed;
 
@@ -24,7 +25,7 @@ final class PhysicalMoveTask implements AutoCloseable {
         this(manager,project,worker,pack,destination,Set.of(),intention);
     }
     PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention){
-        this.worker=worker;this.pack=pack;this.intention=intention;connection=worker.connection;level=worker.level();
+        this.worker=worker;this.pack=pack;this.intention=intention;connection=worker.connection;level=worker.level();initialPosition=worker.position();
         if(!manager.server.isSameThread() || level!=project.level())throw new IllegalStateException("Movement requires the current server workspace");
         PhysicalWorkLease.requireIdle(project);intention.run();
         route=plan(project,worker,destination);
@@ -76,9 +77,14 @@ final class PhysicalMoveTask implements AutoCloseable {
     boolean tick(){
         authority();
         if(step>=route.cells().size()){close();return true;}
-        var from=Vec3.atBottomCenterOf(route.cells().get(step-1));var to=Vec3.atBottomCenterOf(route.cells().get(step));var pos=worker.position();
-        double dx=to.x-from.x,dz=to.z-from.z,along=(pos.x-from.x)*dx+(pos.z-from.z)*dz,side=Math.abs((pos.x-from.x)*dz-(pos.z-from.z)*dx);
-        if(along<-.3 || along>1.3 || side>.3)throw new IllegalStateException("Companion deviated from its reserved walking edge");
+        // Native pickup can finish anywhere inside the standing cell. First
+        // walk from that exact captured pose to its center within the already
+        // reserved start neighborhood, then follow cardinal center-to-center edges.
+        var from=step==0?initialPosition:Vec3.atBottomCenterOf(route.cells().get(step-1));var to=Vec3.atBottomCenterOf(route.cells().get(step));var pos=worker.position();
+        double dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
+        double along=length<1.0e-8?0:((pos.x-from.x)*dx+(pos.z-from.z)*dz)/length;
+        double side=length<1.0e-8?Math.hypot(pos.x-from.x,pos.z-from.z):Math.abs((pos.x-from.x)*dz-(pos.z-from.z)*dx)/length;
+        if(along<-.3 || along>length+.3 || side>.3)throw new IllegalStateException("Companion deviated from its reserved walking edge");
         double distance=Math.hypot(pos.x-to.x,pos.z-to.z);
         if(braking || distance<.16){
             braking=true;call("setForward",new Class[]{float.class},0f);
