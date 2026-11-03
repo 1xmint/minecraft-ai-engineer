@@ -76,6 +76,9 @@ final class PhysicalBlueprintJob implements AutoCloseable {
         throw new IllegalStateException("No original dirt source has an accessible flat gather route; inspect the path and resources");
     }
     private BlockPos placementStance(BlockPos target){
+        // Retain the existing native placement path when the actual pickup
+        // stance is already in reach. Travel is only needed to bridge distance.
+        if(worker.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(target))<=4)return worker.blockPosition().immutable();
         BlockPos best=null;int distance=Integer.MAX_VALUE;
         for(var direction:List.of(net.minecraft.core.Direction.NORTH,net.minecraft.core.Direction.EAST,net.minecraft.core.Direction.SOUTH,net.minecraft.core.Direction.WEST)){
             var candidate=target.relative(direction);
