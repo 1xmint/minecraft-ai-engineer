@@ -407,15 +407,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 server.runCommand("op Alice");send(context,"engineer project new");server.waitFor(s->!EngineerMod.managerFor(s).projects.isEmpty());
                 String project=server.computeOnServer(s->session(s,"Alice").projectId.toString());
                 server.runCommand("forceload add 2392 -16 2424 32");server.runCommand("fill 2400 100 0 2402 100 2 minecraft:stone");
+                server.runOnServer(s->{var camera=player(s,"Alice");camera.getAbilities().flying=true;camera.onUpdateAbilities();});
                 server.runCommand("tp Alice 2401.5 102 6 180 10");send(context,"engineer select1 2400 100 0");send(context,"engineer select2 2402 102 2");
                 server.waitFor(s->new BlockPos(2402,102,2).equals(session(s,"Alice").corner2));
+                awaitFile(context,"physical-bob.connected");send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 UUID actor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
                 server.runOnServer(s->{var body=s.getPlayerList().getPlayer(actor);check(body!=null && !body.isCreative() && body.getInventory().isEmpty() && !session(s,"Alice").access.allows(actor,ProjectAccess.Permission.BUILD),"Chat summons an empty survival actor with no project grant");});
                 connection.waitForClientboundPackets();context.waitTicks(20);
                 context.runOnClient(client->check(client.level.getPlayerByUUID(actor)!=null,"Actual client receives the physical player entity"));
+                context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));context.waitTicks(5);
                 context.takeScreenshot("engineer-visible-physical-companion");
-                awaitFile(context,"physical-bob.connected");send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
                 write("physical-project",project);write("physical-shared","ready");awaitFile(context,"physical-peer-denied.done");
                 server.runOnServer(s->check(s.getPlayerList().getPlayer(actor)!=null,"Denied peer summon/dismiss leaves the owner's actor present"));
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");server.waitFor(s->s.getPlayerList().getPlayer(actor)==null);

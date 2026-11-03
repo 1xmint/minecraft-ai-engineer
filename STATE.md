@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+PR47 is draft, stacked on phase/28-imported-core. Source901a264 native lifecycle
+CI41575900486 passed. Dedicated chat41575903677 failed because the fixture shared
+Bob AFTER summon: authorization revision correctly removed the actor, so Bob's
+location request reported no actor. Fixture now shares first, then summons; no
+lifecycle guard changed. Downloaded evidence work/physical-chat-failure-41575903677
+and inspected screenshot: actual client received actor but camera fell away from
+the floating platform. Fixture camera now flies and clears chat before capture.
+Scoped client compilation passed; corrected real chat/screenshot proof pending.
+Claude PR46 integrated separately in work/memory-integration, never his branch:
+reason punctuation and service-refresh fixture corrected, no auth weakening;
+focused GPT-6-Luna review found owner/privacy/replay separation sound. Memory
+feedback41576575423/source30ee71d is live. All broad milestones remain incomplete.
+
 Dedicated physical chat proof now has two actual client roles and its own CI
 workflow/runner. Alice's addressed chat summons a server actor; the actual client
 must receive its UUID entity and captures a screenshot. Bob is a shared editor
