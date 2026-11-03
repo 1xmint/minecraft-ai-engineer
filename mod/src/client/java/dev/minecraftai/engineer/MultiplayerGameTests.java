@@ -465,7 +465,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 });
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 oldActor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
-                gatherAndSaveWorker(server,resourceWorker,resourceName);
+                gatherAndSaveWorker(context,server,resourceWorker,resourceName);
                 write("physical-chat.done","passed");
             }
             server.waitFor(s->s.getPlayerList().getPlayerByName("Alice")==null && s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")));
@@ -572,8 +572,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static int countDirt(ServerPlayer worker){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(net.minecraft.world.item.Items.DIRT))count+=stack.getCount();}return count;}
     private static Object inventoryPack(ServerPlayer worker){try{return Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(worker);}catch(Exception failed){throw new IllegalStateException(failed);}}
     @SuppressWarnings({"rawtypes","unchecked"})
-    private static void gatherAndSaveWorker(TestDedicatedServerContext server,UUID id,String name){
+    private static void gatherAndSaveWorker(ClientGameTestContext context,TestDedicatedServerContext server,UUID id,String name){
         var gatherRecord=new java.util.concurrent.atomic.AtomicReference<PhysicalGatherRecord>();
+        var pickupDrop=new java.util.concurrent.atomic.AtomicReference<net.minecraft.world.entity.item.ItemEntity>();
         server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
         server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
             worker.snapTo(2421.5,101,1.5,0,0);
@@ -620,7 +621,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(drops.size()==1,"Fresh authorized mine emits exactly one new drop");var drop=drops.getFirst();
             gatherRecord.get().observeDrop(drop);
             PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+1200,()->{},()->{gatherRecord.get().preparePickup(drop);write("physical-pickup-prepared",drop.getUUID().toString());});
+            pickupDrop.set(drop);
+            var unrelatedProfile=new ServerPlayer(s,worker.level(),worker.getGameProfile(),worker.clientInformation());
+            PhysicalActionGate.forget(unrelatedProfile);check(PhysicalActionGate.managed(worker),"Same-profile unjoined object cannot unregister the current native actor");
         });
+        context.waitTicks(5);
+        context.runOnClient(client->{var mirror=client.level.getPlayerByUUID(id);check(mirror!=null,"Actual client has the resource worker's mirrored entity");check(!PhysicalActionGate.pickup(mirror,pickupDrop.get()),"Client mirror cannot act on or consume the server pickup ticket");});
         server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);check(worker!=null,"Native resource worker must remain alive during pickup");
             if(countDirt(worker)==1 && worker.getZ()>2.25)return true;
