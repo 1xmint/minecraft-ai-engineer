@@ -152,3 +152,14 @@ Focused CI41704667009 failed before production gather/job execution: the raw nat
 
 PR50 landed as a067f25 from exact source5cec203; full CI41696617329 and focused CI41696644888 passed. PR51 source8563b16 passed full CI41699264227 and focused CI41699293611. This branch now includes PR51's main ancestry alignment and evidence update.
 PR52 source50f9318 passed focused CI41705521330. Inspected actual two-cell completion chat and passed native-inventory-restart, gather-stop, blueprint-stop and blueprint-job receipts. The fixture margin and stationary handoff are gameplay-proven for this bounded scenario. Merging the parent changed only ancestry/STATE; fresh full integration CI remains required.
+
+## Next phase: native navigation (E2 and Phase 2 survival/NPC)
+
+Outcomes:
+- Owner requests a resource beyond the straight corridor; the visible worker walks around an inert obstacle and hands off to existing exact native gather/place tasks. Proof: actual client chat, recorded route, native drop and saved inventory, no supplied items or teleports.
+- Human edits, blocked steps, route deviation, disconnect, selection/revision/grant changes and stop cancel motion before another action. Proof: real dedicated-server refusals, unchanged protected blocks/inventory, fresh request required.
+- Movement reservations prevent intersecting assignments without granting block mutation authority. Proof: occupancy conflicts and validateWrite refusal for occupancy-only cells.
+
+Decision 2026-11-03: flat loaded-workspace navigation precedes more materials/tools. Keeping straight corridors leaves resource access impractical; expanding materials first multiplies action/drop/restart cases without solving access. Replacing the native actor/framework would discard the proven inventory/ticket boundary. Use bounded cardinal BFS and actual walking, initially flat inert terrain without jumps, doors, hazards or mechanisms. GPT-6-Luna independently challenged the proposal and identified that exclusive body occupancy must be separate from block-write permission.
+
+Tasks: (O3) extend reservation occupancy with no mutation grant and exact conflict checks; (O1) pure bounded route search with captured support/clearance states and explicit edges; (O1/O2) movement executor validates current connection, full route states and swept occupancy each tick, then closes its lease before fresh existing gather/place admission; (O1/O2/O3) real obstacle-route and failure CI flows. Native mine/pickup/place tickets are unchanged. No route or authority is resumed from disk. This phase is planned, not implemented or proven.
