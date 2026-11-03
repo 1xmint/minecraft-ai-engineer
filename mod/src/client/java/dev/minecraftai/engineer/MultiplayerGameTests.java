@@ -918,7 +918,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);designComparisonFlow(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -2138,6 +2138,53 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
+    /** Read-only comparison: chat, viewer sharing and revocation, unsupported targets, and no change to either project. */
+    private static void designComparisonFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String[] ids=server.computeOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var dimension=s.overworld().dimension().identifier().toString();
+            String[] out=new String[4];
+            for(int i=0;i<4;i++){
+                var project=java.util.UUID.randomUUID();var session=new EngineeringSession(manager,project,alice,i==2?"minecraft:the_nether":dimension);
+                if(i!=3)session.blueprint=MechanismCatalog.create("signal-lamp",manager.worldId,session.dimension,new BlockPos(400+i*10,100,0),i==1?90:0,1);
+                manager.projects.put(project,session);out[i]=project.toString();
+            }
+            session(s,"Alice");return out;
+        });
+        String base=ids[0],twin=ids[1],nether=ids[2],empty=ids[3];
+        java.util.function.Function<MinecraftServer,String> fingerprint=s->{var b=new StringBuilder();for(var id:new String[]{base,twin}){var p=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(id));var root=p.assignments.tasks.get("root");
+            b.append(p.revision()).append('/').append(p.blueprint.id()).append('/').append(p.blueprint.revision()).append('/').append(p.verified).append('/').append(root==null?"none":root.verified+"@"+root.lastPassedScope).append('/').append(p.journal.size()).append('/').append(p.state).append(';');}return b.toString();};
+        String before=server.computeOnServer(fingerprint::apply);
+        send(context,"engineer project use "+base);server.waitFor(s->session(s,"Alice").projectId.toString().equals(base));
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+twin);expectChat(context,"Recommendation: no measured difference; neither design has an advantage.");expectChat(context,"Reliability: unavailable");expectChat(context,"This comparison changed nothing.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog not gate");expectChat(context,"Blocks: this design 6, catalog not-gate 4 (catalog not-gate uses 2 fewer)");expectChat(context,"they are meant to do different things");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+nether);expectChat(context,"That project is in another dimension.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+empty);expectChat(context,"has no design yet");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+base);expectChat(context,"That is the design you have selected.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog teleporter");expectChat(context,"The catalog has no design called teleporter.");
+        MESSAGES.clear();send(context,"engineer compare "+twin);expectChat(context,"Measured differences: none.");
+        // Bob's view: the base is shared with him; the twin only while he is a viewer. Missing and unshared read the same.
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var bob=player(s,"Bob").getUUID();
+            var p=manager.projects.get(java.util.UUID.fromString(base));var t=manager.projects.get(java.util.UUID.fromString(twin));
+            p.access.member(alice,bob,ProjectAccess.Role.VIEWER);var previous=p.commandActor;p.commandActor=bob;
+            try{
+                String missing=java.util.UUID.randomUUID().toString();
+                var unshared=DesignComparisonText.run(manager,p,twin);var absent=DesignComparisonText.run(manager,p,missing);
+                check(unshared.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"An unshared project reads as not found: "+unshared);
+                check(absent.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+missing+"'.")),"A missing project reads the same: "+absent);
+                t.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+                var shared=DesignComparisonText.run(manager,p,twin);check(shared.stream().anyMatch(line->line.contains("no measured difference")),"A viewer can compare: "+shared);
+                t.access.revoke(alice,bob);
+                check(DesignComparisonText.run(manager,p,twin).equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"Revocation removes the comparison");
+                p.access.revoke(alice,bob);
+                boolean refused=false;try{DesignComparisonText.run(manager,p,twin);}catch(IllegalStateException denied){refused=true;}
+                check(refused,"Without view permission on the selected project nothing is compared");
+            }finally{p.commandActor=previous;}
+        });
+        String after=server.computeOnServer(fingerprint::apply);
+        check(before.equals(after),"Comparison changed no project, revision, evidence, journal or state: "+before+" -> "+after);
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(var id:ids)manager.projects.remove(java.util.UUID.fromString(id));});
+    }
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));

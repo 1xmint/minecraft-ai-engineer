@@ -50,6 +50,7 @@ final class EngineerConversation {
             if(ConversationText.no(request)){boolean lessonCancelled=manager.conversationLessons.cancel(player.getUUID());boolean requestCancelled=manager.knowledge.cancelConversation(session);boolean designCancelled=manager.generated.cancelConversation(session);boolean structuralCancelled=session.cancelConversationStructural();reply(player,lessonCancelled || requestCancelled || designCancelled || structuralCancelled?"Cancelled the pending request. No new work was delegated.":"There is no pending conversation request to cancel.");return;}
             if(ConversationMemoryText.handle(session,request))return;
             if(SchematicText.handle(session,request))return;
+            if(DesignComparisonText.handle(manager,session,request))return;
             if(manager.physical.handle(session,request))return;
             String lesson=ConversationText.lesson(request);
             if(manager.conversationLessons.handle(session,request,lesson))return;
