@@ -96,7 +96,7 @@ final class LessonAssistant {
         s.tell("Stored functional result for component "+target+": "+(task==null?"untested":task.verified));
         if(task!=null && task.lastPassedScope!=null)s.tell("Retained test evidence for component "+target+": design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong()+". This answer did not run a new test.");
         else s.tell("No actual pass is recorded for this component. This answer did not inspect or test the world.");
-        String stale=staleNote(task,s.blueprint.revision());if(stale!=null)s.tell("Warning: "+stale+".");
+        String stale=staleNote(task,s.blueprint);if(stale!=null)s.tell("Warning: "+stale+".");
         s.tell(built(s,target));
         s.tell(NOT_OBSERVED);
     }
@@ -111,23 +111,28 @@ final class LessonAssistant {
         s.tell("Assistant task: component "+s.activeComponent+" | "+s.state+" | "+s.detail);
         for(String id:components.stream().limit(8).toList()) {
             var task=s.assignments.tasks.get(id);
-            s.tell("Component "+id+": recorded status "+(task==null?"PENDING":task.status)+" | functional result: "+evidence(task,s.blueprint.revision()));
+            s.tell("Component "+id+": recorded status "+(task==null?"PENDING":task.status)+" | functional result: "+evidence(task,s.blueprint));
         }
         if(components.size()>8)s.tell((components.size()-8)+" more components; ask about one by name.");
         s.tell("For decisions and changes, ask 'what did we decide', 'what changed' or 'why did we choose this'.");
         s.tell(NOT_OBSERVED);
     }
     /** A stored functional result, marked stale when its pass belongs to an older design revision. */
-    static String evidence(ComponentAssignments.Task task,long revision) {
+    static String evidence(ComponentAssignments.Task task,Blueprint blueprint) {
         if(task==null)return "untested";
-        String stale=staleNote(task,revision);
+        String stale=staleNote(task,blueprint);
         if(stale!=null)return task.verified+", but "+stale;
         return task.lastPassedScope==null?task.verified:task.verified+" at design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong();
     }
-    private static String staleNote(ComponentAssignments.Task task,long revision) {
-        if(task==null || task.lastPassedScope==null)return null;
-        long passed=task.lastPassedScope.get("blueprintRevision").getAsLong();
-        return passed==revision?null:"its last pass was at design revision "+passed+" but the design is now revision "+revision+", so that pass may not describe the current design";
+    private static String staleNote(ComponentAssignments.Task task,Blueprint blueprint) {
+        if(task==null)return null;
+        if(FunctionalTrial.matchesCurrentScope(blueprint,task))return null;
+        if(task.lastPassedScope==null)return task.verified!=null && task.verified.startsWith("passed")?"its stored pass has no complete original scope; the current design is untested":null;
+        if(task.lastPassedScope.has("blueprintRevision")){
+            long passed=task.lastPassedScope.get("blueprintRevision").getAsLong();
+            if(passed!=blueprint.revision())return "its last pass was at design revision "+passed+" but the design is now revision "+blueprint.revision()+", so that pass may not describe the current design";
+        }
+        return "its retained pass belongs to a different or incomplete blueprint/component scope; the current design is untested";
     }
     private static String built(EngineeringSession s,String target) {
         var task=s.assignments.tasks.get(target);

@@ -53,12 +53,13 @@ public final class ConversationGameTests {
             helper.assertTrue(ConversationMemoryText.lookup(text)==null,"A pronoun why goes to the explanation, not a note search: "+text);
         }
         helper.assertTrue(ConversationText.lesson("why did we choose comparators")==null && ConversationMemoryText.lookup("why did we choose comparators").why(),"A named why stays a literal note search");
-        helper.assertTrue(LessonAssistant.evidence(null,3).equals("untested"),"No record means untested, never an invented pass");
-        var task=new ComponentAssignments.Task("a","basis");task.verified="passed:generated-buffer:3 vectors@4";
-        helper.assertTrue(LessonAssistant.evidence(task,3).equals("passed:generated-buffer:3 vectors@4"),"A pass without a recorded scope is reported as stored");
-        var scope=new com.google.gson.JsonObject();scope.addProperty("blueprintRevision",3L);task.lastPassedScope=scope;
-        helper.assertTrue(LessonAssistant.evidence(task,3).equals("passed:generated-buffer:3 vectors@4 at design revision 3"),"A current pass names its revision");
-        String stale=LessonAssistant.evidence(task,4);
+        var source=MechanismGameTests.generatedSource(4,4);source.addProperty("revision",3);var blueprint=Blueprint.parse(source,"test","minecraft:overworld");
+        helper.assertTrue(LessonAssistant.evidence(null,blueprint).equals("untested"),"No record means untested, never an invented pass");
+        var task=new ComponentAssignments.Task("root",ComponentAssignments.basis(blueprint,"root"));task.verified="passed:generated-buffer:3 vectors@4";
+        helper.assertTrue(LessonAssistant.evidence(task,blueprint).contains("no complete original scope"),"A pass without scope is never presented as current");
+        var scope=new com.google.gson.JsonObject();scope.addProperty("projectId",blueprint.projectId());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",3L);scope.addProperty("component","root");scope.addProperty("basis",task.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);task.lastPassedScope=scope;
+        helper.assertTrue(LessonAssistant.evidence(task,blueprint).equals("passed:generated-buffer:3 vectors@4 at design revision 3"),"A current complete pass names its revision");
+        source.addProperty("revision",4);String stale=LessonAssistant.evidence(task,Blueprint.parse(source,"test","minecraft:overworld"));
         helper.assertTrue(stale.startsWith("passed:generated-buffer:3 vectors@4, but its last pass was at design revision 3 but the design is now revision 4"),"An old pass is marked stale after a design change: "+stale);
         helper.succeed();
     }

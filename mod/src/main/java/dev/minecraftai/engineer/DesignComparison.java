@@ -83,14 +83,12 @@ final class DesignComparison {
         if(task == null) return "not built or tested (catalog design)";
         String verified=task.verified == null ? "untested" : task.verified;
         if(verified.startsWith("passed") && passedAt(b, task)) return "passed its game test at revision " + b.revision();
-        if(verified.startsWith("passed")) return "passed an earlier revision; this revision is untested";
+        if(verified.startsWith("passed")) return "retained historical pass; the current blueprint/component scope is untested";
         if(verified.startsWith("stale")) return "test result is stale; retest required";
         return "untested";
     }
     private static boolean passedAt(Blueprint b, ComponentAssignments.Task task) {
-        var scope=task.lastPassedScope;
-        return task.verified != null && task.verified.startsWith("passed") && scope != null && scope.has("blueprintRevision")
-                && scope.get("blueprintRevision").getAsLong() == b.revision();
+        return task.verified != null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(b,task);
     }
 
     /** Timing only from a confirmed buffer behavior whose current revision passed in game. */

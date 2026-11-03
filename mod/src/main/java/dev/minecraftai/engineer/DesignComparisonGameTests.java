@@ -67,9 +67,14 @@ public final class DesignComparisonGameTests {
         if(behavior!=null)source.add("behavior",behavior);
         return new Blueprint(UUID.randomUUID().toString(),UUID.randomUUID().toString(),revision,WORLD,DIM,"generated",BlockPos.ZERO,0,blocks,List.of(new Blueprint.Stage("build","Build","test")),source);
     }
-    private static ComponentAssignments.Task passed(long revision){
-        var task=new ComponentAssignments.Task("root","");task.verified="passed:generated@20";
-        var scope=new JsonObject();scope.addProperty("blueprintRevision",revision);task.lastPassedScope=scope;return task;
+    private static ComponentAssignments.Task passed(Blueprint blueprint){
+        var task=new ComponentAssignments.Task("root",ComponentAssignments.basis(blueprint,"root"));task.verified="passed:generated@20";
+        var scope=new JsonObject();scope.addProperty("projectId",blueprint.projectId());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",blueprint.revision());
+        scope.addProperty("component","root");scope.addProperty("basis",task.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);task.lastPassedScope=scope;return task;
+    }
+    private static Blueprint timed(){
+        var source=MechanismGameTests.generatedSource(4,6);source.addProperty("revision",3);source.addProperty("id",UUID.randomUUID().toString());
+        return Blueprint.parse(source,"test",DIM);
     }
 
     @GameTest public void sameBehaviorRecommendationsFollowMeasurements(GameTestHelper helper){
@@ -94,14 +99,34 @@ public final class DesignComparisonGameTests {
     @GameTest public void timingComesOnlyFromCurrentPassedEvidence(GameTestHelper helper){
         var behavior=new JsonObject();behavior.addProperty("schemaVersion",1);behavior.addProperty("function","buffer");behavior.addProperty("risingGameTicks",4);behavior.addProperty("fallingGameTicks",6);
         var stone=Blocks.STONE.defaultBlockState();
-        var a=generated("d1",3,List.of(stone),behavior);var b=generated("d1",3,List.of(stone),behavior);
-        var both=DesignComparison.compare(DesignComparison.measure("a",a,passed(3)),DesignComparison.measure("b",b,passed(3)));
+        var a=timed();var b=timed();
+        var both=DesignComparison.compare(DesignComparison.measure("a",a,passed(a)),DesignComparison.measure("b",b,passed(b)));
         helper.assertTrue(has(both,"Timing from passed game tests: a on after 4 game ticks, off after 6; b on after 4 game ticks, off after 6")
                 && has(both,"passed its game test at revision 3") && has(both,"Reliability: unavailable"),"Current passes report recorded timing only: "+all(both));
-        var old=DesignComparison.compare(DesignComparison.measure("a",a,passed(3)),DesignComparison.measure("b",b,passed(2)));
-        helper.assertTrue(has(old,"Timing: unavailable — b does not have") && has(old,"passed an earlier revision; this revision is untested"),"An earlier revision's pass is not current timing: "+all(old));
+        var historical=passed(b);historical.lastPassedScope.addProperty("blueprintRevision",2);
+        var old=DesignComparison.compare(DesignComparison.measure("a",a,passed(a)),DesignComparison.measure("b",b,historical));
+        helper.assertTrue(has(old,"Timing: unavailable — b does not have") && has(old,"retained historical pass"),"An earlier revision's pass is not current timing: "+all(old));
         var stale=new ComponentAssignments.Task("root","");stale.verified="stale: component basis migrated; retest required";
         helper.assertTrue(DesignComparison.status(a,stale).contains("stale") && DesignComparison.timing(a,stale)==null,"Stale evidence reports no timing");
+        helper.succeed();
+    }
+    @GameTest public void retainedPassCannotBeRelabelledToNewIdentityOrBasis(GameTestHelper helper){
+        var original=timed();var task=passed(original);var assignments=new ComponentAssignments();assignments.tasks.put("root",task);assignments.reconcile(original);
+        var source=original.source().deepCopy();source.addProperty("id",UUID.randomUUID().toString());var replacement=Blueprint.parse(source,"test",DIM);assignments.reconcile(replacement);
+        helper.assertTrue(assignments.tasks.get("root")==task && task.verified.startsWith("passed") && task.basis.equals(ComponentAssignments.basis(replacement,"root")),"Same-shape reconciliation really retains the old pass and basis");
+        helper.assertTrue(!FunctionalTrial.matchesCurrentScope(replacement,task) && DesignComparison.timing(replacement,task)==null && DesignComparison.status(replacement,task).contains("historical"),"Same revision and basis cannot relabel a different blueprint identity's pass as current");
+        helper.assertTrue(LessonAssistant.evidence(task,replacement).contains("different or incomplete blueprint/component scope"),"Resume also labels that retained evidence historical");
+        for(String field:List.of("projectId","blueprintId","blueprintRevision","component","basis","basisVersion")){
+            var altered=passed(original);
+            switch(field){
+                case "blueprintRevision","basisVersion"->altered.lastPassedScope.addProperty(field,99);
+                case "projectId","blueprintId"->altered.lastPassedScope.addProperty(field,UUID.randomUUID().toString());
+                case "component"->altered.lastPassedScope.addProperty(field,"other");
+                default->altered.lastPassedScope.addProperty(field,"0".repeat(64));
+            }
+            helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,altered) && DesignComparison.timing(original,altered)==null,"Changing scope field "+field+" refuses current timing");
+        }
+        var wrongTask=passed(original);wrongTask.basis="0".repeat(64);helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,wrongTask),"Stored task basis must itself match the current component");
         helper.succeed();
     }
 

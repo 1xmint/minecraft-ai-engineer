@@ -512,6 +512,19 @@ final class FunctionalTrial {
             return saved.deepCopy();
         } catch(RuntimeException bad) { if(bad instanceof IllegalStateException e)throw e;throw new IllegalStateException("Invalid functional evidence scope",bad); }
     }
+    /** Display-only freshness check; retained history never grants execution authority. */
+    static boolean matchesCurrentScope(Blueprint blueprint,ComponentAssignments.Task task){
+        if(blueprint==null || task==null || task.lastPassedScope==null)return false;
+        try{
+            var scope=validateHistoricalScope(task.lastPassedScope);
+            if(!scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())
+                || scope.get("blueprintRevision").getAsBigDecimal().intValueExact()!=blueprint.revision() || !scope.get("component").getAsString().equals(task.id))return false;
+            String current=ComponentAssignments.basis(blueprint,task.id);
+            int version=scope.get("basisVersion").getAsBigDecimal().intValueExact();
+            String expected=version==1?ComponentAssignments.legacyBasis(blueprint,task.id):current;
+            return current!=null && current.equals(task.basis) && expected.equals(scope.get("basis").getAsString());
+        }catch(RuntimeException invalid){return false;}
+    }
     private void validateCurrentScope(JsonObject scope) {
         var s=session;Blueprint blueprint=s.blueprint;String component=scope.get("component").getAsString();int version=scope.get("basisVersion").getAsBigDecimal().intValueExact();
         if(blueprint==null || !scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())
