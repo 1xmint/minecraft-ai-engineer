@@ -1300,6 +1300,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Where we left off (rebuilt from project records just now)");
         expectChat(context,"Your lesson: component b");expectChat(context,"| paused");expectChat(context,"Component a: recorded status");
         expectChat(context,"but the design is now revision");expectChat(context,"Observed: this answer did not inspect the world");
+        context.waitTicks(200); // Let native command pacing drain after the extra resume question; never reset it.
         send(context,"engineer ask do not build component a");expectChat(context,"Please choose a lesson question");
         MESSAGES.clear();send(context,"engineer skip");send(context,"engineer previous");send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
         write("lesson-bob.done","passed");
