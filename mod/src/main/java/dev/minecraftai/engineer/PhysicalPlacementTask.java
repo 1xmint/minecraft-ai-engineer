@@ -34,7 +34,11 @@ final class PhysicalPlacementTask implements AutoCloseable {
             count+=stack.getCount();if(slot<9)selected=slot;
         }
         if(count!=1 || selected<0)throw new IllegalStateException("The companion needs exactly one retained dirt item in its hotbar");
-        if(!level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(target),Vec3.atLowerCornerOf(target.offset(1,1,1)))).isEmpty())throw new IllegalStateException("Move entities out of the placement cell");
+        var blocking=level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(target),Vec3.atLowerCornerOf(target.offset(1,1,1))));
+        if(!blocking.isEmpty()){
+            System.getLogger(PhysicalPlacementTask.class.getName()).log(System.Logger.Level.WARNING,"Placement blocked: target="+target+", worker="+worker.getUUID()+" at "+worker.position()+", workerBox="+worker.getBoundingBox()+", entities="+blocking.stream().map(entity->net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())+" "+entity.getUUID()+" at "+entity.position()+" box="+entity.getBoundingBox()).toList());
+            throw new IllegalStateException("Move entities out of the placement cell");
+        }
         var reads=new HashSet<BlockPos>();for(var cell:BlockPos.betweenClosed(target.offset(-1,-1,-1),target.offset(1,1,1)))if(!cell.equals(target)){
             if(!project.contains(cell) || !level.hasChunkAt(cell))throw new IllegalStateException("Placement neighborhood must be loaded in the workspace");
             var state=level.getBlockState(cell);
