@@ -1,12 +1,12 @@
-name: Physical companion multiplayer
+name: Physical companion restart
 on:
   push:
-    branches: [work/physical-multiplayer-feedback]
+    branches: [work/physical-restart-feedback]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: physical-multiplayer-${{ github.ref }}
+  group: physical-restart-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   multiplayer:
