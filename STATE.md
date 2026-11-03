@@ -4,6 +4,15 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical restart sourceeb036d1 / CI41577467684 completed SUCCESS. Downloaded
+work/physical-restart-proof-41577467684 and inspected physical-restart.done plus
+runner success. Actual saved-world boot retained world/project, advanced epoch,
+had no actor/lease/test callback; only fresh chat created a new actor UUID received
+by the reconnected client, then explicit dismissal removed it. R1/R2 passed on
+that source. This is idle lifecycle recovery, not interrupted building/inventory
+recovery or production authenticated-human acceptance. Preserve this regression
+in the companion integration before merging; no full NPC/survival completion.
+
 Phase32 physical restart proof in work/physical-restart,
 phase/32-physical-restart, based on PR47 sourcee0129c4; PR47 itself is frozen for CI.
 R1: dedicated server reopens the SAME saved world/project with a fresh epoch and

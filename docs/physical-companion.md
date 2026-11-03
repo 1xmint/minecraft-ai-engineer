@@ -13,6 +13,12 @@ The run proves addressed-chat summon/dismiss, denied shared-editor actions and
 owner-disconnect cleanup. It does not establish production account login or the
 full human acceptance workflow.
 
+The [saved-server reboot proof](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41577467684)
+on source `eb036d1` also passed: same saved world/project, new server epoch, no
+automatic actor or action authority, then explicit chat creates a new actor that
+reaches the reconnected client. This tests idle lifecycle recovery; interrupted
+physical construction and inventory recovery remain unfinished.
+
 The server operator needs the free
 [Carpet 26.3 release](https://github.com/gnembon/fabric-carpet/releases/tag/v26.3),
 specifically `fabric-carpet-26.3+v260915.jar`. Its SHA256 is
