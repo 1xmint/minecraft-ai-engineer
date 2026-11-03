@@ -182,9 +182,10 @@ try {
         "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
       )
       .get(server.serverId, knowledgeProject);
+    const expectedNotes = liveDiscussion ? 3 : 5;
     assert.equal(
       counter?.revision,
-      3,
+      expectedNotes,
       "Restart appends knowledge without losing or duplicating notes",
     );
     const notes = db
@@ -193,21 +194,44 @@ try {
       )
       .all(server.serverId, knowledgeProject)
       .map((row) => JSON.parse(row.document));
-    assert.equal(notes.length, 3, "Denied editor append creates no note");
+    assert.equal(notes.length, expectedNotes, "Denied appends create no note");
     assert.deepEqual(
       notes.map((note) => [note.revision, note.kind, note.text]),
       [
         [1, "goal", "Keep the entrance within six blocks."],
         [2, "decision", "Use a visible lamp for the output."],
         [3, "constraint", "Preserve the entrance clearance."],
+        ...(!liveDiscussion
+          ? [
+              [4, "decision", "Use repeaters for the delay"],
+              [5, "decision", "Use comparators for the delay"],
+            ]
+          : []),
       ],
     );
     for (const note of notes) {
       assert.equal(note.authorId, "10920508-d5d8-3eed-93d2-92f193afe7d7");
       assert.equal(note.source, "owner-authored");
-      assert.equal(note.schemaVersion, 1);
+      assert.equal(note.schemaVersion, note.revision <= 3 ? 1 : 2);
     }
-    assert.equal(new Set(notes.map((note) => note.id)).size, 3);
+    assert.equal(new Set(notes.map((note) => note.id)).size, expectedNotes);
+    if (!liveDiscussion) {
+      assert.deepEqual(
+        notes
+          .slice(3)
+          .map((note) => [
+            note.revision,
+            note.rationale,
+            note.supersedes ?? null,
+            note.writtenAtRevision,
+          ]),
+        [
+          [4, "they stay visible.", null, 3],
+          [5, "they are smaller.", 4, 4],
+        ],
+        "Reasons and replacement provenance persist exactly; refused replacements create no rows",
+      );
+    }
     const discussions = db
       .prepare(
         "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='discussion-reply' ORDER BY rowid",
