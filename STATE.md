@@ -163,6 +163,20 @@ physical-lifecycle-feedback CI is submitted, native N1/N2 and dedicated chat flo
 still pending. Existing creative assistant and optional-dependency-absent behavior
 need full CI before merge/release. No construction/gathering completion claim.
 
+PR45 merged into public main as aaed3ef5e63b8afd42a2c3d47426b39dedd22cd6.
+Exact source42deb3c / CI41577981016 passed all5 jobs; inspected dedicated artifact
+work/connected-success-41577981016, restart/undo receipts and final independent
+SQLite verifier (connected evidence across server epochs). C1-C3 connected slice
+is proven, not the full E2/overall goal. Published alpha.2 still predates it.
+
+PR49/source73510bc CI41578002147 and PR48/sourcef2a3979 CI41578063302 reached later
+structural flow but exhausted the deterministic fixture's64/hour planning cap.
+Focused GPT-6-Luna quota review confirms CI-only increase to96/hour is isolated:
+minute cap24 unchanged, production defaults4/minute24/hour unchanged, all gateway
+quota/denial/audit tests unchanged, inline fixture cannot call SDK and unexpected
+provider paths still fail with inference-attempted marker. New exact-source full
+CI must finish the chain with no unexpected inference before merge.
+
 Inspected failed-restart source0df5e59 / CI41573034326 dedicated artifacts at
 work/imported-restart-failure-41573034326: connected-functional/interruption/
 revocation/player-edit receipts all passed, as did imported-build.done. Actual
