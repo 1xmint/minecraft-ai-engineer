@@ -34,6 +34,15 @@ human-survival authority path, source/drop/destination reservations and pickup
 tickets are required. Native player/chunk files are not a hard-crash transaction;
 mixed states must stay uncertain with no automatic creative compensation.
 
+Preflight23ddbbe / CI41579632130 failed before saving/loading inventory: joining
+the raw fixture worker after Alice disconnected hit Carpet's null scriptServer.
+Downloaded work/physical-inventory-failure-41579632130. Pinned upstream
+CarpetClient.disconnect() calls CarpetServer.onServerClosed(null); Fabric's test
+client and dedicated Main share this JVM. Move resource gathering/saving before
+that client disconnect, while retaining actual saved-world restart/native NBT
+reload and default-denial checks. No product guard or expected item count changed;
+no globals mocked/reset. Scoped client compilation passed; fresh CI required.
+
 Physical restart sourceeb036d1 / CI41577467684 completed SUCCESS. Downloaded
 work/physical-restart-proof-41577467684 and inspected physical-restart.done plus
 runner success. Actual saved-world boot retained world/project, advanced epoch,

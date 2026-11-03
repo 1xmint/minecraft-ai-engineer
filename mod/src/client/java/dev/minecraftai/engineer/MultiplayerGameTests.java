@@ -426,11 +426,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");server.waitFor(s->s.getPlayerList().getPlayer(actor)==null);
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 oldActor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+                gatherAndSaveWorker(server,resourceWorker,resourceName);
                 write("physical-chat.done","passed");
             }
             server.waitFor(s->s.getPlayerList().getPlayerByName("Alice")==null && s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")));
             write("physical-disconnect.done","passed");
-            gatherAndSaveWorker(server,resourceWorker,resourceName);
         }
         // Pinned launcher reopens the same saved level; the public world builder
         // would create a fresh world and could not prove restart recovery.
