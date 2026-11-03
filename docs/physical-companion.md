@@ -45,3 +45,37 @@ permissions removes the actor. Moving it out of its idle position also removes
 it. Server shutdown stops and removes it; restart does not automatically summon
 it or grant any action authority. These lifecycle cases still require the stated
 CI and multiplayer proofs before release.
+
+Each project keeps a private worker identity. An explicit resummon reuses it and
+loads native player data before joining; missing data or a conflicting connected
+identity refuses the request. Saving reloads and compares inventory contents.
+No permission, connection or action ticket is recovered. Production actors still
+require empty inventories while resource execution is unfinished. This does not
+provide atomic recovery across inventory and world files after a hard crash.
+
+Development gather slice (not yet gameplay-proven): an owner can say
+`Engineer, gather dirt at X Y Z`. The target must be two to four blocks from the
+companion on one horizontal axis, at the same height, along a clear three-wide
+stone-supported path entirely in the selected workspace. Only one dirt block is
+handled per request; the inventory must start empty. The companion uses native
+mining and walking, accepts only its captured native drop and verifies the saved
+inventory. Dismissal stops the task; explicit resummon retains saved resources
+without restoring action permission. Construction and general navigation remain
+unfinished. Interrupted or failed records require inspection; no automatic retry,
+creative compensation or atomic hard-crash recovery is provided.
+
+Say `Engineer, what happened to my gathered resources?` for an owner-only,
+read-only comparison of gather records, saved native inventory and currently
+visible source/drop state. `inspect companion recovery` is an equivalent phrase.
+Missing player data is reported as unavailable, never treated as an empty
+inventory. A missing drop does not prove it was picked up. Inspection grants no
+permission and never creates, removes, retries or compensates resources.
+
+Development placement slice: say `Engineer, place retained dirt at X Y Z` as the
+project owner. The companion must hold exactly one dirt item in its hotbar. The
+target must be clear air above stone, within four blocks of its eyes, with its
+neighbor/support reservation inside the workspace and no entity in the target.
+It uses native survival right-click, consumes the retained item and verifies its
+saved inventory. Native return evidence and an empty inventory are required;
+matching geometry alone is insufficient. This is not a blueprint executor,
+functional test, undo mechanism or atomic hard-crash transaction.

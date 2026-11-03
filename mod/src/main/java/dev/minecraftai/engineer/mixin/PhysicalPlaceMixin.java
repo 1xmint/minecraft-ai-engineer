@@ -15,4 +15,6 @@ abstract class PhysicalPlaceMixin {
     private void engineer$physicalPlace(BlockPlaceContext context,CallbackInfoReturnable<InteractionResult> result){
         if(!PhysicalActionGate.place(context))result.setReturnValue(InteractionResult.FAIL);
     }
+    @Inject(method="place",at=@At("RETURN"))
+    private void engineer$physicalPlaced(BlockPlaceContext context,CallbackInfoReturnable<InteractionResult> result){PhysicalActionGate.placed(context,result.getReturnValue());}
 }

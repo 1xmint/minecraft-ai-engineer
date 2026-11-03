@@ -14,8 +14,11 @@ actions. His request authorizes this public repository and implementation.
 ## Constraints
 
 - World state is authoritative. Keep intended, observed, and verified state separate.
-- All mutations run on the logical-server thread, inside explicitly delegated
-  loaded regions, in creative mode. Never silently overwrite player edits.
+- Direct block edits run on the logical-server thread, inside explicitly delegated
+  loaded regions, in creative mode. Native survival actors use separate owner,
+  connection, reservation and event-time action fences and consume real inventory;
+  they never fall back to creative edits or supplied materials. Never silently
+  overwrite player edits.
 - The server owns world identity, player authentication, project permissions,
   reservations and execution. The server-side companion owns durable project
   storage. Clients never own permission decisions or connect to Codex directly.

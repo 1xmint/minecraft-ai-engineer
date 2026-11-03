@@ -12,5 +12,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemEntity.class)
 abstract class PhysicalPickupMixin {
     @Inject(method="playerTouch",at=@At("HEAD"),cancellable=true)
-    private void engineer$physicalPickup(Player player,CallbackInfo result){if(PhysicalActionGate.managed(player))result.cancel();}
+    private void engineer$physicalPickup(Player player,CallbackInfo result){if(!PhysicalActionGate.pickup(player,(ItemEntity)(Object)this))result.cancel();}
 }

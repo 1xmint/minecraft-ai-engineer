@@ -42,7 +42,8 @@ launch() {
 launch "$repo" physical-alice Alice
 launch "$temporary/bob" physical-bob Bob
 for pid in "${pids[@]}"; do wait "$pid"; done
-for marker in physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-alice.done physical-bob.done; do
+for marker in physical-gather-stop.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done; do
   [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing native receipt: $marker" >&2; exit 1; }
 done
-echo 'Physical companion dedicated chat/restart proof passed: visible actor, denied editor, disconnect, same-world reboot and explicit fresh summon.'
+node scripts/ci/verify-physical-gather.mjs "$coord/gather-records"
+echo 'Physical worker recovery proof passed: native mining/pickup, saved inventory reload under denial, plus companion chat and same-world reboot.'
