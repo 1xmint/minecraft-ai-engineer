@@ -1069,3 +1069,21 @@ inspected physical-placement.done, physical-gather.done and actual refusal,
 inspection and native placement chat. Bounded native gather/retained placement is
 proven on that source; broader machines/resources and crash recovery remain open.
 Latest server/client compilation passed before final inspection wording change.
+
+2026-11-03: PR47 merged exact1fdbde7 after all5 CI41682037419 SUCCESS;
+imported restart/undo receipts and final independent memory proof inspected.
+Main squashff4a021. PR50 native resource executor remains separately under CI.
+New phase34 worktree isolates blueprint bridge from that frozen candidate.
+
+Phase34 selects the next accepted single-root stone/dirt blueprint cell for native
+retained-item placement. Preflight all plan cells for loaded/workspace and
+matching-or-air; reserve all plan reads, recheck prefix support/intention and
+existing assignment/revision fences. Physical lease also rejects unreconciled
+creative journal/baseline/pending placement/undo. Journal records blueprint ID,
+revision/component/basis descriptively, never permission. CI fixture accepts
+imported dirt geometry with existing support, rejects later obstruction and
+changed prior support, then actual ownerSURVIVAL chat places the next dirt cell.
+No geometry ownership/creative undo/functional pass/completion is inferred.
+Luna reviewed the boundary; whole-plan occupied-cell preflight was corrected per
+review. Final compile and focused phase34 CI pending. Broader materials, composite
+scheduling, whole-blueprint execution and crash recovery remain unfinished.

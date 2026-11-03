@@ -79,3 +79,13 @@ It uses native survival right-click, consumes the retained item and verifies its
 saved inventory. Native return evidence and an empty inventory are required;
 matching geometry alone is insufficient. This is not a blueprint executor,
 functional test, undo mechanism or atomic hard-crash transaction.
+
+Development blueprint bridge: `Engineer, build the next blueprint block with
+retained dirt` selects the next missing dirt cell in an accepted single-root
+stone/dirt blueprint. Existing stone supports must already match; composite
+scheduling and other materials remain unsupported. All intended cells must be
+loaded in the workspace and matching or air before work starts. The executor
+reserves the plan reads, rechecks preceding intended cells and the accepted
+assignment, and uses the same native retained-item placement. It does not grant
+ownership of matching preexisting blocks, fabricate creative undo history, mark
+the blueprint completed or grant a functional pass.

@@ -42,6 +42,7 @@ final class PhysicalWorkLease implements AutoCloseable {
     private void authority() {
         if(!manager.server.isSameThread() || closed)throw new IllegalStateException("Physical authority is not current");
         if(project.delegation!=null || project.hasPendingTest() || project.shutterMotion!=null
+            || project.pendingPlacement || project.undoRequested || !project.journal.isEmpty() || !project.baseline.isEmpty()
             || Set.of("EXECUTING","PLANNING","VERIFYING").contains(project.state))
             throw new IllegalStateException("Stop and reconcile existing project work before physical delegation");
         var human=manager.server.getPlayerList().getPlayer(owner);

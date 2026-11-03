@@ -506,6 +506,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, gather dirt at 2431 101 4");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory");
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && body.getZ()>2.25 && s.overworld().getBlockState(new BlockPos(2431,101,4)).isAir(),"Owner chat causes native mining, walking and exact pickup without supplying inventory");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            server.runOnServer(s->{
+                var project=session(s,"Alice");var source=ImportedBlueprintGameTests.source();
+                source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());
+                source.add("anchor",Blueprint.jsonPos(new BlockPos(2432,101,4)));source.addProperty("rotation",0);
+                var support=source.getAsJsonArray("blocks").get(0).getAsJsonObject();var dirt=support.deepCopy();dirt.addProperty("state","minecraft:dirt");
+                support.add("pos",Blueprint.jsonPos(new BlockPos(0,-1,0)));source.getAsJsonArray("blocks").add(dirt);
+                var later=dirt.deepCopy();later.add("pos",Blueprint.jsonPos(new BlockPos(1,0,0)));source.getAsJsonArray("blocks").add(later);
+                project.accept(Blueprint.parse(source,project.worldId,project.dimension));
+                check(project.verified.equals("untested"),"Accepting imported dirt geometry grants no functional verification");
+                var laterPos=new BlockPos(2433,101,4);project.level().setBlockAndUpdate(laterPos,Blocks.STONE.defaultBlockState());
+                boolean occupiedDenied=false;try{PhysicalBlueprintStep.select(project);}catch(IllegalStateException expected){occupiedDenied=true;}finally{project.level().setBlockAndUpdate(laterPos,Blocks.AIR.defaultBlockState());}
+                check(occupiedDenied,"An occupied later blueprint cell refuses the earlier physical step before native action");
+                var step=PhysicalBlueprintStep.select(project);var supportPos=new BlockPos(2432,100,4);project.level().setBlockAndUpdate(supportPos,Blocks.DIRT.defaultBlockState());
+                boolean refused=false;try{step.intention().run();}catch(IllegalStateException expected){refused=true;}finally{project.level().setBlockAndUpdate(supportPos,Blocks.STONE.defaultBlockState());}
+                check(refused,"Changing a preceding intended support invalidates the physical blueprint step");
+            });
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");expectChat(context,"Observation only");
@@ -515,9 +531,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).isAir() && countDirt(s.getPlayerList().getPlayer(gatherer))==1,"Adjacent mechanism refuses placement without consuming the retained item"));
             server.runCommand("setblock 2433 101 4 minecraft:air");
             server.runCommand("setblock 2433 101 4 minecraft:dirt");
-            MESSAGES.clear();say(context,"Engineer, place retained dirt at 2432 101 4");expectChat(context,"placing its retained dirt");expectChat(context,"placed the retained dirt and verified its saved inventory");
+            MESSAGES.clear();say(context,"Engineer, build the next blueprint block with retained dirt");expectChat(context,"placing the next blueprint dirt cell");expectChat(context,"placed the retained dirt and verified its saved inventory");
             server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2433,101,4)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(gatherer).getInventory().isEmpty(),"Native companion use places the actual gathered item beside inert dirt, consumes it and preserves the neighbor"));
             write("physical-placement.done","passed");
+            server.runOnServer(s->check(session(s,"Alice").verified.equals("untested") && session(s,"Alice").journal.isEmpty(),"Physical geometry does not fabricate a functional pass or creative undo history"));
+            write("physical-blueprint.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }
     }
