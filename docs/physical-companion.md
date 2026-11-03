@@ -35,7 +35,7 @@ As project owner:
 4. Say **“Engineer, where is my companion?”** for its position, or
    **“Engineer, dismiss my companion.”** to remove it.
 
-The companion is an empty survival actor with a generated `Eng_…` name. It has no
+A new companion starts as an empty survival actor with a generated `Eng_…` name. It has no
 project permissions, cannot use items or mine without a separately checked action
 ticket, and cannot pick up dropped materials or experience orbs while idle. Authorized project
 viewers can ask for its location; only the owner can summon or dismiss it.
@@ -49,11 +49,10 @@ CI and multiplayer proofs before release.
 Each project keeps a private worker identity. An explicit resummon reuses it and
 loads native player data before joining; missing data or a conflicting connected
 identity refuses the request. Saving reloads and compares inventory contents.
-No permission, connection or action ticket is recovered. Production actors still
-require empty inventories while resource execution is unfinished. This does not
+No permission, connection or action ticket is recovered. A resummoned actor retains its saved inventory. Gathering requires empty inventory; dirt placement requires exactly one retained dirt item. This does not
 provide atomic recovery across inventory and world files after a hard crash.
 
-Development gather slice (not yet gameplay-proven): an owner can say
+Bounded dirt gathering (dedicated multiplayer CI proven): an owner can say
 `Engineer, gather dirt at X Y Z`. The target must be two to four blocks from the
 companion on one horizontal axis, at the same height, along a clear three-wide
 stone-supported path entirely in the selected workspace. Only one dirt block is
@@ -107,8 +106,8 @@ worker's current inventory is saved and checked before it becomes idle. Unfinish
 resource records remain available for inspection; stopping never recreates a
 resource or resumes an old action. A new request is required to continue.
 
-Development navigation (not yet gameplay-proven): the same gather request can plan a bounded flat route to a valid mining stance when the resource is beyond the straight corridor. The selected workspace must contain stone-supported walking cells, two clear body blocks and inert surroundings. Routes use native forward input, never teleport or cut through obstacles. Movement holds exclusive occupancy, not block-write authority; edits, entities, deviation or owner authority changes stop it. On arrival, a fresh narrow gather lease and native mine/pickup tickets are required. Stairs, jumps, hazards, mechanisms and general terrain remain unsupported. Batch blueprint jobs still use their existing short resource paths.
+Bounded navigation (focused dedicated multiplayer CI proven; combined integration pending): the same gather request can plan a bounded flat route to a valid mining stance when the resource is beyond the straight corridor. The selected workspace must contain stone-supported walking cells, two clear body blocks and inert surroundings. Routes use native forward input, never teleport or cut through obstacles. Movement holds exclusive occupancy, not block-write authority; edits, entities, deviation or owner authority changes stop it. On arrival, a fresh narrow gather lease and native mine/pickup tickets are required. Stairs, jumps, hazards, mechanisms and general terrain remain unsupported. The blueprint travel flow below also uses these routes.
 
-Development blueprint travel (CI proof pending): the one-request dirt blueprint job can now route to original resources beyond the build area, carry retained items back to an adjacent placement stance, and repeat. Every route reserves the blueprint's observed cells as read dependencies and retains the original owner, connection, plan and assignment checks. A changed intended cell stops the job. Routes close before fresh native mine or placement tickets are issued. The same flat stone-supported inert-terrain and material limits apply; general terrain, tools and crafting remain unfinished.
+Bounded blueprint travel (focused dedicated multiplayer CI proven; combined integration pending): the one-request dirt blueprint job can now route to original resources beyond the build area, carry retained items back to an adjacent placement stance, and repeat. Every route reserves the blueprint's observed cells as read dependencies and retains the original owner, connection, plan and assignment checks. A changed intended cell stops the job. Routes close before fresh native mine or placement tickets are issued. The same flat stone-supported inert-terrain and material limits apply; general terrain, tools and crafting remain unfinished.
 
 Development oak resource contract (gameplay CI pending): say 'Engineer, gather oak log at X Y Z'. Only one isolated oak log on the same clear, stone-supported flat path is supported. Logs beside leaves or other logs are refused; this is not yet tree harvesting. The requested source material and exact block state are checked before native mining, and only its one captured native log drop can be collected. Existing dirt records retain version1; oak records use a strict version2 contract for read-only inspection. Retained logs are saved through native player data, never supplied or converted into materials by direct inventory editing. Preloaded inventory refuses another gather. Oak placement, plank crafting, tools and natural forest navigation remain unfinished.
