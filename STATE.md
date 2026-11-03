@@ -127,3 +127,13 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 Detailed historical logs, failed-run investigations and previous plans remain in
 Git history. This file describes current decisions and evidence, not every attempt.
+
+PR51 integration: sourceae01437 passed all five full checks and focused gameplay.
+This branch now incorporates PR50's memory integration and ordinary owner stop,
+including the separate actual-chat gather-stop scene. Preserve both the blueprint
+placement and gather-stop receipts. New combined source needs compile and CI;
+no previous green head is substituted for this combination.
+Combined PR51 server/client compilation and shell syntax passed. Fresh full and
+focused CI are required for this merge with memory and natural-stop coverage.
+
+PR50 landed as a067f25 from exact source5cec203; full CI41696617329 passed all five checks and focused CI41696644888 passed. PR51 source8563b16 passed full CI41699264227 and focused CI41699293611. Main is byte-identical to the merged parent source; squash ancestry conflicts were resolved by retaining this branch's already-tested extensions. New integration head requires fresh CI.
