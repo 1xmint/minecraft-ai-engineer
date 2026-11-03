@@ -1095,9 +1095,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             // Follow actual phase receipts before starting the later conversation wait.
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
-            awaitFile(context,"connected-functional.done");
-            awaitFile(context,"connected-interruption.done");awaitFile(context,"connected-player-edit.done");
-            awaitFile(context,"connected-revocation.done");
+            // Each receipt bounds a real stage; construction plus recovery plus
+            // the full trial must not share one observer's four-minute wait.
+            awaitFile(context,"connected-revocation.done");awaitFile(context,"connected-interruption.done");
+            awaitFile(context,"connected-functional.done");awaitFile(context,"connected-player-edit.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
             MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
