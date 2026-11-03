@@ -1044,3 +1044,14 @@ Latest Java/client compile pending final fixture assertion; new combined CI need
 
 Final scoped server/client compilation and shell syntax passed for placement and
 pickup steering. Exact-source native gameplay remains pending.
+
+Placement follow-up: adjacent inert stone/dirt is accepted while mechanisms remain
+refused; CI checks preserving a preexisting dirt neighbor. Target chunk/workspace
+admission precedes reads. Dismissal now attempts native despawn even if a task or
+optional action-pack stop fails, retaining default denial until actor absence.
+Inspection replies use plain outcome descriptions and source coordinates instead
+of internal journal filenames/stage codes. Source721b10f CI41685693307 SUCCESS;
+inspected physical-placement.done, physical-gather.done and actual refusal,
+inspection and native placement chat. Bounded native gather/retained placement is
+proven on that source; broader machines/resources and crash recovery remain open.
+Latest server/client compilation passed before final inspection wording change.

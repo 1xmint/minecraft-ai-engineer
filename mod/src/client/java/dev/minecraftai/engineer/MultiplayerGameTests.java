@@ -514,8 +514,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, place retained dirt at 2432 101 4");expectChat(context,"clear inert neighborhood");
             server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).isAir() && countDirt(s.getPlayerList().getPlayer(gatherer))==1,"Adjacent mechanism refuses placement without consuming the retained item"));
             server.runCommand("setblock 2433 101 4 minecraft:air");
+            server.runCommand("setblock 2433 101 4 minecraft:dirt");
             MESSAGES.clear();say(context,"Engineer, place retained dirt at 2432 101 4");expectChat(context,"placing its retained dirt");expectChat(context,"placed the retained dirt and verified its saved inventory");
-            server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(gatherer).getInventory().isEmpty(),"Native companion use places the actual gathered item and consumes it without creative editing"));
+            server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2433,101,4)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(gatherer).getInventory().isEmpty(),"Native companion use places the actual gathered item beside inert dirt, consumes it and preserves the neighbor"));
             write("physical-placement.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }

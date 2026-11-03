@@ -101,12 +101,21 @@ final class PhysicalCompanions {
     }
     private void dismiss(UUID project){
         var binding=actors.get(project);if(binding==null)return;
-        var task=gathering.remove(project);if(task!=null)task.close();
-        var placement=placing.remove(project);if(placement!=null)placement.close();
-        try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException failed){throw new IllegalStateException("Could not stop physical companion",failed);}
-        manager.server.getPlayerList().remove(binding.actor);
-        PhysicalActionGate.forget(binding.actor);actors.remove(project);
+        RuntimeException failure=null;
+        var task=gathering.remove(project);if(task!=null)try{task.close();}catch(RuntimeException stopped){failure=stopped;}
+        var placement=placing.remove(project);if(placement!=null)try{placement.close();}catch(RuntimeException stopped){failure=stopped;}
+        try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
+        // Despawn even if the optional action pack failed. Keep default denial
+        // registered until the native player is actually absent.
+        try{manager.server.getPlayerList().remove(binding.actor);}finally{
+            if(manager.server.getPlayerList().getPlayer(binding.actor.getUUID())!=binding.actor){PhysicalActionGate.forget(binding.actor);actors.remove(project);}
+        }
+        if(failure!=null){
+            System.getLogger(PhysicalCompanions.class.getName()).log(System.Logger.Level.WARNING,"Companion removed after an action-stop error; inspect saved resources",failure);
+            projectMessage(binding,"Companion removed after an action-stop error. Inspect saved resources before another request.");
+        }
     }
+    private void projectMessage(Binding binding,String text){var owner=manager.server.getPlayerList().getPlayer(binding.owner);if(owner!=null)owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: "+text));}
     void tick(){
         for(var binding:new ArrayList<>(actors.values())){
             var project=binding.project;var owner=manager.server.getPlayerList().getPlayer(binding.owner);

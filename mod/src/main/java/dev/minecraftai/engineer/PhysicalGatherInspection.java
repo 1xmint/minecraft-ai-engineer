@@ -26,18 +26,26 @@ final class PhysicalGatherInspection {
             var saved=new ServerPlayer(manager.server,project.level(),profile,net.minecraft.server.level.ClientInformation.createDefault());
             com.google.gson.JsonArray inventory=null;
             try{PhysicalWorkerStorage.restore(saved);inventory=PhysicalWorkerStorage.inventory(saved);}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
-            for(var file:records) {
+            int number=0;for(var file:records) {
                 if(Files.size(file)>262144)throw new IllegalStateException("Gather record exceeds recovery inspection limit");
                 var record=JsonParser.parseString(Files.readString(file)).getAsJsonObject();validate(record,manager,project,identity.id());
                 var source=record.getAsJsonObject("source");var pos=new BlockPos(source.get("x").getAsBigDecimal().intValueExact(),source.get("y").getAsBigDecimal().intValueExact(),source.get("z").getAsBigDecimal().intValueExact());
-                String world=project.contains(pos) && project.level().hasChunkAt(pos)?Blueprint.describe(project.level().getBlockState(pos)):"outside the loaded workspace; not inspected";
+                String world=project.contains(pos) && project.level().hasChunkAt(pos)?project.level().getBlockState(pos).getBlock().getName().getString():"outside the loaded workspace; not inspected";
                 String stored=inventory==null?"native inventory unavailable; not assumed empty":record.has("inventorySaved") && inventory.equals(record.get("inventorySaved"))?"saved inventory matches the recorded snapshot":inventory.equals(record.get("inventoryBefore"))?"saved inventory matches the earlier baseline":"saved inventory differs from the earlier baseline";
                 String drop="no drop recorded";
                 if(record.has("drop")) {
                     var entity=project.level().getEntity(UUID.fromString(record.get("drop").getAsString()));
                     drop=entity!=null && entity.isAlive()?"recorded drop is currently present":"recorded drop is not visible; absence does not prove pickup";
                 }
-                project.tell("Gather recovery "+file.getFileName()+": "+record.get("stage").getAsString()+"; source "+world+"; "+stored+"; "+drop+". Observation only: no resource was created, removed or retried.");
+                String outcome=switch(record.get("stage").getAsString()){
+                    case "NEW"->"recorded; mining had not started";
+                    case "MINE_PREPARED"->"mining was authorized; its outcome needs inspection";
+                    case "DROP_OBSERVED"->"the mined drop was recorded";
+                    case "PICKUP_PREPARED"->"pickup was authorized; its outcome needs inspection";
+                    case "INVENTORY_SAVED"->"inventory saving was verified at completion";
+                    default->throw new IllegalStateException("Unknown gather outcome");
+                };
+                project.tell("Gather record "+(++number)+": "+outcome+"; source at "+pos.toShortString()+" is "+world+"; "+stored+"; "+drop+". Observation only: no resource was created, removed or retried.");
             }
         }catch(java.io.IOException | IllegalArgumentException failed){throw new IllegalStateException("Gather records need operator inspection; no recovery action ran",failed);}
     }

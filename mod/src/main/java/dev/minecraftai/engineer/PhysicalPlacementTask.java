@@ -20,7 +20,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
     private boolean closed,prepared;
     PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target) {
         this.worker=worker;level=worker.level();connection=worker.connection;this.pack=pack;this.target=target.immutable();start=worker.blockPosition();
-        if(level!=project.level() || worker.getEyePosition().distanceTo(Vec3.atCenterOf(target))>4
+        if(level!=project.level() || !project.contains(target) || !level.hasChunkAt(target) || !level.hasChunkAt(target.below()) || worker.getEyePosition().distanceTo(Vec3.atCenterOf(target))>4
             || !level.getBlockState(target).isAir() || !level.getBlockState(target.below()).is(Blocks.STONE))throw new IllegalStateException("Place retained dirt within four blocks, in clear air above stone");
         int count=0,selected=-1;
         for(int slot=0;slot<worker.getInventory().getContainerSize();slot++){
@@ -33,7 +33,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
         var reads=new HashSet<BlockPos>();for(var cell:BlockPos.betweenClosed(target.offset(-1,-1,-1),target.offset(1,1,1)))if(!cell.equals(target)){
             if(!project.contains(cell) || !level.hasChunkAt(cell))throw new IllegalStateException("Placement neighborhood must be loaded in the workspace");
             var state=level.getBlockState(cell);
-            if(cell.getY()<target.getY()?!state.is(Blocks.STONE):!state.isAir())throw new IllegalStateException("Placement needs a clear inert neighborhood: stone floor and air above, without adjacent mechanisms");
+            if(cell.getY()<target.getY()?!state.is(Blocks.STONE):!state.isAir() && !state.is(Blocks.STONE) && !state.is(Blocks.DIRT))throw new IllegalStateException("Placement needs a clear inert neighborhood: stone floor and only air, stone or dirt nearby, without adjacent mechanisms");
             reads.add(cell.immutable());
         }
         lease=new PhysicalWorkLease(manager,project,project.player(),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
