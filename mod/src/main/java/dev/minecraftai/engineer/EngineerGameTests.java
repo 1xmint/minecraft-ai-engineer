@@ -9,6 +9,32 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void nativeInventorySnapshotDecodesAllSlotsWithoutPlayerClones(GameTestHelper helper){
+        var registries=helper.getLevel().registryAccess();var nbtOps=registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);var jsonOps=registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
+        var id=java.util.UUID.randomUUID();var source=new net.minecraft.nbt.CompoundTag();source.put("UUID",net.minecraft.core.UUIDUtil.CODEC.encodeStart(nbtOps,id).getOrThrow());
+        var items=new net.minecraft.nbt.ListTag();var expected=new com.google.gson.JsonArray();
+        for(int slot=0;slot<net.minecraft.world.entity.player.Inventory.INVENTORY_SIZE;slot++){
+            var stack=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE,slot+1);stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("main-"+slot));
+            items.add(net.minecraft.world.ItemStackWithSlot.CODEC.encodeStart(nbtOps,new net.minecraft.world.ItemStackWithSlot(slot,stack)).getOrThrow());expected.add(net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.encodeStart(jsonOps,stack).getOrThrow());
+        }
+        source.put("Inventory",items);var equipment=new net.minecraft.world.entity.EntityEquipment();
+        for(int slot=36;slot<43;slot++){
+            var stack=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE);stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("equipment-"+slot));
+            equipment.set(net.minecraft.world.entity.player.Inventory.EQUIPMENT_SLOT_MAPPING.get(slot),stack);expected.add(net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.encodeStart(jsonOps,stack).getOrThrow());
+        }
+        source.put("equipment",net.minecraft.world.entity.EntityEquipment.CODEC.encodeStart(nbtOps,equipment).getOrThrow());
+        java.util.function.Function<net.minecraft.nbt.CompoundTag,com.google.gson.JsonArray> decode=tag->{var problems=new net.minecraft.util.ProblemReporter.Collector();return PhysicalWorkerStorage.decodeInventory(registries,id,net.minecraft.world.level.storage.TagValueInput.create(problems,registries,tag),problems);};
+        helper.assertTrue(decode.apply(source).equals(expected) && expected.size()==43,"All main/equipment slots and item components survive native-codec decoding without constructing any player");
+        var duplicate=source.copy();var repeated=items.copy();repeated.add(items.getFirst().copy());duplicate.put("Inventory",repeated);reject(helper,()->decode.apply(duplicate),"Duplicate native item slots refuse rather than silently overwrite");
+        var outside=source.copy();var badItems=items.copy();badItems.add(net.minecraft.world.ItemStackWithSlot.CODEC.encodeStart(nbtOps,new net.minecraft.world.ItemStackWithSlot(36,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT))).getOrThrow());outside.put("Inventory",badItems);reject(helper,()->decode.apply(outside),"Equipment cannot be smuggled into the ordinary item list");
+        var noIdentity=source.copy();noIdentity.remove("UUID");reject(helper,()->decode.apply(noIdentity),"Missing identity refuses");
+        var otherIdentity=source.copy();otherIdentity.put("UUID",net.minecraft.core.UUIDUtil.CODEC.encodeStart(nbtOps,java.util.UUID.randomUUID()).getOrThrow());reject(helper,()->decode.apply(otherIdentity),"A differently named native profile cannot substitute its inventory");
+        var missing=source.copy();missing.remove("Inventory");reject(helper,()->decode.apply(missing),"Missing inventory is not assumed empty");
+        var malformed=source.copy();malformed.putString("Inventory","not a list");reject(helper,()->decode.apply(malformed),"Malformed inventory is not assumed empty");
+        var badEquipment=source.copy();badEquipment.putString("equipment","not equipment");reject(helper,()->decode.apply(badEquipment),"Malformed equipment cannot silently become empty gear");
+        var badStack=source.copy();var invalid=new net.minecraft.nbt.ListTag();var row=new net.minecraft.nbt.CompoundTag();row.putByte("Slot",(byte)0);row.putString("id","minecraft:unknown_inventory_probe");invalid.add(row);badStack.put("Inventory",invalid);reject(helper,()->decode.apply(badStack),"Codec errors refuse an unknown saved item");
+        helper.succeed();
+    }
     @GameTest public void flatRouteSearchUsesRealDetourAndRejectsMissingPaths(GameTestHelper helper){
         var available=new java.util.HashSet<BlockPos>();
         for(int x=0;x<=4;x++)for(int z=0;z<=4;z++)available.add(new BlockPos(x,0,z));

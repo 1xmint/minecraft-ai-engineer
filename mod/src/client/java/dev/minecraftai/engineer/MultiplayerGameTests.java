@@ -562,7 +562,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer select1 2630 100 0");send(context,"engineer select2 2634 102 7");server.waitFor(s->new BlockPos(2634,102,7).equals(session(s,"Alice").corner2));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
-        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");PhysicalWorkerStorage.save(body);checkAdvancementOwner(body);check(PhysicalWorkerStorage.savedInventory(body,body.nameAndId()).equals(PhysicalWorkerStorage.inventory(body)),"Read-only native decoding matches the active body");checkAdvancementOwner(body);var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
         MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 4");expectChat(context,"Requested resource does not match");
         server.runCommand("setblock 2631 102 4 minecraft:oak_leaves[persistent=true]");
         MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved flat walking route");
@@ -574,7 +574,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==1,"Refused oak requests create no gather journals");var out=directory().resolve("oak-gather-records");Files.createDirectories(out);Files.copy(records.getFirst(),out.resolve("oak.json"));}catch(java.io.IOException failed){throw new IllegalStateException(failed);}
             return new OakRecovery(project.projectId.toString(),worker,PhysicalWorkerStorage.inventory(body),manager.worldId,manager.epoch);
         });
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");server.runOnServer(s->checkAdvancementOwner(s.getPlayerList().getPlayer(worker)));
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak.done","passed");return recovery;
+    }
+    private static void checkAdvancementOwner(ServerPlayer worker){
+        try{var field=net.minecraft.server.PlayerAdvancements.class.getDeclaredField("player");field.setAccessible(true);check(field.get(worker.getAdvancements())==worker,"Pinned vanilla advancement cache remains bound to the actual connected worker after save/inspection");}
+        catch(ReflectiveOperationException failed){throw new AssertionError("Could not verify pinned advancement ownership",failed);}
     }
     private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x){
         return setupPhysicalBlueprintJob(context,server,x,false);
@@ -609,8 +614,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     private static com.google.gson.JsonArray physicalWorkerInventory(MinecraftServer server,UUID id){
         var worker=server.getPlayerList().getPlayer(id);if(worker!=null)return PhysicalWorkerStorage.inventory(worker);
-        var saved=new ServerPlayer(server,server.overworld(),new com.mojang.authlib.GameProfile(id,"Eng_"+id.toString().substring(0,8)),net.minecraft.server.level.ClientInformation.createDefault());
-        PhysicalWorkerStorage.restore(saved);return PhysicalWorkerStorage.inventory(saved);
+        return PhysicalWorkerStorage.savedInventory(player(server,"Alice"),new net.minecraft.server.players.NameAndId(id,"Eng_"+id.toString().substring(0,8)));
     }
     private static void physicalBlueprintStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID worker=setupPhysicalBlueprintJob(context,server,2480);
@@ -801,6 +805,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             pickupDrop.set(drop);
             var unrelatedProfile=new ServerPlayer(s,worker.level(),worker.getGameProfile(),worker.clientInformation());
             PhysicalActionGate.forget(unrelatedProfile);check(PhysicalActionGate.managed(worker),"Same-profile unjoined object cannot unregister the current native actor");
+            // This negative fixture deliberately constructed a player; restore
+            // vanilla's UUID-cached advancement binding before native ticks.
+            s.getPlayerList().getPlayerAdvancements(worker);
         });
         context.waitTicks(5);
         context.runOnClient(client->{var mirror=client.level.getPlayerByUUID(id);check(mirror!=null,"Actual client has the resource worker's mirrored entity");check(!PhysicalActionGate.pickup(mirror,pickupDrop.get()),"Client mirror cannot act on or consume the server pickup ticket");});

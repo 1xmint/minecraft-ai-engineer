@@ -22,10 +22,8 @@ final class PhysicalGatherInspection {
             var identityPath=manager.directory.resolve(project.projectId+".physical-worker.json");
             if(!Files.exists(identityPath))throw new IllegalStateException("Worker identity is missing; no replacement was created");
             var identity=PhysicalWorkerIdentity.open(manager,project);
-            var profile=new com.mojang.authlib.GameProfile(identity.id(),"Eng_"+identity.id().toString().substring(0,8));
-            var saved=new ServerPlayer(manager.server,project.level(),profile,net.minecraft.server.level.ClientInformation.createDefault());
             com.google.gson.JsonArray inventory=null;
-            try{PhysicalWorkerStorage.restore(saved);inventory=PhysicalWorkerStorage.inventory(saved);}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
+            try{inventory=PhysicalWorkerStorage.savedInventory(project.player(),new net.minecraft.server.players.NameAndId(identity.id(),"Eng_"+identity.id().toString().substring(0,8)));}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
             int number=0;for(var file:records) {
                 if(Files.size(file)>262144)throw new IllegalStateException("Gather record exceeds recovery inspection limit");
                 var record=JsonParser.parseString(Files.readString(file)).getAsJsonObject();validate(record,manager,project,identity.id());
