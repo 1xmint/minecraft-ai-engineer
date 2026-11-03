@@ -48,6 +48,8 @@ public final class PhysicalActionGate {
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         return entry!=null && entry.actor==actor && entry.connection==actor.connection && entry.minedDrop==drop && drop.isAlive();
     }
+    static net.minecraft.world.entity.item.ItemEntity capturedDrop(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor?entry.minedDrop:null;}
+    static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.minedTarget=null;entry.minedDrop=null;}}
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
         if(!managed(player))return true;
         var entry=ACTORS.get(player.getUUID());var ticket=entry.pickup;

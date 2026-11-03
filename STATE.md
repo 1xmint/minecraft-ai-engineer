@@ -981,3 +981,23 @@ This is clean-stop evidence, not atomic chunk/inventory hard-crash recovery.
 Corrected prior sourcec81d59b CI41682414743 SUCCESS; latest journal source needs CI.
 Scoped server/client compile and JS/bash syntax checks passed before final event
 list addition; final Java compile pending. No production gathering enabled.
+
+Phase33 owner gather executor: explicit chat requests bind live human ownership,
+selection/revisions, survival/creative controller, worker connection/dimension,
+exact mining target and captured support/path states. Bounded straight2..4 path,
+three-wide stone floor/clear air, no other path entities, empty inventory, native
+mining/walking/exact drop pickup and durable record/native save. Dismiss/revocation
+stops actions; explicit resummon retains native resources without grants. CI adds
+actual ownerSURVIVAL chat gather and inventory-retaining resummon. General resource
+search, tools/crafting, construction, recovery UI and robust navigation remain
+unfinished. Server compile passed; client/CI pending. Independent boundary review
+requested before integration. No release/milestone completion claim.
+
+Boundary review: owner/actor authorization is coherent. Hard-crash caveat remains:
+a crash after native pickup but before verified inventory saving can leave
+PICKUP_PREPARED with an empty earlier player save and no drop. That stage is
+unresolved/manual recovery, never evidence that resources are durably retained.
+No crash-safe gathering claim or automatic compensation is permitted. A recovery
+flow must be implemented before treating arbitrary restart recovery as complete.
+Latest server/client compilation and shell syntax passed. Prior journal source
+20ba0f8 CI41683046469 SUCCESS; new owner-flow gameplay still pending.

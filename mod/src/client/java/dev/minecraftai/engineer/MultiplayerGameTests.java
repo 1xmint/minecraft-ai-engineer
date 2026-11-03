@@ -496,6 +496,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();context.waitTicks(20);context.runOnClient(client->check(client.level.getPlayerByUUID(fresh)!=null,"Reconnected actual client receives the newly requested actor"));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-restart.done","passed");
+            send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(savedProject));
+            server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
+            server.runCommand("tp Alice 2434.5 101 7 180 0");
+            send(context,"engineer select1 2430 100 0");send(context,"engineer select2 2434 102 5");server.waitFor(s->new BlockPos(2434,102,5).equals(session(s,"Alice").corner2));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            UUID gatherer=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+            server.runOnServer(s->player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL));
+            MESSAGES.clear();say(context,"Engineer, gather dirt at 2431 101 4");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory");
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && body.getZ()>2.25 && s.overworld().getBlockState(new BlockPos(2431,101,4)).isAir(),"Owner chat causes native mining, walking and exact pickup without supplying inventory");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }
     }
     private static void physicalPeer(ClientGameTestContext context) throws Exception {

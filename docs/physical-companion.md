@@ -52,3 +52,14 @@ identity refuses the request. Saving reloads and compares inventory contents.
 No permission, connection or action ticket is recovered. Production actors still
 require empty inventories while resource execution is unfinished. This does not
 provide atomic recovery across inventory and world files after a hard crash.
+
+Development gather slice (not yet gameplay-proven): an owner can say
+`Engineer, gather dirt at X Y Z`. The target must be two to four blocks from the
+companion on one horizontal axis, at the same height, along a clear three-wide
+stone-supported path entirely in the selected workspace. Only one dirt block is
+handled per request; the inventory must start empty. The companion uses native
+mining and walking, accepts only its captured native drop and verifies the saved
+inventory. Dismissal stops the task; explicit resummon retains saved resources
+without restoring action permission. Construction and general navigation remain
+unfinished. Interrupted or failed records require inspection; no automatic retry,
+creative compensation or atomic hard-crash recovery is provided.

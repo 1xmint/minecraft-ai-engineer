@@ -17,19 +17,30 @@ final class PhysicalCompanions {
     private record Binding(EngineeringSession project,UUID owner,Object ownerConnection,int revision,long authorization,ServerPlayer actor,Object pack,BlockPos spawn) { }
     private final ProjectManager manager;
     private final Map<UUID,Binding> actors=new HashMap<>();
+    private final Map<UUID,PhysicalGatherTask> gathering=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
     boolean handle(EngineeringSession project,String request){
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
-        if(!Set.of("summon my companion","dismiss my companion","where is my companion").contains(text))return false;
+        var gather=java.util.regex.Pattern.compile("gather dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
+        boolean gatherRequest=gather.matches();
+        if(!gatherRequest && !Set.of("summon my companion","dismiss my companion","where is my companion").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+". It is idle; construction and gathering are not enabled.");return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(gathering.containsKey(project.projectId)?". It is gathering your requested dirt block.":". It is idle. Construction has not started."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
+        if(gatherRequest){
+            var binding=actors.get(project.projectId);
+            if(binding==null)throw new IllegalStateException("Summon your companion first");
+            if(gathering.containsKey(project.projectId))throw new IllegalStateException("Stop the current gather by dismissing your companion first");
+            var source=new BlockPos(Integer.parseInt(gather.group(1)),Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)));
+            gathering.put(project.projectId,new PhysicalGatherTask(manager,project,binding.actor,binding.pack,source));
+            project.tell("Your companion is gathering one dirt block from the requested location. Say 'dismiss my companion' to stop.");return true;
+        }
         if(text.equals("dismiss my companion")){dismiss(project.projectId);project.tell("Physical companion dismissed. No new work was delegated.");return true;}
-        summon(project);project.tell("Your physical companion is here. It is an empty survival actor, currently idle. Construction and gathering are not enabled. Say 'dismiss my companion' to remove it.");return true;
+        summon(project);project.tell("Your physical companion is here. It is a survival actor, currently idle. Saved resources are retained. Say 'dismiss my companion' to remove it.");return true;
     }
     private static void compatible(){
         var carpet=FabricLoader.getInstance().getModContainer("carpet");
@@ -68,7 +79,7 @@ final class PhysicalCompanions {
             PhysicalActionGate.bindConnection(actor);
             actor.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
             actor.snapTo(spawn.getX()+0.5,spawn.getY(),spawn.getZ()+0.5,0,0);
-            if(!actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an empty unprivileged identity");
+            if(!identity.restore() && !actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an unprivileged identity");
             var pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);pack.getClass().getMethod("stopAll").invoke(pack);
             PhysicalWorkerStorage.save(actor);
             identity.activate(manager,project);
@@ -80,6 +91,7 @@ final class PhysicalCompanions {
     }
     private void dismiss(UUID project){
         var binding=actors.get(project);if(binding==null)return;
+        var task=gathering.remove(project);if(task!=null)task.close();
         try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException failed){throw new IllegalStateException("Could not stop physical companion",failed);}
         manager.server.getPlayerList().remove(binding.actor);
         PhysicalActionGate.forget(binding.actor);actors.remove(project);
@@ -89,7 +101,16 @@ final class PhysicalCompanions {
             var project=binding.project;var owner=manager.server.getPlayerList().getPlayer(binding.owner);
             if(owner==null || owner.hasDisconnected() || owner.connection!=binding.ownerConnection || !project.access.allows(binding.owner,ProjectAccess.Permission.BUILD)
                 || project.revision()!=binding.revision || project.access.revision()!=binding.authorization || !Objects.equals(manager.selections.get(binding.owner),project.projectId)
-                || owner.level()!=project.level() || !binding.actor.isAlive() || binding.actor.hasDisconnected() || !project.contains(binding.actor.blockPosition()) || !binding.actor.blockPosition().equals(binding.spawn))dismiss(project.projectId);
+                || owner.level()!=project.level() || !binding.actor.isAlive() || binding.actor.hasDisconnected() || !project.contains(binding.actor.blockPosition()) || !gathering.containsKey(project.projectId) && !binding.actor.blockPosition().equals(binding.spawn)){dismiss(project.projectId);continue;}
+            var task=gathering.get(project.projectId);if(task!=null)try{
+                if(task.tick()){
+                    gathering.remove(project.projectId);
+                    actors.put(project.projectId,new Binding(project,binding.owner,binding.ownerConnection,binding.revision,binding.authorization,binding.actor,binding.pack,binding.actor.blockPosition()));
+                    project.tell("Your companion gathered one dirt block and verified its saved inventory. Construction has not started.");
+                }
+            }catch(RuntimeException stopped){
+                dismiss(project.projectId);project.tell("Gathering stopped. Inspect the source, dropped resources and saved inventory before another request: "+stopped.getMessage());
+            }
         }
     }
     void close(){for(var id:new ArrayList<>(actors.keySet()))dismiss(id);}
