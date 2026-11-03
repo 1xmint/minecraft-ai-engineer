@@ -135,11 +135,13 @@ const server = createCompanionServer({
                 : [
                       "CI build selected lamp.",
                       "CI build selected comparator.",
+                      "CI build selected half-adder.",
                     ].includes(input.message)
                   ? "build"
                   : [
                         "CI test selected lamp.",
                         "CI test selected comparator.",
+                        "CI test selected half-adder.",
                       ].includes(input.message)
                     ? "test"
                     : input.message === "CI resume selected lamp."

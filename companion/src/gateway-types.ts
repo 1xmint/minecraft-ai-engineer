@@ -1,5 +1,6 @@
 import { validateGeneratedBlueprint } from "./generated.js";
 import { validateAnalogIntention } from "./analog-intention.js";
+import { readConnectedIntention } from "./connected-intention.js";
 import { readShutterDesign } from "./shutter-design.js";
 import {
   type Blueprint,
@@ -126,6 +127,20 @@ export function serverBlueprint(
     typeof v.rotation !== "number"
   )
     throw new RequestError("Invalid blueprint rotation.");
+  if (
+    v.connected !== undefined ||
+    object(v.provenance).template === "half-adder"
+  ) {
+    try {
+      return readConnectedIntention(v, {
+        worldId,
+        dimension,
+        projectId: context.projectId,
+      });
+    } catch {
+      throw new RequestError("Invalid canonical connected blueprint.");
+    }
+  }
   if (
     v.analog !== undefined ||
     ["comparator-compare", "comparator-subtract"].includes(

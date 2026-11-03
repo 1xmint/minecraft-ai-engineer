@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "id": "half-adder",
+  "minecraft": "26.3",
+  "revision": 1,
+  "origin": {
+    "x": 0,
+    "y": 0,
+    "z": 4
+  },
+  "nandNodes": [
+    {
+      "id": "n1",
+      "x": 8,
+      "z": 16
+    },
+    {
+      "id": "n2",
+      "x": 24,
+      "z": 8
+    },
+    {
+      "id": "n3",
+      "x": 24,
+      "z": 24
+    },
+    {
+      "id": "sum",
+      "x": 40,
+      "z": 16
+    }
+  ],
+  "controls": [
+    {
+      "id": "a",
+      "x": 0,
+      "z": 4
+    },
+    {
+      "id": "b",
+      "x": 0,
+      "z": 40
+    }
+  ],
+  "nets": [
+    {
+      "id": "a-net",
+      "from": "a:out",
+      "to": ["n1:in0", "n2:in0"],
+      "paths": [
+        [
+          [2, 4],
+          [20, 4],
+          [20, 8],
+          [22, 8]
+        ],
+        [
+          [4, 4],
+          [4, 16],
+          [6, 16]
+        ]
+      ],
+      "buffers": [
+        {
+          "x": 12,
+          "z": 4,
+          "facing": "west"
+        },
+        {
+          "x": 4,
+          "z": 10,
+          "facing": "north"
+        }
+      ]
+    },
+    {
+      "id": "b-net",
+      "from": "b:out",
+      "to": ["n1:in1", "n3:in1"],
+      "paths": [
+        [
+          [2, 40],
+          [20, 40],
+          [20, 28],
+          [22, 28]
+        ],
+        [
+          [4, 40],
+          [4, 20],
+          [6, 20]
+        ]
+      ],
+      "buffers": [
+        {
+          "x": 12,
+          "z": 40,
+          "facing": "west"
+        },
+        {
+          "x": 20,
+          "z": 32,
+          "facing": "south"
+        },
+        {
+          "x": 4,
+          "z": 34,
+          "facing": "south"
+        },
+        {
+          "x": 4,
+          "z": 22,
+          "facing": "south"
+        }
+      ]
+    },
+    {
+      "id": "n1-net",
+      "from": "n1:out",
+      "to": ["n2:in1", "n3:in0", "carry:in"],
+      "paths": [
+        [
+          [12, 18],
+          [14, 18],
+          [14, 12],
+          [22, 12]
+        ],
+        [
+          [14, 18],
+          [14, 24],
+          [22, 24]
+        ]
+      ],
+      "buffers": [
+        {
+          "x": 18,
+          "z": 12,
+          "facing": "west"
+        },
+        {
+          "x": 18,
+          "z": 24,
+          "facing": "west"
+        }
+      ]
+    },
+    {
+      "id": "n2-net",
+      "from": "n2:out",
+      "to": ["sum:in0"],
+      "paths": [
+        [
+          [28, 10],
+          [34, 10],
+          [34, 16],
+          [38, 16]
+        ]
+      ],
+      "buffers": [
+        {
+          "x": 34,
+          "z": 13,
+          "facing": "north"
+        }
+      ]
+    },
+    {
+      "id": "n3-net",
+      "from": "n3:out",
+      "to": ["sum:in1"],
+      "paths": [
+        [
+          [28, 26],
+          [34, 26],
+          [34, 20],
+          [38, 20]
+        ]
+      ],
+      "buffers": [
+        {
+          "x": 34,
+          "z": 23,
+          "facing": "south"
+        }
+      ]
+    }
+  ],
+  "carry": {
+    "id": "carry",
+    "inputX": 14,
+    "z": 18
+  },
+  "outputs": [
+    {
+      "id": "sum-light",
+      "from": "sum:out",
+      "x": 45,
+      "z": 18
+    },
+    {
+      "id": "carry-light",
+      "from": "carry:out",
+      "x": 19,
+      "z": 18
+    }
+  ],
+  "settleGameTicks": 48,
+  "stableSamples": 8,
+  "notice": "Canonical intended geometry only. No ownership, construction authority or functional pass."
+}

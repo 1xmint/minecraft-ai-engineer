@@ -590,17 +590,33 @@ final class EngineeringSession implements BuildExecutor {
         for (Change c : journal) if(c.operation().equals(activeOperation)) expected.put(c.pos(), c.after());
         return expected;
     }
-    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual) {
+    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual,Blueprint connectedOperation) {
+        if(ConnectedIntention.describes(blueprint.source())){
+            if(expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
+            if(expected.is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && connectedOperation!=null){
+                // Only assistant-written cells may use native partial-construction arms.
+                // Adopted player wires retain the original exact static comparison.
+                Change owned=null;for(var change:journal)if(change.operation().equals(activeOperation) && change.pos().equals(pos))owned=change;
+                if(owned!=null && Blueprint.matches(owned.after(),expected))
+                    return ConnectedWireUndo.matchesValidated(connectedOperation,owned,actual,level());
+            }
+        }
         if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint)) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
         return Blueprint.matches(expected,actual);
     }
     void reconcile() {
         requireCreative();
         if (undoRequested) throw new IllegalStateException("Undo was interrupted; use /engineer undo to reconcile it");
+        Blueprint connectedOperation=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
+            ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
+        if(connectedOperation!=null){
+            var reads=new HashSet<BlockPos>(expectedNow().keySet());reads.addAll(dependencies.keySet());
+            for(var pos:reads)if(!level().hasChunkAt(pos))throw new IllegalStateException("Connected reconciliation needs all recorded cells and dependencies loaded");
+        }
         for (Map.Entry<BlockPos, BlockState> entry : expectedNow().entrySet()) {
             validateTarget(entry.getKey());
             BlockState actual = level().getBlockState(entry.getKey());
-            if (!matchesExpected(entry.getKey(),entry.getValue(), actual)) {
+            if (!matchesExpected(entry.getKey(),entry.getValue(), actual,connectedOperation)) {
                 // A crash between journal flush and placement may leave before-state. It is safe to retry only that case.
                 Change pending = journal.isEmpty() ? null : journal.getLast();
                 if (pendingPlacement && pending != null && pending.operation().equals(activeOperation) && pending.pos().equals(entry.getKey()) && actual.equals(pending.before())) {
@@ -746,10 +762,14 @@ final class EngineeringSession implements BuildExecutor {
                 if (server.getTickCount() < nextPlacement) return;
                 nextPlacement=server.getTickCount()+4;
                 if(operationKind.equals("STRUCTURAL")){tickStructural();return;}
+                Blueprint connectedBuild=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
+                    ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
                 for (Blueprint.PlannedBlock b : assignmentBlocks()) {
                     if(operationKind.equals("REPAIR") && !repairTargets.contains(b.pos()))continue;
                     BlockState actual = level().getBlockState(b.pos());
                     if (Blueprint.matches(b.state(),actual)) continue;
+                    if(connectedBuild!=null && operationKind.equals("BUILD") && b.state().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE)
+                        && matchesExpected(b.pos(),b.state(),actual,connectedBuild))continue;
                     BlockState after;
                     if(operationKind.equals("REPAIR")) {
                         if(!actual.isAir() && !actual.is(b.state().getBlock()))throw new IllegalStateException("Repair target changed to an unsupported block at "+b.pos().toShortString());
@@ -765,6 +785,9 @@ final class EngineeringSession implements BuildExecutor {
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save(); return;
+                }
+                if(connectedBuild!=null && assignmentBlocks().stream().anyMatch(block->!Blueprint.matches(block.state(),level().getBlockState(block.pos())))){
+                    detail="Waiting for native connected wire geometry to settle";return;
                 }
                 state="COMPLETED"; detail=ComponentTree.composite(blueprint)?"Component "+activeComponent+" geometry matches. Functional test still required.":operationKind.equals("REPAIR")?"Supported corrections applied. Functional test still required.":"Geometry matches the blueprint. Functional test still required.";manager.release(this); save(); checkpoint(); tell(detail);
             } catch (RuntimeException e) { pause(e.getMessage()); }
@@ -951,6 +974,11 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         if(state.equals("PLANNING") || state.equals("EXECUTING") || testTick>=0 || hasPendingTest() || pendingPlacement || undoRequested)
             throw new IllegalStateException("Stop and reconcile current world work before revising the intended design");
+        if(ConnectedIntention.describes(candidate.source())) {
+            ConnectedIntention.validated(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
+            accept(candidate);return true;
+        }
         if(AnalogIntention.describes(candidate.source())) {
             AnalogIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built analog designs cannot be replaced by another preview; reconcile their existing work first");
@@ -1072,6 +1100,9 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.BUILD);requireCreative();
         if(blueprint==null)throw new IllegalStateException("No component project");
         if(ShutterDesign.describes(blueprint.source())){ComponentTree.component(blueprint,id);test();return;}
+        // A single root is the whole project: retain ordinary test recovery and
+        // original-input capture instead of replacing its construction history.
+        if(!ComponentTree.composite(blueprint)){ComponentTree.component(blueprint,id);test();return;}
         ensureComponentContextIdle("test a component");
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);
@@ -1317,6 +1348,8 @@ final class EngineeringSession implements BuildExecutor {
         return batch;
     }
     private boolean undoAfterMatches(Change change,BlockState actual) {
+        if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && ConnectedIntention.describes(operationScopes.blueprint(change.operation()).source()))
+            return ConnectedWireUndo.matches(operationScopes.blueprint(change.operation()),change,actual,level());
         if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && AnalogIntention.describes(operationScopes.blueprint(change.operation()).source()))
             return AnalogWireUndo.matches(operationScopes.blueprint(change.operation()),change,actual,level());
         return UndoProjection.matches(change,actual);

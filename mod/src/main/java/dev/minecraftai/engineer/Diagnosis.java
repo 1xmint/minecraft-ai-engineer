@@ -113,7 +113,7 @@ final class Diagnosis {
             return new Proposal(UUID.randomUUID(),actor,player.connection,s.manager.epoch,s.projectId,s.revision(),s.access.revision(),componentId,
                 assignment.generation,assignment.basis,ComponentAssignments.BASIS_VERSION,s.server.getTickCount()+MAX_TTL_TICKS,report.observed(),targets,messages,!targets.isEmpty());
         }
-        if(AnalogIntention.describes(selected.source()))EngineeringContracts.contract(selected);else MechanismCatalog.contract(selected);
+        if(AnalogIntention.describes(selected.source()) || ConnectedIntention.describes(selected.source()))EngineeringContracts.contract(selected);else MechanismCatalog.contract(selected);
         var level = s.level();
         var footprint = new LinkedHashSet<BlockPos>();
         Set<String> closure=new LinkedHashSet<>();

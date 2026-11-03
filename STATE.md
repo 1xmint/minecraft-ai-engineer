@@ -4,10 +4,41 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
-Active engineering worktree: task `work/connected-circuits`, branch
+## Parallel ownership — 2026-11-02
+
+Josh requested sustained milestone ownership for Claude, rather than another
+small CLI task. This supersedes the old transforms-only delegation below.
+Claude's track: finish schematic tools and their in-game feature integration;
+richer durable project knowledge/reference retrieval; local offline voice;
+engineering candidate comparison/optimization with honestly measured evidence.
+Codex's track: connected/larger functional engineering, diagnosis/repair and
+teaching; authoritative construction core; physical NPC; genuine survival;
+multiple builders; shared integrations and final original ten-step acceptance.
+These are roughly balanced workstreams, not a claim of equal estimated effort.
+
+Claude owns new schematic/memory/voice/optimization feature modules and their
+tests/docs. Existing shared protocol/provider/storage/registration entry points
+are integration seams: changes stay in isolated PRs, with exact touched files
+and contracts called out; Codex integrates against current engineering work.
+Do not rewrite execution, permission, journal, reservation or verification cores.
+Read actual existing memory/knowledge infrastructure before extending it; reuse
+SQLite, provider authentication and normal conversational interaction. All new
+features must reach actual user flows, not stop at standalone libraries. Native
+hooks owned by Codex must be explicitly tracked as incomplete until integrated.
+No separately billed service/API key, credential sharing, model-call loops or
+local behavioral tests. Voice must prove a viable offline path before adding a
+large dependency; inability to meet constraints blocks voice only, not the track.
+Optimization must separate estimated geometry cost from native-measured timing/
+reliability, and never recommend untested candidates as verified machines.
+Each milestone needs success/failure evidence on its exact CI source and a
+focused PR. Claude can continue later independent milestones while CI runs;
+Codex owns final merging and STATE reconciliation, with proposed updates in PRs.
+
+Current engineering worktree: task `work/connected-circuits`, branch
 `phase/27-connected-circuits`, based on merged main **9a1d6e7 / PR37**.
-Documentation worktree `work/release-download-docs` updates the public download
-and archives the real memory screenshot. Main worktree is clean and fast-forwarded. Original C1
+Documentation PR38 (`docs/multiplayer-preview-download`, sourceeb91617) updates
+the public download and archives the real memory screenshot; all five checks in
+CI41373420233 passed and it merged as e25a0b3. Original C1
 source8490f8d passed all five checks in CI41369209886, including141 native tests
 and the unchanged full dedicated/restart/SQLite suite.
 These C1 fixture observations do not establish the entire phase.
@@ -166,12 +197,20 @@ launch unnecessary model probes. Current work needs no SDK call.
   optimization; coordinated multiple builders. File interchange/analysis alone
   does not complete the schematic feature.
 
-Claude's offered independent lane remains schematic transforms only:
+Claude delivered transforms in PR42 at58202dc, with all five CI41379536160
+checks green. Parent review found maximal zero-volume traversal; fixe314a4b
+skips traversal and adds all-axis/all-operation regressions. Updated CI41472675876
+is live; merge only its exact green head. Next offered Claude lane is a standalone
+file-only transform CLI in the same reserved paths, with explicit formats,
+bounded reads, alias/output preservation and independent NBT output checks.
+Codex retains in-game integration and memory ownership.
+
+Claude's independent lane remains schematic transforms only:
 companion/src/schematic-transforms/**, tests/schematic-transforms*.test.ts,
 docs/schematic-transforms.md. No mod/core/auth/storage/provider/CI/memory changes.
-No delivery seen yet. Do not edit those reserved paths.
+Do not overlap Claude's next CLI work in those paths.
 
-Next: finish the README/download documentation checks, watch C2 full41371755386
+Next: finish the README/download documentation checks, watch the new connected-codec run
 to terminal without restarts, and continue strict connected source/evidence work.
 Continue C2 native half-adder proof and strict graph/source/evidence integration,
 then actual C3 flows. Keep the full goal active; no single slice completes it.
@@ -197,8 +236,270 @@ Reports inspected at `work/half-adder-native-41371755386`:436 cells,20 pins,
 448 consecutive frames per rotation and64 stable frames covering all four input
 vectors forward/reverse. Every rotation produced SUM/CARRY00->00,01->10,
 10->10,11->01. The missing A-to-N2 wire showed expectedSUMtrue/observedSUMfalse
-while CARRY stayedfalse. Static native wire-arm checks passed. Full CI is still
-live. This proves the physical prototype, not C2 strict admission or C3 gameplay.
-GPT-6-Luna supplied standalone connected-trace.ts at local7aaad74; parent still
-owes scoped typing, rejection proofs, Java mirror and actual native replay. No
-SDK calls or local tests ran. Public alpha.2 does not include this prototype.
+while CARRY stayedfalse. Static native wire-arm checks passed. Full CI41371755386 is now all-five green
+on source6a5c07a, including the unchanged dedicated/shared/restart/SQLite suite. This proves the physical prototype, not C2 strict admission or C3 gameplay.
+GPT-6-Luna supplied standalone connected-trace.ts at7aaad74 and fixed partial
+verdict semantics, rejected-sample immutability and early array bounds in8ba8209.
+Parent type checking passes with the shared dependency junction. Eight parent-owned
+CI tests now use four actual archived native vectors plus clock/gap/rebinding/
+metadata/false-pass/sparse/oversize/immutability rejection proofs. The normalized
+fixture retains actual game clocks and native boolean/integer values, and carries
+no fresh project authority. Behavioral tests await GitHub; Java mirror, canonical
+source admission, current-run cross-runtime replay and C3 remain outstanding.
+No SDK calls or local tests ran. Public alpha.2 does not include this prototype.
+
+Connected codec source dc8e5bf passed all five checks in CI41374383606.
+The Java mirror now captures and replays each native case with independently
+supplied graph/input identity, rejects forged fields, missing frames, input/graph
+rebinding, malformed pin types and unsafe clocks, and preserves facts after a
+rejected sample. Scoped Java compilation passed. A fresh CI verifier recomputes
+the semantic graph/geometry digest and compares all 32 Java case snapshots to
+the same run's 1792 raw native frames through the TypeScript reader. That new
+cross-runtime proof is pending CI. It does not grant project authority or complete
+strict source admission/C3. No behavioral tests ran locally.
+
+ConnectedIntention.java now regenerates a bounded canonical half-adder source,
+binding exact geometry, typed graph/routes, digest, identity, anchor/orientation,
+bounds and untested provenance. Long arithmetic checks every rotated cell before
+coordinate addition. Native proofs now reject metadata/pass/geometry/role/edge/
+digest/bounds tampering, world/dimension/project rebinding and overflowing anchors,
+and verify defensive snapshots. These new proofs await CI after the existing
+5387f0d run finishes. No production Blueprint.parse admission is enabled yet;
+companion parity and construction guards remain required.
+
+Companion connected-intention.ts now regenerates identity-bound source using a
+shared expanded intended definition extracted from native recipe generation.
+Decision: avoid a second implementation of Minecraft wire-shape rules. The native
+recipe still independently regenerates every block/route/port; fresh exported
+sources in four orientations must exactly match the companion's shared definition
+in CI. Both half-adder catalogs are now explicitly packaged and paired-jar bytes
+checked. Added tampering, rebinding, rotated bounds and defensive-copy tests.
+Scoped TypeScript/format/syntax checks passed; behavioral proofs await CI. New
+source is not yet admitted to production planning/building. Existing runs remain
+live and must finish before dispatching another same-branch run.
+
+Added matching five-stage teaching text and exact item resource lists in Java/TS.
+Native registry item mapping is checked against the companion during fresh source
+replay, including dust->redstone and wall torch->redstone_torch. Intended counts:
+227 stone,171 redstone,25 repeaters,9 torches,2 levers,2 lamps. Regression asserts
+these and rejects altered quantities/stage dependencies. Scoped compile/type checks
+passed. Construction review confirms strict static wire-arm comparisons during
+partial placement and undo need native transition proof; do not weaken generic
+Blueprint.matches or admit the new family before resolving player-edit safety.
+
+Added two native half-adder construction proofs, pending CI:436 single writes in
+the five teaching stages must all have physical support, overwrite only air and
+settle to exact canonical static geometry; removing A's physical branch must
+change wire arms in the read-only native projection while a manual dot remains
+distinct and untouched. These fixtures do not yet exercise EngineeringSession
+journals, permissions, interruption or undo; C3 remains incomplete.
+
+ConnectedIntention now converts its already-regenerated contract to native
+Blueprint plans without broadening generic parser admission. Four-rotation native
+proofs check all436 positions/states/stage/component identities and five stages.
+Scoped Java compilation passed. Latest source still requires a fresh complete CI
+after41472491344 terminates; its Fabric/Companion/Windows/client jobs are green,
+dedicated multiplayer remains live. PR42's41472675876 has the same four green
+jobs and a live dedicated job. No merge or replacement run while these are live.
+
+ConnectedWireUndo now checks canonical operation/source/geometry before applying
+the pinned read-only native wire projection. EngineeringSession calls it only for
+connected wires after durable undo intent; initial preflight and player-neighbor
+guards remain unchanged. The native branch/dot fixture now exercises this actual
+helper: initial exact shape, allowed owned branch transition, rejected manual dot,
+and read-only preservation. No generic parser admission or new live-pass authority.
+Full session undo/restart/conflict flow still needs C3 proof.
+
+Fresh native replay now also requires eight disjoint ordered64-tick case starts
+and an actual post-suite restoration observation at start+512, retaining both
+original and observed external control states. This fixture currently starts both
+off; initially-on input recovery still needs the actual C3 trial/restart proof.
+FunctionalTrial inspection confirms contract selection and evidence recovery must
+be extended together before generic source admission; otherwise a saved connected
+project would fail reload. Keep the family out of the normal planning menu until
+that complete path is implemented and proven.
+
+ConnectedEvidence Java/TS now replay the bounded eight-case whole suite against
+independently supplied graph identity and forward/reverse stimuli. Completion
+requires all eight complete traces; nonfinal cases must already pass, clocks must
+advance beyond the prior window, and same-stimulus cases cannot reuse old windows.
+Native and current-run TS replay include missing/reordered/reused-case negatives.
+This is observation validation, not input restoration or project authority. Scoped
+TypeScript checks passed; new behavior awaits the next exact-source CI run.
+
+Live FunctionalTrial now has a connected path: contract exposes only A/B levers
+and both result lamps; every native tick captures all20 typed pins, all8 ordered
+cases must pass replay, and exact original lever states are independently checked
+after restoration before recording a pass. Saved connected traces load through
+ConnectedEvidence rather than generic leaf cases, with recovery ports from the
+same canonical contract. Native fixture checks external-only contract selection.
+This code still requires actual EngineeringSession success/interruption/restart/
+conflict proof. Generic parser/provider admission remains disabled pending that
+integration. Do not call this complete or expose it through normal planning yet.
+
+Strict native Blueprint.parse/ComponentTree admission now delegates connected
+sources exclusively to canonical regeneration; the generic block allowlist is
+unchanged. Provider/menu admission remains disabled. Added actual saved-session
+reload proof with two pending controls, A originally on and B off: original vs
+last stimulus survives, no delegation/callback/trial resumes, and an internal pin
+in a recovery record rejects. Scoped Java compilation passed. This pending native
+proof does not establish actual authorized restoration or full user acceptance.
+
+Connected build reconciliation now uses native shape projection only for cells
+written by the assistant in the captured current operation. Adopted player wires
+stay strict; changed external levers conflict exactly. Canonical operation is
+regenerated once per reconciliation, not once per wire. Existing dependency,
+permission and ownership checks remain. Actual session conflict/undo proof pending.
+Prior source5387f0d CI41472491344 is now completed SUCCESS; fresh source needs its
+own CI before claiming any of the subsequent integration proven.
+
+Latest connected source43fc56c has fresh CI41476541185 live (do not replace it).
+PR42 sourcee314a4b passed all five CI41472675876 checks. Ready/merge encountered
+the protected-main up-to-date requirement; requested GitHub update-branch and
+automatic squash merge after its new checks pass. No bypass/admin merge used.
+PR43 remains separate and its dedicated CI was still live at last observation.
+
+CI41476541185 Fabric evidence inspected at work/connected-source-41476541185:
+all149 required native tests passed, including staged construction, branch/dot,
+canonical source, ordered suites and pending-input session reload. Fresh replay
+passed32 cases/1792 frames across4 rotations. This is native fixture/recovery
+proof, not the complete live shared C3 session flow. Companion job also passed;
+full run remains live until its dedicated job terminates.
+
+Subsequent unproven source adds the normal Blueprint shape to connected intentions:
+per-block stage prerequisites, external-only public ports and test description.
+Java/TS remain exact regenerated counterparts; graph digest still binds raw intended
+geometry and full electrical graph. Companion gateway now admits only this exact
+canonical source after current project/revision checks, with stale revision and
+inventory tampering regressions. Scoped Java/type/format checks passed. Planner
+menu/provider offer remains disabled until actual session flows are proven.
+
+Added pending dedicated connectedExecutionFlow using actual Alice connection and
+EngineeringSession.accept/build/resume/test/undo, with explicit canonical fixture
+selection (not natural planning proof). It interrupts after20 owned placements,
+resumes436-cell construction, starts with A on/B off, requires whole-suite pass
+and exact restoration, then resets the player lever and requires owned undo to
+remove every cell. Client coordination requires success markers. SQLite verifier
+requires persisted connected pass evidence, current project/revision/basis and no
+pending controls, then independently replays all8 cases against canonical digest.
+Scoped client compilation and script syntax checks passed; full behavior awaits
+the next exact-source CI after41476541185 finishes. Shared Bob/revocation, full
+saved-server restart, human teaching and normal conversation planning remain.
+
+Dedicated connected flow now additionally interrupts a genuinely running trial
+after two cases, requires exact A-on/B-off restoration/no pass/no lease, then
+retests. After a real pass, undo must reject the player's originally-on lever
+before touching any of436 records; only after the player resets it may undo
+continue. Both negative/success markers are required by client coordination.
+These are pending exact-source CI proofs, not reported as executed gameplay.
+
+Added actual Bob viewer/editor commands to the dedicated connected flow: viewer
+build/test/undo deny without a lease or changes; editor starts a real two-case
+trial; Alice revokes him and recovery remains pending without authority; Bob's
+resume denies; Alice explicitly restores A-on/B-off without resuming a trial or
+recording a pass. Required connected-revocation marker gates client completion.
+This remains pending the next exact-source CI, not established multiplayer proof.
+
+Connected test now keeps the actual tested structure until the existing third
+saved-server boot. Recovery must retain436 owned cells and valid historical
+observations but only a stale pass, no callback/lease/pending trial. A new real
+trial must restore A-on/B-off and pass before post-restart undo removes the owned
+structure. SQLite now requires complete valid observations in at least two server
+epochs and both restart/undo completion markers. No extra boot added; no local
+behavioral tests run. Scoped client compilation/script syntax checks passed.
+PR43 original source7f9c537 CI41474306862 is now completed SUCCESS; integrate
+after its parent PR42's protected-branch update finishes.
+
+Connected preview/lesson integration now recognizes “show me a half-adder” via
+the local conversational setup path, with intended SUM/CARRY explanation and
+explicit20-pin/eight-case/48-tick/eight-stable-sample contract. Preview has no
+execution authority or pass. Dedicated flow now creates/marks workspace/previews
+through actual chat and uses existing conversational approval for build and final
+test, instead of direct source injection. Offline provider fixtures add only those
+two scoped choices; SQLite asserts exactly build/test replies for that project.
+Scoped client compile/script syntax passed. These latest player flows are pending
+CI, not claimed proven. SDK/model provider advertisement is still unchanged.
+
+Follow-through found/fixed the old catalog-only reviseProposal path: connected
+previews now validate canonical graph/source and accept only before construction;
+built connected projects must reconcile existing work before replacement. Static
+diagnosis selects the connected engineering contract instead of the leaf catalog.
+No shape match or diagnosis creates a functional pass. These hooks are covered
+by the pending full conversational dedicated flow, not yet executed on CI.
+
+Connected failure reports now retain first wrong pin, expected state, observed
+value and actual clock; missed windows are explicitly inconclusive. Native replay
+negative injects one wrong stable internal output into otherwise actual samples
+with correct root receivers and requires failed verdict plus pin/clock diagnosis.
+Added docs/connected-circuits.md with flow, electrical graph, actual material list,
+truth table, test-window limits and explicit pending gameplay/not-alpha.2 status.
+
+Integration update: prior connected source43fc56c CI41476541185 completed all5
+SUCCESS. PR42 merged asb9d7be4 after its updated protected-branch checks; PR43
+source9ac26ecd passed all5 and merged as5e2425e. Reviewed CLI's bounded reads,
+explicit formats/discards and open-handle alias/no-truncate-before-validation
+guards. Both are file-tool foundations, not full in-game schematics. Connected
+branch merged current main through5e2425e; kept its ongoing STATE decisions when
+resolving the documentation-only memory conflict. Opening a draft phase27 PR for
+fresh combined-source CI, including the new actual conversational/shared/restart
+flows. Do not reuse prior149-native proof as proof of the newer full C3 flow.
+
+PR45 CI41524156179 terminated FAILURE in dedicated construction: a partial A-net
+junction at2004,101,0 conflicted after223 owned records. Four other jobs passed.
+Candidate correction: ConnectedWireUndo/matchesValidated accepts the exact
+canonical recorded after-state as well as the pinned native projection. Previously
+it accepted only the latter, excluding legitimate just-written arms before later
+neighbor updates. Still requires canonical ownership/block/state; manual dots are
+not broadly ignored. New partial-junction native proof plus unchanged real failing
+construction flow remain the regression gates. Scoped Java compilation pending
+final check; fresh source requires CI, not claimed fixed gameplay yet.
+
+CI41527288929 terminated FAILURE later in the same real build: placement loop
+revisited an owned wire at2014,101,14 after317 records. Four other jobs passed.
+The reconcile fix advanced beyond the original223-record junction, but placement
+still used only final static equality. BUILD now skips only canonically owned
+wire states accepted by the same recorded/native reconciliation, never unowned
+or arbitrary states. Completion still requires all final static geometry to match;
+otherwise waits for native settling. Keep the unchanged real build regression.
+
+CI41533180250/sourceee8ff98 terminated FAILURE waiting connected-functional.done.
+Inspected work/connected-failure-41533180250: actual436-cell build completed,
+shared/revoked/interrupted trial recovery ran, but conversation final approval
+returned "Stop and reconcile active or interrupted world work before you test a
+component". componentTest used composite-only context switching for a single root,
+unlike ordinary test(). Single-component root now validates the requested id and
+delegates to existing whole-project test path, preserving construction history,
+input capture and all existing trial/permission/area guards. Composite switching
+is unchanged. Scoped Java compile passed; unchanged real conversational flow is
+the regression proof and needs fresh exact-source CI. No whole-circuit pass yet.
+
+CI41573027130/source94a9991 terminated FAILURE from Bob's observer timeout.
+Inspected work/connected-failure-41573027130:436-cell build completed, revocation
+and interruption recovered, final natural approval started a real truth-table
+trial. Bob's single240-second receipt wait spanned that entire slow sequence and
+expired while the final trial ran. Observer now waits the already-required
+revocation, interruption, functional and player-edit receipts in chronological
+stages, each retaining the unchanged240-second bound and failure-file detection.
+No functional assertions, game timings, permissions or recovery guards changed.
+Scoped client compilation passed. Fresh full CI needed; no pass/merge claim.
+
+Combined source0df5e59 / CI41573034326 progressed past connected execution but
+failed on real saved-server restart: ConnectedTrace.read rejected missing strict
+fields. Explicit firstMismatch:null was omitted by shared Gson disk/HTTP encoder.
+LocalFiles.GSON now serializeNulls; it serializes already-built JsonObjects, so
+this preserves explicit protocol fields without inventing optional Java members.
+Added native regression roundtripping an actual strict trace through LocalFiles
+disk write/read and Companion checkpoint HTTP encoder, then strict trace reader.
+This fixes a known persistence/transport defect, not a relaxed reader schema.
+Scoped Java compile passed; fresh native/full restart CI required.
+
+Source3d4f732 / CI41575231876 ended when the23-minute client wrapper expired:
+"alice exited before its native test completed", no assertion failure receipt.
+Inspected work/connected-failure-41575231876: connected-restarted.done and
+connected-undo.done both passed, along with earlier functional/revocation/edit
+receipts. Actual saved-world re-test/control restoration and owned undo therefore
+passed on that source; independent final SQLite/full job still did not finish.
+Runner was still executing later generated-truth-table checks under native lag.
+Expanded suite now gets29-minute clients,30-minute harness,35-minute job including
+setup. No expected behavior, game tick windows, per-stage wait or case count was
+changed. Shell syntax check passes; fresh full CI required, not a milestone pass.

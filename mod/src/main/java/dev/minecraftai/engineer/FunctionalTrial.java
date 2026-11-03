@@ -24,6 +24,8 @@ final class FunctionalTrial {
     private TransitionTrace transition;
     private PulseTrace pulse;
     private AnalogTrace analog;
+    private ConnectedTrace connected;
+    private HalfAdderDesign connectedDesign;
     private boolean pulseOriginal;
     private JsonObject generatedRow;
     private long startedGameTick,phaseStart,lastBaseline=-1;
@@ -65,6 +67,7 @@ final class FunctionalTrial {
         generatedBehavior=accepted instanceof BehaviorSpec buffer?buffer:null;
         truthBehavior=accepted instanceof TruthTableSpec truth?truth:null;settled=null;
         generatedRow=null;transition=null;pulse=null;analog=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
+        connected=null;connectedDesign=ConnectedIntention.describes(s.executionBlueprint().source())?new HalfAdderDesign():null;
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+(contract.analogMode()!=null?" settled numeric suite running":contract.pulse()!=null?" pulse test running":" truth table running");
         s.save();s.checkpoint();
         s.tell(s.detail);
@@ -74,6 +77,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(connectedDesign!=null){tickConnected();return;}
             if(contract.analogMode()!=null){tickAnalog();return;}
             if(contract.pulse()!=null){tickPulse();return;}
             if(truthBehavior!=null){tickTruth();return;}
@@ -96,6 +100,42 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickConnected(){
+        var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0 && s.testTick<contract.settleTicks())return;
+        if(connected==null){
+            vector++;int value=ConnectedEvidence.vector(vector);
+            apply(Map.of("a:control",(value&2)!=0,"b:control",(value&1)!=0));
+            connected=new ConnectedTrace(connectedDesign.graphDigest(),(value&2)!=0,(value&1)!=0,now);
+            phaseStart=now;
+            evidence.add(connected.json());
+        }
+        var ports=new JsonObject();var blueprint=s.executionBlueprint();
+        for(var pin:connectedDesign.pins()){
+            var pos=pin.pos().rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor());s.validateTarget(pos);
+            var actual=s.level().getBlockState(pos);
+            switch(pin.physical()){
+                case LEVER->{if(!actual.is(Blocks.LEVER))throw new IllegalStateException("Connected external lever changed");ports.addProperty(pin.id(),actual.getValue(BlockStateProperties.POWERED));}
+                case WIRE->{if(!actual.is(Blocks.REDSTONE_WIRE))throw new IllegalStateException("Connected signal pin changed");ports.addProperty(pin.id(),actual.getValue(BlockStateProperties.POWER));}
+                case LAMP->{if(!actual.is(Blocks.REDSTONE_LAMP))throw new IllegalStateException("Connected receiver changed");ports.addProperty(pin.id(),actual.getValue(BlockStateProperties.LIT));}
+            }
+        }
+        if(now-phaseStart>ConnectedTrace.END)throw new IllegalStateException("inconclusive: connected game-tick observation window missed");
+        connected.sample(now,ports);evidence.set(vector,connected.json());s.save();
+        if(connected.verdict().equals("failed"))throw new IllegalStateException(connected.failure());
+        if(!connected.passed())return;
+        ConnectedEvidence.validate(evidence,connectedDesign.graphDigest(),false);
+        if(vector<7){connected=null;return;}
+        ConnectedEvidence.validate(evidence,connectedDesign.graphDigest(),true);
+        var originals=new LinkedHashMap<BlockPos,BlockState>();for(var input:inputs.values())originals.put(input.pos(),input.original());
+        int elapsed=s.testTick;restore();
+        if(pending() || originals.size()!=2 || originals.entrySet().stream().anyMatch(entry->!s.level().hasChunkAt(entry.getKey()) || !s.level().getBlockState(entry.getKey()).equals(entry.getValue())))
+            throw new IllegalStateException("Connected original input restoration incomplete; no pass recorded");
+        s.verified="passed:half-adder:8 cases@"+elapsed;
+        s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString()).lastPassedScope=evidenceScope.deepCopy();
+        s.state="COMPLETED";s.detail="Actual half-adder passed all eight forward/reverse cases at all twenty pins; both original input states restored. Latency was not measured.";
+        s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
     }
     private void tickAnalog(){
         var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
@@ -405,7 +445,9 @@ final class FunctionalTrial {
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
-        validateCases(evidence,session.blueprint!=null && AnalogIntention.describes(session.blueprint.source())?45:32);
+        if(session.blueprint!=null && ConnectedIntention.describes(session.blueprint.source()))
+            ConnectedEvidence.validate(evidence,ConnectedIntention.validated(session.blueprint).source().get("graphDigest").getAsString(),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
+        else validateCases(evidence,session.blueprint!=null && AnalogIntention.describes(session.blueprint.source())?45:32);
         evidenceScope=null;evidenceBlueprint=null;
         if(json.has("functionalScope")) {
             evidenceScope=validateHistoricalScope(json.getAsJsonObject("functionalScope"));

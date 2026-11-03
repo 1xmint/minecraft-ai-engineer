@@ -12,7 +12,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
 final class LocalFiles {
-    static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    static final Gson GSON = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
     static Path configDir() {
         String override = System.getenv("MCE_CONFIG_DIR");
         if (override != null && !override.isBlank()) return Path.of(override);

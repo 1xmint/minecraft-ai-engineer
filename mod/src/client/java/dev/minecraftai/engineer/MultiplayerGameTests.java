@@ -652,7 +652,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);conversationWorkFlows(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -671,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
           try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
-            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);}
+            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);}
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1095,6 +1095,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_ACCEPTANCE){
             // Follow actual phase receipts before starting the later conversation wait.
             awaitFile(context,"analog-preview.done");awaitFile(context,"analog-functional.done");awaitFile(context,"analog-undo.done");awaitFile(context,"analog-shared.done");
+            // Each receipt bounds a real stage; construction plus recovery plus
+            // the full trial must not share one observer's four-minute wait.
+            awaitFile(context,"connected-revocation.done");awaitFile(context,"connected-interruption.done");
+            awaitFile(context,"connected-functional.done");awaitFile(context,"connected-player-edit.done");
             awaitFile(context,"conversation-bob-project");String conversationProject=read("conversation-bob-project");
             send(context,"engineer project use "+conversationProject);await(context,()->view(context)!=null && view(context).projectId().equals(conversationProject),"Bob sees only the conversation project that granted him view access");
             MESSAGES.clear();say(context,"Engineer, show me a signal lamp");expectChat(context,"does not grant you edit permission");
@@ -2046,6 +2050,79 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("/engineer act ") || message.contains("/engineer confirm ")),"Conversation does not require a command or copied confirmation nonce");
     }
     private static void conversationApprove(ClientGameTestContext context,String request){conversationProposal(context,request);say(context,"Engineer, yes please");}
+    private static void connectedAction(TestDedicatedServerContext server,java.util.function.Consumer<EngineeringSession> action) throws Exception {
+        server.runOnServer(s->{var project=session(s,"Alice");var previous=project.commandActor;
+            try{project.commandActor=player(s,"Alice").getUUID();action.accept(project);}finally{project.commandActor=previous;}});
+    }
+    private static void connectedExecutionFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("forceload add 1984 -16 2064 64");
+        MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+        server.runCommand("tp Alice 2000 100 0");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(2000,100,0)));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the first corner here");expectChat(context,"First corner marked at your feet");
+        server.runCommand("tp Alice 2045 101 36");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(2045,101,36)));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
+        MESSAGES.clear();setupSay(context,"Engineer, show me a half-adder");expectChat(context,"Preview ready: Connected one-bit half-adder");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && !project.verified.startsWith("passed:"),"Natural connected preview grants neither execution nor a pass");});
+        MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Intended connected test: eight forward/reverse");
+        conversationApprove(context,"CI build selected half-adder.");
+        server.waitFor(s->session(s,"Alice").journal.size()>=20 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && !project.verified.startsWith("passed:"),"Interrupted connected build releases authority without verification");});
+        connectedAction(server,EngineeringSession::resume);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==436,"Production connected construction must complete: "+project.status());
+            var input=EngineeringContracts.contract(project.blueprint).ports().stream().filter(port->port.name().equals("a:control")).findFirst().orElseThrow();
+            var actual=project.level().getBlockState(input.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),input.pos(),player(s,"Alice"));});
+        context.waitTicks(12);
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);
+            commandAs(s,"Bob","engineer build");commandAs(s,"Bob","engineer test");commandAs(s,"Bob","engineer undo");
+            check(project.journal.size()==436 && project.delegation==null && project.testTick<0,"Shared connected viewer gains no execution or test authority");
+            commandAs(s,"Alice","engineer project share Bob editor");commandAs(s,"Bob","engineer test");});
+        server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick>=0 && project.trial.pending(),"Authorized shared editor actually starts the connected trial");
+            commandAs(s,"Alice","engineer project revoke Bob");check(project.delegation==null && project.trial.pending() && !project.verified.startsWith("passed:"),"Revocation retains recovery facts without mutation authority");
+            commandAs(s,"Bob","engineer resume");check(project.delegation==null && project.trial.pending(),"Revoked editor cannot restore connected inputs");});
+        connectedAction(server,EngineeringSession::resume);
+        server.runOnServer(s->{var project=session(s,"Alice");check(!project.trial.pending() && project.delegation==null && project.testTick<0,"Owner explicitly reconciles revoked connected trial without resuming it");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Owner restores original controls after revoked editor");});
+        write("connected-revocation.done","passed");connectedAction(server,EngineeringSession::test);
+        server.waitFor(s->session(s,"Alice").trial.evidence().size()>=2 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->check(session(s,"Alice").testTick>=0,"Connected interruption must reach an actual running production trial"));
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && !project.verified.startsWith("passed:"),"Interrupted connected trial restores inputs and releases authority without a pass");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Interruption restores originally-on/off controls exactly");});
+        write("connected-interruption.done","passed");conversationApprove(context,"CI test selected half-adder.");
+        server.waitFor(s->session(s,"Alice").testTick>=0 && session(s,"Alice").state.equals("VERIFYING"),30_000);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"Production whole-circuit trial must pass: "+project.status());
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
+            check(!project.hasPendingTest() && project.delegation==null,"Connected pass follows restoration and lease release");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Exact originally-on/off controls restored");});
+        assertPersisted(server);write("connected-functional-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("connected-functional.done","passed");
+        connectedAction(server,project->{boolean blocked=false;try{project.undo();}catch(IllegalStateException expected){blocked=expected.getMessage().contains("Undo blocked by later edit");}
+            check(blocked && project.journal.size()==436 && project.delegation==null,"Undo preflight preserves all construction when the player's originally-on lever differs from assistant after-state");});
+        write("connected-player-edit.done","passed");
+        // Keep the real constructed and tested world for the existing third boot.
+    }
+    private static void connectedRestartRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("connected-functional-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("stale:") && project.delegation==null && project.testTick<0 && !project.hasPendingTest() && project.journal.size()==436,"Saved connected project retains history and ownership, never a live pass or callback");
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);});
+        connectedAction(server,EngineeringSession::test);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:half-adder:8 cases@"),"New server epoch establishes fresh connected observations: "+project.status());
+            ConnectedEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);
+            check(!project.hasPendingTest() && project.delegation==null,"Restarted connected test restores inputs and releases its fresh lease");
+            for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==port.name().equals("a:control"),"Restarted trial retains exact original A-on/B-off controls");});
+        assertPersisted(server);write("connected-restarted.done","passed");
+        server.runOnServer(s->{var project=session(s,"Alice");var port=EngineeringContracts.contract(project.blueprint).ports().stream().filter(input->input.name().equals("a:control")).findFirst().orElseThrow();
+            var actual=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)actual.getBlock()).pull(actual,project.level(),port.pos(),player(s,"Alice"));});
+        context.waitTicks(12);connectedAction(server,EngineeringSession::undo);
+        server.waitFor(s->session(s,"Alice").journal.isEmpty() || session(s,"Alice").state.equals("PAUSED"),90_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Production connected undo removes exactly assistant construction: "+project.status());});
+        write("connected-undo.done","passed");
+    }
     private static void analogConversationFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         server.runCommand("forceload add 1680 -16 1744 48");
         server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
