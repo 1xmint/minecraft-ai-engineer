@@ -23,6 +23,7 @@ import {
 import { PlanningQueue } from "./planning-queue.js";
 import type { SchematicRoutes } from "./schematic-library/routes.js";
 import { validateInventory } from "./inventory.js";
+import { validateNoteSearch } from "./project-knowledge.js";
 import {
   text,
   identifier,
@@ -152,6 +153,8 @@ export class ServerGateway {
         "/v2/project/read",
         "/v2/knowledge/read",
         "/v2/knowledge/note",
+        "/v2/knowledge/show",
+        "/v2/knowledge/find",
         "/v2/discuss",
         "/v2/interpret",
         "/v2/design",
@@ -163,17 +166,20 @@ export class ServerGateway {
     const v = object(value),
       context = gatewayContext(v.context);
     this.requireEpoch(context);
-    if (
-      pathname === "/v2/knowledge/read" ||
-      pathname === "/v2/knowledge/note"
-    ) {
-      const allowed =
-        pathname === "/v2/knowledge/read"
+    if (pathname.startsWith("/v2/knowledge/")) {
+      const required =
+        pathname === "/v2/knowledge/read" || pathname === "/v2/knowledge/find"
           ? ["context"]
-          : ["context", "note", "expectedRevision"];
+          : pathname === "/v2/knowledge/show"
+            ? ["context", "revision"]
+            : ["context", "note", "expectedRevision"];
+      const optional =
+        pathname === "/v2/knowledge/find" ? ["text", "kind", "changes"] : [];
       if (
-        Object.keys(v).length !== allowed.length ||
-        Object.keys(v).some((key) => !allowed.includes(key))
+        required.some((key) => !(key in v)) ||
+        Object.keys(v).some(
+          (key) => !required.includes(key) && !optional.includes(key),
+        )
       )
         throw new RequestError("Invalid project knowledge request fields.");
       if (!context.connectionId)
@@ -181,6 +187,23 @@ export class ServerGateway {
           "Project knowledge requests require a current connection.",
           403,
         );
+      if (pathname === "/v2/knowledge/show")
+        return {
+          protocol: 2,
+          status: "shared",
+          context,
+          ...memory.showNote(
+            context,
+            integer(v.revision, "note number", 1, Number.MAX_SAFE_INTEGER),
+          ),
+        };
+      if (pathname === "/v2/knowledge/find")
+        return {
+          protocol: 2,
+          status: "shared",
+          context,
+          ...memory.findNotes(context, validateNoteSearch(v)),
+        };
       if (pathname === "/v2/knowledge/read")
         return {
           protocol: 2,

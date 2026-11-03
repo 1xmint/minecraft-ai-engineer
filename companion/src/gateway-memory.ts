@@ -5,6 +5,9 @@ import {
   readProjectNote,
   type ProjectNote,
   type ProjectKnowledge,
+  type ProjectNoteEntry,
+  type ProjectNoteSearch,
+  NOTE_SEARCH_LIMIT,
 } from "./project-knowledge.js";
 import type { DatabaseSync } from "node:sqlite";
 import { validateInventory, type InventorySnapshot } from "./inventory.js";
@@ -235,6 +238,87 @@ export class GatewayMemory {
         `Note #${revision} was already replaced by #${newer}; replace #${newer} instead.`,
         409,
       );
+  }
+  private entry(context: GatewayContext, note: ProjectNote): ProjectNoteEntry {
+    const replacedBy = this.replacedBy(context, note.revision);
+    const replaces =
+      note.schemaVersion === 2 && note.supersedes !== undefined
+        ? this.storedNote(context, note.supersedes)
+        : undefined;
+    return Object.freeze({
+      note,
+      ...(replacedBy !== undefined ? { replacedBy } : {}),
+      ...(replaces ? { replaces } : {}),
+    });
+  }
+  /** One note by number from the whole history; null when the project has no such note. */
+  showNote(
+    context: GatewayContext,
+    revision: number,
+  ): Readonly<{ knowledgeRevision: number; entry: ProjectNoteEntry | null }> {
+    this.assertCurrent(context, "read");
+    integer(revision, "note number", 1, Number.MAX_SAFE_INTEGER);
+    const note = this.storedNote(context, revision);
+    return Object.freeze({
+      knowledgeRevision: this.noteRevision(context),
+      entry: note ? this.entry(context, note) : null,
+    });
+  }
+  /** Newest matching notes from the whole history, searching only this project's literal text and reasons. */
+  findNotes(
+    context: GatewayContext,
+    search: ProjectNoteSearch,
+  ): Readonly<{
+    knowledgeRevision: number;
+    entries: readonly ProjectNoteEntry[];
+    more: number;
+  }> {
+    this.assertCurrent(context, "read");
+    const where = ["server_id=?", "project_id=?"];
+    const values: (string | number)[] = [context.serverId, context.projectId];
+    if (search.text !== undefined) {
+      // instr, not LIKE: '%' and '_' in a player's words stay literal.
+      where.push(
+        "(instr(lower(json_extract(document,'$.text')),lower(?))>0 OR instr(lower(coalesce(json_extract(document,'$.rationale'),'')),lower(?))>0)",
+      );
+      values.push(search.text, search.text);
+    }
+    if (search.kind !== undefined) {
+      where.push("json_extract(document,'$.kind')=?");
+      values.push(search.kind);
+    }
+    if (search.changes)
+      where.push("json_extract(document,'$.supersedes') IS NOT NULL");
+    const filter = where.join(" AND ");
+    const total = (
+      this.db
+        .prepare(
+          `SELECT COUNT(*) AS total FROM gateway_project_notes WHERE ${filter}`,
+        )
+        .get(...values) as { total: number }
+    ).total;
+    const rows = this.db
+      .prepare(
+        `SELECT note_revision,document FROM gateway_project_notes WHERE ${filter} ORDER BY note_revision DESC LIMIT ?`,
+      )
+      .all(...values, NOTE_SEARCH_LIMIT) as {
+      note_revision: number;
+      document: string;
+    }[];
+    const entries = rows.map((row) => {
+      const note = readProjectNote(JSON.parse(row.document));
+      if (note.revision !== row.note_revision)
+        throw new RequestError(
+          "Stored project-note revision is inconsistent.",
+          409,
+        );
+      return this.entry(context, note);
+    });
+    return Object.freeze({
+      knowledgeRevision: this.noteRevision(context),
+      entries: Object.freeze(entries),
+      more: total - entries.length,
+    });
   }
   knowledge(context: GatewayContext, limit = 32): ProjectKnowledge {
     this.assertCurrent(context, "read");

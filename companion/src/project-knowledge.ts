@@ -5,12 +5,13 @@ export const PROJECT_NOTE_KINDS = Object.freeze([
   "constraint",
   "preference",
   "decision",
+  "reference",
 ] as const);
 export type ProjectNoteKind = (typeof PROJECT_NOTE_KINDS)[number];
 /** Version 1 is frozen: stored rows and planning text keep exactly these keys. */
 export interface ProjectNoteInputV1 {
   readonly schemaVersion: 1;
-  readonly kind: ProjectNoteKind;
+  readonly kind: Exclude<ProjectNoteKind, "reference">;
   readonly text: string;
 }
 /** Optional keys are absent, never null: the mod's JSON writer drops nulls. */
@@ -72,8 +73,12 @@ function content(value: Record<string, unknown>): ProjectNoteInput {
     throw new RequestError("Unsupported project-note kind or version.");
   const kind = value.kind as ProjectNoteKind;
   const literal = text(value.text, "literal project note", 512);
-  if (value.schemaVersion === 1)
+  if (value.schemaVersion === 1) {
+    // Version 1 is frozen to its original four kinds; references need version 2.
+    if (kind === "reference")
+      throw new RequestError("Unsupported project-note kind or version.");
     return { schemaVersion: 1, kind, text: literal };
+  }
   return {
     schemaVersion: 2,
     kind,
@@ -134,4 +139,44 @@ export function readProjectNote(value: unknown): ProjectNote {
     ),
     source: "owner-authored",
   }) as ProjectNote;
+}
+/** One note as retrieved, with how it relates to the rest of the append-only history. */
+export interface ProjectNoteEntry {
+  readonly note: ProjectNote;
+  /** The newer note that replaced this one; absent while it is current. */
+  readonly replacedBy?: number;
+  /** The older note this one replaced, kept so a change shows before and after. */
+  readonly replaces?: ProjectNote;
+}
+export interface ProjectNoteSearch {
+  readonly text?: string;
+  readonly kind?: ProjectNoteKind;
+  /** Only notes that replaced an earlier note. */
+  readonly changes?: true;
+}
+export const NOTE_SEARCH_LIMIT = 8;
+/** Literal, bounded search terms only; matching is case-insensitive substring over note text and reason. */
+export function validateNoteSearch(
+  value: Record<string, unknown>,
+): ProjectNoteSearch {
+  const search: { text?: string; kind?: ProjectNoteKind; changes?: true } = {};
+  if ("text" in value) {
+    search.text = text(value.text, "note search text", 64).trim();
+    if (!search.text) throw new RequestError("Note search text is empty.");
+  }
+  if ("kind" in value) {
+    if (!PROJECT_NOTE_KINDS.some((kind) => kind === value.kind))
+      throw new RequestError("Unsupported project-note kind.");
+    search.kind = value.kind as ProjectNoteKind;
+  }
+  if ("changes" in value) {
+    if (value.changes !== true)
+      throw new RequestError("Invalid project-note change filter.");
+    search.changes = true;
+  }
+  if (!search.text && !search.kind && !search.changes)
+    throw new RequestError(
+      "Give note search text, a kind or the change filter.",
+    );
+  return Object.freeze(search);
 }
