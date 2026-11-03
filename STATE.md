@@ -4,6 +4,16 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Real project-authority sourcebef333e / CI41572801130 completed SUCCESS. Inspected
+actual ENGINEER_PHYSICAL_PROJECT_AUTHORITY marker and both required native passes;
+downloaded artifact work/physical-project-proof-41572801130. Native survival
+placement used the real core claim/reservation/exact-target validation and denied
+released/revoked/outside/disconnected cases without actor project grants. This
+still uses CI controller connections and no-op writeAhead; not durable execution,
+production NPC or human acceptance. Next production slice needs optional actor
+lifecycle, actual WAL/recovery, project-scoped chat and bounded navigation before
+calling NPC/survival complete. Existing project creation/creative write path stays.
+
 Expiry-corrected sourced1b2c7f / CI41535410497 completed SUCCESS; actual marker
 and both required native passes inspected. New CI-only projectAuthority fixture
 uses a separate creative controller connection and survival physical actor with
