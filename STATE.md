@@ -4,6 +4,15 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Extended lifecycle sourcee79fb3b / CI41574979258 completed SUCCESS; inspected
+actual owner/editor/action/material/XP/dismiss/selection/grant/disconnect marker
+and both required native passes. These are production lifecycle methods driven
+with native CI connections, not an actual dedicated chat/UI proof. Merged current
+combined core through0a5a077, including chronological observer receipts and strict
+trace-null serialization fix3d4f732. New combined source requires fresh CI; parent
+run41575231876 is pending. Previously dispatched combined41575015476 remains live
+on older source lacking the serialization correction; no pass is claimed.
+
 Lifecycle sourcef4d59af / CI41574545857 completed SUCCESS; inspected actual
 owner summon/editor denial/idle action+material denial/dismiss/grant cleanup
 marker and both required native passes. New candidate blocks XP orb pickup too,
