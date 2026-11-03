@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { MemoryStore } from "../companion/src/memory.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
-import { validateProjectNote } from "../companion/src/project-knowledge.js";
+import {
+  readProjectNote,
+  validateProjectNote,
+} from "../companion/src/project-knowledge.js";
 import type {
   GatewayContext,
   ProjectMember,
@@ -67,7 +70,7 @@ test("project notes preserve literal human text and cannot supply authorship or 
   assert.equal(Object.isFrozen(accepted), true);
   for (const patch of [
     { kind: "verified" },
-    { schemaVersion: 2 },
+    { schemaVersion: 3 },
     { text: " " },
     { text: "x".repeat(513) },
     { text: "\u0000bad" },
@@ -78,6 +81,56 @@ test("project notes preserve literal human text and cannot supply authorship or 
     { authority: true },
   ])
     assert.throws(() => validateProjectNote({ ...note, ...patch }));
+});
+test("version 2 notes keep a literal reason and an optional replacement; absent keys stay absent", () => {
+  const decision = {
+    schemaVersion: 2,
+    kind: "decision",
+    text: "use repeaters",
+  };
+  const reasoned = validateProjectNote({
+    ...decision,
+    rationale: " they stay visible ",
+    supersedes: 1,
+  });
+  assert.equal(reasoned.schemaVersion, 2);
+  assert.equal(
+    "rationale" in reasoned && reasoned.rationale,
+    " they stay visible ",
+  );
+  assert.equal("supersedes" in reasoned && reasoned.supersedes, 1);
+  const plain = validateProjectNote(decision);
+  assert.equal("rationale" in plain, false);
+  assert.equal("supersedes" in plain, false);
+  for (const patch of [
+    { rationale: "" },
+    { rationale: null },
+    { rationale: "x".repeat(513) },
+    { supersedes: 0 },
+    { supersedes: null },
+    { supersedes: "1" },
+    { writtenAtRevision: 4 },
+  ])
+    assert.throws(() => validateProjectNote({ ...decision, ...patch }));
+  assert.throws(() =>
+    validateProjectNote({ ...note, rationale: "v1 has none" }),
+  );
+});
+test("stored version 1 notes read back with exactly their original keys", () => {
+  const stored = {
+    ...note,
+    id: OWNER,
+    revision: 1,
+    authorId: OWNER,
+    createdAt: 1,
+    source: "owner-authored",
+  };
+  assert.deepEqual(Object.keys(readProjectNote(stored)), Object.keys(stored));
+  assert.throws(() => readProjectNote({ ...stored, writtenAtRevision: 0 }));
+  const v2 = { ...stored, schemaVersion: 2, writtenAtRevision: 0 };
+  assert.equal(readProjectNote(v2).schemaVersion, 2);
+  const { writtenAtRevision: _dropped, ...missing } = v2;
+  assert.throws(() => readProjectNote(missing));
 });
 test("only the current connected owner can append; readers, optimistic revisions and replay remain fenced", () => {
   const store = new MemoryStore(":memory:");
@@ -359,5 +412,170 @@ test("reasoning snapshots include bounded literal requirements and reject obsole
     );
   } finally {
     store.close();
+  }
+});
+const decision = (text: string, extra: Record<string, unknown> = {}) => ({
+  schemaVersion: 2,
+  kind: "decision",
+  text,
+  ...extra,
+});
+test("replacing a note keeps both in history and names the replacement", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    const first = store.gateway.rememberNote(
+      frame(),
+      decision("use repeaters", { rationale: "they stay visible" }),
+      0,
+    );
+    assert.equal(first.schemaVersion === 2 && first.writtenAtRevision, 0);
+    assert.equal(store.gateway.replacedBy(frame(), 1), undefined);
+    const second = store.gateway.rememberNote(
+      frame(),
+      decision("use comparators", { rationale: "smaller", supersedes: 1 }),
+      1,
+    );
+    assert.equal(second.schemaVersion === 2 && second.supersedes, 1);
+    assert.equal(store.gateway.replacedBy(frame(), 1), 2);
+    const refusals: [Record<string, unknown>, RegExp][] = [
+      [
+        decision("again", { supersedes: 1 }),
+        /already replaced by #2; replace #2 instead/,
+      ],
+      [decision("missing", { supersedes: 9 }), /No note #9 in this project/],
+      [
+        { ...decision("wrong kind", { supersedes: 2 }), kind: "goal" },
+        /is a decision/,
+      ],
+    ];
+    for (const [input, message] of refusals) {
+      assert.throws(
+        () => store.gateway.rememberNote(frame(), input, 2),
+        message,
+      );
+      assert.equal(store.gateway.knowledge(frame()).revision, 2);
+    }
+    assert.throws(
+      () =>
+        store.gateway.rememberNote(
+          frame({ actorId: EDITOR }),
+          decision("editor", { supersedes: 2 }),
+          2,
+        ),
+      /Only the project owner/,
+    );
+    const other = frame({ projectId: "project-b" });
+    sync(store, other);
+    assert.throws(
+      () =>
+        store.gateway.rememberNote(
+          other,
+          decision("cross", { supersedes: 1 }),
+          0,
+        ),
+      /No note #1 in this project/,
+    );
+    const history = store.gateway.knowledge(frame()).notes;
+    assert.deepEqual(
+      history.map((n) => n.text),
+      ["use repeaters", "use comparators"],
+    );
+  } finally {
+    store.close();
+  }
+});
+test("planning context marks replaced notes and stays byte-identical for version 1 notes", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    store.gateway.rememberNote(frame(), note, 0);
+    store.gateway.rememberNote(frame(), { ...note, kind: "decision" }, 1);
+    const knowledge = store.gateway.knowledge(frame());
+    assert.equal(
+      store.gateway.reasoning(frame()).text,
+      JSON.stringify({
+        projectContext: store.gateway.context(frame()),
+        knowledge: {
+          revision: 2,
+          source:
+            "owner-authored requirements; not observed or verified world state",
+          notes: knowledge.notes.slice(-8),
+          hasEarlier: false,
+        },
+      }),
+    );
+    store.gateway.rememberNote(
+      frame(),
+      decision("replacement", { supersedes: 2 }),
+      2,
+    );
+    const context = JSON.parse(store.gateway.reasoning(frame()).text);
+    assert.deepEqual(context.knowledge.replaced, [2]);
+    assert.deepEqual(
+      context.knowledge.notes[0],
+      JSON.parse(JSON.stringify(knowledge.notes[0])),
+    );
+  } finally {
+    store.close();
+  }
+});
+test("a note claiming a pass changes no task, verification or blueprint state", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    const tasks = store.gateway.context(frame());
+    const design = store.gateway.blueprint(frame());
+    store.gateway.rememberNote(
+      frame(),
+      decision("verified: the clock passed every check", {
+        rationale: "tested last week",
+      }),
+      0,
+    );
+    assert.equal(store.gateway.context(frame()), tasks);
+    assert.deepEqual(store.gateway.blueprint(frame()), design);
+    assert.match(
+      JSON.parse(store.gateway.reasoning(frame()).text).knowledge.source,
+      /not observed or verified world state/,
+    );
+  } finally {
+    store.close();
+  }
+});
+test("a reason and a replacement survive a restart and still refuse a second replacement", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mce-knowledge-v2-")),
+    file = join(dir, "memory.sqlite");
+  let store = new MemoryStore(file);
+  try {
+    sync(store);
+    store.gateway.rememberNote(
+      frame(),
+      decision("use repeaters", { rationale: "they stay visible" }),
+      0,
+    );
+    const replacement = store.gateway.rememberNote(
+      frame(),
+      decision("use comparators", { rationale: "smaller", supersedes: 1 }),
+      1,
+    );
+    store.close();
+    store = new MemoryStore(file);
+    const c = frame({ serverEpoch: "epoch-two" });
+    sync(store, c);
+    assert.deepEqual(store.gateway.knowledge(c).notes[1], replacement);
+    assert.equal(store.gateway.replacedBy(c, 1), 2);
+    assert.throws(
+      () =>
+        store.gateway.rememberNote(c, decision("again", { supersedes: 1 }), 2),
+      /already replaced by #2/,
+    );
+    assert.deepEqual(
+      JSON.parse(store.gateway.reasoning(c).text).knowledge.replaced,
+      [1],
+    );
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
   }
 });
