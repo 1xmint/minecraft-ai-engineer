@@ -461,3 +461,14 @@ still used only final static equality. BUILD now skips only canonically owned
 wire states accepted by the same recorded/native reconciliation, never unowned
 or arbitrary states. Completion still requires all final static geometry to match;
 otherwise waits for native settling. Keep the unchanged real build regression.
+
+CI41533180250/sourceee8ff98 terminated FAILURE waiting connected-functional.done.
+Inspected work/connected-failure-41533180250: actual436-cell build completed,
+shared/revoked/interrupted trial recovery ran, but conversation final approval
+returned "Stop and reconcile active or interrupted world work before you test a
+component". componentTest used composite-only context switching for a single root,
+unlike ordinary test(). Single-component root now validates the requested id and
+delegates to existing whole-project test path, preserving construction history,
+input capture and all existing trial/permission/area guards. Composite switching
+is unchanged. Scoped Java compile passed; unchanged real conversational flow is
+the regression proof and needs fresh exact-source CI. No whole-circuit pass yet.

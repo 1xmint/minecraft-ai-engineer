@@ -1100,6 +1100,9 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.BUILD);requireCreative();
         if(blueprint==null)throw new IllegalStateException("No component project");
         if(ShutterDesign.describes(blueprint.source())){ComponentTree.component(blueprint,id);test();return;}
+        // A single root is the whole project: retain ordinary test recovery and
+        // original-input capture instead of replacing its construction history.
+        if(!ComponentTree.composite(blueprint)){ComponentTree.component(blueprint,id);test();return;}
         ensureComponentContextIdle("test a component");
         ComponentTree.validate(blueprint);
         Blueprint selected=ComponentTree.component(blueprint,id);
