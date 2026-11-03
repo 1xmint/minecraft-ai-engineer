@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Revised journal source847e347 / CI41573625978 completed SUCCESS; inspected native
+marker reloaded=after-match,causal-proof=false and both required passes. Downloaded
+artifact work/physical-journal-proof-41573625978. Primitive phase29 feasibility is
+now proven within its narrow CI scope: actual item use/mining/movement/pickup,
+cancellation, event-time tickets, real project authority, forced-file disk reload.
+It is not the shipped NPC/survival feature. Next production slice: optional
+server-owned actor lifecycle reachable from project-scoped chat, empty survival
+actor denied by default, owner/connection-bound cleanup with no restart auto-spawn;
+then durable placement executor and bounded navigation/resource tasks. Proof must
+show visible actor and denied users, disconnect cleanup and no actor permissions.
+Keep optional third-party compatibility and existing creative path intact; do not
+call a stationary actor or isolated primitives complete construction/gathering.
+
 Journal sourced66c23a / CI41573449362 completed SUCCESS. Focused GPT-6-Luna
 durability review found no unauthorized write within the prototype, but clarified
 limits: equal native block/item facts do not prove this operation caused them;
