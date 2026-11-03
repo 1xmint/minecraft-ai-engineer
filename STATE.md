@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Next physical proof adds CI-only PhysicalPlacementRecord: strict bounded inert
+dirt-placement facts bind world/dimension/project/blueprint/revision/component,
+human+worker UUID, exact cell and native block/item before/after counts. Real
+LocalFiles forced atomic checkpoint runs inside the gate's pre-mutation callback.
+Native candidate reloads PREPARED as UNAPPLIED before item use; after placement
+and lease release reloads APPLIED, persists OBSERVED, reloads again, and identifies
+a later block edit as CONFLICT. Injected lease fields are refused. Reload restores
+no ticket/lease and performs no retry or undo. OBSERVED cannot become UNAPPLIED.
+This is disk-reload proof, not an actual server/process restart or complete
+inventory/drop recovery. Scoped Java compilation passed; native CI and focused
+durability review pending. Full integration41573034326 has four green jobs and
+live dedicated flow; parent41573027130 remains live. Do not restart either.
+
 Real project-authority sourcebef333e / CI41572801130 completed SUCCESS. Inspected
 actual ENGINEER_PHYSICAL_PROJECT_AUTHORITY marker and both required native passes;
 downloaded artifact work/physical-project-proof-41572801130. Native survival

@@ -140,6 +140,7 @@ public final class PhysicalBuilderGameTests {
             var candidate=SchematicBlueprint.candidate(cells,99,"a".repeat(64),"b".repeat(64),manager.worldId,project.dimension,project.projectId.toString());
             project.proposeImported(Blueprint.parse(candidate,manager.worldId,project.dimension),target,0);
             helper.assertTrue(!project.access.allows(actor.getUUID(),ProjectAccess.Permission.BUILD),"Physical actor receives no project membership or grant");
+            var recordFile=manager.directory.resolve("physical-probe-"+UUID.randomUUID()+".json");
             for(String scenario:java.util.List.of("live","released","revoked","outside","disconnected")){
                 level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());
                 var destination=scenario.equals("outside")?target.offset(2,0,0):target;
@@ -147,7 +148,12 @@ public final class PhysicalBuilderGameTests {
                 actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,1));
                 project.claim(ProjectAccess.Permission.BUILD,false);
                 PhysicalActionGate.arm(actor,"place",destination,Blocks.AIR.defaultBlockState(),server.getTickCount()+10,
-                    ()->project.validateMutation(ProjectAccess.Permission.BUILD,destination),()->{});
+                    ()->project.validateMutation(ProjectAccess.Permission.BUILD,destination),()->{
+                        if(scenario.equals("live")){
+                            PhysicalPlacementRecord.prepare(project,actor,destination,recordFile);
+                            helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.UNAPPLIED,"Durable prepared record precedes native world/item mutation");
+                        }
+                    });
                 if(scenario.equals("released"))manager.release(project);
                 if(scenario.equals("revoked"))project.access.permission(owner,human.getUUID(),ProjectAccess.Permission.BUILD,false);
                 if(scenario.equals("disconnected"))server.getPlayerList().remove(human);
@@ -156,10 +162,23 @@ public final class PhysicalBuilderGameTests {
                 boolean live=scenario.equals("live");
                 helper.assertTrue(level.getBlockState(destination).is(live?Blocks.DIRT:Blocks.AIR) && actor.getMainHandItem().getCount()==(live?0:1),"Actual project lease governs physical destination/items: "+scenario);
                 manager.release(project);
+                if(live){
+                    var recovered=PhysicalPlacementRecord.load(recordFile);
+                    helper.assertTrue(recovered.status(project,actor)==PhysicalPlacementRecord.Status.APPLIED && project.delegation==null,"Prepared record recovers matching native block/item facts without a lease");
+                    recovered.observed(project,actor,recordFile);
+                    helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.APPLIED,"Observed record survives a fresh disk read");
+                    level.setBlockAndUpdate(destination,Blocks.COBBLESTONE.defaultBlockState());
+                    helper.assertTrue(PhysicalPlacementRecord.load(recordFile).status(project,actor)==PhysicalPlacementRecord.Status.CONFLICT,"Later player edit is a conflict, never an authorized retry");
+                    level.setBlockAndUpdate(destination,Blocks.DIRT.defaultBlockState());
+                    var forged=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(recordFile)).getAsJsonObject();forged.addProperty("lease","invented");LocalFiles.write(recordFile,forged);
+                    boolean refused=false;try{PhysicalPlacementRecord.load(recordFile);}catch(IllegalArgumentException invalid){refused=true;}
+                    helper.assertTrue(refused,"Physical journal cannot import execution authority");
+                }
                 if(scenario.equals("revoked"))project.access.permission(owner,human.getUUID(),ProjectAccess.Permission.BUILD,true);
             }
             helper.assertTrue(!actor.isCreative(),"Physical actor remains in survival while human permission uses the unchanged core");
             System.out.println("ENGINEER_PHYSICAL_PROJECT_AUTHORITY live=placed released=denied revoked=denied outside-reservation=denied disconnected=denied actor-grants=none");
+            System.out.println("ENGINEER_PHYSICAL_WAL prepared-before-write=true reloaded=applied observed-reloaded=true player-edit=conflict forged-authority=denied restored-lease=none");
         }finally{manager.release(project);manager.projects.remove(project.projectId);server.getPlayerList().remove(human);}
     }
 }
