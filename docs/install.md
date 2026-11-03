@@ -153,8 +153,8 @@ check once on a real computer:
 3. Hold V, say "what does this do", release. Expect the listening line while
    held, then `Engineer, what does this do` in the chat box. Wait ten seconds:
    nothing is sent. Press Enter: the engineer answers as if you had typed it.
-4. Hold V, speak, and press Esc before releasing. Expect `Voice cancelled.
-Nothing was sent.` and no chat box.
+4. Hold V, speak, and press Esc before releasing. Expect
+   `Voice cancelled. Nothing was sent.` and no chat box.
 5. Hold V, speak a long sentence, release, then press Esc while
    `Transcribing` shows. Expect the cancel notice and no chat box afterwards.
 6. Say "yes" with no proposal waiting and press Enter. Expect the same reply as
