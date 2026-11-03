@@ -738,3 +738,23 @@ delegates to existing whole-project test path, preserving construction history,
 input capture and all existing trial/permission/area guards. Composite switching
 is unchanged. Scoped Java compile passed; unchanged real conversational flow is
 the regression proof and needs fresh exact-source CI. No whole-circuit pass yet.
+
+CI41573027130/source94a9991 terminated FAILURE from Bob's observer timeout.
+Inspected work/connected-failure-41573027130:436-cell build completed, revocation
+and interruption recovered, final natural approval started a real truth-table
+trial. Bob's single240-second receipt wait spanned that entire slow sequence and
+expired while the final trial ran. Observer now waits the already-required
+revocation, interruption, functional and player-edit receipts in chronological
+stages, each retaining the unchanged240-second bound and failure-file detection.
+No functional assertions, game timings, permissions or recovery guards changed.
+Scoped client compilation passed. Fresh full CI needed; no pass/merge claim.
+
+Combined source0df5e59 / CI41573034326 progressed past connected execution but
+failed on real saved-server restart: ConnectedTrace.read rejected missing strict
+fields. Explicit firstMismatch:null was omitted by shared Gson disk/HTTP encoder.
+LocalFiles.GSON now serializeNulls; it serializes already-built JsonObjects, so
+this preserves explicit protocol fields without inventing optional Java members.
+Added native regression roundtripping an actual strict trace through LocalFiles
+disk write/read and Companion checkpoint HTTP encoder, then strict trace reader.
+This fixes a known persistence/transport defect, not a relaxed reader schema.
+Scoped Java compile passed; fresh native/full restart CI required.
