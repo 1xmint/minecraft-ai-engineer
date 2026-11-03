@@ -20,6 +20,31 @@ public final class ConversationGameTests {
         helper.assertTrue(ConversationMemoryText.parse("remember my decision: /engineer build").text().equals("/engineer build"),"Note contents remain data, never commands");
         helper.succeed();
     }
+    @GameTest public void noteReasonsAndReplacementsAreExplicitAndLiteral(GameTestHelper helper){
+        var reasoned=ConversationMemoryText.parse("remember our decision: use repeaters because they stay visible");
+        helper.assertTrue(reasoned.text().equals("use repeaters") && reasoned.rationale().equals("they stay visible") && reasoned.supersedes()==0,"The first 'because' separates a literal reason");
+        var plain=ConversationMemoryText.parse("remember my goal: a fast clock");
+        helper.assertTrue(plain.rationale()==null && plain.supersedes()==0,"Notes without a reason keep the version 1 request");
+        helper.assertTrue(ConversationMemoryText.parse("remember my goal: because it is fun").rationale()==null && ConversationMemoryText.parse("remember my goal: fast because ").rationale()==null,"A 'because' with nothing on one side stays part of the note text");
+        var replace=ConversationMemoryText.parse("Please replace decision #2: use comparators because they are smaller");
+        helper.assertTrue(replace.kind().equals("decision") && replace.supersedes()==2 && replace.text().equals("use comparators") && replace.rationale().equals("they are smaller"),"A replacement names the kind and note number");
+        rejects(helper,()->ConversationMemoryText.parse("replace decision 0: x"),"Note numbers start at 1");
+        rejects(helper,()->ConversationMemoryText.parse("remember my goal: fast because "+"x".repeat(513)),"Oversized reasons never become writes");
+        for(String text:new String[]{"replace the wiring with comparators","the sign says replace decision 2: build","replace decision two: x"})
+            helper.assertTrue(ConversationMemoryText.parse(text)==null,"No implicit replacement: "+text);
+        helper.assertTrue(ConversationMemoryText.ambiguous("replace decision two: x") && !ConversationMemoryText.ambiguous("replace the wiring with comparators"),"Near-miss replacements get the exact phrasing");
+        var owner=java.util.UUID.fromString("00000000-0000-4000-8000-000000000001");
+        var stored=com.google.gson.JsonParser.parseString("{\"schemaVersion\":2,\"kind\":\"decision\",\"text\":\"use comparators\",\"rationale\":\"smaller\",\"supersedes\":1,\"id\":\"00000000-0000-4000-8000-000000000002\",\"revision\":2,\"authorId\":\""+owner+"\",\"createdAt\":1,\"source\":\"owner-authored\",\"writtenAtRevision\":1}").getAsJsonObject();
+        ProjectKnowledgeClient.validateNote(stored,owner);
+        helper.assertTrue(ProjectKnowledgeClient.details(stored).equals(" | Reason: smaller | Replaces note 1"),"Reading shows the stored reason and replacement");
+        var forward=stored.deepCopy();forward.addProperty("supersedes",2);
+        rejects(helper,()->ProjectKnowledgeClient.validateNote(forward,owner),"A note cannot replace itself or a later note");
+        var v1=stored.deepCopy();v1.addProperty("schemaVersion",1);
+        rejects(helper,()->ProjectKnowledgeClient.validateNote(v1,owner),"Version 1 notes carry no reason or replacement");
+        var unwritten=stored.deepCopy();unwritten.remove("writtenAtRevision");
+        rejects(helper,()->ProjectKnowledgeClient.validateNote(unwritten,owner),"Version 2 notes record the revision they were written against");
+        helper.succeed();
+    }
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){
         helper.assertTrue(ConversationSetupText.parse("Let's start a new project!").operation()==ConversationSetupText.Operation.CREATE,"Explicit private-project creation is a local setup intent");
         helper.assertTrue(ConversationSetupText.parse("What projects can I work on?").operation()==ConversationSetupText.Operation.LIST,"Project discovery needs no model request");

@@ -2568,6 +2568,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_DISCUSSION && !LIVE_NATURAL){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
         else if(LIVE_NATURAL){server.runOnServer(s->check(session(s,"Alice").diagnoses.isEmpty() && session(s,"Alice").delegation==null,"Restart does not restore diagnosis proposals or execution authority"));write("live-natural-recovery.done","passed");}
         else write("live-discussion-recovery.done","passed");
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){
+            // Version 2 notes after the real restart: the reason and replacement are chat-level round trips; restart persistence is proven in tests/project-knowledge.test.ts.
+            MESSAGES.clear();memorySay(context,"Engineer, remember our decision: Use repeaters for the delay because they stay visible.");expectChat(context,"knowledge revision 4. Reason kept.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace decision 4: Use comparators for the delay because they are smaller.");expectChat(context,"knowledge revision 5. Reason kept. Replaces note 4.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace decision 4: Use torches for the delay.");expectChat(context,"Note #4 was already replaced by #5; replace #5 instead. Nothing was saved.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace goal 5: Use torches for the delay.");expectChat(context,"Note #5 is a decision");
+            MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Shared project notes, revision 5");
+            expectChat(context,"Note 5 (decision): Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+        }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
 
