@@ -49,8 +49,7 @@ CI and multiplayer proofs before release.
 Each project keeps a private worker identity. An explicit resummon reuses it and
 loads native player data before joining; missing data or a conflicting connected
 identity refuses the request. Saving reloads and compares inventory contents.
-No permission, connection or action ticket is recovered. Production actors still
-require empty inventories while resource execution is unfinished. This does not
+No permission, connection or action ticket is recovered. A resummoned actor retains its saved inventory. Gathering requires empty inventory; placement requires exactly one retained dirt item. This does not
 provide atomic recovery across inventory and world files after a hard crash.
 
 Bounded gathering (dedicated multiplayer CI proven): an owner can say
