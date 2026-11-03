@@ -1069,3 +1069,16 @@ inspected physical-placement.done, physical-gather.done and actual refusal,
 inspection and native placement chat. Bounded native gather/retained placement is
 proven on that source; broader machines/resources and crash recovery remain open.
 Latest server/client compilation passed before final inspection wording change.
+
+PR50 focused source1ce90b2 CI41686563722 failed at the explicit platform boundary,
+without pickup intent. Static audit found client/server same-UUID mirror calls
+could clear the authoritative server ticket in the shared CI JVM. Gate entry now
+requires exact ServerPlayer object before reading/clearing mutable action state;
+wrong mirrors fail locally without consuming server tickets. Concurrent removed
+entries fail closed. forget also requires the exact bound actor, so an unjoined
+same-profile clone cannot unregister the worker. CI explicitly calls pickup on
+the actual client mirror after a valid server arm, then requires real native
+walk/pickup/save. Also asserts clone cleanup preserves registration. Luna found
+no bypass; null-entry race hardened per review. This addresses a real code bug;
+whether it explains all stochastic pickup failures still needs exact-source CI.
+Final scoped compilation pending; no passing new gameplay claim.

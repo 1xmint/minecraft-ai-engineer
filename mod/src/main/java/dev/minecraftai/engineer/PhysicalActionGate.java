@@ -30,7 +30,7 @@ public final class PhysicalActionGate {
     private PhysicalActionGate() { }
     static void register(ServerPlayer actor){thread(actor);if(ACTORS.putIfAbsent(actor.getUUID(),new Entry(actor))!=null)throw new IllegalStateException("Actor already bound");}
     static void bindConnection(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry==null || entry.actor!=actor || entry.connection!=null || actor.connection==null)throw new IllegalStateException("Actor connection cannot be rebound");entry.connection=actor.connection;}
-    static void forget(ServerPlayer actor){thread(actor);ACTORS.remove(actor.getUUID());}
+    static void forget(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor)ACTORS.remove(actor.getUUID(),entry);}
     public static boolean managed(Player actor){return actor!=null && ACTORS.containsKey(actor.getUUID());}
     static void arm(ServerPlayer actor,String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
@@ -54,7 +54,7 @@ public final class PhysicalActionGate {
     static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.minedTarget=null;entry.minedDrop=null;entry.pendingPlace=null;entry.observedPlace=null;}}
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
         if(!managed(player))return true;
-        var entry=ACTORS.get(player.getUUID());var ticket=entry.pickup;
+        var entry=ACTORS.get(player.getUUID());if(entry==null || entry.actor!=player)return false;var ticket=entry.pickup;
         try{
             if(!(player instanceof ServerPlayer actor) || entry.actor!=actor || entry.connection!=actor.connection || actor.hasDisconnected())throw new IllegalStateException("Worker connection changed");
             thread(actor);
@@ -69,7 +69,7 @@ public final class PhysicalActionGate {
     private static void thread(ServerPlayer actor){if(!actor.level().getServer().isSameThread())throw new IllegalStateException("Server thread required");}
     private static boolean check(Player player,String operation,BlockPos target,boolean consume){
         if(!managed(player))return true;
-        var entry=ACTORS.get(player.getUUID());var ticket=entry.ticket;
+        var entry=ACTORS.get(player.getUUID());if(entry==null || entry.actor!=player)return false;var ticket=entry.ticket;
         try{
             if(!(player instanceof ServerPlayer actor) || entry.actor!=actor || entry.connection!=actor.connection || actor.hasDisconnected())throw new IllegalStateException("Actor connection changed");
             thread(actor);
@@ -83,6 +83,7 @@ public final class PhysicalActionGate {
     }
     public static boolean use(ServerPlayer actor,Level level,ItemStack stack,BlockHitResult hit){
         if(!managed(actor))return true;
+        var bound=ACTORS.get(actor.getUUID());if(bound==null || bound.actor!=actor)return false;
         // No containers, secondary block interactions, buckets, fire or spawn eggs.
         if(level!=actor.level() || !stack.is(Items.DIRT) || !level.getBlockState(hit.getBlockPos()).is(Blocks.STONE)){
             ACTORS.get(actor.getUUID()).ticket=null;return false;
@@ -91,6 +92,7 @@ public final class PhysicalActionGate {
     }
     public static boolean place(BlockPlaceContext context){
         var actor=context.getPlayer();if(!managed(actor))return true;
+        var bound=ACTORS.get(actor.getUUID());if(bound==null || bound.actor!=actor)return false;
         if(!context.getItemInHand().is(Items.DIRT) || !context.getLevel().getBlockState(context.getClickedPos()).isAir()){
             ACTORS.get(actor.getUUID()).ticket=null;return false;
         }
@@ -99,13 +101,14 @@ public final class PhysicalActionGate {
     }
     public static void placed(BlockPlaceContext context,net.minecraft.world.InteractionResult result){
         var actor=context.getPlayer();if(!managed(actor))return;var entry=ACTORS.get(actor.getUUID());
-        if(entry.actor!=actor)return;
+        if(entry==null || entry.actor!=actor)return;
         var target=entry.pendingPlace;entry.pendingPlace=null;
         if(target!=null && target.equals(context.getClickedPos()) && result.consumesAction() && context.getLevel().getBlockState(target).is(Blocks.DIRT))entry.observedPlace=target;
     }
     static boolean placementObserved(ServerPlayer actor,BlockPos target){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor && target.equals(entry.observedPlace);}
     public static boolean mine(ServerPlayer actor,BlockPos target){
         if(!managed(actor))return true;
+        var bound=ACTORS.get(actor.getUUID());if(bound==null || bound.actor!=actor)return false;
         if(!actor.level().getBlockState(target).is(Blocks.DIRT)){ACTORS.get(actor.getUUID()).ticket=null;return false;}
         var entry=ACTORS.get(actor.getUUID());entry.minedTarget=null;entry.minedDrop=null;
         boolean permitted=check(actor,"mine",target,true);
