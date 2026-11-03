@@ -18,6 +18,18 @@ resyncA/history read. No production guard change. Type/format checks passed;
 scoped Java/client compile and focused memory CI need current results. This slice
 does not finish richer retrieval/references/summaries or full E1 milestone.
 
+Inspected failed-restart source0df5e59 / CI41573034326 dedicated artifacts at
+work/imported-restart-failure-41573034326: connected-functional/interruption/
+revocation/player-edit receipts all passed, as did imported-build.done. Actual
+flow assertions before those receipts required the whole8-case half-adder pass
+and exact control restoration, then actual35-block imported geometry completion
+with interruption/viewer denial/no functional claim. Stored imported source has
+35 intended cells and verification untested. This proves those pre-restart flows
+on that source, not the full run: saved-server boot then failed strict trace load
+because firstMismatch:null was omitted. Fix3d4f732 and restart/undo/independent
+SQLite verification still need exact-source full CI. Do not discard actual partial
+evidence or inflate it to completed C3/I2/I3/overall milestones.
+
 Inspected source29785a2 / CI41533141692 Fabric artifact at
 work/imported-native-41533141692: all158 required native tests passed. This source
 includes imported182-material runtime admission and exact snapshot parity,
@@ -731,3 +743,14 @@ Added native regression roundtripping an actual strict trace through LocalFiles
 disk write/read and Companion checkpoint HTTP encoder, then strict trace reader.
 This fixes a known persistence/transport defect, not a relaxed reader schema.
 Scoped Java compile passed; fresh native/full restart CI required.
+
+Source3d4f732 / CI41575231876 ended when the23-minute client wrapper expired:
+"alice exited before its native test completed", no assertion failure receipt.
+Inspected work/connected-failure-41575231876: connected-restarted.done and
+connected-undo.done both passed, along with earlier functional/revocation/edit
+receipts. Actual saved-world re-test/control restoration and owned undo therefore
+passed on that source; independent final SQLite/full job still did not finish.
+Runner was still executing later generated-truth-table checks under native lag.
+Expanded suite now gets29-minute clients,30-minute harness,35-minute job including
+setup. No expected behavior, game tick windows, per-stage wait or case count was
+changed. Shell syntax check passes; fresh full CI required, not a milestone pass.
