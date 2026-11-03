@@ -44,6 +44,10 @@ public final class PhysicalActionGate {
             throw new IllegalStateException("Pickup requires one exact dirt drop and an empty bound inventory");
         entry.pickup=new Pickup(drop,drop.getItem().copy(),expires,authority,writeAhead);
     }
+    static boolean eligibleDrop(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop){
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        return entry!=null && entry.actor==actor && entry.connection==actor.connection && entry.minedDrop==drop && drop.isAlive();
+    }
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
         if(!managed(player))return true;
         var entry=ACTORS.get(player.getUUID());var ticket=entry.pickup;

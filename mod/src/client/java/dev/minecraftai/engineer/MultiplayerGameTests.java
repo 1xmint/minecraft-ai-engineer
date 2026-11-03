@@ -530,6 +530,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static Object inventoryPack(ServerPlayer worker){try{return Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(worker);}catch(Exception failed){throw new IllegalStateException(failed);}}
     @SuppressWarnings({"rawtypes","unchecked"})
     private static void gatherAndSaveWorker(TestDedicatedServerContext server,UUID id,String name){
+        var gatherRecord=new java.util.concurrent.atomic.AtomicReference<PhysicalGatherRecord>();
         server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
         server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
             worker.snapTo(2421.5,101,1.5,0,0);
@@ -563,7 +564,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             // Dispose only this negative fixture's item. Production must preserve
             // uncertain resources for recovery, never discard them to retry.
             drop.discard();
-            PhysicalActionGate.arm(worker,"mine",new BlockPos(2421,101,5),Blocks.DIRT.defaultBlockState(),s.getTickCount()+1200,()->{},()->write("physical-second-mine-prepared",id.toString()));
+            var manager=EngineerMod.managerFor(s);
+            gatherRecord.set(new PhysicalGatherRecord(directory().resolve("gather-records"),manager.worldId,session(s,"Alice").projectId,worker,new BlockPos(2421,101,5),()->{}));
+            PhysicalActionGate.arm(worker,"mine",new BlockPos(2421,101,5),Blocks.DIRT.defaultBlockState(),s.getTickCount()+1200,()->{},()->gatherRecord.get().prepareMine());
             try{var pack=inventoryPack(worker);pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,new net.minecraft.world.phys.Vec3(2421.5,101.5,5.5));}catch(Exception failure){throw new IllegalStateException(failure);}
         });
         server.waitFor(s->s.overworld().getBlockState(new BlockPos(2421,101,5)).isAir(),30_000);
@@ -572,12 +575,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var worker=s.getPlayerList().getPlayer(id);
             var drops=s.overworld().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new net.minecraft.world.phys.AABB(2420,100,4,2423,103,7));
             check(drops.size()==1,"Fresh authorized mine emits exactly one new drop");var drop=drops.getFirst();
-            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+1200,()->{},()->write("physical-pickup-prepared",drop.getUUID().toString()));
+            gatherRecord.get().observeDrop(drop);
+            PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+1200,()->{},()->{gatherRecord.get().preparePickup(drop);write("physical-pickup-prepared",drop.getUUID().toString());});
         });
         server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);return countDirt(worker)==1 && worker.getZ()>2.25;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
-            check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");PhysicalWorkerStorage.save(worker);
+            check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");gatherRecord.get().inventorySaved();
             s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});
     }
 

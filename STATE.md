@@ -969,3 +969,15 @@ drop must fail. Fixture now asserts that refusal and uses a separately authorize
 native mine for the success/save/restart leg. Disposal of the first negative-case
 item is explicit CI-only cleanup, never a production recovery policy. Native
 mining target/authority checks were not relaxed. Final client compilation pending.
+
+Phase33 adds PhysicalGatherRecord: durable ordered mining/pickup intents, observed
+native drop UUID, and full before/saved inventory snapshots. It stores no grants,
+connections or tickets and exposes no replay/restore execution path. Journal/save
+I/O failure poisons the live record. Caller-provided event authority remains
+mandatory; the fixture supplies deterministic callbacks, not production owner
+permission proof. Native success leg now writes this record; independent CI file
+reader checks ordered stages, source/drop identity and changed saved inventory.
+This is clean-stop evidence, not atomic chunk/inventory hard-crash recovery.
+Corrected prior sourcec81d59b CI41682414743 SUCCESS; latest journal source needs CI.
+Scoped server/client compile and JS/bash syntax checks passed before final event
+list addition; final Java compile pending. No production gathering enabled.

@@ -26,7 +26,7 @@ final class PhysicalWorkerStorage {
         restore(saved);
         if(!inventory(saved).equals(inventory(worker)))throw new IllegalStateException("Saved worker inventory differs; stop for explicit recovery");
     }
-    private static com.google.gson.JsonArray inventory(ServerPlayer worker){
+    static com.google.gson.JsonArray inventory(ServerPlayer worker){
         var result=new com.google.gson.JsonArray();
         var operations=worker.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
         for(int slot=0;slot<worker.getInventory().getContainerSize();slot++){
