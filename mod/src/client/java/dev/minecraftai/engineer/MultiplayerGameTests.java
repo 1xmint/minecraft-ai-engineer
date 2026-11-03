@@ -627,7 +627,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 s.overworld().setBlockAndUpdate(changed,Blocks.AIR.defaultBlockState());
             }
         });
-        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"gather nearby dirt and build");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
         server.runOnServer(s->{var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
             check(body!=null && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2590,101,6)).isAir(),"Both original distant resources are consumed through real gather actions");
             check(s.overworld().getBlockState(new BlockPos(2583,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2583,101,4)).is(Blocks.DIRT),"Travel from resources returns retained inventory to both intended cells");
