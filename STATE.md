@@ -20,6 +20,19 @@ phase/30-physical-companion, based on combined core0df5e59. Outcomes:
   server-owned lifecycle and adopted event-time guards. No construction/gathering or
   general movement claimed until separate executor/navigation/restart proof.
 
+Phase30 implementationf4d59af pushed with optional runtime lifecycle and default-
+deny vanilla action hooks, addressed-chat summon/location/dismiss, checked3x3
+stone/air spawn, random empty survival identity, owner/connection/selection/
+grant/revision cleanup, and dropped-item pickup denial. Scoped Java compilation
+passed including native lifecycle fixture. Exact Carpet manifest version is
+26.3+v260915 (upstream build.gradle appends date), checked before reflection.
+Focused read-only GPT-6-Luna review found no blocker for this idle scope. Cleanup
+is next-END-tick; no action ticket exists for idle actors. Material pickup is
+blocked, XP orb pickup and external physics are not claimed contained. Separate
+physical-lifecycle-feedback CI is submitted, native N1/N2 and dedicated chat flow
+still pending. Existing creative assistant and optional-dependency-absent behavior
+need full CI before merge/release. No construction/gathering completion claim.
+
 Inspected source29785a2 / CI41533141692 Fabric artifact at
 work/imported-native-41533141692: all158 required native tests passed. This source
 includes imported182-material runtime admission and exact snapshot parity,
