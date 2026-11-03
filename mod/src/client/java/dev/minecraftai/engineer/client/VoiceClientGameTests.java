@@ -374,10 +374,14 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         return null;
     }
 
-    private static void write(Path file, String text) throws java.io.IOException {
-        if (text == null) { Files.deleteIfExists(file); return; }
-        Files.createDirectories(file.getParent());
-        Files.writeString(file, text, StandardCharsets.UTF_8);
+    private static void write(Path file, String text) {
+        try {
+            if (text == null) { Files.deleteIfExists(file); return; }
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, text, StandardCharsets.UTF_8);
+        } catch (java.io.IOException failed) {
+            throw new java.io.UncheckedIOException(failed);
+        }
     }
 
     private static ServerPlayer player(MinecraftServer server) { return server.getPlayerList().getPlayers().getFirst(); }
