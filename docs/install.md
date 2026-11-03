@@ -86,11 +86,24 @@ account or API key is needed, and nothing is billed.
 {
   "enabled": true,
   "recognizer": {
-    "command": ["C:/whisper/whisper-cli.exe", "-m", "C:/whisper/ggml-base.en.bin", "-f", "{wav}", "-nt", "-np"],
+    "command": [
+      "C:/whisper/whisper-cli.exe",
+      "-m",
+      "C:/whisper/ggml-base.en.bin",
+      "-f",
+      "{wav}",
+      "-nt",
+      "-np"
+    ],
     "timeoutSeconds": 60
   },
   "speaker": {
-    "command": ["powershell", "-NoProfile", "-Command", "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak([Console]::In.ReadToEnd())"],
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-Command",
+      "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak([Console]::In.ReadToEnd())"
+    ],
     "timeoutSeconds": 120
   }
 }
@@ -141,7 +154,7 @@ check once on a real computer:
    held, then `Engineer, what does this do` in the chat box. Wait ten seconds:
    nothing is sent. Press Enter: the engineer answers as if you had typed it.
 4. Hold V, speak, and press Esc before releasing. Expect `Voice cancelled.
-   Nothing was sent.` and no chat box.
+Nothing was sent.` and no chat box.
 5. Hold V, speak a long sentence, release, then press Esc while
    `Transcribing` shows. Expect the cancel notice and no chat box afterwards.
 6. Say "yes" with no proposal waiting and press Enter. Expect the same reply as
@@ -150,7 +163,7 @@ check once on a real computer:
    mid-sentence: speech stops at once. Ask again and press V mid-sentence:
    speech stops and listening starts.
 8. Unplug or disable the microphone and press V. Expect `No microphone is
-   available. Typing still works.`
+available. Typing still works.`
 9. Break the recogniser path in the config and press V, speak, release. Expect
    `Speech recognition could not start ...` and typing still works.
 10. After each run, check your temporary folder has no `engineer-voice-*`

@@ -366,7 +366,7 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
     private static void release(ClientGameTestContext context) { context.getInput().releaseKey(VoiceClient.talkKey()); context.waitTicks(2); }
     private static VoiceController.State state(ClientGameTestContext context) { return context.computeOnClient(VoiceClientGameTests::stateOn); }
     private static VoiceController.State stateOn(Minecraft client) { return VoiceClient.controller().state(); }
-    private static String notice(ClientGameTestContext context) { return String.valueOf(context.computeOnClient(c -> VoiceClient.controller().lastNotice())); }
+    private static String notice(ClientGameTestContext context) { return String.valueOf((Object) context.computeOnClient(c -> VoiceClient.controller().lastNotice())); }
 
     private static String chatText(Minecraft client) {
         if (!(client.gui.screen() instanceof ChatScreen chat)) return null;
