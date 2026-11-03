@@ -482,3 +482,13 @@ revocation, interruption, functional and player-edit receipts in chronological
 stages, each retaining the unchanged240-second bound and failure-file detection.
 No functional assertions, game timings, permissions or recovery guards changed.
 Scoped client compilation passed. Fresh full CI needed; no pass/merge claim.
+
+Combined source0df5e59 / CI41573034326 progressed past connected execution but
+failed on real saved-server restart: ConnectedTrace.read rejected missing strict
+fields. Explicit firstMismatch:null was omitted by shared Gson disk/HTTP encoder.
+LocalFiles.GSON now serializeNulls; it serializes already-built JsonObjects, so
+this preserves explicit protocol fields without inventing optional Java members.
+Added native regression roundtripping an actual strict trace through LocalFiles
+disk write/read and Companion checkpoint HTTP encoder, then strict trace reader.
+This fixes a known persistence/transport defect, not a relaxed reader schema.
+Scoped Java compile passed; fresh native/full restart CI required.

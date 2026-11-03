@@ -11,6 +11,20 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native port feasibility. These fixtures never grant a project a connected-circuit pass. */
 public final class ConnectedGameTests {
+    @GameTest public void connectedTraceKeepsExplicitNullThroughDiskAndHttp(GameTestHelper helper){
+        var trace=new ConnectedTrace("a".repeat(64),false,false,0).json();
+        var document=new JsonObject();document.add("trace",trace);
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());
+        var file=manager.directory.resolve("connected-codec-"+java.util.UUID.randomUUID()+".json");
+        LocalFiles.write(file,document);
+        try{
+            var disk=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject().getAsJsonObject("trace");
+            var http=com.google.gson.JsonParser.parseString(Companion.encodeBody("/v2/checkpoint",document)).getAsJsonObject().getAsJsonObject("trace");
+            helper.assertTrue(disk.equals(trace) && http.equals(trace),"Actual disk/HTTP serializers retain all strict trace fields, including explicit null mismatch");
+            ConnectedTrace.read(disk,"a".repeat(64),false,false);ConnectedTrace.read(http,"a".repeat(64),false,false);
+        }catch(java.io.IOException failed){throw new IllegalStateException(failed);}
+        helper.succeed();
+    }
     private static final BlockPos CENTER=new BlockPos(24,2,24);
     private static final int WINDOW=24;
     private static final boolean[][] CONTROLS={{false,false},{false,true},{true,true},{true,false},{false,false}};
