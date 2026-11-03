@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Native inventory preflighte9f6ad8 / CI41580349745 completed SUCCESS. Downloaded
+work/physical-inventory-proof-41580349745; inspected both saved/restarted resource
+receipts. An initially empty worker natively mined/picked up1 dirt, vanilla player
+data saved it, actual same-world reboot loaded the same UUID/count under default
+denial, and recovered resources could not authorize a placement/project grant.
+This answers the native persistence API risk for clean restart, not hard-crash
+atomicity or full P1/P2/P3 production execution. Next: durable per-project identity,
+separate physical human-survival lease, exact source/drop/pickup/destination
+operation and conservative uncertain-state recovery. Current runtime still idle.
+PR45 merged public mainaaed3ef after5/5 CI41577981016 and inspected SQLite/
+restart/undo. PR49/48/47 are rechecking after CI-only hourly fixture budget fix;
+production quota/defaults and rejection/audit tests are unchanged.
+
 Phase33 physical execution in work/physical-build, phase/33-physical-build,
 based on companion6da0f14. P1: explicitly delegated actor legally gathers required
 materials and constructs intended geometry; no inventory injection/creative edits.
