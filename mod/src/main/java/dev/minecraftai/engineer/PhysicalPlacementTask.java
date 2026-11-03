@@ -18,7 +18,12 @@ final class PhysicalPlacementTask implements AutoCloseable {
     private final java.nio.file.Path file;
     private final com.google.gson.JsonObject record=new com.google.gson.JsonObject();
     private boolean closed,prepared;
+    private final Runnable intention;
     PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target) {
+        this(manager,project,worker,pack,target,java.util.Set.of(),()->{});
+    }
+    PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target,java.util.Set<BlockPos> planReads,Runnable intention) {
+        this.intention=intention;
         this.worker=worker;level=worker.level();connection=worker.connection;this.pack=pack;this.target=target.immutable();start=worker.blockPosition();
         if(level!=project.level() || !project.contains(target) || !level.hasChunkAt(target) || !level.hasChunkAt(target.below()) || worker.getEyePosition().distanceTo(Vec3.atCenterOf(target))>4
             || !level.getBlockState(target).isAir() || !level.getBlockState(target.below()).is(Blocks.STONE))throw new IllegalStateException("Place retained dirt within four blocks, in clear air above stone");
@@ -36,10 +41,15 @@ final class PhysicalPlacementTask implements AutoCloseable {
             if(cell.getY()<target.getY()?!state.is(Blocks.STONE):!state.isAir() && !state.is(Blocks.STONE) && !state.is(Blocks.DIRT))throw new IllegalStateException("Placement needs a clear inert neighborhood: stone floor and only air, stone or dirt nearby, without adjacent mechanisms");
             reads.add(cell.immutable());
         }
+        reads.addAll(planReads);
         lease=new PhysicalWorkLease(manager,project,project.player(),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
         file=manager.directory.resolve(project.projectId+".place-"+UUID.randomUUID()+".json");
         record.addProperty("schemaVersion",1);record.addProperty("world",manager.worldId);record.addProperty("dimension",project.dimension);
         record.addProperty("project",project.projectId.toString());record.addProperty("worker",worker.getUUID().toString());
+        if(!planReads.isEmpty()){
+            record.addProperty("blueprint",project.blueprint.id());record.addProperty("projectRevision",project.revision());record.addProperty("component",project.activeComponent);
+            record.addProperty("assignmentBasis",project.assignments.task(project.blueprint,project.activeComponent).basis);
+        }
         var position=new com.google.gson.JsonObject();position.addProperty("x",target.getX());position.addProperty("y",target.getY());position.addProperty("z",target.getZ());record.add("target",position);
         record.add("inventoryBefore",PhysicalWorkerStorage.inventory(worker));
         try {
@@ -60,6 +70,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
             || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || level.getServer().getTickCount()>=expires)
             throw new IllegalStateException("Placement worker authority changed");
         lease.validate(target);
+        intention.run();
     }
     boolean tick(){
         authority();

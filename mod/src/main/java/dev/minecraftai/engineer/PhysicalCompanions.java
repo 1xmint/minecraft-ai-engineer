@@ -25,7 +25,8 @@ final class PhysicalCompanions {
         var gather=java.util.regex.Pattern.compile("gather dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
         var place=java.util.regex.Pattern.compile("place retained dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
-        if(!gatherRequest && !placeRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
+        boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
+        if(!gatherRequest && !placeRequest && !blueprintRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
@@ -34,6 +35,13 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
+        if(blueprintRequest){
+            var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
+            var step=PhysicalBlueprintStep.select(project);
+            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,step.target(),step.reads(),step.intention()));
+            project.tell("Your companion is placing the next blueprint dirt cell using its retained item. This does not verify the blueprint.");return true;
+        }
         if(placeRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");

@@ -53,7 +53,7 @@ public final class ImportedBlueprintGameTests {
         boolean refused=false;try{restored.trial.load(forged);}catch(IllegalStateException invalid){refused=true;}
         helper.assertTrue(refused,"Imported geometry cannot smuggle a test input journal into recovery");helper.succeed();
     }
-    private static JsonObject source(){
+    static JsonObject source(){
         return JsonParser.parseString("""
             {"schemaVersion":1,"id":"db1175eb-1559-4cca-a740-d63f224a4068","projectId":"9a71b5bd-2073-4c67-9cd8-60d66f43cb6a",
              "revision":1,"worldId":"test","dimension":"minecraft:overworld","name":"Imported design 1","anchor":{"x":10,"y":100,"z":10},"rotation":90,"verification":"untested",
