@@ -22,7 +22,7 @@ As project owner:
 
 The companion is an empty survival actor with a generated `Eng_…` name. It has no
 project permissions, cannot use items or mine without a separately checked action
-ticket, and cannot pick up dropped materials while idle. Authorized project
+ticket, and cannot pick up dropped materials or experience orbs while idle. Authorized project
 viewers can ask for its location; only the owner can summon or dismiss it.
 
 Changing the owner's connection, dimension, selected project, project revision or

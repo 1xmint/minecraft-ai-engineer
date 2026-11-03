@@ -4,6 +4,18 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Lifecycle sourcef4d59af / CI41574545857 completed SUCCESS; inspected actual
+owner summon/editor denial/idle action+material denial/dismiss/grant cleanup
+marker and both required native passes. New candidate blocks XP orb pickup too,
+uses concurrent actor-registration lookup, and extends actual native lifecycle to
+selection change and owner removal before checking core disconnected-action
+denial. Scoped Java compilation passed. These extensions require fresh CI.
+Parent connected CI41573027130 failed only because Bob's single four-minute wait
+covered436-cell construction, interruption/revocation and final trial; artifact
+shows final approved trial actually running. Parent now follows each existing
+progress receipt in order without changing four-minute bound or functional checks.
+Combined41573034326 remains live; do not cancel to include the newer observer fix.
+
 Phase30 optional visible companion, work/physical-companion,
 phase/30-physical-companion, based on combined core0df5e59. Outcomes:
 

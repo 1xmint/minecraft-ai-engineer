@@ -140,7 +140,6 @@ public final class PhysicalBuilderGameTests {
             var candidate=SchematicBlueprint.candidate(cells,99,"a".repeat(64),"b".repeat(64),manager.worldId,project.dimension,project.projectId.toString());
             project.proposeImported(Blueprint.parse(candidate,manager.worldId,project.dimension),target,0);
             helper.assertTrue(!project.access.allows(actor.getUUID(),ProjectAccess.Permission.BUILD),"Physical actor receives no project membership or grant");
-            visibleLifecycle(helper,human,project);
             var recordFile=manager.directory.resolve("physical-probe-"+UUID.randomUUID()+".json");
             for(String scenario:java.util.List.of("live","released","revoked","outside","disconnected")){
                 level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());
@@ -157,7 +156,7 @@ public final class PhysicalBuilderGameTests {
                     });
                 if(scenario.equals("released"))manager.release(project);
                 if(scenario.equals("revoked"))project.access.permission(owner,human.getUUID(),ProjectAccess.Permission.BUILD,false);
-                if(scenario.equals("disconnected"))server.getPlayerList().remove(human);
+                if(scenario.equals("disconnected"))visibleLifecycle(helper,human,project);
                 var hit=new net.minecraft.world.phys.BlockHitResult(new Vec3(base.getX()+0.5,base.getY()+1,base.getZ()+0.5),net.minecraft.core.Direction.UP,base,false);
                 actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
                 boolean live=scenario.equals("live");
@@ -203,13 +202,24 @@ public final class PhysicalBuilderGameTests {
             actor.setItemInHand(InteractionHand.MAIN_HAND,ItemStack.EMPTY);
             var drop=new net.minecraft.world.entity.item.ItemEntity(level,actor.getX(),actor.getY(),actor.getZ(),new ItemStack(Items.DIRT));level.addFreshEntity(drop);drop.playerTouch(actor);
             helper.assertTrue(actor.getInventory().isEmpty() && drop.getItem().getCount()==1,"Idle companion does not take a player's dropped materials");drop.discard();
+            int xp=actor.totalExperience;actor.takeXpDelay=0;
+            var orb=new net.minecraft.world.entity.ExperienceOrb(level,actor.getX(),actor.getY(),actor.getZ(),3);level.addFreshEntity(orb);orb.playerTouch(actor);
+            helper.assertTrue(actor.totalExperience==xp && !orb.isRemoved(),"Idle companion does not consume a player's experience orbs");orb.discard();
             manager.physical.handle(project,"dismiss my companion");
             helper.assertTrue(manager.server.getPlayerList().getPlayer(actor.getUUID())==null && !PhysicalActionGate.managed(actor),"Dismiss removes actor before forgetting its deny gate");
             manager.physical.handle(project,"summon my companion");
             var second=manager.server.getPlayerList().getPlayers().stream().filter(p->!before.contains(p.getUUID())).findFirst().orElseThrow();
+            manager.selections.remove(owner.getUUID());manager.physical.tick();
+            helper.assertTrue(manager.server.getPlayerList().getPlayer(second.getUUID())==null,"Selecting away from the project removes the companion");
+            manager.selections.put(owner.getUUID(),project.projectId);manager.physical.handle(project,"summon my companion");
+            var third=manager.server.getPlayerList().getPlayers().stream().filter(p->!before.contains(p.getUUID())).findFirst().orElseThrow();
             project.access.member(owner.getUUID(),UUID.randomUUID(),ProjectAccess.Role.VIEWER);manager.physical.tick();
-            helper.assertTrue(manager.server.getPlayerList().getPlayer(second.getUUID())==null,"Authorization revision change removes the physical actor");
-            System.out.println("ENGINEER_PHYSICAL_LIFECYCLE owner=summoned editor=denied idle-actions=denied pickup=denied dismissed=true grant-change=removed");
+            helper.assertTrue(manager.server.getPlayerList().getPlayer(third.getUUID())==null,"Authorization revision change removes the physical actor");
+            manager.physical.handle(project,"summon my companion");
+            var fourth=manager.server.getPlayerList().getPlayers().stream().filter(p->!before.contains(p.getUUID())).findFirst().orElseThrow();
+            manager.server.getPlayerList().remove(owner);manager.physical.tick();
+            helper.assertTrue(manager.server.getPlayerList().getPlayer(fourth.getUUID())==null && !PhysicalActionGate.managed(fourth),"Actual controller removal despawns the companion and retires its deny registration");
+            System.out.println("ENGINEER_PHYSICAL_LIFECYCLE owner=summoned editor=denied idle-actions=denied pickup=denied xp=denied dismissed=true selection-change=removed grant-change=removed disconnected=removed");
         }finally{manager.physical.close();manager.projects.remove(project.projectId);manager.selections.remove(owner.getUUID());}
     }
 }

@@ -21,7 +21,7 @@ public final class PhysicalActionGate {
         Ticket ticket;
         Entry(ServerPlayer actor){this.actor=actor;connection=actor.connection;}
     }
-    private static final Map<UUID,Entry> ACTORS=new HashMap<>();
+    private static final Map<UUID,Entry> ACTORS=new java.util.concurrent.ConcurrentHashMap<>();
     private PhysicalActionGate() { }
     static void register(ServerPlayer actor){thread(actor);if(ACTORS.putIfAbsent(actor.getUUID(),new Entry(actor))!=null)throw new IllegalStateException("Actor already bound");}
     static void bindConnection(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry==null || entry.actor!=actor || entry.connection!=null || actor.connection==null)throw new IllegalStateException("Actor connection cannot be rebound");entry.connection=actor.connection;}
