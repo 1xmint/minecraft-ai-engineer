@@ -18,12 +18,14 @@ final class PhysicalCompanions {
     private final ProjectManager manager;
     private final Map<UUID,Binding> actors=new HashMap<>();
     private final Map<UUID,PhysicalGatherTask> gathering=new HashMap<>();
+    private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
     boolean handle(EngineeringSession project,String request){
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
         var gather=java.util.regex.Pattern.compile("gather dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
-        if(!gatherRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
+        var place=java.util.regex.Pattern.compile("place retained dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
+        if(!gatherRequest && !placeRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
@@ -32,10 +34,17 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
+        if(placeRequest){
+            var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
+            var target=new BlockPos(Integer.parseInt(place.group(1)),Integer.parseInt(place.group(2)),Integer.parseInt(place.group(3)));
+            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target));
+            project.tell("Your companion is placing its retained dirt through a native survival action.");return true;
+        }
         if(gatherRequest){
             var binding=actors.get(project.projectId);
             if(binding==null)throw new IllegalStateException("Summon your companion first");
-            if(gathering.containsKey(project.projectId))throw new IllegalStateException("Stop the current gather by dismissing your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Stop the current task by dismissing your companion first");
             var source=new BlockPos(Integer.parseInt(gather.group(1)),Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)));
             gathering.put(project.projectId,new PhysicalGatherTask(manager,project,binding.actor,binding.pack,source));
             project.tell("Your companion is gathering one dirt block from the requested location. Say 'dismiss my companion' to stop.");return true;
@@ -93,6 +102,7 @@ final class PhysicalCompanions {
     private void dismiss(UUID project){
         var binding=actors.get(project);if(binding==null)return;
         var task=gathering.remove(project);if(task!=null)task.close();
+        var placement=placing.remove(project);if(placement!=null)placement.close();
         try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException failed){throw new IllegalStateException("Could not stop physical companion",failed);}
         manager.server.getPlayerList().remove(binding.actor);
         PhysicalActionGate.forget(binding.actor);actors.remove(project);
@@ -112,6 +122,9 @@ final class PhysicalCompanions {
             }catch(RuntimeException stopped){
                 dismiss(project.projectId);project.tell("Gathering stopped. Inspect the source, dropped resources and saved inventory before another request: "+stopped.getMessage());
             }
+            var placement=placing.get(project.projectId);if(placement!=null)try{
+                if(placement.tick()){placing.remove(project.projectId);project.tell("Your companion placed the retained dirt and verified its saved inventory. The mechanism remains untested.");}
+            }catch(RuntimeException stopped){dismiss(project.projectId);project.tell("Physical placement stopped; inspect the cell and saved inventory before retry: "+stopped.getMessage());}
         }
     }
     void close(){for(var id:new ArrayList<>(actors.keySet()))dismiss(id);}

@@ -1019,3 +1019,28 @@ mining/walk/pickup completed, save verified and resummon retained one dirt with 
 worker BUILD grant. This proves the bounded slice, not general gathering or crash
 atomicity. Luna inspection review found no material privacy or mutation blocker.
 Final server/client compilation passed; new inspection source still needs CI.
+
+Phase33 native retained-resource placement: owner chat requests exact target,
+current human/worker fences, within4 eye reach, clear air/stone support/no target
+entity, neighbor-read/exact-write lease, one dirt in hotbar. Physical action pack
+USE reaches one-use native BlockItem placement with prepared intent. RETURN hook
+records native consumed-action+DIRT outcome; executor additionally requires empty
+inventory, native save verification, then SAVED_OBSERVATION record. No direct
+creative edits, restored permissions, functional claims or automatic undo. CI
+chains actual ownerSURVIVAL gather/resummon/place and checks item consumed; editor
+request refused. Server compile passed; final client/CI and independent review
+pending. Whole-blueprint execution/general resources/crash recovery unfinished.
+
+Placement review correction: read reservations alone do not contain native neighbor
+updates. Admission now accepts only an inert 3x3 neighborhood with stone below and
+air at/above the target, rejecting adjacent mechanisms before any action. CI adds
+redstone-wire neighbor refusal with item retained, then clear-area success.
+Inspection sourcee8194f2 CI41684585113 failed before inspection in raw pickup probe:
+the worker missed a drifting drop, walked off the fixture platform and died. Raw
+probe and owner executor now steer toward the actual captured drop; owner movement
+stays inside its already reserved three-wide corridor. Probe explicitly stops at
+platform boundary rather than falling. No pickup permissions/assertions relaxed.
+Latest Java/client compile pending final fixture assertion; new combined CI needed.
+
+Final scoped server/client compilation and shell syntax passed for placement and
+pickup steering. Exact-source native gameplay remains pending.

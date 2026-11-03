@@ -70,3 +70,12 @@ visible source/drop state. `inspect companion recovery` is an equivalent phrase.
 Missing player data is reported as unavailable, never treated as an empty
 inventory. A missing drop does not prove it was picked up. Inspection grants no
 permission and never creates, removes, retries or compensates resources.
+
+Development placement slice: say `Engineer, place retained dirt at X Y Z` as the
+project owner. The companion must hold exactly one dirt item in its hotbar. The
+target must be clear air above stone, within four blocks of its eyes, with its
+neighbor/support reservation inside the workspace and no entity in the target.
+It uses native survival right-click, consumes the retained item and verifies its
+saved inventory. Native return evidence and an empty inventory are required;
+matching geometry alone is insufficient. This is not a blueprint executor,
+functional test, undo mechanism or atomic hard-crash transaction.

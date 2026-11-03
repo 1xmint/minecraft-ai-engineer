@@ -510,6 +510,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");expectChat(context,"Observation only");
             server.runOnServer(s->check(countDirt(s.getPlayerList().getPlayer(gatherer))==1 && session(s,"Alice").delegation==null,"Recovery inspection changes no inventory and restores no project lease"));
+            server.runCommand("setblock 2433 101 4 minecraft:redstone_wire");
+            MESSAGES.clear();say(context,"Engineer, place retained dirt at 2432 101 4");expectChat(context,"clear inert neighborhood");
+            server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).isAir() && countDirt(s.getPlayerList().getPlayer(gatherer))==1,"Adjacent mechanism refuses placement without consuming the retained item"));
+            server.runCommand("setblock 2433 101 4 minecraft:air");
+            MESSAGES.clear();say(context,"Engineer, place retained dirt at 2432 101 4");expectChat(context,"placing its retained dirt");expectChat(context,"placed the retained dirt and verified its saved inventory");
+            server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2432,101,4)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(gatherer).getInventory().isEmpty(),"Native companion use places the actual gathered item and consumes it without creative editing"));
+            write("physical-placement.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }
     }
@@ -520,6 +527,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"The companion is at");
         MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"Only the project owner");
+        MESSAGES.clear();say(context,"Engineer, place retained dirt at 2401 101 2");expectChat(context,"Only the project owner");
         write("physical-peer-denied.done","passed");disconnect(context);
     }
 
@@ -595,7 +603,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             PhysicalActionGate.armPickup(worker,drop,s.getTickCount()+1200,()->{},()->{gatherRecord.get().preparePickup(drop);write("physical-pickup-prepared",drop.getUUID().toString());});
         });
         server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
-        server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);return countDirt(worker)==1 && worker.getZ()>2.25;},30_000);
+        server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);check(worker!=null,"Native resource worker must remain alive during pickup");
+            if(countDirt(worker)==1 && worker.getZ()>2.25)return true;
+            var drop=PhysicalActionGate.capturedDrop(worker);
+            try{var pack=inventoryPack(worker);
+                if(worker.getZ()>5.8){pack.getClass().getMethod("stopAll").invoke(pack);throw new AssertionError("Resource worker reached fixture platform boundary before pickup");}
+                if(drop!=null && drop.isAlive())pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,drop.position());
+            }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}return false;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
             check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");gatherRecord.get().inventorySaved();
             s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});

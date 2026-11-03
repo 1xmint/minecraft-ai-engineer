@@ -23,6 +23,7 @@ public final class PhysicalActionGate {
         Pickup pickup;
         BlockPos minedTarget;
         net.minecraft.world.entity.item.ItemEntity minedDrop;
+        BlockPos pendingPlace,observedPlace;
         Entry(ServerPlayer actor){this.actor=actor;connection=actor.connection;}
     }
     private static final Map<UUID,Entry> ACTORS=new java.util.concurrent.ConcurrentHashMap<>();
@@ -36,6 +37,7 @@ public final class PhysicalActionGate {
         if(entry==null || entry.actor!=actor || entry.ticket!=null || entry.pickup!=null)throw new IllegalStateException("No idle bound actor");
         if(!Set.of("place","mine").contains(operation))throw new IllegalArgumentException("Unsupported action");
         entry.ticket=new Ticket(operation,target.immutable(),before,expires,authority,writeAhead);
+        if(operation.equals("place")){entry.pendingPlace=null;entry.observedPlace=null;}
     }
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
@@ -49,7 +51,7 @@ public final class PhysicalActionGate {
         return entry!=null && entry.actor==actor && entry.connection==actor.connection && entry.minedDrop==drop && drop.isAlive();
     }
     static net.minecraft.world.entity.item.ItemEntity capturedDrop(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor?entry.minedDrop:null;}
-    static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.minedTarget=null;entry.minedDrop=null;}}
+    static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.minedTarget=null;entry.minedDrop=null;entry.pendingPlace=null;entry.observedPlace=null;}}
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
         if(!managed(player))return true;
         var entry=ACTORS.get(player.getUUID());var ticket=entry.pickup;
@@ -92,8 +94,16 @@ public final class PhysicalActionGate {
         if(!context.getItemInHand().is(Items.DIRT) || !context.getLevel().getBlockState(context.getClickedPos()).isAir()){
             ACTORS.get(actor.getUUID()).ticket=null;return false;
         }
-        return check(actor,"place",context.getClickedPos(),true);
+        boolean permitted=check(actor,"place",context.getClickedPos(),true);
+        if(permitted)ACTORS.get(actor.getUUID()).pendingPlace=context.getClickedPos().immutable();return permitted;
     }
+    public static void placed(BlockPlaceContext context,net.minecraft.world.InteractionResult result){
+        var actor=context.getPlayer();if(!managed(actor))return;var entry=ACTORS.get(actor.getUUID());
+        if(entry.actor!=actor)return;
+        var target=entry.pendingPlace;entry.pendingPlace=null;
+        if(target!=null && target.equals(context.getClickedPos()) && result.consumesAction() && context.getLevel().getBlockState(target).is(Blocks.DIRT))entry.observedPlace=target;
+    }
+    static boolean placementObserved(ServerPlayer actor,BlockPos target){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor && target.equals(entry.observedPlace);}
     public static boolean mine(ServerPlayer actor,BlockPos target){
         if(!managed(actor))return true;
         if(!actor.level().getBlockState(target).is(Blocks.DIRT)){ACTORS.get(actor.getUUID()).ticket=null;return false;}

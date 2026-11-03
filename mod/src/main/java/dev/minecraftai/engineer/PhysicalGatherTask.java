@@ -16,6 +16,7 @@ final class PhysicalGatherTask implements AutoCloseable {
     private final PhysicalGatherRecord journal;
     private final long expires;
     private boolean picking,closed;
+    private net.minecraft.world.entity.item.ItemEntity pickupDrop;
 
     PhysicalGatherTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source) {
         this.worker=worker;level=worker.level();connection=worker.connection;this.pack=pack;this.source=source.immutable();start=worker.blockPosition();
@@ -58,8 +59,9 @@ final class PhysicalGatherTask implements AutoCloseable {
             throw new IllegalStateException("Gather worker or time limit changed");
         lease.validate(source);
         var pos=worker.blockPosition();
-        if(pos.getY()!=start.getY() || pos.getX()<Math.min(start.getX(),source.getX()) || pos.getX()>Math.max(start.getX(),source.getX())
-            || pos.getZ()<Math.min(start.getZ(),source.getZ()) || pos.getZ()>Math.max(start.getZ(),source.getZ()))
+        int sideX=start.getX()==source.getX()?1:0,sideZ=start.getZ()==source.getZ()?1:0;
+        if(pos.getY()!=start.getY() || pos.getX()<Math.min(start.getX(),source.getX())-sideX || pos.getX()>Math.max(start.getX(),source.getX())+sideX
+            || pos.getZ()<Math.min(start.getZ(),source.getZ())-sideZ || pos.getZ()>Math.max(start.getZ(),source.getZ())+sideZ)
             throw new IllegalStateException("Companion left its reserved gather path");
     }
     boolean tick() {
@@ -69,11 +71,12 @@ final class PhysicalGatherTask implements AutoCloseable {
             if(drop==null)throw new IllegalStateException("Native mining did not produce one tracked drop; inspect resources");
             journal.observeDrop(drop);
             PhysicalActionGate.armPickup(worker,drop,expires,this::authority,()->journal.preparePickup(drop));
-            call("lookAt",new Class[]{Vec3.class},Vec3.atCenterOf(source));call("setForward",new Class[]{float.class},1f);picking=true;
+            pickupDrop=drop;call("lookAt",new Class[]{Vec3.class},drop.position());call("setForward",new Class[]{float.class},1f);picking=true;
         }
         if(picking && !worker.getInventory().isEmpty()) {
             call("stopAll",new Class[]{});journal.inventorySaved();close();return true;
         }
+        if(picking && pickupDrop.isAlive())call("lookAt",new Class[]{Vec3.class},pickupDrop.position());
         return false;
     }
     @Override public void close(){
