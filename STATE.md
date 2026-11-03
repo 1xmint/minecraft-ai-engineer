@@ -4,6 +4,36 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Phase33 physical execution in work/physical-build, phase/33-physical-build,
+based on companion6da0f14. P1: explicitly delegated actor legally gathers required
+materials and constructs intended geometry; no inventory injection/creative edits.
+P2: revocation, stale connection/revision, conflicts, unloads and unreachable
+targets stop before unauthorized mutation. P3: interrupted/restarted material
+and action records reconcile without duplication/loss or restored authority.
+Tasks: [P3] first prove native worker inventory save/load across actual world
+reboot before enabling resource pickup; [P1/P2] implement bounded resource/placement
+planning and event-time pickup/mining/placement authority with real project leases;
+[P3] durable operation identity, conservative uncertain outcomes and explicit
+recovery; [P1-P3] actual chat/visible construction plus failure/restart CI.
+Pinned API inspection: PlayerList.placeNewPlayer does not load player data;
+PlayerList.loadPlayerData(NameAndId), Entity.load(TagValueInput) and saveAll exist.
+Carpet respawnFake therefore needs explicit native loading for stable resources.
+No production inventory path enabled yet. GPT-6-Luna challenges the resource/
+identity boundary independently; idle companion PR47 remains separate.
+
+Phase33 preflight candidate now mines/picks up exactly1 real dirt with an initially
+empty CI worker, saves through PlayerList.saveAll/remove, reboots the same world,
+then explicitly loads vanilla NBT with strict ProblemReporter checks before join.
+Restored UUID/count must match; default-deny registration must prevent spending
+the dirt without a fresh ticket and worker receives no project grants. Fixture
+carries the test worker UUID across boots; durable per-project identity registry
+and production gather leases are still unimplemented. No post-start inventory
+supply/creative restoration is used. Scoped client compile and shell syntax passed;
+actual CI pending. Independent GPT-6-Luna challenge confirms separate physical
+human-survival authority path, source/drop/destination reservations and pickup
+tickets are required. Native player/chunk files are not a hard-crash transaction;
+mixed states must stay uncertain with no automatic creative compensation.
+
 Physical restart sourceeb036d1 / CI41577467684 completed SUCCESS. Downloaded
 work/physical-restart-proof-41577467684 and inspected physical-restart.done plus
 runner success. Actual saved-world boot retained world/project, advanced epoch,

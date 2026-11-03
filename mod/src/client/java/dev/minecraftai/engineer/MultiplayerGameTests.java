@@ -401,6 +401,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
 
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;
+        UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
             publishServer(server,1);
@@ -429,6 +430,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             }
             server.waitFor(s->s.getPlayerList().getPlayerByName("Alice")==null && s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")));
             write("physical-disconnect.done","passed");
+            gatherAndSaveWorker(server,resourceWorker,resourceName);
         }
         // Pinned launcher reopens the same saved level; the public world builder
         // would create a fresh world and could not prove restart recovery.
@@ -437,6 +439,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(manager.worldId.equals(savedWorld) && !manager.epoch.equals(savedEpoch) && manager.projects.containsKey(UUID.fromString(savedProject)),"Actual restart retains world/project identity and advances the server epoch");
                 check(s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")),"Saved-server restart does not recreate a physical actor");
                 var project=manager.projects.get(UUID.fromString(savedProject));check(project.delegation==null && project.testTick<0 && !project.hasPendingTest(),"Restart restores no actor execution or test authority");});
+            server.runOnServer(s->{var worker=inventoryWorker(s,resourceWorker,resourceName,true);
+                try{
+                    check(countDirt(worker)==1 && !worker.isCreative() && PhysicalActionGate.managed(worker),"Native worker reload retains exactly the actually mined item under default denial");
+                    check(EngineerMod.managerFor(s).projects.values().stream().noneMatch(project->project.access.allows(resourceWorker,ProjectAccess.Permission.BUILD)),"Native inventory reload grants no project permission");
+                    var target=new BlockPos(2421,101,4);var support=target.below();
+                    worker.gameMode.useItemOn(worker,worker.level(),worker.getMainHandItem(),net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(support).add(0,0.5,0),net.minecraft.core.Direction.UP,support,false));
+                    check(worker.level().getBlockState(target).isAir() && countDirt(worker)==1,"Recovered inventory cannot authorize native placement without a fresh ticket");
+                    write("physical-inventory-restarted.done","passed");
+                }finally{s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);}});
             send(context,"engineer project use "+savedProject);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(savedProject));
             MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"No physical companion is present");
@@ -455,6 +466,44 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"The companion is at");
         write("physical-peer-denied.done","passed");disconnect(context);
+    }
+
+    /** Resource-persistence experiment only; not a production gather delegation. */
+    private static ServerPlayer inventoryWorker(MinecraftServer server,UUID id,String name,boolean restore){
+        if(server.getPlayerList().getPlayer(id)!=null || server.getPlayerList().getPlayerByName(name)!=null)throw new IllegalStateException("Worker identity collision; never replace an online player");
+        ServerPlayer worker=null;
+        try{
+            var profile=new com.mojang.authlib.GameProfile(id,name);var client=net.minecraft.server.level.ClientInformation.createDefault();
+            worker=(ServerPlayer)Class.forName("carpet.patches.EntityPlayerMPFake").getMethod("respawnFake",MinecraftServer.class,net.minecraft.server.level.ServerLevel.class,com.mojang.authlib.GameProfile.class,net.minecraft.server.level.ClientInformation.class).invoke(null,server,server.overworld(),profile,client);
+            if(restore){PhysicalWorkerStorage.restore(worker);PhysicalActionGate.register(worker);}
+            var connection=(net.minecraft.network.Connection)Class.forName("carpet.patches.FakeClientConnection").getConstructor(net.minecraft.network.protocol.PacketFlow.class).newInstance(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
+            server.getPlayerList().placeNewPlayer(connection,worker,new net.minecraft.server.network.CommonListenerCookie(profile,0,client,false));
+            if(restore)PhysicalActionGate.bindConnection(worker);
+            worker.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
+            if(server.getPlayerList().isOp(worker.nameAndId()))throw new IllegalStateException("Worker must not be an operator");
+            return worker;
+        }catch(Exception failed){
+            if(worker!=null){if(server.getPlayerList().getPlayer(worker.getUUID())==worker)server.getPlayerList().remove(worker);if(PhysicalActionGate.managed(worker))PhysicalActionGate.forget(worker);}
+            throw new IllegalStateException("Native inventory worker could not be joined safely",failed);
+        }
+    }
+    private static int countDirt(ServerPlayer worker){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(net.minecraft.world.item.Items.DIRT))count+=stack.getCount();}return count;}
+    private static Object inventoryPack(ServerPlayer worker){try{return Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(worker);}catch(Exception failed){throw new IllegalStateException(failed);}}
+    @SuppressWarnings({"rawtypes","unchecked"})
+    private static void gatherAndSaveWorker(TestDedicatedServerContext server,UUID id,String name){
+        server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");
+        server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
+            worker.snapTo(2421.5,101,1.5,0,0);
+            try{var pack=inventoryPack(worker);pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,new net.minecraft.world.phys.Vec3(2421.5,101.5,4.5));
+                Class type=Class.forName("carpet.helpers.EntityPlayerActionPack$ActionType"),action=Class.forName("carpet.helpers.EntityPlayerActionPack$Action");
+                pack.getClass().getMethod("start",type,action).invoke(pack,Enum.valueOf(type,"ATTACK"),action.getMethod("continuous").invoke(null));
+            }catch(Exception failed){throw new IllegalStateException(failed);}});
+        server.waitFor(s->s.overworld().getBlockState(new BlockPos(2421,101,4)).isAir(),30_000);
+        server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
+        server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);return countDirt(worker)==1 && worker.getZ()>2.25;},30_000);
+        server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
+            check(countDirt(worker)==1,"Exactly one native mined drop is present before saving");PhysicalActionGate.register(worker);PhysicalWorkerStorage.save(worker);
+            s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});
     }
 
     private static void owner(ClientGameTestContext context) throws Exception {

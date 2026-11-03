@@ -1,12 +1,12 @@
-name: Physical companion restart
+name: Physical worker resource recovery
 on:
   push:
-    branches: [work/physical-restart-feedback]
+    branches: [work/physical-build-feedback]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: physical-restart-${{ github.ref }}
+  group: physical-build-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   multiplayer:
