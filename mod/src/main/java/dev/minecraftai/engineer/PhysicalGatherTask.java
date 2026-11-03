@@ -92,7 +92,10 @@ final class PhysicalGatherTask implements AutoCloseable {
         var pos=worker.blockPosition();
         if(pos.getY()!=start.getY() || pos.getX()<(alongX?Math.min(start.getX(),source.getX()):source.getX()-1) || pos.getX()>(alongX?Math.max(start.getX(),source.getX()):source.getX()+1)
             || pos.getZ()<(alongX?source.getZ()-1:Math.min(start.getZ(),source.getZ())) || pos.getZ()>(alongX?source.getZ()+1:Math.max(start.getZ(),source.getZ())))
+        {
+            System.getLogger(PhysicalGatherTask.class.getName()).log(System.Logger.Level.WARNING,"Gather path deviation: position="+worker.position()+", start="+start+", source="+source+", drop="+(pickupDrop==null?"none":pickupDrop.position()));
             throw new IllegalStateException("Companion left its reserved gather path");
+        }
     }
     boolean tick() {
         authority();
@@ -101,7 +104,7 @@ final class PhysicalGatherTask implements AutoCloseable {
             if(drop==null)throw new IllegalStateException("Native mining did not produce one tracked drop; inspect resources");
             journal.observeDrop(drop);
             PhysicalActionGate.armPickup(worker,drop,expires,this::authority,()->journal.preparePickup(drop));
-            pickupDrop=drop;call("lookAt",new Class[]{Vec3.class},drop.position());call("setForward",new Class[]{float.class},1f);picking=true;
+            pickupDrop=drop;call("lookAt",new Class[]{Vec3.class},drop.position());call("setForward",new Class[]{float.class},0.45f);picking=true;
         }
         if(picking && !worker.getInventory().isEmpty()) {
             call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);
@@ -117,7 +120,11 @@ final class PhysicalGatherTask implements AutoCloseable {
             return false;
         }
         if(savedInventory!=null)throw new IllegalStateException("Gathered inventory disappeared before handoff");
-        if(picking && pickupDrop.isAlive())call("lookAt",new Class[]{Vec3.class},pickupDrop.position());
+        if(picking && pickupDrop.isAlive()){
+            call("lookAt",new Class[]{Vec3.class},pickupDrop.position());
+            double distance=Math.hypot(worker.getX()-pickupDrop.getX(),worker.getZ()-pickupDrop.getZ());
+            call("setForward",new Class[]{float.class},distance>.75?0.45f:0f);
+        }
         return false;
     }
     @Override public void close(){
