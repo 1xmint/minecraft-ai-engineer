@@ -147,3 +147,5 @@ both parent gather-stop and child blueprint-stop tests plus the memory cases.
 Fresh full and focused CI are required before integration.
 
 Combined source a379a6b failed focused CI41700593882 during gather-to-place handoff: placement authority changed. Residual walking motion is the suspected cause, not yet proven. Gathering now keeps its lease and inventory snapshot until three stationary ticks, explicitly clears forward input, and summon clears prior velocity/fall progress. Placement stance and expiry diagnostics are separate; its guards remain strict. Scoped server/client compile and diff checks passed; fresh exact-source gameplay CI is required.
+
+Focused CI41704667009 failed before production gather/job execution: the raw native pickup fixture crossed its platform boundary. Its second dirt source was on the last supported row. Added floor margin for native drop motion, aimed initial walking at the tracked drop, and added worker/drop/inventory failure diagnostics. Pickup identity, journal, expiry and rejection checks are unchanged. This fixture correction and the batch handoff still require exact-source CI.

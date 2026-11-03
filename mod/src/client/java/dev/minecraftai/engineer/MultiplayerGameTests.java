@@ -656,7 +656,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void gatherAndSaveWorker(ClientGameTestContext context,TestDedicatedServerContext server,UUID id,String name){
         var gatherRecord=new java.util.concurrent.atomic.AtomicReference<PhysicalGatherRecord>();
         var pickupDrop=new java.util.concurrent.atomic.AtomicReference<net.minecraft.world.entity.item.ItemEntity>();
-        server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
+        server.runCommand("fill 2420 100 0 2425 100 8 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
         server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
             worker.snapTo(2421.5,101,1.5,0,0);
             PhysicalActionGate.register(worker);
@@ -708,12 +708,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         });
         context.waitTicks(5);
         context.runOnClient(client->{var mirror=client.level.getPlayerByUUID(id);check(mirror!=null,"Actual client has the resource worker's mirrored entity");check(!PhysicalActionGate.pickup(mirror,pickupDrop.get()),"Client mirror cannot act on or consume the server pickup ticket");});
-        server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
+        server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,pickupDrop.get().position());pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);check(worker!=null,"Native resource worker must remain alive during pickup");
             if(countDirt(worker)==1 && worker.getZ()>2.25)return true;
             var drop=PhysicalActionGate.capturedDrop(worker);
             try{var pack=inventoryPack(worker);
-                if(worker.getZ()>5.8){pack.getClass().getMethod("stopAll").invoke(pack);throw new AssertionError("Resource worker reached fixture platform boundary before pickup");}
+                if(worker.getZ()>8.0){pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("setForward",float.class).invoke(pack,0f);throw new AssertionError("Resource worker reached fixture platform boundary before pickup: worker="+worker.position()+", drop="+pickupDrop.get().position()+", alive="+pickupDrop.get().isAlive()+", inventory="+PhysicalWorkerStorage.inventory(worker));}
                 if(drop!=null && drop.isAlive())pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,drop.position());
             }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}return false;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
