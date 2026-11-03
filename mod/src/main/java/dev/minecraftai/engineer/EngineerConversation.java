@@ -36,7 +36,7 @@ final class EngineerConversation {
             session=manager.selected(player,false);previous=session.commandActor;session.access.require(player.getUUID(),ProjectAccess.Permission.VIEW);
             if(!session.dimension.equals(player.level().dimension().identifier().toString()))throw new IllegalStateException("Choose a project in your current dimension before we work on it.");
             session.commandActor=player.getUUID();
-            if(ConversationText.stop(request)){manager.knowledge.interpretConversation(session,"stop");manager.conversationLessons.cancel(player.getUUID());return;}
+            if(ConversationText.stop(request)){manager.physical.stop(session);manager.knowledge.interpretConversation(session,"stop");manager.conversationLessons.cancel(player.getUUID());return;}
             if(ConversationText.yes(request)){
                 if(manager.conversationLessons.holdsLesson(session,player.getUUID())){reply(player,"Tell me which part you mean, or say 'Engineer, never mind' to cancel the question. A yes does not choose a component or approve other work here.");return;}
                 switch(ConversationReview.choose(manager.knowledge.hasConversationReview(session),manager.generated.hasConversationReview(session),session.hasConversationStructural())){

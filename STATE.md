@@ -1125,3 +1125,21 @@ physical-blueprint.done and actual next-cell/native placement chat inspected.
 Phase35 server/client compilation passed before final wording/resource admission;
 final compile and new native job CI pending. General materials, tool/crafting,
 robust navigation, composite scheduling and arbitrary crash recovery remain open.
+
+Natural stop follow-up: early addressed-chat stop now cancels active physical
+jobs/gather/placement before the existing local core stop. Owner+BUILD required;
+all child phases/maps/tickets are closed, optional pack stopped, native inventory
+save verified, then the existing binding becomes idle at its current position.
+Stop/save failure despawns while denial remains registered until removal. No old
+connection/revision/grant is rebound. Native CI starts actual client-chat work,
+stops by actual client chat, and requires source/target cells plus retained
+inventory unchanged for20server ticks. Fixture clock temporarily5TPS creates an
+interruption window and is restored20TPS; mutation/expiry checks unchanged.
+Selection-revocation test arms an actual phase, changes owner selection via real
+manager API, and requires native destroyBlock and job tick denied without resource
+mutation. No model calls. Luna reviewed stop auth/cleanup without material issue.
+
+Source8b9e015 CI41691988901 SUCCESS: downloaded physical-blueprint-job.done and
+actual one-request/two-cell construction chat inspected. This proves the bounded
+job on that source; new natural-stop/revocation checks need fresh native CI.
+Latest server/client compilation passed; shell syntax check pending.

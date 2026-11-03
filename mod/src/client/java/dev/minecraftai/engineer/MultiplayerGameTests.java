@@ -540,14 +540,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             physicalBlueprintJobFlow(context,server);
         }
     }
-    private static void physicalBlueprintJobFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+    private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
-        server.runCommand("forceload add 2496 -16 2520 32");server.runCommand("fill 2500 100 0 2505 100 9 minecraft:stone");
-        server.runCommand("setblock 2501 101 3 minecraft:dirt");server.runCommand("setblock 2501 101 5 minecraft:dirt");server.runCommand("tp Alice 2504.5 101 8 180 0");
-        send(context,"engineer select1 2500 100 0");send(context,"engineer select2 2504 102 6");server.waitFor(s->new BlockPos(2504,102,6).equals(session(s,"Alice").corner2));
+        server.runCommand("forceload add "+(x-8)+" -16 "+(x+24)+" 32");server.runCommand("fill "+x+" 100 0 "+(x+5)+" 100 9 minecraft:stone");
+        server.runCommand("setblock "+(x+1)+" 101 3 minecraft:dirt");server.runCommand("setblock "+(x+1)+" 101 5 minecraft:dirt");server.runCommand("tp Alice "+(x+4.5)+" 101 8 180 0");
+        send(context,"engineer select1 "+x+" 100 0");send(context,"engineer select2 "+(x+4)+" 102 6");server.waitFor(s->new BlockPos(x+4,102,6).equals(session(s,"Alice").corner2));
         server.runOnServer(s->{var project=session(s,"Alice");var source=ImportedBlueprintGameTests.source();
-            source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());source.addProperty("rotation",0);source.add("anchor",Blueprint.jsonPos(new BlockPos(2503,101,3)));
+            source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());source.addProperty("rotation",0);source.add("anchor",Blueprint.jsonPos(new BlockPos(x+3,101,3)));
             var template=source.getAsJsonArray("blocks").get(0).getAsJsonObject();var blocks=new com.google.gson.JsonArray();
             for(int z=0;z<2;z++){var support=template.deepCopy();support.add("pos",Blueprint.jsonPos(new BlockPos(0,-1,z)));blocks.add(support);}
             for(int z=0;z<2;z++){var cell=template.deepCopy();cell.add("pos",Blueprint.jsonPos(new BlockPos(0,0,z)));cell.addProperty("state","minecraft:dirt");blocks.add(cell);}
@@ -556,6 +556,45 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
         server.runOnServer(s->check(player(s,"Alice").gameMode.getGameModeForPlayer()==net.minecraft.world.level.GameType.SURVIVAL && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Batch starts with a survival owner and no supplied worker inventory"));
+        return worker;
+    }
+    private static java.util.List<net.minecraft.world.level.block.state.BlockState> physicalJobCells(MinecraftServer server,int x){
+        return java.util.List.of(server.overworld().getBlockState(new BlockPos(x+1,101,3)),server.overworld().getBlockState(new BlockPos(x+1,101,5)),server.overworld().getBlockState(new BlockPos(x+3,101,3)),server.overworld().getBlockState(new BlockPos(x+3,101,4)));
+    }
+    private static com.google.gson.JsonArray physicalWorkerInventory(MinecraftServer server,UUID id){
+        var worker=server.getPlayerList().getPlayer(id);if(worker!=null)return PhysicalWorkerStorage.inventory(worker);
+        var saved=new ServerPlayer(server,server.overworld(),new com.mojang.authlib.GameProfile(id,"Eng_"+id.toString().substring(0,8)),net.minecraft.server.level.ClientInformation.createDefault());
+        PhysicalWorkerStorage.restore(saved);return PhysicalWorkerStorage.inventory(saved);
+    }
+    private static void physicalBlueprintStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID worker=setupPhysicalBlueprintJob(context,server,2480);
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var owner=player(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+            var other=manager.projects.values().stream().filter(p->p!=project && p.owner.equals(owner.getUUID())).findFirst().orElseThrow();
+            try(var job=new PhysicalBlueprintJob(manager,project,body,inventoryPack(body))){
+                job.tick();manager.use(owner,other.projectId);
+                try{
+                    check(!body.gameMode.destroyBlock(new BlockPos(2481,101,3)),"Changed owner selection denies the exact native mine at event time");
+                    boolean refused=false;try{job.tick();}catch(IllegalStateException expected){refused=true;}
+                    check(refused && s.overworld().getBlockState(new BlockPos(2481,101,3)).is(Blocks.DIRT) && body.getInventory().isEmpty(),"Changed owner selection stops the active job without native resource mutation");
+                }finally{manager.use(owner,project.projectId);}
+            }
+        });
+        // Slow the fixture's tick clock for a deterministic opportunity to issue
+        // actual client chat while the native job is still running. No mutation
+        // or expiry assertion is relaxed, and the normal clock is restored.
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        try{
+            MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");
+            MESSAGES.clear();say(context,"Engineer, stop building");expectChat(context,"Physical work stopped. Saved inventory was checked");
+            var cells=server.computeOnServer(s->physicalJobCells(s,2480));var inventory=server.computeOnServer(s->physicalWorkerInventory(s,worker));
+            int stopped=server.computeOnServer(MinecraftServer::getTickCount);server.waitFor(s->s.getTickCount()>=stopped+20,30_000);
+            server.runOnServer(s->check(physicalJobCells(s,2480).equals(cells) && physicalWorkerInventory(s,worker).equals(inventory),"Actual chat stop leaves native source/target cells and retained inventory unchanged for twenty server ticks"));
+        }finally{server.runOnServer(s->s.tickRateManager().setTickRate(20f));}
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-stop.done","passed");
+    }
+    private static void physicalBlueprintJobFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        physicalBlueprintStopFlow(context,server);UUID worker=setupPhysicalBlueprintJob(context,server,2500);
         MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells");
         server.runOnServer(s->{var project=session(s,"Alice");check(s.overworld().getBlockState(new BlockPos(2501,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2501,101,5)).isAir()
             && s.overworld().getBlockState(new BlockPos(2503,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2503,101,4)).is(Blocks.DIRT)

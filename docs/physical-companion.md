@@ -100,3 +100,9 @@ pickup drift is allowed inside that same reserved corridor. No teleport,
 material supply or creative fallback is used. Dismissal, connection/grant changes,
 plan edits or inaccessible resources stop the job. Matching geometry remains
 untested; unfinished records do not restore actions after restart.
+
+Say `Engineer, stop` or `Engineer, stop building` to stop physical work as well as
+core work. Only the project owner can stop its active physical companion. The
+worker's current inventory is saved and checked before it becomes idle. Unfinished
+resource records remain available for inspection; stopping never recreates a
+resource or resumes an old action. A new request is required to continue.
