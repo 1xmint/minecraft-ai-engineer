@@ -2096,7 +2096,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.cursors.containsKey(player(s,"Bob").getUUID()),"Revocation deliberately removes Bob's private lesson cursor");
             commandAs(s,"Alice","engineer teach b");commandAs(s,"Alice","engineer pause");});
         write("lesson-followup.done","passed");
-        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void assertLegacyScopeMigration(EngineeringSession project,int version) {
         var legacy=saved(project);legacy.remove("operationScopes");
@@ -2216,7 +2216,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.level().getBlockState(stone).is(Blocks.STONE) && project.level().getBlockState(chest).is(Blocks.CHEST),"Export reads the selection and leaves it exactly as it was");});
         context.takeScreenshot("engineer-schematic-export");
         importedBuildFlow(context,server);
-        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void importedBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         MESSAGES.clear();memorySay(context,"Engineer, import schematic safe");expectChat(context,"Untrusted and untested.");int design=storedDesign();
@@ -2315,7 +2315,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
         if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);observerFlow(context,server);}
-        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void observerFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
@@ -2883,7 +2883,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var wal=saved(project);check(wal.get("activeComponent").getAsString().equals("b") && wal.get("undoRequested").getAsBoolean() && wal.getAsJsonArray("baseline").isEmpty(),"Real persisted WAL identifies B with an empty baseline");
         });
         write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
-        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
 
     private static void undoContextRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
