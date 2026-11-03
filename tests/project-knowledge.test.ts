@@ -9,6 +9,7 @@ import { MemoryStore } from "../companion/src/memory.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
   readProjectNote,
+  validateNoteSearch,
   validateProjectNote,
 } from "../companion/src/project-knowledge.js";
 import type {
@@ -580,6 +581,253 @@ test("a reason and a replacement survive a restart and still refuse a second rep
       JSON.parse(store.gateway.reasoning(c).text).knowledge.replaced,
       [1],
     );
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+const reference = (text: string) => ({
+  schemaVersion: 2,
+  kind: "reference",
+  text,
+});
+/** Notes 1-5: a goal, a decision replaced by note 3, its replacement, a reference and a preference. */
+function history(store: MemoryStore) {
+  store.gateway.rememberNote(
+    frame(),
+    { ...note, text: "Keep the entrance within six blocks." },
+    0,
+  );
+  store.gateway.rememberNote(
+    frame(),
+    decision("use repeaters", { rationale: "they stay visible" }),
+    1,
+  );
+  store.gateway.rememberNote(
+    frame(),
+    decision("use comparators", { rationale: "smaller", supersedes: 2 }),
+    2,
+  );
+  store.gateway.rememberNote(
+    frame(),
+    reference("Copy the 100% tested clock_a layout"),
+    3,
+  );
+  store.gateway.rememberNote(
+    frame(),
+    { schemaVersion: 2, kind: "preference", text: "Keep wiring visible" },
+    4,
+  );
+}
+const revisions = (entries: readonly { note: { revision: number } }[]) =>
+  entries.map((entry) => entry.note.revision);
+test("references are version 2 notes; version 1 stays frozen to its four kinds", () => {
+  assert.equal(validateProjectNote(reference("Docs page 3")).kind, "reference");
+  assert.throws(() =>
+    validateProjectNote({ ...reference("x"), schemaVersion: 1 }),
+  );
+  for (const search of [
+    {},
+    { text: " " },
+    { text: "x".repeat(65) },
+    { kind: "verified" },
+    { changes: false },
+  ])
+    assert.throws(() => validateNoteSearch(search));
+  assert.deepEqual(validateNoteSearch({ text: "  lamp " }), { text: "lamp" });
+});
+test("show and find read the whole history and mark current and replaced notes", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    history(store);
+    const replaced = store.gateway.showNote(frame(), 2);
+    assert.equal(replaced.knowledgeRevision, 5);
+    assert.equal(replaced.entry?.note.text, "use repeaters");
+    assert.equal(replaced.entry?.note.authorId, OWNER);
+    assert.equal(replaced.entry?.replacedBy, 3);
+    assert.equal(replaced.entry?.replaces, undefined);
+    const current = store.gateway.showNote(frame(), 3).entry!;
+    assert.equal(current.replacedBy, undefined);
+    assert.equal(current.replaces?.revision, 2);
+    assert.equal(current.replaces?.text, "use repeaters");
+    assert.equal(store.gateway.showNote(frame(), 9).entry, null);
+    assert.throws(() => store.gateway.showNote(frame(), 0));
+    const find = (search: Record<string, unknown>) =>
+      store.gateway.findNotes(frame(), validateNoteSearch(search));
+    assert.deepEqual(revisions(find({ text: "VISIBLE" }).entries), [5, 2]);
+    assert.deepEqual(revisions(find({ text: "%" }).entries), [4]);
+    assert.deepEqual(revisions(find({ text: "_" }).entries), [4]);
+    assert.deepEqual(revisions(find({ text: "clock%a" }).entries), []);
+    assert.deepEqual(
+      revisions(find({ text: "decision" }).entries),
+      [],
+      "Search never matches stored field names",
+    );
+    assert.deepEqual(revisions(find({ kind: "decision" }).entries), [3, 2]);
+    assert.deepEqual(revisions(find({ changes: true }).entries), [3]);
+    assert.equal(find({ changes: true }).entries[0]!.replaces?.revision, 2);
+    assert.deepEqual(revisions(find({ kind: "reference" }).entries), [4]);
+    const none = find({ text: "torches" });
+    assert.deepEqual(none.entries, []);
+    assert.equal(none.more, 0);
+    for (let i = 5; i < 40; i++)
+      store.gateway.rememberNote(
+        frame(),
+        { ...note, kind: "preference", text: `Preference ${i + 1}` },
+        i,
+      );
+    assert.equal(store.gateway.knowledge(frame()).hasEarlier, true);
+    assert.equal(
+      store.gateway.showNote(frame(), 1).entry?.note.text,
+      "Keep the entrance within six blocks.",
+      "Notes older than the read window stay retrievable by number",
+    );
+    assert.deepEqual(revisions(find({ text: "six blocks" }).entries), [1]);
+    const many = find({ kind: "preference" });
+    assert.equal(many.entries.length, 8);
+    assert.equal(many.more, 36 - 8);
+    assert.deepEqual(revisions(many.entries).slice(0, 2), [40, 39]);
+  } finally {
+    store.close();
+  }
+});
+test("retrieval is fenced to current members of the selected project", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    history(store);
+    assert.equal(
+      store.gateway.showNote(frame({ actorId: EDITOR }), 1).entry?.note.text,
+      "Keep the entrance within six blocks.",
+    );
+    const other = frame({
+      projectId: "project-b",
+      actorId: EVE,
+      connectionId: "55555555-5555-4555-8555-555555555555",
+    });
+    store.gateway.sync({
+      context: other,
+      worldId: "world-a",
+      dimension: "minecraft:overworld",
+      name: "Other owner's project",
+      members: [{ actorId: EVE, role: "owner", canPlan: true }],
+      isOperator: true,
+      blueprint: makeReferenceBlueprint({
+        request: "other",
+        projectId: "project-b",
+        worldId: "world-a",
+        dimension: "minecraft:overworld",
+        anchor: { x: 20, y: 100, z: 0 },
+        rotation: 0,
+      }),
+    });
+    store.gateway.rememberNote(
+      { ...other, requestId: randomUUID() },
+      { ...note, text: "Private entrance plan for project b." },
+      0,
+    );
+    assert.deepEqual(
+      revisions(
+        store.gateway.findNotes(
+          frame(),
+          validateNoteSearch({ text: "entrance" }),
+        ).entries,
+      ),
+      [1],
+      "Search never crosses into another project",
+    );
+    for (const c of [
+      frame({ actorId: EVE }),
+      frame({ projectId: "project-b" }),
+      frame({ projectId: "unknown-project" }),
+    ]) {
+      assert.throws(() => store.gateway.showNote(c, 1));
+      assert.throws(() =>
+        store.gateway.findNotes(c, validateNoteSearch({ text: "entrance" })),
+      );
+    }
+    store.gateway.sync({
+      context: frame({ authorizationRevision: 2 }),
+      worldId: "world-a",
+      dimension: "minecraft:overworld",
+      name: "Shared engineering",
+      members: [members[0]!],
+      isOperator: true,
+      blueprint,
+    });
+    for (const c of [
+      frame({ actorId: EDITOR, authorizationRevision: 2 }),
+      frame({ actorId: EDITOR }),
+    ]) {
+      assert.throws(() => store.gateway.showNote(c, 1));
+      assert.throws(() =>
+        store.gateway.findNotes(c, validateNoteSearch({ kind: "goal" })),
+      );
+    }
+    assert.equal(
+      store.gateway.showNote(frame({ authorizationRevision: 2 }), 1).entry?.note
+        .revision,
+      1,
+    );
+  } finally {
+    store.close();
+  }
+});
+test("refused writes leave nothing to show or find", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    history(store);
+    const refused = decision("Use torches for the delay");
+    const attempts: [GatewayContext, Record<string, unknown>, number][] = [
+      [frame({ actorId: EDITOR }), refused, 5],
+      [frame({ actorId: EVE }), refused, 5],
+      [frame(), refused, 4],
+      [frame(), { ...refused, supersedes: 2 }, 5],
+      [frame(), { ...refused, kind: "goal", supersedes: 3 }, 5],
+      [frame(), { ...refused, supersedes: 9 }, 5],
+      [frame(), { ...refused, schemaVersion: 1, kind: "reference" }, 5],
+    ];
+    for (const [c, value, expected] of attempts)
+      assert.throws(() => store.gateway.rememberNote(c, value, expected));
+    assert.equal(store.gateway.knowledge(frame()).revision, 5);
+    assert.equal(store.gateway.showNote(frame(), 6).entry, null);
+    assert.deepEqual(
+      store.gateway.findNotes(frame(), validateNoteSearch({ text: "torches" }))
+        .entries,
+      [],
+    );
+  } finally {
+    store.close();
+  }
+});
+test("show and find return the same records after a restart", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mce-knowledge-find-")),
+    file = join(dir, "memory.sqlite");
+  let store = new MemoryStore(file);
+  try {
+    sync(store);
+    history(store);
+    const shown = store.gateway.showNote(frame(), 3);
+    const found = store.gateway.findNotes(
+      frame(),
+      validateNoteSearch({ kind: "decision" }),
+    );
+    store.close();
+    store = new MemoryStore(file);
+    const c = frame({ serverEpoch: "epoch-two" });
+    assert.throws(
+      () => store.gateway.showNote(c, 3),
+      "Retrieval waits for a fresh server-owned sync",
+    );
+    sync(store, c);
+    assert.deepEqual(store.gateway.showNote(c, 3), shown);
+    assert.deepEqual(
+      store.gateway.findNotes(c, validateNoteSearch({ kind: "decision" })),
+      found,
+    );
+    assert.equal(store.gateway.showNote(c, 2).entry?.replacedBy, 3);
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

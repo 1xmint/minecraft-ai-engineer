@@ -182,7 +182,7 @@ try {
         "SELECT revision FROM gateway_knowledge_revisions WHERE server_id=? AND project_id=?",
       )
       .get(server.serverId, knowledgeProject);
-    const expectedNotes = liveDiscussion ? 3 : 5;
+    const expectedNotes = liveDiscussion ? 3 : 6;
     assert.equal(
       counter?.revision,
       expectedNotes,
@@ -205,6 +205,7 @@ try {
           ? [
               [4, "decision", "Use repeaters for the delay"],
               [5, "decision", "Use comparators for the delay"],
+              [6, "reference", "Copy the tested signal lamp layout."],
             ]
           : []),
       ],
@@ -218,7 +219,7 @@ try {
     if (!liveDiscussion) {
       assert.deepEqual(
         notes
-          .slice(3)
+          .slice(3, 5)
           .map((note) => [
             note.revision,
             note.rationale,
@@ -231,6 +232,9 @@ try {
         ],
         "Reasons and replacement provenance persist exactly; refused replacements create no rows",
       );
+      assert.equal(notes[5].writtenAtRevision, 5);
+      assert.equal(notes[5].rationale, undefined);
+      assert.equal(notes[5].supersedes, undefined);
     }
     const discussions = db
       .prepare(

@@ -1860,6 +1860,55 @@ test("literal project notes use connected owner transport and remain separate fr
       ).status,
       400,
     );
+    const editor = context({
+      actorId: EDITOR,
+      connectionId: generatedConnection,
+    });
+    const shown = await f.post("/v2/knowledge/show", {
+      context: editor,
+      revision: 1,
+    });
+    assert.equal(shown.status, 200);
+    const shownBody = await json<{
+      knowledgeRevision: number;
+      entry: { note: { text: string; authorId: string } };
+    }>(shown);
+    assert.equal(shownBody.knowledgeRevision, 1);
+    assert.equal(shownBody.entry.note.text, body.note.text);
+    assert.equal(shownBody.entry.note.authorId, OWNER);
+    const missing = await f.post("/v2/knowledge/show", {
+      context: editor,
+      revision: 9,
+    });
+    assert.equal(missing.status, 200);
+    assert.equal((await json<{ entry: null }>(missing)).entry, null);
+    const found = await f.post("/v2/knowledge/find", {
+      context: editor,
+      text: "SIX",
+    });
+    assert.equal(found.status, 200);
+    const foundBody = await json<{ entries: unknown[]; more: number }>(found);
+    assert.equal(foundBody.entries.length, 1);
+    assert.equal(foundBody.more, 0);
+    const eve = context({ actorId: EVE, connectionId: generatedConnection });
+    const unconnected = context({ actorId: EDITOR });
+    for (const [route, request, status] of [
+      ["show", { context: eve, revision: 1 }, 403],
+      ["find", { context: eve, text: "six" }, 403],
+      ["show", { context: unconnected, revision: 1 }, 403],
+      ["find", { context: unconnected, text: "six" }, 403],
+      ["show", { context: editor, revision: 1, text: "six" }, 400],
+      ["show", { context: editor }, 400],
+      ["show", { context: editor, revision: 0 }, 400],
+      ["find", { context: editor }, 400],
+      ["find", { context: editor, text: "six", isOperator: true }, 400],
+      ["find", { context: editor, kind: "verified" }, 400],
+    ] as const)
+      assert.equal(
+        (await f.post(`/v2/knowledge/${route}`, request)).status,
+        status,
+        `${route} ${JSON.stringify(request)}`,
+      );
     assert.equal(f.store.gateway.knowledge(context()).revision, 1);
     assert.deepEqual(f.store.gateway.blueprint(context()), blueprint);
     assert.equal(calls, 0);
