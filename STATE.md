@@ -962,3 +962,10 @@ downloaded pickup-prepared, inventory-saved and inventory-restarted receipts.
 Final scoped client compile passed. Independent review found no direct bypass;
 provenance means sole matching item spawned synchronously during playerDestroy,
 not a guarantee against arbitrary other mods spawning inside that callback.
+
+90dabb1 CI41681639329 failed at the fixture's final pickup arm after its simulated
+WAL error. Provenance is intentionally consumed before WAL; rearming that uncertain
+drop must fail. Fixture now asserts that refusal and uses a separately authorized
+native mine for the success/save/restart leg. Disposal of the first negative-case
+item is explicit CI-only cleanup, never a production recovery policy. Native
+mining target/authority checks were not relaxed. Final client compilation pending.
