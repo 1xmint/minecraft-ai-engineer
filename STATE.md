@@ -909,3 +909,21 @@ resource gathering/building is unfinished. Scoped server/client compilation pass
 Dedicated CI adds same-identity restart and owner-mismatch/no-reset assertions;
 that new source is not yet proven by CI. Hard-crash cross-file atomicity is not
 claimed.
+
+Phase33 follow-up: review found first-summon failure could strand a profile before
+native data existed. An uninitialized marker now permits retry of the same UUID;
+existing dat/dat_old always requires native recovery, activation follows verified
+save. Added a separate ephemeral PhysicalWorkLease for native survival work:
+owner/current connection/selection/revisions, loaded workspace, cross-project
+permission and exact write/read reservations; direct creative edits unchanged.
+No production gathering caller exists yet. CI assertions cover pending identity
+retry, exact-write rejection and owner deselection. Compile passed before the
+last assertion; full exact-source gameplay proof remains pending.
+
+Evidence: eb3552d CI41583318231 SUCCESS; downloaded coordination receipts confirm
+physical restart and native inventory restart passed. Luna review accepts the
+pending-profile fix within idle scope. PhysicalWorkLease remains an unused
+primitive: before production wiring capture accepted operation/assignment basis,
+recheck source/destination/support/path observations at event time, and bind the
+native worker connection through action tickets. validate(target) alone is not a
+complete resource transaction. Latest server/client compilation passed.

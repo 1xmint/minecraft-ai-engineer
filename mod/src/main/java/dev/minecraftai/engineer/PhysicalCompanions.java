@@ -57,7 +57,10 @@ final class PhysicalCompanions {
             var id=identity.id();var profile=new GameProfile(id,"Eng_"+id.toString().substring(0,8));var client=ClientInformation.createDefault();
             if(manager.server.getPlayerList().getPlayer(id)!=null || manager.server.getPlayerList().getPlayerByName(profile.name())!=null)throw new IllegalStateException("Companion identity is already connected; no player was replaced");
             actor=(ServerPlayer)Class.forName("carpet.patches.EntityPlayerMPFake").getMethod("respawnFake",net.minecraft.server.MinecraftServer.class,net.minecraft.server.level.ServerLevel.class,GameProfile.class,ClientInformation.class).invoke(null,manager.server,level,profile,client);
-            if(identity.restore())PhysicalWorkerStorage.restore(actor);
+            // A retry of an uninitialized profile may already have native data.
+            // Load it if present; only a never-saved pending profile starts empty.
+            var data=manager.server.getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR);
+            if(identity.restore() || java.nio.file.Files.exists(data.resolve(id+".dat")) || java.nio.file.Files.exists(data.resolve(id+".dat_old")))PhysicalWorkerStorage.restore(actor);
             // Register default denial before the actor can enter any native player tick.
             PhysicalActionGate.register(actor);
             var connection=(Connection)Class.forName("carpet.patches.FakeClientConnection").getConstructor(PacketFlow.class).newInstance(PacketFlow.SERVERBOUND);
@@ -68,6 +71,7 @@ final class PhysicalCompanions {
             if(!actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an empty unprivileged identity");
             var pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);pack.getClass().getMethod("stopAll").invoke(pack);
             PhysicalWorkerStorage.save(actor);
+            identity.activate(manager,project);
             actors.put(project.projectId,new Binding(project,owner.getUUID(),owner.connection,project.revision(),project.access.revision(),actor,pack,spawn));
         }catch(Exception failed){
             if(actor!=null){if(manager.server.getPlayerList().getPlayer(actor.getUUID())==actor)manager.server.getPlayerList().remove(actor);PhysicalActionGate.forget(actor);}

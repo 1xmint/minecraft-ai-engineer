@@ -413,6 +413,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 server.runOnServer(s->{var camera=player(s,"Alice");camera.getAbilities().flying=true;camera.onUpdateAbilities();});
                 server.runCommand("tp Alice 2401.5 102 6 180 10");send(context,"engineer select1 2400 100 0");send(context,"engineer select2 2402 102 2");
                 server.waitFor(s->new BlockPos(2402,102,2).equals(session(s,"Alice").corner2));
+                server.runOnServer(s->{
+                    var manager=EngineerMod.managerFor(s);var projectSession=session(s,"Alice");var human=player(s,"Alice");
+                    var first=PhysicalWorkerIdentity.open(manager,projectSession);var retry=PhysicalWorkerIdentity.open(manager,projectSession);
+                    check(!first.restore() && !retry.restore() && first.id().equals(retry.id()),"First-summon retry retains its uninitialized identity");
+                    var target=new BlockPos(2401,101,1);
+                    var previous=human.gameMode.getGameModeForPlayer();human.gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+                    try(var lease=new PhysicalWorkLease(manager,projectSession,human,java.util.Set.of(target),java.util.Set.of(target.below()))) {
+                        lease.validate(target);boolean denied=false;
+                        try{lease.validate(target.east());}catch(IllegalStateException expected){denied=true;}
+                        check(denied && projectSession.delegation==null,"Survival physical lease reserves exact targets without enabling direct-edit delegation");
+                        manager.selections.remove(human.getUUID());denied=false;
+                        try{lease.validate(target);}catch(IllegalStateException expected){denied=true;}
+                        finally{manager.selections.put(human.getUUID(),projectSession.projectId);}
+                        check(denied,"Physical lease refuses the next action immediately after owner deselection");
+                    }finally{human.gameMode.changeGameModeForPlayer(previous);}
+                });
                 awaitFile(context,"physical-bob.connected");send(context,"engineer project share Bob editor");server.waitFor(s->session(s,"Alice").access.allows(player(s,"Bob").getUUID(),ProjectAccess.Permission.BUILD));
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 UUID actor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
