@@ -788,3 +788,4 @@ five-note/reason/replacement persistence verifier fix. Merging main through PR47
 adds the optional idle companion lifecycle; auto-merged source retains both memory
 chat and physical hooks. New combined source requires fresh compile/full CI;
 prior source proof is not claimed for this merge.
+Combined memory/main server and client compilation passed. Fresh full CI follows.
