@@ -86,17 +86,20 @@ final class PhysicalMoveTask implements AutoCloseable {
         double side=length<1.0e-8?Math.hypot(pos.x-from.x,pos.z-from.z):Math.abs((pos.x-from.x)*dz-(pos.z-from.z)*dx)/length;
         if(along<-.3 || along>length+.3 || side>.3)throw new IllegalStateException("Companion deviated from its reserved walking edge");
         double distance=Math.hypot(pos.x-to.x,pos.z-to.z);
-        if(braking || distance<.16){
+        if(braking || distance<.08){
             braking=true;call("setForward",new Class[]{float.class},0f);
             if(previous!=null && previous.distanceToSqr(pos)<1.0e-8 && worker.getDeltaMovement().horizontalDistanceSqr()<1.0e-8)settled++;else settled=0;
             previous=pos;
             if(settled>=3){
-                if(distance>.3)throw new IllegalStateException("Companion did not settle at its planned walking stance");
+                // A .3-cell arrival error can put the player's .6-wide body
+                // across the next cell's face. Correct within the same captured
+                // edge before handing off to native placement.
+                if(distance>.15){braking=false;settled=0;previous=null;return false;}
                 step++;braking=false;settled=0;previous=null;
             }
         }else{
             call("lookAt",new Class[]{Vec3.class},new Vec3(to.x,worker.getEyeY(),to.z));
-            call("setForward",new Class[]{float.class},1f);
+            call("setForward",new Class[]{float.class},distance>.65?1f:.35f);
         }
         return false;
     }
