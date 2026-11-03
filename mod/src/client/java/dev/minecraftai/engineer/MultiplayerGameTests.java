@@ -2096,7 +2096,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(!project.cursors.containsKey(player(s,"Bob").getUUID()),"Revocation deliberately removes Bob's private lesson cursor");
             commandAs(s,"Alice","engineer teach b");commandAs(s,"Alice","engineer pause");});
         write("lesson-followup.done","passed");
-        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
     }
     private static void assertLegacyScopeMigration(EngineeringSession project,int version) {
         var legacy=saved(project);legacy.remove("operationScopes");
@@ -2142,15 +2142,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void designComparisonFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String[] ids=server.computeOnServer(s->{
             var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var dimension=s.overworld().dimension().identifier().toString();
-            String[] out=new String[4];
+            String[] out=new String[5];out[4]=session(s,"Alice").projectId.toString();
             for(int i=0;i<4;i++){
                 var project=java.util.UUID.randomUUID();var session=new EngineeringSession(manager,project,alice,i==2?"minecraft:the_nether":dimension);
                 if(i!=3)session.blueprint=MechanismCatalog.create("signal-lamp",manager.worldId,session.dimension,new BlockPos(400+i*10,100,0),i==1?90:0,1);
                 manager.projects.put(project,session);out[i]=project.toString();
             }
-            session(s,"Alice");return out;
+            return out;
         });
-        String base=ids[0],twin=ids[1],nether=ids[2],empty=ids[3];
+        String base=ids[0],twin=ids[1],nether=ids[2],empty=ids[3],prior=ids[4];
         java.util.function.Function<MinecraftServer,String> fingerprint=s->{var b=new StringBuilder();for(var id:new String[]{base,twin}){var p=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(id));var root=p.assignments.tasks.get("root");
             b.append(p.revision()).append('/').append(p.blueprint.id()).append('/').append(p.blueprint.revision()).append('/').append(p.verified).append('/').append(root==null?"none":root.verified+"@"+root.lastPassedScope).append('/').append(p.journal.size()).append('/').append(p.state).append(';');}return b.toString();};
         String before=server.computeOnServer(fingerprint::apply);
@@ -2183,7 +2183,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         });
         String after=server.computeOnServer(fingerprint::apply);
         check(before.equals(after),"Comparison changed no project, revision, evidence, journal or state: "+before+" -> "+after);
-        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(var id:ids)manager.projects.remove(java.util.UUID.fromString(id));});
+        // Select the earlier project again before removing these, so no selection points at a removed project.
+        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(int i=0;i<4;i++)manager.projects.remove(java.util.UUID.fromString(ids[i]));});
     }
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
@@ -2214,7 +2216,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.level().getBlockState(stone).is(Blocks.STONE) && project.level().getBlockState(chest).is(Blocks.CHEST),"Export reads the selection and leaves it exactly as it was");});
         context.takeScreenshot("engineer-schematic-export");
         importedBuildFlow(context,server);
-        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
     }
     private static void importedBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         MESSAGES.clear();memorySay(context,"Engineer, import schematic safe");expectChat(context,"Untrusted and untested.");int design=storedDesign();
@@ -2313,7 +2315,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-no-world-changes.done","passed");
         if(!LIVE_DISCUSSION && !LIVE_NATURAL){naturalConstructionFlow(context,server);naturalCatalogFlow(context,server);observerFlow(context,server);}
-        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
     }
     private static void observerFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
@@ -2881,7 +2883,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var wal=saved(project);check(wal.get("activeComponent").getAsString().equals("b") && wal.get("undoRequested").getAsBoolean() && wal.getAsJsonArray("baseline").isEmpty(),"Real persisted WAL identifies B with an empty baseline");
         });
         write("undo-context-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
-        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer project use "+prior);server.waitFor(s->session(s,"Alice").projectId.toString().equals(prior));
     }
 
     private static void undoContextRecoveryFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
