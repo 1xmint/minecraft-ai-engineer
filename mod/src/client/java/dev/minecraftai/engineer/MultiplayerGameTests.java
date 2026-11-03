@@ -423,6 +423,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                         lease.validate(target);boolean denied=false;
                         try{lease.validate(target.east());}catch(IllegalStateException expected){denied=true;}
                         check(denied && projectSession.delegation==null,"Survival physical lease reserves exact targets without enabling direct-edit delegation");
+                        String operation=projectSession.activeOperation;projectSession.activeOperation="changed-physical-test";denied=false;
+                        try{lease.validate(target);}catch(IllegalStateException expected){denied=true;}
+                        finally{projectSession.activeOperation=operation;}
+                        check(denied,"Changed operation refuses the next physical action without a revision change");
+                        var support=target.below();var original=projectSession.level().getBlockState(support);
+                        projectSession.level().setBlockAndUpdate(support,Blocks.DIRT.defaultBlockState());denied=false;
+                        try{lease.validate(target);}catch(IllegalStateException expected){denied=true;}
+                        finally{projectSession.level().setBlockAndUpdate(support,original);}
+                        check(denied,"Support edit refuses physical mutation before the next action");
                         manager.selections.remove(human.getUUID());denied=false;
                         try{lease.validate(target);}catch(IllegalStateException expected){denied=true;}
                         finally{manager.selections.put(human.getUUID(),projectSession.projectId);}

@@ -927,3 +927,12 @@ primitive: before production wiring capture accepted operation/assignment basis,
 recheck source/destination/support/path observations at event time, and bind the
 native worker connection through action tickets. validate(target) alone is not a
 complete resource transaction. Latest server/client compilation passed.
+
+Phase33 lease follow-up captures accepted blueprint identity, operation/component
+and assignment basis/generation; an event-time validate refuses changed task
+context even without revision changes. Captured read-only support/path block
+states must still match. Added native dedicated assertions for changed operation
+and edited support. Write cells remain exact-before native action tickets, not
+read snapshots. No production gather/build caller yet; no resource milestone
+completion claim. Server compilation passed; client compilation/CI pending.
+Scoped client compilation also passed for these assertions.
