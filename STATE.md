@@ -4,6 +4,22 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Phase30 optional visible companion, work/physical-companion,
+phase/30-physical-companion, based on combined core0df5e59. Outcomes:
+
+- N1: owner says summon my companion and sees an empty survival player-like actor
+  in a checked3x3 stone/air workspace; unsupported optional dependency explains
+  refusal. Proof: actual native Carpet lifecycle plus chat routing/absence tests.
+- N2: viewer/editor cannot summon another owner's actor; owner can dismiss;
+  disconnect, selection/grant/revision change removes actor without restoring an
+  action. Proof: native denial/lifecycle cases and eventual dedicated player flow.
+- N3: actor receives no project grants; default-deny action gate prevents item,
+  mining and entity interactions. Existing mod works without Carpet. Proof: retained
+  phase29 native refusal suite and normal full CI without optional dependency.
+  Implementation uses proven optional Carpet26.3 reflection (no account lookup),
+  server-owned lifecycle and adopted event-time guards. No construction/gathering or
+  general movement claimed until separate executor/navigation/restart proof.
+
 Inspected source29785a2 / CI41533141692 Fabric artifact at
 work/imported-native-41533141692: all158 required native tests passed. This source
 includes imported182-material runtime admission and exact snapshot parity,
