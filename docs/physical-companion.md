@@ -89,3 +89,14 @@ reserves the plan reads, rechecks preceding intended cells and the accepted
 assignment, and uses the same native retained-item placement. It does not grant
 ownership of matching preexisting blocks, fabricate creative undo history, mark
 the blueprint completed or grant a functional pass.
+
+Development job: say `Engineer, gather dirt and build this blueprint` after
+summoning the companion. It handles up to 32 dirt cells in a single-root
+stone/dirt blueprint whose stone supports already match. It observes candidate
+dirt sources in the selected workspace at request time, gathers one real item,
+places the next planned cell, and repeats. Sources must be reachable through the
+bounded clear three-wide stone corridor near the next cell. One lateral block of
+pickup drift is allowed inside that same reserved corridor. No teleport,
+material supply or creative fallback is used. Dismissal, connection/grant changes,
+plan edits or inaccessible resources stop the job. Matching geometry remains
+untested; unfinished records do not restore actions after restart.

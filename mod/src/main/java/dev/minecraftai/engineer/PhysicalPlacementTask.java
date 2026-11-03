@@ -42,7 +42,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
             reads.add(cell.immutable());
         }
         reads.addAll(planReads);
-        lease=new PhysicalWorkLease(manager,project,project.player(),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
+        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
         file=manager.directory.resolve(project.projectId+".place-"+UUID.randomUUID()+".json");
         record.addProperty("schemaVersion",1);record.addProperty("world",manager.worldId);record.addProperty("dimension",project.dimension);
         record.addProperty("project",project.projectId.toString());record.addProperty("worker",worker.getUUID().toString());

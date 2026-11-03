@@ -19,6 +19,7 @@ final class PhysicalCompanions {
     private final Map<UUID,Binding> actors=new HashMap<>();
     private final Map<UUID,PhysicalGatherTask> gathering=new HashMap<>();
     private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
+    private final Map<UUID,PhysicalBlueprintJob> jobs=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
     boolean handle(EngineeringSession project,String request){
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
@@ -26,25 +27,32 @@ final class PhysicalCompanions {
         boolean gatherRequest=gather.matches();
         var place=java.util.regex.Pattern.compile("place retained dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
-        if(!gatherRequest && !placeRequest && !blueprintRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
+        boolean jobRequest=text.equals("gather dirt and build this blueprint");
+        if(!gatherRequest && !placeRequest && !blueprintRequest && !jobRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(gathering.containsKey(project.projectId)?". It is gathering your requested dirt block.":". It is idle. Construction has not started."));return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained dirt.":gathering.containsKey(project.projectId)?". It is gathering your requested dirt block.":". It is idle."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
+        if(jobRequest){
+            var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
+            jobs.put(project.projectId,new PhysicalBlueprintJob(manager,project,binding.actor,binding.pack));
+            project.tell("Your companion will gather nearby dirt and place the supported blueprint cells. Say 'dismiss my companion' to stop. Geometry alone will not prove it works.");return true;
+        }
         if(blueprintRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
-            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
             var step=PhysicalBlueprintStep.select(project);
             placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,step.target(),step.reads(),step.intention()));
             project.tell("Your companion is placing the next blueprint dirt cell using its retained item. This does not verify the blueprint.");return true;
         }
         if(placeRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
-            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
             var target=new BlockPos(Integer.parseInt(place.group(1)),Integer.parseInt(place.group(2)),Integer.parseInt(place.group(3)));
             placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target));
             project.tell("Your companion is placing its retained dirt through a native survival action.");return true;
@@ -52,7 +60,7 @@ final class PhysicalCompanions {
         if(gatherRequest){
             var binding=actors.get(project.projectId);
             if(binding==null)throw new IllegalStateException("Summon your companion first");
-            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId))throw new IllegalStateException("Stop the current task by dismissing your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current task by dismissing your companion first");
             var source=new BlockPos(Integer.parseInt(gather.group(1)),Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)));
             gathering.put(project.projectId,new PhysicalGatherTask(manager,project,binding.actor,binding.pack,source));
             project.tell("Your companion is gathering one dirt block from the requested location. Say 'dismiss my companion' to stop.");return true;
@@ -110,6 +118,7 @@ final class PhysicalCompanions {
     private void dismiss(UUID project){
         var binding=actors.get(project);if(binding==null)return;
         RuntimeException failure=null;
+        var job=jobs.remove(project);if(job!=null)try{job.close();}catch(RuntimeException stopped){failure=stopped;}
         var task=gathering.remove(project);if(task!=null)try{task.close();}catch(RuntimeException stopped){failure=stopped;}
         var placement=placing.remove(project);if(placement!=null)try{placement.close();}catch(RuntimeException stopped){failure=stopped;}
         try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
@@ -129,7 +138,13 @@ final class PhysicalCompanions {
             var project=binding.project;var owner=manager.server.getPlayerList().getPlayer(binding.owner);
             if(owner==null || owner.hasDisconnected() || owner.connection!=binding.ownerConnection || !project.access.allows(binding.owner,ProjectAccess.Permission.BUILD)
                 || project.revision()!=binding.revision || project.access.revision()!=binding.authorization || !Objects.equals(manager.selections.get(binding.owner),project.projectId)
-                || owner.level()!=project.level() || !binding.actor.isAlive() || binding.actor.hasDisconnected() || !project.contains(binding.actor.blockPosition()) || !gathering.containsKey(project.projectId) && !binding.actor.blockPosition().equals(binding.spawn)){dismiss(project.projectId);continue;}
+                || owner.level()!=project.level() || !binding.actor.isAlive() || binding.actor.hasDisconnected() || !project.contains(binding.actor.blockPosition()) || !gathering.containsKey(project.projectId) && !jobs.containsKey(project.projectId) && !binding.actor.blockPosition().equals(binding.spawn)){dismiss(project.projectId);continue;}
+            var job=jobs.get(project.projectId);if(job!=null){
+                try{if(job.tick()){
+                    jobs.remove(project.projectId);actors.put(project.projectId,new Binding(project,binding.owner,binding.ownerConnection,binding.revision,binding.authorization,binding.actor,binding.pack,binding.actor.blockPosition()));
+                }}catch(RuntimeException stopped){dismiss(project.projectId);projectMessage(binding,"Blueprint job stopped. Inspect the blueprint and resources before a fresh request: "+stopped.getMessage());}
+                continue;
+            }
             var task=gathering.get(project.projectId);if(task!=null)try{
                 if(task.tick()){
                     gathering.remove(project.projectId);

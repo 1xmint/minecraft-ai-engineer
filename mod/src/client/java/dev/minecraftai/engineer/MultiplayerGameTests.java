@@ -537,7 +537,31 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->check(session(s,"Alice").verified.equals("untested") && session(s,"Alice").journal.isEmpty(),"Physical geometry does not fabricate a functional pass or creative undo history"));
             write("physical-blueprint.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
+            physicalBlueprintJobFlow(context,server);
         }
+    }
+    private static void physicalBlueprintJobFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2496 -16 2520 32");server.runCommand("fill 2500 100 0 2505 100 9 minecraft:stone");
+        server.runCommand("setblock 2501 101 3 minecraft:dirt");server.runCommand("setblock 2501 101 5 minecraft:dirt");server.runCommand("tp Alice 2504.5 101 8 180 0");
+        send(context,"engineer select1 2500 100 0");send(context,"engineer select2 2504 102 6");server.waitFor(s->new BlockPos(2504,102,6).equals(session(s,"Alice").corner2));
+        server.runOnServer(s->{var project=session(s,"Alice");var source=ImportedBlueprintGameTests.source();
+            source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());source.addProperty("rotation",0);source.add("anchor",Blueprint.jsonPos(new BlockPos(2503,101,3)));
+            var template=source.getAsJsonArray("blocks").get(0).getAsJsonObject();var blocks=new com.google.gson.JsonArray();
+            for(int z=0;z<2;z++){var support=template.deepCopy();support.add("pos",Blueprint.jsonPos(new BlockPos(0,-1,z)));blocks.add(support);}
+            for(int z=0;z<2;z++){var cell=template.deepCopy();cell.add("pos",Blueprint.jsonPos(new BlockPos(0,0,z)));cell.addProperty("state","minecraft:dirt");blocks.add(cell);}
+            source.add("blocks",blocks);project.accept(Blueprint.parse(source,project.worldId,project.dimension));
+        });
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(player(s,"Alice").gameMode.getGameModeForPlayer()==net.minecraft.world.level.GameType.SURVIVAL && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Batch starts with a survival owner and no supplied worker inventory"));
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells");
+        server.runOnServer(s->{var project=session(s,"Alice");check(s.overworld().getBlockState(new BlockPos(2501,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2501,101,5)).isAir()
+            && s.overworld().getBlockState(new BlockPos(2503,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2503,101,4)).is(Blocks.DIRT)
+            && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Two native gathered resources become two intended cells without inventory supply");
+            check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"Batch geometry fabricates neither functional proof nor creative history/lease");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-job.done","passed");
     }
     private static void physicalPeer(ClientGameTestContext context) throws Exception {
         connect(context,1);write("physical-bob.connected","ready");awaitFile(context,"physical-shared");

@@ -1100,3 +1100,28 @@ walk/pickup/save. Also asserts clone cleanup preserves registration. Luna found
 no bypass; null-entry race hardened per review. This addresses a real code bug;
 whether it explains all stochastic pickup failures still needs exact-source CI.
 Final scoped compilation pending; no passing new gameplay claim.
+
+Phase35 isolates a bounded native blueprint job from PR51: fixed owner/worker
+connections, blueprint identity/revision, authorization and assignment basis/gen
+across phases; all planned cells carry expected world observations. Candidate
+resource positions are observed at request time in <=4096 workspace cells and
+exclude every plan cell. Up to32 dirt cells; stone supports must already match,
+known resource count must suffice, inventory empty or one retained dirt. Native
+gather/save then native placement/save repeat; expected geometry advances only
+after native placement evidence plus verified player save. Plan reads and job
+fence are present in each phase's event callbacks, including between-phase
+revalidation. Dismiss closes active phase; no restored job or creative fallback.
+Pure gather admission is shared with source selection. Worker can start one lateral
+cell off its source column after pickup drift, staying within the same reserved
+three-wide clear stone corridor. Completion is a geometry observation, never a
+functional pass or inferred ownership of old blocks.
+
+CI adds actual ownerSURVIVAL one-request two-cell construction from two initially
+existing dirt sources, empty supplied inventory, and no creative journal/pass.
+Luna boundary review found no material phase handoff/auth/resource-creation issue.
+AGENTS clarifies the already-authorized native survival exception separately from
+creative direct edits. Sourceae01437 single-step CI41688767809 SUCCESS; downloaded
+physical-blueprint.done and actual next-cell/native placement chat inspected.
+Phase35 server/client compilation passed before final wording/resource admission;
+final compile and new native job CI pending. General materials, tool/crafting,
+robust navigation, composite scheduling and arbitrary crash recovery remain open.
