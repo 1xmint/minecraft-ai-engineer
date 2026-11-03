@@ -11,6 +11,7 @@ final class PhysicalResourceTask implements AutoCloseable {
     private final ServerPlayer worker;
     private final Object pack;
     private final BlockPos source;
+    private final net.minecraft.world.level.block.state.BlockState sourceState;
     private final Set<BlockPos> planReads;
     private final Runnable intention;
     private PhysicalMoveTask movement;
@@ -21,9 +22,11 @@ final class PhysicalResourceTask implements AutoCloseable {
     }
     PhysicalResourceTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source,Set<BlockPos> planReads,Runnable intention){
         this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;this.source=source.immutable();this.planReads=Set.copyOf(planReads);this.intention=intention;
+        if(!project.contains(source) || !project.level().hasChunkAt(source))throw new IllegalStateException("Requested resource must be loaded inside this workspace");
+        sourceState=project.level().getBlockState(source);PhysicalMaterial.source(sourceState);
         var stance=stance(project,worker,source);
         if(stance.equals(worker.blockPosition()))gather=new PhysicalGatherTask(manager,project,worker,pack,source,planReads,intention);
-        else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,planReads,intention);
+        else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,planReads,()->{intention.run();requireOriginalSource();});
     }
     static BlockPos stance(EngineeringSession project,ServerPlayer worker,BlockPos source){
         try{PhysicalGatherTask.readFootprint(project,worker,source);return worker.blockPosition().immutable();}catch(IllegalStateException notAdjacent){/* Search reachable original stances, never edit a path. */}
@@ -44,6 +47,7 @@ final class PhysicalResourceTask implements AutoCloseable {
         if(movement!=null){
             if(movement.tick()){
                 movement=null;
+                requireOriginalSource();
                 // The movement lease is already closed. Recheck the actual final
                 // stance, current source and owner authority before issuing any mine ticket.
                 gather=new PhysicalGatherTask(manager,project,worker,pack,source,planReads,intention);
@@ -51,6 +55,9 @@ final class PhysicalResourceTask implements AutoCloseable {
             return false;
         }
         if(gather.tick()){gather=null;closed=true;return true;}return false;
+    }
+    private void requireOriginalSource(){
+        if(!project.level().hasChunkAt(source) || !project.level().getBlockState(source).equals(sourceState))throw new IllegalStateException("Requested resource changed during walking; request fresh work after inspection");
     }
     @Override public void close(){
         try{if(movement!=null)movement.close();}finally{try{if(gather!=null)gather.close();}finally{closed=true;}}

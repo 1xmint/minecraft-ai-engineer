@@ -36,7 +36,7 @@ final class PhysicalGatherTask implements AutoCloseable {
         expires=manager.server.getTickCount()+1200;
         try {
             journal=new PhysicalGatherRecord(manager.directory,manager.worldId,project.projectId,worker,source,this::authority);
-            PhysicalActionGate.arm(worker,"mine",source,Blocks.DIRT.defaultBlockState(),expires,this::authority,journal::prepareMine);
+            PhysicalActionGate.arm(worker,"mine",source,level.getBlockState(source),expires,this::authority,journal::prepareMine);
             call("lookAt",new Class[]{Vec3.class},Vec3.atCenterOf(source));
             Class type=Class.forName("carpet.helpers.EntityPlayerActionPack$ActionType"),action=Class.forName("carpet.helpers.EntityPlayerActionPack$Action");
             call("start",new Class[]{type,action},java.lang.Enum.valueOf(type,"ATTACK"),action.getMethod("continuous").invoke(null));
@@ -52,14 +52,24 @@ final class PhysicalGatherTask implements AutoCloseable {
         if(source.getY()!=start.getY() || sideOffset>1 || distance<2 || distance>4 || !worker.getInventory().isEmpty())
             throw new IllegalStateException("Gather one dirt block two to four blocks straight ahead along a clear level path, with an empty companion inventory");
         var reads=new HashSet<BlockPos>();
+        if(!project.contains(source) || !project.level().hasChunkAt(source))throw new IllegalStateException("Requested resource must be loaded inside this workspace");
+        var material=PhysicalMaterial.source(project.level().getBlockState(source));
         var origin=new BlockPos(alongX?start.getX():source.getX(),start.getY(),alongX?source.getZ():start.getZ());
         for(int step=0;step<=distance;step++)for(int side=-1;side<=1;side++)for(int y=-1;y<=1;y++) {
             var cell=origin.offset(alongX?Integer.signum(dx)*step:side,y,alongX?side:Integer.signum(dz)*step);
             reads.add(cell.immutable());
             if(!project.contains(cell) || !project.level().hasChunkAt(cell))throw new IllegalStateException("Gather path must be loaded inside this workspace");
             var state=project.level().getBlockState(cell);
-            if(cell.equals(source)?!state.is(Blocks.DIRT):y==-1?!state.is(Blocks.STONE):!state.isAir())
-                throw new IllegalStateException("Gathering needs a clear three-wide stone-supported path to exactly one dirt block");
+            if(cell.equals(source)?!state.is(material.block):y==-1?!state.is(Blocks.STONE):!state.isAir())
+                throw new IllegalStateException("Gathering needs a clear three-wide stone-supported path to exactly one supported resource");
+        }
+        if(material==PhysicalMaterial.OAK_LOG)for(var cell:BlockPos.betweenClosed(source.offset(-1,-1,-1),source.offset(1,1,1))){
+            if(cell.equals(source))continue;
+            if(!project.contains(cell) || !project.level().hasChunkAt(cell))throw new IllegalStateException("Oak log surroundings must be loaded inside this workspace");
+            var state=project.level().getBlockState(cell);
+            if(cell.getY()<source.getY()?!state.is(Blocks.STONE):!state.isAir() && !state.is(Blocks.STONE) && !state.is(Blocks.DIRT))
+                throw new IllegalStateException("Only an isolated oak log with inert surroundings is supported; trees and leaves are unfinished");
+            reads.add(cell.immutable());
         }
         reads.remove(source);
         var bounds=new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(origin),Vec3.atLowerCornerOf(source)).inflate(1,1,1);

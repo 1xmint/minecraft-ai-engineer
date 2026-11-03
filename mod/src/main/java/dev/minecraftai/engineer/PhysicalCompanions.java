@@ -23,7 +23,7 @@ final class PhysicalCompanions {
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
     boolean handle(EngineeringSession project,String request){
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
-        var gather=java.util.regex.Pattern.compile("gather dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
+        var gather=java.util.regex.Pattern.compile("gather (dirt|oak log) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
         var place=java.util.regex.Pattern.compile("place retained dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
@@ -32,7 +32,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained dirt.":gathering.containsKey(project.projectId)?". It is gathering your requested dirt block.":". It is idle."));return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained dirt.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
@@ -61,9 +61,11 @@ final class PhysicalCompanions {
             var binding=actors.get(project.projectId);
             if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current task by dismissing your companion first");
-            var source=new BlockPos(Integer.parseInt(gather.group(1)),Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)));
+            var source=new BlockPos(Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)),Integer.parseInt(gather.group(4)));
+            var material=gather.group(1).equals("dirt")?PhysicalMaterial.DIRT:PhysicalMaterial.OAK_LOG;
+            if(!project.contains(source) || !project.level().hasChunkAt(source) || !project.level().getBlockState(source).is(material.block))throw new IllegalStateException("Requested resource does not match a loaded source inside this workspace");
             gathering.put(project.projectId,new PhysicalResourceTask(manager,project,binding.actor,binding.pack,source));
-            project.tell("Your companion is gathering one dirt block from the requested location. Say 'dismiss my companion' to stop.");return true;
+            project.tell("Your companion is gathering one "+(material==PhysicalMaterial.DIRT?"dirt block":"oak log")+" from the requested location. Say 'stop' to stop.");return true;
         }
         if(text.equals("dismiss my companion")){dismiss(project.projectId);project.tell("Physical companion dismissed. No new work was delegated.");return true;}
         summon(project);project.tell("Your physical companion is here. It is a survival actor, currently idle. Saved resources are retained. Say 'dismiss my companion' to remove it.");return true;
@@ -166,7 +168,7 @@ final class PhysicalCompanions {
                 if(task.tick()){
                     gathering.remove(project.projectId);
                     actors.put(project.projectId,new Binding(project,binding.owner,binding.ownerConnection,binding.revision,binding.authorization,binding.actor,binding.pack,binding.actor.blockPosition()));
-                    project.tell("Your companion gathered one dirt block and verified its saved inventory. Construction has not started.");
+                    project.tell("Your companion gathered one resource and verified its saved inventory. Construction has not started.");
                 }
             }catch(RuntimeException stopped){
                 dismiss(project.projectId);project.tell("Gathering stopped. Inspect the source, dropped resources and saved inventory before another request: "+stopped.getMessage());
