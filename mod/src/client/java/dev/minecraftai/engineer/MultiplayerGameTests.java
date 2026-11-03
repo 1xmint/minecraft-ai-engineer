@@ -424,6 +424,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 write("physical-project",project);write("physical-shared","ready");awaitFile(context,"physical-peer-denied.done");
                 server.runOnServer(s->check(s.getPlayerList().getPlayer(actor)!=null,"Denied peer summon/dismiss leaves the owner's actor present"));
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");server.waitFor(s->s.getPlayerList().getPlayer(actor)==null);
+                server.runOnServer(s->{
+                    var manager=EngineerMod.managerFor(s);var projectSession=session(s,"Alice");
+                    var identity=PhysicalWorkerIdentity.open(manager,projectSession);
+                    check(identity.restore() && identity.id().equals(actor),"Dismiss retains the exact project worker identity");
+                    var path=manager.directory.resolve(projectSession.projectId+".physical-worker.json");
+                    try {
+                        String original=Files.readString(path);var bad=JsonParser.parseString(original).getAsJsonObject();
+                        bad.addProperty("owner",UUID.randomUUID().toString());LocalFiles.write(path,bad);
+                        boolean denied=false;
+                        try{PhysicalWorkerIdentity.open(manager,projectSession);}catch(IllegalStateException expected){denied=true;}
+                        check(denied && JsonParser.parseString(Files.readString(path)).equals(bad),"Mismatched owner refuses recovery without resetting identity");
+                        Files.writeString(path,original);
+                    }catch(java.io.IOException failure){throw new IllegalStateException(failure);}
+                });
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 oldActor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
                 gatherAndSaveWorker(server,resourceWorker,resourceName);
@@ -453,7 +467,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"No physical companion is present");
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             UUID fresh=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
-            server.runOnServer(s->check(!fresh.equals(oldActor) && session(s,"Alice").delegation==null && !session(s,"Alice").access.allows(fresh,ProjectAccess.Permission.BUILD),"Explicit post-restart summon creates a fresh unprivileged actor, never an old lease"));
+            server.runOnServer(s->check(fresh.equals(oldActor) && session(s,"Alice").delegation==null && !session(s,"Alice").access.allows(fresh,ProjectAccess.Permission.BUILD),"Explicit post-restart summon restores the project identity without an old lease or grants"));
             connection.waitForClientboundPackets();context.waitTicks(20);context.runOnClient(client->check(client.level.getPlayerByUUID(fresh)!=null,"Reconnected actual client receives the newly requested actor"));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-restart.done","passed");

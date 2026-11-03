@@ -53,9 +53,11 @@ final class PhysicalCompanions {
         if(!level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,box).isEmpty())throw new IllegalStateException("Move players and entities out of the companion's spawn space first");
         ServerPlayer actor=null;
         try{
-            var id=UUID.randomUUID();var profile=new GameProfile(id,"Eng_"+id.toString().substring(0,8));var client=ClientInformation.createDefault();
-            if(manager.server.getPlayerList().getPlayerByName(profile.name())!=null)throw new IllegalStateException("Companion identity collision; ask again");
+            var identity=PhysicalWorkerIdentity.open(manager,project);
+            var id=identity.id();var profile=new GameProfile(id,"Eng_"+id.toString().substring(0,8));var client=ClientInformation.createDefault();
+            if(manager.server.getPlayerList().getPlayer(id)!=null || manager.server.getPlayerList().getPlayerByName(profile.name())!=null)throw new IllegalStateException("Companion identity is already connected; no player was replaced");
             actor=(ServerPlayer)Class.forName("carpet.patches.EntityPlayerMPFake").getMethod("respawnFake",net.minecraft.server.MinecraftServer.class,net.minecraft.server.level.ServerLevel.class,GameProfile.class,ClientInformation.class).invoke(null,manager.server,level,profile,client);
+            if(identity.restore())PhysicalWorkerStorage.restore(actor);
             // Register default denial before the actor can enter any native player tick.
             PhysicalActionGate.register(actor);
             var connection=(Connection)Class.forName("carpet.patches.FakeClientConnection").getConstructor(PacketFlow.class).newInstance(PacketFlow.SERVERBOUND);
@@ -65,9 +67,10 @@ final class PhysicalCompanions {
             actor.snapTo(spawn.getX()+0.5,spawn.getY(),spawn.getZ()+0.5,0,0);
             if(!actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an empty unprivileged identity");
             var pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);pack.getClass().getMethod("stopAll").invoke(pack);
+            PhysicalWorkerStorage.save(actor);
             actors.put(project.projectId,new Binding(project,owner.getUUID(),owner.connection,project.revision(),project.access.revision(),actor,pack,spawn));
         }catch(Exception failed){
-            if(actor!=null){manager.server.getPlayerList().remove(actor);PhysicalActionGate.forget(actor);}
+            if(actor!=null){if(manager.server.getPlayerList().getPlayer(actor.getUUID())==actor)manager.server.getPlayerList().remove(actor);PhysicalActionGate.forget(actor);}
             throw new IllegalStateException("Physical companion could not be created safely; no construction was started",failed);
         }
     }

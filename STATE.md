@@ -899,3 +899,13 @@ Runner was still executing later generated-truth-table checks under native lag.
 Expanded suite now gets29-minute clients,30-minute harness,35-minute job including
 setup. No expected behavior, game tick windows, per-stage wait or case count was
 changed. Shell syntax check passes; fresh full CI required, not a milestone pass.
+
+2026-11-03: phase33 adds a private world/dimension/project/owner-bound worker
+identity. Explicit resummon loads the same native profile before joining; missing
+native data and connected UUID/name collisions refuse without replacement. Native
+save reloads into an unjoined player and compares all inventory slots/components.
+No permissions or action tickets persist. Production remains idle and empty-only;
+resource gathering/building is unfinished. Scoped server/client compilation passed.
+Dedicated CI adds same-identity restart and owner-mismatch/no-reset assertions;
+that new source is not yet proven by CI. Hard-crash cross-file atomicity is not
+claimed.

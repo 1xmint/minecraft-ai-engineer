@@ -45,3 +45,10 @@ permissions removes the actor. Moving it out of its idle position also removes
 it. Server shutdown stops and removes it; restart does not automatically summon
 it or grant any action authority. These lifecycle cases still require the stated
 CI and multiplayer proofs before release.
+
+Each project keeps a private worker identity. An explicit resummon reuses it and
+loads native player data before joining; missing data or a conflicting connected
+identity refuses the request. Saving reloads and compares inventory contents.
+No permission, connection or action ticket is recovered. Production actors still
+require empty inventories while resource execution is unfinished. This does not
+provide atomic recovery across inventory and world files after a hard crash.
