@@ -44,7 +44,9 @@ final class PhysicalGatherTask implements AutoCloseable {
     }
     /** Same pure admission used by the dispatcher and the actual executor. */
     static java.util.Set<BlockPos> readFootprint(EngineeringSession project,ServerPlayer worker,BlockPos source) {
-        var start=worker.blockPosition();
+        return readFootprint(project,worker,source,worker.blockPosition());
+    }
+    static java.util.Set<BlockPos> readFootprint(EngineeringSession project,ServerPlayer worker,BlockPos source,BlockPos start) {
         int dx=source.getX()-start.getX(),dz=source.getZ()-start.getZ();
         boolean alongX=Math.abs(dx)>Math.abs(dz);int distance=alongX?Math.abs(dx):Math.abs(dz),sideOffset=alongX?Math.abs(dz):Math.abs(dx);
         if(source.getY()!=start.getY() || sideOffset>1 || distance<2 || distance>4 || !worker.getInventory().isEmpty())

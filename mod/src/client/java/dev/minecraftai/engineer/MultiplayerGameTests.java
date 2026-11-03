@@ -497,6 +497,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-restart.done","passed");
             physicalGatherStopFlow(context,server);
+            physicalNavigationFlow(context,server);
             UUID beforeGatherProject=server.computeOnServer(s->session(s,"Alice").projectId);
             send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(beforeGatherProject));
             server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
@@ -603,6 +604,37 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Two native gathered resources become two intended cells without inventory supply");
             check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"Batch geometry fabricates neither functional proof nor creative history/lease");});
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-job.done","passed");
+    }
+    private static void physicalNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
+        server.runCommand("forceload add 2528 -16 2576 32");server.runCommand("fill 2540 100 0 2555 100 12 minecraft:stone");
+        server.runCommand("fill 2544 101 0 2544 102 7 minecraft:stone");server.runCommand("setblock 2550 101 3 minecraft:dirt");server.runCommand("tp Alice 2554.5 101 11 180 0");
+        send(context,"engineer select1 2540 100 0");send(context,"engineer select2 2555 102 12");server.waitFor(s->new BlockPos(2555,102,12).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->{
+            var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            try(var motion=new PhysicalMoveTask(EngineerMod.managerFor(s),project,body,inventoryPack(body),new BlockPos(2548,101,3),()->{})){
+                check(!body.gameMode.destroyBlock(new BlockPos(2544,101,1)),"Exclusive movement never grants a native mine ticket");
+                var support=body.blockPosition().below();s.overworld().setBlockAndUpdate(support,Blocks.DIRT.defaultBlockState());
+                boolean refused=false;try{motion.tick();}catch(IllegalStateException expected){refused=true;}
+                check(refused && countDirt(body)==0 && s.overworld().getBlockState(new BlockPos(2550,101,3)).is(Blocks.DIRT),"A player route-support edit stops movement before native resource work");
+                s.overworld().setBlockAndUpdate(support,Blocks.STONE.defaultBlockState());
+            }
+        });
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2550 101 3");expectChat(context,"gathering one dirt block");
+        server.waitFor(s->{var body=s.getPlayerList().getPlayer(worker);return body!=null && body.getZ()>2.5;},30_000);
+        MESSAGES.clear();say(context,"Engineer, stop");expectChat(context,"Physical work stopped. Saved inventory was checked");
+        server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2550,101,3)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Actual owner stop during navigation leaves the distant source and inventory untouched"));
+        // Explicitly resummon after the stop: no old route or action authority resumes.
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2550 101 3");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory",90_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && countDirt(body)==1 && body.getX()>2544 && s.overworld().getBlockState(new BlockPos(2550,101,3)).isAir(),"Actual owner chat walks around the wall, mines a real resource, picks up its exact drop and saves it");
+            for(int z=0;z<=7;z++)for(int y=101;y<=102;y++)check(s.overworld().getBlockState(new BlockPos(2544,y,z)).is(Blocks.STONE),"Navigation never cuts through the obstacle");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-navigation.done","passed");
     }
     private static void physicalGatherStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));

@@ -106,3 +106,5 @@ core work. Only the project owner can stop its active physical companion. The
 worker's current inventory is saved and checked before it becomes idle. Unfinished
 resource records remain available for inspection; stopping never recreates a
 resource or resumes an old action. A new request is required to continue.
+
+Development navigation (not yet gameplay-proven): the same gather request can plan a bounded flat route to a valid mining stance when the resource is beyond the straight corridor. The selected workspace must contain stone-supported walking cells, two clear body blocks and inert surroundings. Routes use native forward input, never teleport or cut through obstacles. Movement holds exclusive occupancy, not block-write authority; edits, entities, deviation or owner authority changes stop it. On arrival, a fresh narrow gather lease and native mine/pickup tickets are required. Stairs, jumps, hazards, mechanisms and general terrain remain unsupported. Batch blueprint jobs still use their existing short resource paths.

@@ -17,7 +17,7 @@ final class PhysicalCompanions {
     private record Binding(EngineeringSession project,UUID owner,Object ownerConnection,int revision,long authorization,ServerPlayer actor,Object pack,BlockPos spawn) { }
     private final ProjectManager manager;
     private final Map<UUID,Binding> actors=new HashMap<>();
-    private final Map<UUID,PhysicalGatherTask> gathering=new HashMap<>();
+    private final Map<UUID,PhysicalResourceTask> gathering=new HashMap<>();
     private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
     private final Map<UUID,PhysicalBlueprintJob> jobs=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
@@ -62,7 +62,7 @@ final class PhysicalCompanions {
             if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current task by dismissing your companion first");
             var source=new BlockPos(Integer.parseInt(gather.group(1)),Integer.parseInt(gather.group(2)),Integer.parseInt(gather.group(3)));
-            gathering.put(project.projectId,new PhysicalGatherTask(manager,project,binding.actor,binding.pack,source));
+            gathering.put(project.projectId,new PhysicalResourceTask(manager,project,binding.actor,binding.pack,source));
             project.tell("Your companion is gathering one dirt block from the requested location. Say 'dismiss my companion' to stop.");return true;
         }
         if(text.equals("dismiss my companion")){dismiss(project.projectId);project.tell("Physical companion dismissed. No new work was delegated.");return true;}
