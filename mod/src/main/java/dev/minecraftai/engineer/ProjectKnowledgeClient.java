@@ -77,16 +77,18 @@ final class ProjectKnowledgeClient {
                 var notes=knowledge.getAsJsonArray("notes");tell(f,"Shared project notes, revision "+revision+". Owner-authored requirements, not observed or verified world state.");
                 if(notes.isEmpty())tell(f,"No project notes recorded yet.");
                 for(int i=Math.max(0,notes.size()-8);i<notes.size();i++){
-                    var note=notes.get(i).getAsJsonObject();tell(f,"Note "+number(note.get("revision"))+" ("+string(note.get("kind"),32)+"): "+string(note.get("text"),512));
+                    var note=notes.get(i).getAsJsonObject();tell(f,"Note "+number(note.get("revision"))+" ("+string(note.get("kind"),32)+"): "+string(note.get("text"),512)+details(note));
                 }
                 if(notes.size()>8 || knowledge.get("hasEarlier").getAsBoolean())tell(f,"Showing recent notes; earlier history remains stored in the companion.");
             }catch(RuntimeException invalid){tell(f,"Project notes unavailable or changed; select the project and read notes again.");}
             finally{finish(f);}
         }));
     }
-    void remember(EngineeringSession s,String kind,String text) {
+    void remember(EngineeringSession s,String kind,String text) {remember(s,kind,text,null,0);}
+    /** Without a reason or replacement the request body stays the version 1 note, so existing flows are unchanged. */
+    void remember(EngineeringSession s,String kind,String text,String rationale,int supersedes) {
         if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner may author shared project notes");
-        if(!KINDS.contains(kind) || text==null || text.isBlank() || text.length()>512 || text.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))
+        if(!KINDS.contains(kind) || !literal(text) || rationale!=null && !literal(rationale) || supersedes<0)
             throw new IllegalArgumentException("Choose goal, constraint, preference or decision and literal text within 512 characters");
         cancelDiscussion(s);var f=start(s);try{EngineerMod.knowledgeChanging(s);}catch(RuntimeException failure){finish(f);throw failure;}
         tell(f,"Recording an owner-authored shared project "+kind+"; no model request or world changes.");
@@ -97,17 +99,27 @@ final class ProjectKnowledgeClient {
                 if(error!=null)throw new IllegalStateException("Project knowledge unavailable");
                 long expected=validateKnowledge(reply.getAsJsonObject("knowledge"),s.owner);
                 if(!s.owner.equals(f.actor))throw new IllegalStateException("Note ownership changed");
-                var note=new JsonObject();note.addProperty("schemaVersion",1);note.addProperty("kind",kind);note.addProperty("text",text);
+                boolean extended=rationale!=null || supersedes>0;
+                var note=new JsonObject();note.addProperty("schemaVersion",extended?2:1);note.addProperty("kind",kind);note.addProperty("text",text);
+                if(rationale!=null)note.addProperty("rationale",rationale);
+                if(supersedes>0)note.addProperty("supersedes",supersedes);
                 var body=new JsonObject();body.add("note",note);body.addProperty("expectedRevision",expected);
                 f.future=request(f,"/v2/knowledge/note",body);
                 f.future.whenComplete((recorded,failure)->manager.server.execute(()->{
                     if(!current(f)){finish(f);return;}
                     try {
-                        if(failure!=null)throw new IllegalStateException("Note write not confirmed");
+                        if(failure!=null){
+                            String refusal=refusal(failure);
+                            if(supersedes>0 && refusal!=null){tell(f,refusal+" Nothing was saved.");return;}
+                            throw new IllegalStateException("Note write not confirmed");
+                        }
                         var saved=recorded.getAsJsonObject("note");validateNote(saved,s.owner);
-                        if(number(saved.get("revision"))!=expected+1 || !kind.equals(string(saved.get("kind"),32)) || !text.equals(string(saved.get("text"),512)))
+                        if(number(saved.get("revision"))!=expected+1 || !kind.equals(string(saved.get("kind"),32)) || !text.equals(string(saved.get("text"),512))
+                                || number(saved.get("schemaVersion"))!=(extended?2:1)
+                                || !Objects.equals(rationale,saved.has("rationale")?string(saved.get("rationale"),512):null)
+                                || supersedes!=(saved.has("supersedes")?number(saved.get("supersedes")):0))
                             throw new IllegalStateException("Companion recorded a different literal note");
-                        tell(f,"Remembered shared project "+kind+" at knowledge revision "+(expected+1)+". Blueprint and world evidence unchanged.");
+                        tell(f,"Remembered shared project "+kind+" at knowledge revision "+(expected+1)+"."+(rationale!=null?" Reason kept.":"")+(supersedes>0?" Replaces note "+supersedes+".":"")+" Blueprint and world evidence unchanged.");
                     }catch(RuntimeException invalid){tell(f,"Project-note write not confirmed. Read notes before retrying; no automatic retry.");}
                     finally{finish(f);}
                 }));
@@ -225,12 +237,32 @@ final class ProjectKnowledgeClient {
         if(value.get("hasEarlier").getAsBoolean()!=(revision>notes.size()))throw new IllegalArgumentException("Knowledge page summary mismatch");
         return revision;
     }
-    private static void validateNote(JsonObject value,UUID owner) {
-        if(value==null || !value.keySet().equals(Set.of("schemaVersion","kind","text","id","revision","authorId","createdAt","source"))
-                || number(value.get("schemaVersion"))!=1 || number(value.get("revision"))<1 || !KINDS.contains(string(value.get("kind"),32))
+    /** The companion's own refusal for a replacement it could not apply; these name only note numbers and kinds. */
+    private static String refusal(Throwable failure){
+        Throwable t=failure;while(t.getCause()!=null && t.getCause()!=t)t=t.getCause();
+        String message=t.getMessage();
+        return message!=null && message.matches("(?:No note #\\d+ in this project\\.|Note #\\d+ (?:is a [a-z]+; say 'replace [a-z]+ \\d+: \\.\\.\\.'\\.|was already replaced by #\\d+; replace #\\d+ instead\\.))")?message:null;
+    }
+    private static boolean literal(String text){return text!=null && !text.isBlank() && text.length()<=512 && text.codePoints().noneMatch(c->c<32 && c!=9 && c!=10 && c!=13);}
+    /** Reason and replacement as stored; empty for version 1 notes. */
+    static String details(JsonObject note){
+        return (note.has("rationale")?" | Reason: "+string(note.get("rationale"),512):"")+(note.has("supersedes")?" | Replaces note "+number(note.get("supersedes")):"");
+    }
+    static void validateNote(JsonObject value,UUID owner) {
+        var base=Set.of("schemaVersion","kind","text","id","revision","authorId","createdAt","source");
+        boolean extended=value!=null && value.has("schemaVersion") && number(value.get("schemaVersion"))==2;
+        Set<String> keys=value==null?new HashSet<String>():new HashSet<String>(value.keySet());
+        if(extended){keys.remove("rationale");keys.remove("supersedes");keys.remove("writtenAtRevision");}
+        if(value==null || !keys.equals(base) || extended && !value.has("writtenAtRevision")
+                || !extended && number(value.get("schemaVersion"))!=1 || number(value.get("revision"))<1 || !KINDS.contains(string(value.get("kind"),32))
                 || !owner.toString().equals(string(value.get("authorId"),36)) || !string(value.get("source"),32).equals("owner-authored"))throw new IllegalArgumentException("Invalid owner-authored note");
         String id=string(value.get("id"),36);if(!UUID.fromString(id).toString().equals(id))throw new IllegalArgumentException("Invalid note ID");
         string(value.get("text"),512);number(value.get("createdAt"));
+        if(!extended)return;
+        long revision=number(value.get("revision"));
+        if(number(value.get("writtenAtRevision"))!=revision-1)throw new IllegalArgumentException("Invalid note revision");
+        if(value.has("rationale"))string(value.get("rationale"),512);
+        if(value.has("supersedes")){long replaced=number(value.get("supersedes"));if(replaced<1 || replaced>=revision)throw new IllegalArgumentException("Invalid replaced note");}
     }
     private static long number(JsonElement value) {
         if(value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException("Expected note integer");

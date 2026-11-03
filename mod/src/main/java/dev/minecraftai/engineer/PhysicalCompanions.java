@@ -107,12 +107,28 @@ final class PhysicalCompanions {
             throw new IllegalStateException("Physical companion could not be created safely; no construction was started",failed);
         }
     }
-    private void dismiss(UUID project){
-        var binding=actors.get(project);if(binding==null)return;
+    boolean stop(EngineeringSession project){
+        if(!gathering.containsKey(project.projectId) && !placing.containsKey(project.projectId))return false;
+        project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
+        if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can stop its physical companion");
+        var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Physical actor is unavailable; inspect recovery");
+        var failure=stopActions(binding);
+        if(failure!=null){dismiss(project.projectId);throw new IllegalStateException("Companion removed after an action-stop error; inspect recovery",failure);}
+        try{PhysicalWorkerStorage.save(binding.actor);}catch(RuntimeException uncertain){dismiss(project.projectId);throw new IllegalStateException("Physical work stopped, but inventory saving could not be verified; inspect recovery",uncertain);}
+        actors.put(project.projectId,new Binding(project,binding.owner,binding.ownerConnection,binding.revision,binding.authorization,binding.actor,binding.pack,binding.actor.blockPosition()));
+        project.tell("Physical work stopped. Saved inventory was checked; inspect companion recovery before a fresh request.");return true;
+    }
+    private RuntimeException stopActions(Binding binding){
+        UUID project=binding.project.projectId;
         RuntimeException failure=null;
         var task=gathering.remove(project);if(task!=null)try{task.close();}catch(RuntimeException stopped){failure=stopped;}
         var placement=placing.remove(project);if(placement!=null)try{placement.close();}catch(RuntimeException stopped){failure=stopped;}
         try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
+        PhysicalActionGate.cancel(binding.actor);return failure;
+    }
+    private void dismiss(UUID project){
+        var binding=actors.get(project);if(binding==null)return;
+        var failure=stopActions(binding);
         // Despawn even if the optional action pack failed. Keep default denial
         // registered until the native player is actually absent.
         try{manager.server.getPlayerList().remove(binding.actor);}finally{

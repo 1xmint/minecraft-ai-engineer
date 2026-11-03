@@ -496,7 +496,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();context.waitTicks(20);context.runOnClient(client->check(client.level.getPlayerByUUID(fresh)!=null,"Reconnected actual client receives the newly requested actor"));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-restart.done","passed");
-            send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(savedProject));
+            physicalGatherStopFlow(context,server);
+            UUID beforeGatherProject=server.computeOnServer(s->session(s,"Alice").projectId);
+            send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(beforeGatherProject));
             server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
             server.runCommand("tp Alice 2434.5 101 7 180 0");
             send(context,"engineer select1 2430 100 0");send(context,"engineer select2 2434 102 5");server.waitFor(s->new BlockPos(2434,102,5).equals(session(s,"Alice").corner2));
@@ -538,6 +540,27 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-blueprint.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
         }
+    }
+    private static com.google.gson.JsonArray physicalWorkerInventory(MinecraftServer server,UUID id){
+        var worker=server.getPlayerList().getPlayer(id);if(worker!=null)return PhysicalWorkerStorage.inventory(worker);
+        var saved=new ServerPlayer(server,server.overworld(),new com.mojang.authlib.GameProfile(id,"Eng_"+id.toString().substring(0,8)),net.minecraft.server.level.ClientInformation.createDefault());
+        PhysicalWorkerStorage.restore(saved);return PhysicalWorkerStorage.inventory(saved);
+    }
+    private static void physicalGatherStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2448 -16 2480 32");server.runCommand("fill 2450 100 0 2455 100 9 minecraft:stone");server.runCommand("setblock 2451 101 4 minecraft:dirt");server.runCommand("tp Alice 2454.5 101 7 180 0");
+        send(context,"engineer select1 2450 100 0");send(context,"engineer select2 2454 102 5");server.waitFor(s->new BlockPos(2454,102,5).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->{player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);s.tickRateManager().setTickRate(5f);});
+        try{
+            MESSAGES.clear();say(context,"Engineer, gather dirt at 2451 101 4");expectChat(context,"gathering one dirt block");
+            MESSAGES.clear();say(context,"Engineer, stop");expectChat(context,"Physical work stopped. Saved inventory was checked");
+            var source=server.computeOnServer(s->s.overworld().getBlockState(new BlockPos(2451,101,4)));var inventory=server.computeOnServer(s->physicalWorkerInventory(s,worker));
+            int stopped=server.computeOnServer(MinecraftServer::getTickCount);server.waitFor(s->s.getTickCount()>=stopped+20,30_000);
+            server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2451,101,4)).equals(source) && physicalWorkerInventory(s,worker).equals(inventory),"Actual owner stop leaves native source and retained inventory unchanged for twenty server ticks"));
+        }finally{server.runOnServer(s->s.tickRateManager().setTickRate(20f));}
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather-stop.done","passed");
     }
     private static void physicalPeer(ClientGameTestContext context) throws Exception {
         connect(context,1);write("physical-bob.connected","ready");awaitFile(context,"physical-shared");
@@ -2751,6 +2774,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         if(!LIVE_DISCUSSION && !LIVE_NATURAL){MESSAGES.clear();send(context,"engineer discuss CI explain entrance constraint.");expectChat(context,"knowledge revision 3");expectChat(context,"Owner-authored constraint: Preserve the entrance clearance.");expectChat(context,"Project sources:");}
         else if(LIVE_NATURAL){server.runOnServer(s->check(session(s,"Alice").diagnoses.isEmpty() && session(s,"Alice").delegation==null,"Restart does not restore diagnosis proposals or execution authority"));write("live-natural-recovery.done","passed");}
         else write("live-discussion-recovery.done","passed");
+        if(!LIVE_DISCUSSION && !LIVE_NATURAL){
+            // Version 2 notes after the real restart: the reason and replacement are chat-level round trips; restart persistence is proven in tests/project-knowledge.test.ts.
+            MESSAGES.clear();memorySay(context,"Engineer, remember our decision: Use repeaters for the delay because they stay visible.");expectChat(context,"knowledge revision 4. Reason kept.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace decision 4: Use comparators for the delay because they are smaller.");expectChat(context,"knowledge revision 5. Reason kept. Replaces note 4.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace decision 4: Use torches for the delay.");expectChat(context,"Note #4 was already replaced by #5; replace #5 instead. Nothing was saved.");
+            MESSAGES.clear();memorySay(context,"Engineer, replace goal 5: Use torches for the delay.");expectChat(context,"Note #5 is a decision");
+            MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Shared project notes, revision 5");
+            expectChat(context,"Note 5 (decision): Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+        }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
 
