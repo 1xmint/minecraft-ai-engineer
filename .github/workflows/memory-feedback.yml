@@ -1,0 +1,24 @@
+name: Project memory feedback
+on:
+  push:
+    branches: [work/memory-feedback]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: memory-feedback-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  notes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check actual note storage, permissions and replacement recovery
+        run: node --test --test-timeout=30000 dist/tests/project-knowledge.test.js
