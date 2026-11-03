@@ -768,3 +768,23 @@ Runner was still executing later generated-truth-table checks under native lag.
 Expanded suite now gets29-minute clients,30-minute harness,35-minute job including
 setup. No expected behavior, game tick windows, per-stage wait or case count was
 changed. Shell syntax check passes; fresh full CI required, not a milestone pass.
+disk write/read and Companion checkpoint HTTP encoder, then strict trace reader.
+This fixes a known persistence/transport defect, not a relaxed reader schema.
+Scoped Java compile passed; fresh native/full restart CI required.
+
+Source3d4f732 / CI41575231876 ended when the23-minute client wrapper expired:
+"alice exited before its native test completed", no assertion failure receipt.
+Inspected work/connected-failure-41575231876: connected-restarted.done and
+connected-undo.done both passed, along with earlier functional/revocation/edit
+receipts. Actual saved-world re-test/control restoration and owned undo therefore
+passed on that source; independent final SQLite/full job still did not finish.
+Runner was still executing later generated-truth-table checks under native lag.
+Expanded suite now gets29-minute clients,30-minute harness,35-minute job including
+setup. No expected behavior, game tick windows, per-stage wait or case count was
+changed. Shell syntax check passes; fresh full CI required, not a milestone pass.
+
+Integration update: memory sourcea6def73 CI41681966669 all5 SUCCESS after exact
+five-note/reason/replacement persistence verifier fix. Merging main through PR47
+adds the optional idle companion lifecycle; auto-merged source retains both memory
+chat and physical hooks. New combined source requires fresh compile/full CI;
+prior source proof is not claimed for this merge.
