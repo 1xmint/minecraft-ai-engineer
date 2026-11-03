@@ -234,7 +234,11 @@ try {
         "Reasons and replacement provenance persist exactly; refused replacements create no rows",
       );
       assert.deepEqual(
-        [notes[5].rationale ?? null, notes[5].supersedes ?? null, notes[5].writtenAtRevision],
+        [
+          notes[5].rationale ?? null,
+          notes[5].supersedes ?? null,
+          notes[5].writtenAtRevision,
+        ],
         [null, null, 5],
         "A note written after restart appends to the persisted history",
       );
