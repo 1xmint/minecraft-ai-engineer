@@ -1326,6 +1326,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
             send(context,"engineer project use "+read("knowledge-project"));
             memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Keep the entrance within six blocks.");
+            MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Note 1 (goal, current) by Alice: Keep the entrance within six blocks.");expectChat(context,"not observed, built or tested");
+            MESSAGES.clear();memorySay(context,"Engineer, find notes about entrance");expectChat(context,"Note 1 (goal, current) by Alice");
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
@@ -1333,6 +1335,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Engineer:");
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
+            MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Engineer:");memorySay(context,"Engineer, find notes about entrance");context.waitTicks(40);
+            check(MESSAGES.stream().noneMatch(message->message.contains("six blocks") || message.contains("visible lamp") || message.contains("by Alice")),"Revoked members cannot show or search project notes");
             write("knowledge-bob-denied.done","passed");
         }
         if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN)) {
@@ -2782,6 +2786,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, replace goal 5: Use torches for the delay.");expectChat(context,"Note #5 is a decision");
             MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Shared project notes, revision 5");
             expectChat(context,"Note 5 (decision): Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+            // Retrieval after the real restart reads the persisted history; refused writes above left nothing behind.
+            MESSAGES.clear();memorySay(context,"Engineer, show note 4");expectChat(context,"Note 4 (decision, replaced by note 5) by Alice: Use repeaters for the delay | Reason: they stay visible.");
+            MESSAGES.clear();memorySay(context,"Engineer, show note 5");expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller. | Replaces note 4: Use repeaters for the delay");
+            MESSAGES.clear();memorySay(context,"Engineer, show note 9");expectChat(context,"Unknown: no note 9 is recorded in this project; notes go up to 5.");
+            MESSAGES.clear();memorySay(context,"Engineer, why did we choose comparators?");expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller.");
+            MESSAGES.clear();memorySay(context,"Engineer, why did we choose a visible lamp?");expectChat(context,"Note 2 (decision, current) by Alice: Use a visible lamp for the output. | Reason not recorded");
+            MESSAGES.clear();memorySay(context,"Engineer, why did we choose glass?");expectChat(context,"Unknown: no recorded decision mentions 'glass'");
+            MESSAGES.clear();memorySay(context,"Engineer, what changed?");expectChat(context,"Note 5 (decision, current)");
+            MESSAGES.clear();memorySay(context,"Engineer, find notes about torches");expectChat(context,"Unknown: no shared project notes match 'torches'.");
+            MESSAGES.clear();memorySay(context,"Engineer, remember our reference: Copy the tested signal lamp layout.");expectChat(context,"knowledge revision 6");
+            MESSAGES.clear();memorySay(context,"Engineer, what are our references?");expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }

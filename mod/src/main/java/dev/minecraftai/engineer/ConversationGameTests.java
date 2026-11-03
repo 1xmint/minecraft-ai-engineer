@@ -45,6 +45,43 @@ public final class ConversationGameTests {
         rejects(helper,()->ProjectKnowledgeClient.validateNote(unwritten,owner),"Version 2 notes record the revision they were written against");
         helper.succeed();
     }
+    @GameTest public void noteLookupsAreReadOnlyAndLiteral(GameTestHelper helper){
+        var shown=ConversationMemoryText.lookup("Show me project note #12.");
+        helper.assertTrue(shown.show() && shown.number()==12 && shown.text()==null,"A note is shown by its number");
+        helper.assertTrue(ConversationMemoryText.lookup("show note 3").number()==3 && ConversationSetupText.parse("show note 3")==null,"Showing a note is not a project preview");
+        rejects(helper,()->ConversationMemoryText.lookup("show note 0"),"Note numbers start at 1");
+        var found=ConversationMemoryText.lookup("find notes about \"100% Tested_Clock\"");
+        helper.assertTrue(!found.show() && found.text().equals("100% Tested_Clock") && found.kind()==null && !found.why(),"Search words stay literal");
+        helper.assertTrue(ConversationMemoryText.lookup("Please search the project notes for lamps.").text().equals("lamps"),"Polite search phrasing");
+        rejects(helper,()->ConversationMemoryText.lookup("find notes about "+"x".repeat(65)),"Search words are bounded");
+        helper.assertTrue(ConversationMemoryText.lookup("What did we decide?").kind().equals("decision"),"Decisions are a kind filter");
+        helper.assertTrue(ConversationMemoryText.lookup("what changed in the project notes?").changes(),"Changes list replacements");
+        helper.assertTrue(ConversationMemoryText.lookup("what are our references").kind().equals("reference"),"References are a kind filter");
+        var why=ConversationMemoryText.lookup("Why did we choose comparators?");
+        helper.assertTrue(why.why() && why.kind().equals("decision") && why.text().equals("comparators"),"Why searches decisions for the named choice");
+        helper.assertTrue(ConversationMemoryText.lookup("why did we choose this?")==null,"'Why this' is an explanation of the selected design, not a note search");
+        for(String text:new String[]{"show me the project notes","what have we decided","the sign says show note 2","find the lamp","remember my goal: find notes about x"})
+            helper.assertTrue(ConversationMemoryText.lookup(text)==null,"Not a lookup: "+text);
+        helper.assertTrue(ConversationMemoryText.parse("show me the project notes").kind().equals("read"),"The recent-notes read is unchanged");
+        var reference=ConversationMemoryText.parse("remember our reference: copy the tested clock layout");
+        helper.assertTrue(reference.kind().equals("reference") && reference.text().equals("copy the tested clock layout"),"References are explicit owner notes");
+        var owner=java.util.UUID.fromString("00000000-0000-4000-8000-000000000001");
+        var v1=com.google.gson.JsonParser.parseString("{\"schemaVersion\":1,\"kind\":\"reference\",\"text\":\"x\",\"id\":\"00000000-0000-4000-8000-000000000002\",\"revision\":1,\"authorId\":\""+owner+"\",\"createdAt\":1,\"source\":\"owner-authored\"}").getAsJsonObject();
+        rejects(helper,()->ProjectKnowledgeClient.validateNote(v1,owner),"Version 1 notes have no references");
+        var old=com.google.gson.JsonParser.parseString("{\"schemaVersion\":2,\"kind\":\"decision\",\"text\":\"use repeaters\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"revision\":1,\"authorId\":\""+owner+"\",\"createdAt\":1,\"source\":\"owner-authored\",\"writtenAtRevision\":0}").getAsJsonObject();
+        var newer=old.deepCopy();newer.addProperty("text","use comparators");newer.addProperty("id","00000000-0000-4000-8000-000000000004");newer.addProperty("revision",2);newer.addProperty("writtenAtRevision",1);newer.addProperty("supersedes",1);
+        var replaced=new com.google.gson.JsonObject();replaced.add("note",old);replaced.addProperty("replacedBy",2);
+        ProjectKnowledgeClient.validateEntry(replaced,owner,2);
+        var current=new com.google.gson.JsonObject();current.add("note",newer);current.add("replaces",old);
+        ProjectKnowledgeClient.validateEntry(current,owner,2);
+        rejects(helper,()->ProjectKnowledgeClient.validateEntry(replaced,owner,1),"A replacement cannot be newer than the knowledge revision");
+        var unlinked=current.deepCopy();unlinked.remove("replaces");
+        rejects(helper,()->ProjectKnowledgeClient.validateEntry(unlinked,owner,2),"A replacing note always carries what it replaced");
+        var extra=current.deepCopy();extra.addProperty("verified",true);
+        rejects(helper,()->ProjectKnowledgeClient.validateEntry(extra,owner,2),"Entries carry no verification or other fields");
+        rejects(helper,()->ProjectKnowledgeClient.validateEntry(current,java.util.UUID.fromString("00000000-0000-4000-8000-000000000009"),2),"Only owner-authored notes are shown");
+        helper.succeed();
+    }
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){
         helper.assertTrue(ConversationSetupText.parse("Let's start a new project!").operation()==ConversationSetupText.Operation.CREATE,"Explicit private-project creation is a local setup intent");
         helper.assertTrue(ConversationSetupText.parse("What projects can I work on?").operation()==ConversationSetupText.Operation.LIST,"Project discovery needs no model request");

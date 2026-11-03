@@ -9,7 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 /** Explicit literal shared-project notes; never world state, inventory capture or model authority. */
 final class ProjectKnowledgeClient {
     private static final long DISCUSSION_TIMEOUT_NANOS="true".equals(System.getenv("CI")) && "true".equals(System.getenv("MCE_LIVE_ACCEPTANCE")) && ("true".equals(System.getenv("MCE_DISCUSSION_ACCEPTANCE")) || "true".equals(System.getenv("MCE_NATURAL_ACCEPTANCE")))?900_000_000_000L:100_000_000_000L;
-    private static final Set<String> KINDS=Set.of("goal","constraint","preference","decision");
+    private static final Set<String> KINDS=Set.of("goal","constraint","preference","decision","reference");
+    private static final String NOT_EVIDENCE="Notes are owner-authored records, not observed, built or tested world state.";
     private final ProjectManager manager;
     private final Map<UUID,Frame> active=new HashMap<>();
     private boolean closed;
@@ -84,12 +85,101 @@ final class ProjectKnowledgeClient {
             finally{finish(f);}
         }));
     }
+    /** One stored note by number from the whole history. Reading never writes, aborts work or calls a model. */
+    void show(EngineeringSession s,int number) {
+        if(number<1)throw new IllegalArgumentException("Note numbers start at 1.");
+        var f=start(s);tell(f,"Looking up shared project note "+number+"; no model request or world inspection.");
+        var body=new JsonObject();body.addProperty("revision",number);
+        f.future=request(f,"/v2/knowledge/show",body);
+        f.future.whenComplete((reply,error)->manager.server.execute(()->{
+            if(!current(f)){finish(f);return;}
+            try {
+                if(error!=null)throw new IllegalStateException("Project notes unavailable");
+                long revision=number(reply.get("knowledgeRevision"));var entry=reply.get("entry");
+                if(entry==null)throw new IllegalArgumentException("Missing note entry");
+                if(entry.isJsonNull()){
+                    if(number<=revision)throw new IllegalArgumentException("Stored note missing");
+                    tell(f,"Unknown: no note "+number+" is recorded in this project"+(revision==0?".":"; notes go up to "+revision+"."));
+                    return;
+                }
+                validateEntry(entry.getAsJsonObject(),s.owner,revision);
+                if(number(entry.getAsJsonObject().getAsJsonObject("note").get("revision"))!=number)throw new IllegalArgumentException("Wrong note returned");
+                tell(f,line(entry.getAsJsonObject(),false));tell(f,NOT_EVIDENCE);
+            }catch(RuntimeException invalid){tell(f,"Project notes unavailable or not shared with you; nothing was shown. Select the project and ask again.");}
+            finally{finish(f);}
+        }));
+    }
+    /** Newest matching notes: literal words in a note or its reason, a kind, or notes that replace others. */
+    void find(EngineeringSession s,ConversationMemoryText.Lookup lookup) {
+        if(lookup==null || lookup.show() || lookup.text()==null && lookup.kind()==null && !lookup.changes())throw new IllegalArgumentException("Say what to look for in the notes.");
+        var f=start(s);String subject=subject(lookup);
+        tell(f,"Searching shared project notes for "+subject+"; no model request or world inspection.");
+        var body=new JsonObject();
+        if(lookup.text()!=null)body.addProperty("text",lookup.text());
+        if(lookup.kind()!=null)body.addProperty("kind",lookup.kind());
+        if(lookup.changes())body.addProperty("changes",true);
+        f.future=request(f,"/v2/knowledge/find",body);
+        f.future.whenComplete((reply,error)->manager.server.execute(()->{
+            if(!current(f)){finish(f);return;}
+            try {
+                if(error!=null)throw new IllegalStateException("Project notes unavailable");
+                long revision=number(reply.get("knowledgeRevision")),more=number(reply.get("more"));
+                if(reply.get("entries")==null || !reply.get("entries").isJsonArray())throw new IllegalArgumentException("Missing note entries");
+                var entries=reply.getAsJsonArray("entries");if(entries.size()>8 || more>0 && entries.size()<8)throw new IllegalArgumentException("Invalid note page");
+                long previous=Long.MAX_VALUE;
+                for(var element:entries){
+                    var entry=element.getAsJsonObject();validateEntry(entry,s.owner,revision);var note=entry.getAsJsonObject("note");
+                    long number=number(note.get("revision"));if(number>=previous)throw new IllegalArgumentException("Note order mismatch");previous=number;
+                    if(lookup.kind()!=null && !lookup.kind().equals(string(note.get("kind"),32)) || lookup.changes() && !note.has("supersedes"))throw new IllegalArgumentException("Note outside the requested filter");
+                }
+                if(entries.isEmpty()){
+                    tell(f,lookup.why()?"Unknown: no recorded decision mentions '"+lookup.text()+"', so I can't say why it was chosen."
+                            :"Unknown: no shared project notes match "+subject+".");
+                    return;
+                }
+                tell(f,"Shared project notes for "+subject+", knowledge revision "+revision+", newest first:");
+                for(var element:entries)tell(f,line(element.getAsJsonObject(),lookup.why()));
+                if(more>0)tell(f,more+" more matching note"+(more==1?" is":"s are")+" stored; use more specific words or show a note by number.");
+                tell(f,NOT_EVIDENCE);
+            }catch(RuntimeException invalid){tell(f,"Project notes unavailable or not shared with you; nothing was shown. Select the project and ask again.");}
+            finally{finish(f);}
+        }));
+    }
+    private static String subject(ConversationMemoryText.Lookup lookup){
+        if(lookup.why())return "decisions mentioning '"+lookup.text()+"'";
+        if(lookup.text()!=null)return "'"+lookup.text()+"'";
+        if(lookup.changes())return "replacements";
+        return lookup.kind()+"s";
+    }
+    /** "Note 3 (decision, current) by Alice: text | Reason: ... | Replaces note 2: old text". */
+    private String line(JsonObject entry,boolean why){
+        var note=entry.getAsJsonObject("note");
+        String status=entry.has("replacedBy")?"replaced by note "+number(entry.get("replacedBy")):"current";
+        String reason=note.has("rationale")?" | Reason: "+string(note.get("rationale"),512):why?" | Reason not recorded":"";
+        String replaces="";
+        if(entry.has("replaces")){var old=entry.getAsJsonObject("replaces");replaces=" | Replaces note "+number(old.get("revision"))+": "+string(old.get("text"),512);}
+        return "Note "+number(note.get("revision"))+" ("+string(note.get("kind"),32)+", "+status+") by "+author(note)+": "+string(note.get("text"),512)+reason+replaces;
+    }
+    /** The author's current name when online; otherwise a short ID, never a guess. */
+    private String author(JsonObject note){
+        var id=UUID.fromString(string(note.get("authorId"),36));var player=manager.server.getPlayerList().getPlayer(id);
+        return player!=null?player.getName().getString():"the project owner ("+id.toString().substring(0,8)+")";
+    }
+    /** A stored note plus its replacement links, all owner-authored and within the reported knowledge revision. */
+    static void validateEntry(JsonObject entry,UUID owner,long knowledgeRevision){
+        if(entry==null || !entry.has("note") || !Set.of("note","replacedBy","replaces").containsAll(entry.keySet()))throw new IllegalArgumentException("Invalid note entry");
+        var note=entry.getAsJsonObject("note");validateNote(note,owner);long revision=number(note.get("revision"));
+        if(revision>knowledgeRevision)throw new IllegalArgumentException("Note newer than knowledge");
+        if(entry.has("replacedBy")){long by=number(entry.get("replacedBy"));if(by<=revision || by>knowledgeRevision)throw new IllegalArgumentException("Invalid replacement link");}
+        if(note.has("supersedes")!=entry.has("replaces"))throw new IllegalArgumentException("Replacement link mismatch");
+        if(entry.has("replaces")){var old=entry.getAsJsonObject("replaces");validateNote(old,owner);if(number(old.get("revision"))!=number(note.get("supersedes")))throw new IllegalArgumentException("Replacement link mismatch");}
+    }
     void remember(EngineeringSession s,String kind,String text) {remember(s,kind,text,null,0);}
     /** Without a reason or replacement the request body stays the version 1 note, so existing flows are unchanged. */
     void remember(EngineeringSession s,String kind,String text,String rationale,int supersedes) {
         if(!s.owner.equals(s.actor()))throw new IllegalStateException("Only the project owner may author shared project notes");
         if(!KINDS.contains(kind) || !literal(text) || rationale!=null && !literal(rationale) || supersedes<0)
-            throw new IllegalArgumentException("Choose goal, constraint, preference or decision and literal text within 512 characters");
+            throw new IllegalArgumentException("Choose goal, constraint, preference, decision or reference and literal text within 512 characters");
         cancelDiscussion(s);var f=start(s);try{EngineerMod.knowledgeChanging(s);}catch(RuntimeException failure){finish(f);throw failure;}
         tell(f,"Recording an owner-authored shared project "+kind+"; no model request or world changes.");
         f.future=request(f,"/v2/knowledge/read",new JsonObject());
@@ -99,7 +189,7 @@ final class ProjectKnowledgeClient {
                 if(error!=null)throw new IllegalStateException("Project knowledge unavailable");
                 long expected=validateKnowledge(reply.getAsJsonObject("knowledge"),s.owner);
                 if(!s.owner.equals(f.actor))throw new IllegalStateException("Note ownership changed");
-                boolean extended=rationale!=null || supersedes>0;
+                boolean extended=rationale!=null || supersedes>0 || kind.equals("reference");
                 var note=new JsonObject();note.addProperty("schemaVersion",extended?2:1);note.addProperty("kind",kind);note.addProperty("text",text);
                 if(rationale!=null)note.addProperty("rationale",rationale);
                 if(supersedes>0)note.addProperty("supersedes",supersedes);
@@ -258,6 +348,7 @@ final class ProjectKnowledgeClient {
                 || !owner.toString().equals(string(value.get("authorId"),36)) || !string(value.get("source"),32).equals("owner-authored"))throw new IllegalArgumentException("Invalid owner-authored note");
         String id=string(value.get("id"),36);if(!UUID.fromString(id).toString().equals(id))throw new IllegalArgumentException("Invalid note ID");
         string(value.get("text"),512);number(value.get("createdAt"));
+        if(!extended && "reference".equals(string(value.get("kind"),32)))throw new IllegalArgumentException("Version 1 notes have no references");
         if(!extended)return;
         long revision=number(value.get("revision"));
         if(number(value.get("writtenAtRevision"))!=revision-1)throw new IllegalArgumentException("Invalid note revision");
