@@ -4,6 +4,17 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Phase32 physical restart proof in work/physical-restart,
+phase/32-physical-restart, based on PR47 sourcee0129c4; PR47 itself is frozen for CI.
+R1: dedicated server reopens the SAME saved world/project with a fresh epoch and
+no actor/lease/test callback. R2: normal chat reports absent actor; only a new
+explicit request creates a fresh UUID received by the reconnected client, with no
+project grants. Proof extends actual two-client runner with pinned saved-world
+launcher and required physical-restart.done receipt, separate feedback branch.
+No runtime behavior changed and no replacement world can satisfy identity checks.
+Scoped client compilation and shell syntax checks passed; actual restart CI pending. This is lifecycle
+recovery only; physical construction/gathering/navigation remain unfinished.
+
 Dedicated physical chat source053f358 / CI41576664814 completed SUCCESS.
 Downloaded work/physical-chat-proof-41576664814; inspected all5 completion receipts
 and actual screenshot showing the companion rendered on stone platform. Both

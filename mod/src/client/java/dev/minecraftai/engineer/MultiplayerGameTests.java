@@ -400,12 +400,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
-        try(var server=context.worldBuilder().createServer(properties())){
+        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;
+        try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
             publishServer(server,1);
             try(var connection=server.connect()){
                 server.runCommand("op Alice");send(context,"engineer project new");server.waitFor(s->!EngineerMod.managerFor(s).projects.isEmpty());
                 String project=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+                savedProject=project;savedWorld=server.computeOnServer(s->session(s,"Alice").worldId);savedEpoch=server.computeOnServer(s->EngineerMod.managerFor(s).epoch);
                 server.runCommand("forceload add 2392 -16 2424 32");server.runCommand("fill 2400 100 0 2402 100 2 minecraft:stone");
                 server.runOnServer(s->{var camera=player(s,"Alice");camera.getAbilities().flying=true;camera.onUpdateAbilities();});
                 server.runCommand("tp Alice 2401.5 102 6 180 10");send(context,"engineer select1 2400 100 0");send(context,"engineer select2 2402 102 2");
@@ -422,10 +424,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 server.runOnServer(s->check(s.getPlayerList().getPlayer(actor)!=null,"Denied peer summon/dismiss leaves the owner's actor present"));
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");server.waitFor(s->s.getPlayerList().getPlayer(actor)==null);
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+                oldActor=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
                 write("physical-chat.done","passed");
             }
             server.waitFor(s->s.getPlayerList().getPlayerByName("Alice")==null && s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")));
             write("physical-disconnect.done","passed");
+        }
+        // Pinned launcher reopens the same saved level; the public world builder
+        // would create a fresh world and could not prove restart recovery.
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            server.runOnServer(s->{var manager=EngineerMod.managerFor(s);
+                check(manager.worldId.equals(savedWorld) && !manager.epoch.equals(savedEpoch) && manager.projects.containsKey(UUID.fromString(savedProject)),"Actual restart retains world/project identity and advances the server epoch");
+                check(s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")),"Saved-server restart does not recreate a physical actor");
+                var project=manager.projects.get(UUID.fromString(savedProject));check(project.delegation==null && project.testTick<0 && !project.hasPendingTest(),"Restart restores no actor execution or test authority");});
+            send(context,"engineer project use "+savedProject);
+            server.waitFor(s->session(s,"Alice").projectId.toString().equals(savedProject));
+            MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"No physical companion is present");
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            UUID fresh=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+            server.runOnServer(s->check(!fresh.equals(oldActor) && session(s,"Alice").delegation==null && !session(s,"Alice").access.allows(fresh,ProjectAccess.Permission.BUILD),"Explicit post-restart summon creates a fresh unprivileged actor, never an old lease"));
+            connection.waitForClientboundPackets();context.waitTicks(20);context.runOnClient(client->check(client.level.getPlayerByUUID(fresh)!=null,"Reconnected actual client receives the newly requested actor"));
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            write("physical-restart.done","passed");
         }
     }
     private static void physicalPeer(ClientGameTestContext context) throws Exception {
