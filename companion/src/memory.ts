@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { GatewayMemory } from "./gateway-memory.js";
+import { SchematicDesignStore } from "./schematic-library/store.js";
 import {
   type Blueprint,
   type Checkpoint,
@@ -13,6 +14,7 @@ import {
 export class MemoryStore {
   private readonly db: DatabaseSync;
   readonly gateway: GatewayMemory;
+  readonly schematics: SchematicDesignStore;
   constructor(
     dbPath: string,
     private readonly blueprintsDir?: string,
@@ -41,6 +43,7 @@ export class MemoryStore {
         "Unsupported project database version. Preserve the file and upgrade the service.",
       );
     this.gateway = new GatewayMemory(this.db);
+    this.schematics = new SchematicDesignStore(this.db);
   }
   private projectScope(
     projectId: string,

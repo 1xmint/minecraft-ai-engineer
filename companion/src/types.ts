@@ -88,6 +88,15 @@ export interface Blueprint {
   tests: { id: string; description: string }[];
   provenance:
     | {
+        kind: "schematic";
+        designId: number;
+        digest: string;
+        sourceSha256: string;
+        template?: never;
+        minecraft?: never;
+        catalogRevision?: never;
+      }
+    | {
         kind: "curated";
         template: string;
         minecraft: "26.3";

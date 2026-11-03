@@ -4,6 +4,257 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+PR45 merged into public main as aaed3ef5e63b8afd42a2c3d47426b39dedd22cd6.
+Exact source42deb3c / CI41577981016 passed all5 jobs; inspected dedicated artifact
+work/connected-success-41577981016, restart/undo receipts and final independent
+SQLite verifier (connected evidence across server epochs). C1-C3 connected slice
+is proven, not the full E2/overall goal. Published alpha.2 still predates it.
+
+PR49/source73510bc CI41578002147 and PR48/sourcef2a3979 CI41578063302 reached later
+structural flow but exhausted the deterministic fixture's64/hour planning cap.
+Focused GPT-6-Luna quota review confirms CI-only increase to96/hour is isolated:
+minute cap24 unchanged, production defaults4/minute24/hour unchanged, all gateway
+quota/denial/audit tests unchanged, inline fixture cannot call SDK and unexpected
+provider paths still fail with inference-attempted marker. New exact-source full
+CI must finish the chain with no unexpected inference before merge.
+
+Inspected failed-restart source0df5e59 / CI41573034326 dedicated artifacts at
+work/imported-restart-failure-41573034326: connected-functional/interruption/
+revocation/player-edit receipts all passed, as did imported-build.done. Actual
+flow assertions before those receipts required the whole8-case half-adder pass
+and exact control restoration, then actual35-block imported geometry completion
+with interruption/viewer denial/no functional claim. Stored imported source has
+35 intended cells and verification untested. This proves those pre-restart flows
+on that source, not the full run: saved-server boot then failed strict trace load
+because firstMismatch:null was omitted. Fix3d4f732 and restart/undo/independent
+SQLite verification still need exact-source full CI. Do not discard actual partial
+evidence or inflate it to completed C3/I2/I3/overall milestones.
+
+Inspected source29785a2 / CI41533141692 Fabric artifact at
+work/imported-native-41533141692: all158 required native tests passed. This source
+includes imported182-material runtime admission and exact snapshot parity,
+coordinate rejection and canonical imported preview/reload tests. Cross-runtime
+connected replay passed32 cases/1792 frames across4 rotations. Four full jobs are
+green; dedicated multiplayer remains live. These native results do not establish
+the imported chat/build/restart flow or the later export-overflow correction.
+
+Physical-builder feasibility research (2026-11-02): Mineflayer's upstream README
+lists support only through26.1; discussion4190 says26.3 support remains unreleased.
+Do not choose protocol translation/proxy/login workarounds as the foundation.
+Carpet upstream has an exact26.3 release (GitHub API verifiedv26.3 asset
+fabric-carpet-26.3+v260915.jar): https://github.com/gnembon/fabric-carpet/releases/tag/v26.3.
+Next physical milestone is an isolated compatibility probe, not a shipped NPC:
+P1 actual fake-player lifecycle and legal item-use placement/mining with inventory
+change on the pinned server; P2 unreachable targets, depleted items and cancellation
+make no unauthorized changes; P3 owner/grant/revision/region remain core authority,
+never fake-player identity. Require native CI evidence before dependency adoption.
+Fresh-look challenge: Carpet supplies player actions, not a bounded navigation or
+resource-acquisition planner; spawning a character alone completes neither NPC nor
+survival. Native PathfinderMob APIs exist in the pinned jar but do not supply player
+inventory/item-use semantics. Compare the probe against a native actor only after
+actual action/recovery evidence; no new runtime dependency or credentials added.
+Sources: https://github.com/PrismarineJS/mineflayer and
+https://github.com/PrismarineJS/mineflayer/discussions/4190.
+
+Current full checks: combined source29785a2 / CI41533141692 is live (Companion
+and Windows passed); parentee8ff98 / CI41533180250 is live. Earlier parent run
+41530574368 terminated with the same pre-start PAUSED assertion as imported run,
+confirming the shared regression. Do not cancel/restart the current handles.
+Follow-up export fix uses long inclusive spans before the64-block check, rejecting
+extreme integer corners before overflow or world reads. Added all-three-axis
+native regression; scoped Java compilation passed. This later fix is not in the
+running source and needs fresh CI after it finishes.
+
+Focused CI41532825264/sourcecb0d832 passed8 tests,0 failures, including omitted
+transform import and missing-discard/name/unknown-transform refusals. Full imported
+CI41530710501 terminated FAILURE in the connected flow before schematic gameplay:
+after436-cell construction, final asynchronous conversational test completion was
+checked against the preceding PAUSED state. Correctionee8ff98 first requires an
+actually VERIFYING trial, then retains the full pass/restoration assertions. No
+production guard changed. Added native connected-viewer denial for schematic
+import/rotate/export/preview. Scoped client compilation passed for both changes;
+fresh combined full CI is required. Parent41530574368 remains live; do not cancel.
+
+Integrated Claude's later import compatibility fix2dd20c2 as4cfe78e: only the
+empty transform field may be omitted; explicit null remains supported. Kept the
+core's existing null-preserving transport and preview hooks. HTTP proof now uses
+an omitted-transform successful import and rejects missing name/discard or an
+unknown transform without storing a design. Local type/format checks passed;
+new regression awaits focused CI. Full runs41530574368 and41530710501 remain
+authoritatively live with four other jobs green; no restart or merge yet.
+
+Expanded-material feedback source3b2ed50 / CI41531718943 passed8 tests,0 failures.
+This includes pinned cobblestone admission and sand refusal plus HTTP library/
+restart/permission cases; it is not native runtime or multiplayer proof. Added
+docs/schematic-building.md explaining chat preview/approval, bounding-corner
+placement, supported materials, untested behavior, conflicts, recovery and export.
+Guide explicitly marks development/pending CI and absence from alpha.2.
+
+Material evidence: sourceb4faabc / CI41530710501 Fabric passed all157 native tests.
+Inspected artifact work/imported-materials-41530710501: native candidate set has182
+vanilla single-state full cubes. Extracted catalog/imported-materials.json from
+that observed report. New imported-only admission requires pinned membership and
+native predicates; companion uses the same snapshot. Native test requires exact
+registry/snapshot equality; generic/model admission remains narrow. Release zip and
+paired jar must contain identical snapshot bytes. Gameplay fixture now uses16
+cobblestone/16 oak-plank supports plus3 devices (35 total), including restart/undo.
+Broadened runtime admission and gameplay are new changes pending fresh CI, not
+proved by the earlier candidate enumeration. Slabs, stairs, inventories, gravity,
+interactive/dynamic blocks and arbitrary redstone still remain outside this set.
+
+Imported CI41530710501/sourceb4faabc Companion and Windows jobs now passed; native,
+client and dedicated jobs remain live. Adapter now rejects fractional, numeric-
+string and out-of-int-range coordinates before Blueprint.parse, rather than
+truncating/coercing them into apparently valid cells. Added native regression for
+all three; scoped Java compilation passed. Latest adapter change awaits fresh CI.
+
+Focused feedback source48bbc12 / CI41530452349 passed7 tests,0 failures: all five
+real HTTP schematic-library cases plus two imported-admission cases. The prior
+409 failures came from fixture regeneration of blueprint ID at the same intended
+revision during sync/restart; fixture now reuses the immutable source. Production
+revision guards were not relaxed. This focused check does not establish gameplay.
+Merged connected placement-loop correction6508367; its fresh full CI41530574368
+is live. Do not substitute the7 focused passes for required full integration CI.
+
+Verified current-run native evidence: source0a81172 / CI41528081343 Fabric passed
+all156 required tests. Artifact inspected at work/imported-native-41528081343:
+imported canonical preview/reload, request-null transport and partial-junction
+regressions passed; native imported source matched the companion reader. Connected
+replay passed32 cases/1792 frames in4 rotations. This does not prove the dedicated
+player flow; its job is still live, and later restart/admission-test changes are
+not in that source. No local behavior tests ran.
+
+Next material expansion decision (I2): focused GPT-6-Luna read-only challenge
+supports a separate pinned imported-family set, leaving generic/model admission
+unchanged. Probe native vanilla exact Block.class IDs with no BE, signal/analog
+output or fluid and full collision; retain existing device exceptions. Derive a
+registry snapshot on CI and compare native/TS membership before admission. This
+excludes gravity/absorption/interactive subclasses; it is not universal safety or
+all-block support. Do not broaden runtime admission before those native proofs.
+
+CI triage: schematic-library HTTP tests previously closed their server/SQLite
+only after all assertions passed. TestContext cleanup now registers idempotent
+server/connection/store closure before setup assertions, retaining explicit close
+for restart cases. Failed assertions must report without a leaked listening
+server keeping the test worker alive. Type/format checks passed; no local tests.
+
+Companion job125560890205 ended cancelled at its10-minute timeout, while the
+other integration jobs remain live. Added focused Schematic feedback workflow
+for the two relevant HTTP/admission test files with30-second test bounds, using
+pinned actions and its own concurrency/check name. Push work/schematic-feedback
+to run it before the workflow lands on main. This check is not a required full-CI
+job, never substitutes for native/dedicated proof, and does not cancel either
+active full run. Purpose: reveal actual failures after deterministic cleanup.
+
+Added read-only native material probe: enumerate pinned vanilla exact Block.class
+single-state full cubes without BE/fluid/signal/analog behavior. Requires ordinary
+cobblestone/planks, rejects representative dynamic/interactive/partial/invisible
+blocks, exports sorted IDs as ENGINEER_IMPORTED_MATERIAL_PROBE. It grants no
+runtime admission; native source proof and pinned native/TS snapshot still needed.
+
+2026-11-02 parallel core slice: work/imported-core, phase/28-imported-core,
+based on pending PR45 source915139e. Claude's PR44 remains his feature lane;
+its last dedicated run failed at import request-schema mismatch and Companion
+was cancelled. No merge of44 yet. Parent starts imported core boundary in this
+separate worktree while45 runs: ImportedBlueprint validates exact geometry-only
+schema/provenance, canonical identity and current world, rejects authority/pass/
+behavior metadata, and reparses through unchanged registry/block/extent limits.
+Hashes are descriptive provenance, not permission or behavior evidence. Added
+native rejection proof for owner/pass/grant/behavior/foreign-world/inventory/
+extent/fractional-position/component injection. Not wired to acceptance/build yet;
+proposal, permissions, placement ordering, isolation, undo/restart and real
+in-game proof remain. Do not claim schematic construction complete.
+
+Imported core Outcomes:
+
+- I1: authorized users can preview exact imported geometry in their selected
+  workspace without execution or functional claims. Native source-injection,
+  permission denial, containment and saved-session reload are the proof.
+- I2: approved construction uses existing ownership/journal/reservation/isolation
+  paths with backing blocks first; edits, revocation and unloaded dependencies
+  pause. Prove real dedicated build/interruption/undo/restart, including failures.
+- I3: Claude's real library/chat reaches that core path and SQLite retains the
+  intended/observed distinction. Prove actual import->preview->approved build->
+  interrupt->undo/export with denied players. No unsupported functional pass.
+
+I1/I2 implementation now adds proposeImported(candidate,anchor,rotation), exact
+current world/project checks, workspace containment and backing-block-first order.
+ComponentTree recognizes strict imported source; execution reserves a loaded clear
+two-block isolation margin. Existing generic block limits remain unchanged.
+Imported engineering contract has no ports or cases; FunctionalTrial refuses to
+start it and rejects imported evidence/input-control recovery claims. Added native
+preview/unauthorized replacement/saved-session reload tests. Full I2/I3 gameplay,
+companion schema admission and Claude feature hook remain incomplete.
+
+Integrated Claude PR44 snapshotd07ff3a into this isolated branch (not main/44),
+preserving connected/imported/schematic test registrations and both dedicated
+flows. Added explicit preview design N as EDIT-only, keeping show/inspect VIEW-only.
+Preview uses the captured actor and advances the async frame revision only after
+its own accepted preview; no build starts. Type/client compilation passed.
+This integration still needs end-to-end proof and clearer refusal handling.
+
+Async schematic frames now bind both marked corners as well as player connection,
+project revision and grants; changing the workspace invalidates pending results.
+Preview refusal reports its native reason without placing blocks. Native grammar
+proof distinguishes EDIT preview design from VIEW show design. Dedicated stale
+request and denied-preview player flows remain required; not claimed proven yet.
+
+Added pending actual importedBuildFlow after the existing real WorldEdit library/
+discard/export proof. A separate synthetic35-block safe .schem exercises chat
+import/preview, connected viewer preview denial, reviewed build, genuine partial
+interruption/resume, exact final geometry, functional-test refusal and owned undo.
+Synthetic fixture is not third-party codec evidence. SQLite must retain the actual
+35-placement completion as untested with empty evidence/input journals. Existing
+WorldEdit six-sign fixture remains for independent interchange/discard coverage.
+Native/client compile and script syntax checks are local only; this new combined
+gameplay flow is still pending CI. Full imported saved-server restart remains.
+
+Imported gameplay now leaves the built structure for the existing third server
+boot, then requires exact source/35-record/actual geometry recovery, untested state
+and no lease/callback/input journal. Ordinary testing remains refused. A real
+diorite edit must block undo without losing any record or overwriting that edit;
+after explicit conflict resolution, owned undo removes the structure. SQLite
+requires untested35-placement checkpoints across at least two server epochs and
+restart/undo completion markers. No extra boot or local behavioral tests added.
+These latest restart/conflict proofs are pending exact-source CI.
+
+Added companion imported-admission regressions with hand-calculated three-block
+bounds/resources: owner/pass/port/test injection, altered counts/bounds, inventory,
+invalid lever direction, duplicate cells, rotated world-height overflow, foreign
+project/world and stale server revision all reject. Type/format checks passed;
+behavioral tests await the next exact-source CI. These complement actual native
+source replay and dedicated gameplay rather than replace them.
+
+PR45 CI41524156179 is now terminal FAILURE: all four other jobs passed, but the
+real connected build paused at2004,101,0 after223 records. Native final geometry
+and149 tests passed; partial owned-wire reconciliation at a junction is the live
+failure. Investigate actual native intermediate arms; do not blanket-ignore wire
+arms or weaken manual-dot/player edit guards. Fix45 before claiming C3 complete.
+
+PR44 import request mismatch traced to Companion.encodeBody: default Gson omits
+explicit transform:null while the schematic endpoint requires that exact field.
+Core transport now preserves JSON nulls for /v2/schematic/import, as already done
+for interpretation. Native regression checks the actual encoded request retains
+no-transform and discard:false. Claude's branch/files remain untouched. Fix is
+pending fresh CI and integration with44; this does not establish import gameplay.
+
+CI41525271966 found two concrete failures: STATE formatting and native imported
+preview acceptance expected a catalog template in ComponentTree.nodes. Fixed
+imported root descriptor to schematic-geometry (no ports or behavior) and retained
+the failing native preview/reload proof. Full run is still live; save fixes after
+scoped checks and dispatch a fresh run only when it terminates.
+
+Protocol integration: native imported previews now derive the normal blueprint
+envelope (bounds/materials, fixed geometry-only explanation, empty ports/tests and
+prerequisites). Strict validation compares all derived fields back to geometry;
+minimal Claude adapter candidates remain accepted only as input to normalization.
+Companion imported-intention.ts independently checks exact normalized source,
+current world/project, bounded rotated cells, supported property values, resources
+and empty behavior metadata. Gateway admits it only after its existing revision
+check. Native preview is exported for exact current-run TypeScript replay plus
+forged-pass rejection. Scoped TypeScript/format/syntax checks passed. Actual
+Claude feature integration and dedicated imported construction remain pending.
+
 ## Parallel ownership — 2026-11-02
 
 Josh requested sustained milestone ownership for Claude, rather than another

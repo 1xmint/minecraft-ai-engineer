@@ -652,7 +652,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -671,7 +671,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
           try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
-            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);}
+            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);importedRestartRecovery(context,server);}
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1871,6 +1871,91 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(activeRejected,"Even an empty pending undo must keep its operation's original component label");
     }
 
+    /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
+    private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        MESSAGES.clear();memorySay(context,"Engineer, list schematics");expectChat(context,"Schematic library (2): safe, signs.");
+        MESSAGES.clear();memorySay(context,"Engineer, inspect schematic signs");expectChat(context,"say 'import schematic signs and drop block entities'");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic signs");expectChat(context,"Nothing was stored.");
+        MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"No designs are imported in this project yet.");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic ../signs");expectChat(context,"For schematics, say for example");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic signs and drop block entities");expectChat(context,"Untrusted and untested.");int first=storedDesign();
+        MESSAGES.clear();memorySay(context,"Engineer, rotate design "+first+" by 90");expectChat(context,"(rotate-90)");int second=storedDesign();
+        check(first!=second,"A transform is stored as a new design, never an edit of the original");
+        MESSAGES.clear();memorySay(context,"Engineer, compare design "+first+" with "+second);expectChat(context,"Geometry only: neither design is tested");
+        MESSAGES.clear();memorySay(context,"Engineer, show design "+second);expectChat(context,"Design "+second+" (rotate-90)");
+        check(MESSAGES.stream().anyMatch(message->message.contains("not built") || message.contains("waits on the core build hook")),"Previewing an imported design never builds it");
+        MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"Imported designs (2)");
+        final var stone=new BlockPos(700,100,0);final var chest=new BlockPos(701,100,0);
+        server.runCommand("tp Alice 700 108 15 180 25");
+        server.waitFor(s->session(s,"Alice").level().hasChunkAt(stone) && session(s,"Alice").level().hasChunkAt(chest.above()));
+        server.runOnServer(s->{s.overworld().setBlockAndUpdate(stone,Blocks.STONE.defaultBlockState());s.overworld().setBlockAndUpdate(chest,Blocks.CHEST.defaultBlockState());});
+        send(context,"engineer select1 700 100 0");send(context,"engineer select2 701 101 0");
+        server.waitFor(s->stone.equals(session(s,"Alice").corner1) && chest.above().equals(session(s,"Alice").corner2));
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate");expectChat(context,"and drop block contents' to export the blocks without them.");
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate and drop block contents");expectChat(context,"Exported ci-gate.schem");
+        MESSAGES.clear();memorySay(context,"Engineer, export selection as ci-gate and drop block contents");expectChat(context,"already exists and was left unchanged");expectChat(context,"Nothing in the world changed.");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.journal.isEmpty() && project.delegation==null && !project.pendingPlacement && project.blueprint==null,"Schematic chat never plans, delegates or places anything");
+            check(project.level().getBlockState(stone).is(Blocks.STONE) && project.level().getBlockState(chest).is(Blocks.CHEST),"Export reads the selection and leaves it exactly as it was");});
+        context.takeScreenshot("engineer-schematic-export");
+        importedBuildFlow(context,server);
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
+    }
+    private static void importedBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic safe");expectChat(context,"Untrusted and untested.");int design=storedDesign();
+        server.runCommand("forceload add 2192 -16 2256 32");
+        send(context,"engineer select1 2200 120 0");send(context,"engineer select2 2231 121 0");
+        server.waitFor(s->new BlockPos(2200,120,0).equals(session(s,"Alice").corner1) && new BlockPos(2231,121,0).equals(session(s,"Alice").corner2));
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");var previous=project.commandActor;
+            try{project.commandActor=player(s,"Bob").getUUID();
+                for(String request:List.of("import schematic safe","rotate design "+design+" by 90","export selection as viewer-denied","preview design "+design)){
+                    boolean denied=false;try{project.manager.schematics.handle(project,SchematicText.parse(request));}catch(IllegalStateException expected){denied=true;}
+                    check(denied && project.blueprint==null && project.journal.isEmpty() && project.delegation==null,"Real connected viewer cannot mutate schematic state: "+request);
+                }
+            }finally{project.commandActor=previous;}});
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+design);expectChat(context,"Preview ready: Imported design "+design);
+        server.runOnServer(s->{var project=session(s,"Alice");check(ImportedBlueprint.describes(project.blueprint.source()) && project.blueprint.blocks().size()==35 && project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Imported preview is geometry only, without construction or pass");});
+        conversationApprove(context,"CI build imported design.");
+        server.waitFor(s->session(s,"Alice").journal.size()>=3 || session(s,"Alice").state.equals("PAUSED"),30_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("EXECUTING") && project.journal.size()<35,"Interruption reaches a genuinely incomplete imported build");});
+        MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.delegation==null && project.state.equals("PAUSED") && project.verified.equals("untested"),"Imported construction interruption releases authority and remains untested");});
+        connectedAction(server,EngineeringSession::resume);
+        server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),60_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==35 && project.verified.equals("untested"),"Production imported build completes only geometry: "+project.status());
+            check(project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Every imported block reaches its intended state");});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"no independently defined functional test contract");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null && project.verified.equals("untested"),"No generic imported test can manufacture a pass or input-control lease");});
+        assertPersisted(server);write("imported-build-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));write("imported-build.done","passed");
+        write("imported-source",server.computeOnServer(s->session(s,"Alice").blueprint.source().toString()));
+        // Leave the real construction in the saved world for the existing third boot.
+    }
+    private static void importedRestartRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("imported-build-project");send(context,"engineer project use "+id);
+        server.waitFor(s->session(s,"Alice").projectId.toString().equals(id));
+        server.runOnServer(s->{var project=session(s,"Alice");ImportedBlueprint.validate(project.blueprint);
+            check(project.blueprint.source().equals(JsonParser.parseString(read("imported-source"))) && project.journal.size()==35,"Saved imported source and exact owned history survive a real server restart");
+            check(project.delegation==null && project.testTick<0 && !project.hasPendingTest() && project.verified.equals("untested"),"Imported recovery resumes neither construction nor test authority");
+            check(project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))),"Actual imported geometry survives the saved-server restart");
+            project.checkpoint();});
+        MESSAGES.clear();send(context,"engineer test");expectChat(context,"no independently defined functional test contract");
+        final var edited=new BlockPos(2200,120,0);
+        server.runOnServer(s->session(s,"Alice").level().setBlockAndUpdate(edited,Blocks.DIORITE.defaultBlockState()));
+        connectedAction(server,project->{boolean denied=false;try{project.undo();}catch(IllegalStateException conflict){denied=conflict.getMessage().contains("Undo blocked by later edit");}
+            check(denied && project.journal.size()==35 && project.level().getBlockState(edited).is(Blocks.DIORITE) && project.delegation==null,"Imported post-restart undo preserves a later player block edit and all owned records");});
+        server.runOnServer(s->{var project=session(s,"Alice");var intended=project.blueprint.blocks().stream().filter(block->block.pos().equals(edited)).findFirst().orElseThrow().state();project.level().setBlockAndUpdate(edited,intended);});
+        assertPersisted(server);write("imported-restarted.done","passed");
+        connectedAction(server,EngineeringSession::undo);
+        server.waitFor(s->session(s,"Alice").journal.isEmpty(),60_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()) && !project.verified.startsWith("passed:"),"Imported undo removes only owned geometry without a behavior claim");});
+        write("imported-undo.done","passed");
+    }
+    private static int storedDesign(){
+        for(var message:MESSAGES){var match=java.util.regex.Pattern.compile("Stored as design (\\d+)").matcher(message);if(match.find())return Integer.parseInt(match.group(1));}
+        throw new AssertionError("Expected a stored design number; received "+MESSAGES);
+    }
     private static void assertKnowledgeHasNoWorldAuthority(EngineeringSession project) {
         check(project.journal.isEmpty() && project.verified.equals("untested") && saved(project).getAsJsonArray("functionalEvidence").isEmpty(),"Literal notes cannot create construction or verified evidence");
         check(project.blueprint.blocks().stream().allMatch(block->project.level().getBlockState(block.pos()).isAir()),"Note commands never place intended blocks");

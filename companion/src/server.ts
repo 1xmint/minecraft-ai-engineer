@@ -8,6 +8,7 @@ import { makeReferenceBlueprint } from "./blueprint.js";
 import { MemoryStore } from "./memory.js";
 import { ServerGateway } from "./gateway.js";
 import { PlanningQueue } from "./planning-queue.js";
+import { SchematicRoutes } from "./schematic-library/routes.js";
 import {
   type PlanningProvider,
   RequestError,
@@ -25,6 +26,8 @@ export interface ServerOptions {
   planTimeoutMs?: number;
   actorPlansPerMinute?: number;
   serverPlansPerHour?: number;
+  /** Folder for the in-game schematic library and exports; the routes are off without it. */
+  schematicDirectory?: string;
 }
 function respond(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, {
@@ -83,6 +86,15 @@ export function createCompanionServer(options: ServerOptions) {
     ...(options.serverPlansPerHour === undefined
       ? {}
       : { serverPlansPerHour: options.serverPlansPerHour }),
+    ...(options.schematicDirectory === undefined
+      ? {}
+      : {
+          schematics: new SchematicRoutes({
+            memory: options.store.gateway,
+            designs: options.store.schematics,
+            directory: options.schematicDirectory,
+          }),
+        }),
   });
   const controllers = new Set<AbortController>();
   const server = createServer((req, res) => {

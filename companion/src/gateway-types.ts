@@ -1,6 +1,7 @@
 import { validateGeneratedBlueprint } from "./generated.js";
 import { validateAnalogIntention } from "./analog-intention.js";
 import { readConnectedIntention } from "./connected-intention.js";
+import { readImportedIntention } from "./imported-intention.js";
 import { readShutterDesign } from "./shutter-design.js";
 import {
   type Blueprint,
@@ -127,6 +128,17 @@ export function serverBlueprint(
     typeof v.rotation !== "number"
   )
     throw new RequestError("Invalid blueprint rotation.");
+  if (object(v.provenance).kind === "schematic") {
+    try {
+      return readImportedIntention(v, {
+        worldId,
+        dimension,
+        projectId: context.projectId,
+      });
+    } catch {
+      throw new RequestError("Invalid imported geometry blueprint.");
+    }
+  }
   if (
     v.connected !== undefined ||
     object(v.provenance).template === "half-adder"

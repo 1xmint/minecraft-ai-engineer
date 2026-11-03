@@ -52,6 +52,7 @@ final class FunctionalTrial {
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
+        if(ImportedBlueprint.describes(s.executionBlueprint().source()))throw new IllegalStateException("Imported geometry has no independently defined functional test contract. It remains untested.");
         var candidate=EngineeringContracts.contract(s.executionBlueprint());s.validateTestArea();
         var captured=new LinkedHashMap<String,Input>();
         for(var port:candidate.ports())if(port.input()){
@@ -444,6 +445,9 @@ final class FunctionalTrial {
         shutterOriginal=json.has("shutterOriginalInput")?Blueprint.state(json.get("shutterOriginalInput").getAsString()):null;
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
+        if(session.blueprint!=null && ImportedBlueprint.describes(session.blueprint.source()) && (!evidence.isEmpty() || json.has("testOriginal")
+            || json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty() || session.verified.startsWith("passed:") || session.verified.startsWith("stale:")))
+            throw new IllegalStateException("Imported geometry cannot restore a functional claim or input-control journal without an independent behavior contract");
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
         if(session.blueprint!=null && ConnectedIntention.describes(session.blueprint.source()))
             ConnectedEvidence.validate(evidence,ConnectedIntention.validated(session.blueprint).source().get("graphDigest").getAsString(),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));

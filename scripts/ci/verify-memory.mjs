@@ -519,6 +519,43 @@ try {
     assert.equal(observed.testScope.basis, observed.componentBasis);
     assert.deepEqual(observed.testInputs, []);
     validatePulseEvidence(observed.testEvidence, true);
+    const importedProject = readFileSync(
+      `${coordination}/imported-build-project`,
+      "utf8",
+    ).trim();
+    assert.equal(
+      readFileSync(`${coordination}/imported-build.done`, "utf8").trim(),
+      "passed",
+    );
+    assert.equal(
+      readFileSync(`${coordination}/imported-undo.done`, "utf8").trim(),
+      "passed",
+    );
+    assert.equal(
+      readFileSync(`${coordination}/imported-restarted.done`, "utf8").trim(),
+      "passed",
+    );
+    const importedBuilt = db
+      .prepare(
+        "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.observed.assistantPlacements')=35 ORDER BY id",
+      )
+      .all(server.serverId, importedProject);
+    assert.ok(
+      importedBuilt.length > 0,
+      "Actual imported construction reaches SQLite",
+    );
+    const importedEpochs = new Set();
+    for (const row of importedBuilt) {
+      const document = JSON.parse(row.document);
+      importedEpochs.add(document.context.serverEpoch);
+      assert.equal(document.checkpoint.verified, "untested");
+      assert.deepEqual(document.checkpoint.observed.testEvidence, []);
+      assert.deepEqual(document.checkpoint.observed.testInputs, []);
+    }
+    assert.ok(
+      importedEpochs.size >= 2,
+      "Imported construction is persisted before and after actual saved-server restart without functional claims",
+    );
     const connectedProject = readFileSync(
       `${coordination}/connected-functional-project`,
       "utf8",

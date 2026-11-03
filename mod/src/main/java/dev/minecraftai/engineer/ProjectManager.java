@@ -24,6 +24,7 @@ final class ProjectManager {
     final InventoryPerception inventories=new InventoryPerception(this);
     final GeneratedPlanning generated=new GeneratedPlanning(this);
     final ProjectKnowledgeClient knowledge=new ProjectKnowledgeClient(this);
+    final SchematicClient schematics=new SchematicClient(this);
     final ConversationLessons conversationLessons=new ConversationLessons(this);
     final ConversationSetup conversationSetup=new ConversationSetup(this);
     private record ConnectionStamp(net.minecraft.server.network.ServerGamePacketListenerImpl connection,String id) {}
@@ -183,7 +184,7 @@ final class ProjectManager {
         }
     }
     void tick() {
-        inventories.tick();generated.tick();knowledge.tick();
+        inventories.tick();generated.tick();knowledge.tick();schematics.tick();
         connectionIds.entrySet().removeIf(entry->{var current=server.getPlayerList().getPlayer(entry.getKey());return current==null || current.connection!=entry.getValue().connection();});
         for (EngineeringSession project : projects.values()) project.tick();
         if (server.getTickCount() % 5 != 0) return;
@@ -213,7 +214,7 @@ final class ProjectManager {
                     +(ghosts.size()<project.blueprint.blocks().size()?" | Preview limited: "+ghosts.size()+"/"+project.blueprint.blocks().size()+" blocks":""), ghosts);
     }
     void close() {
-        generated.close();inventories.close();knowledge.close();conversationLessons.close();conversationSetup.close();connectionIds.clear();
+        generated.close();inventories.close();knowledge.close();schematics.close();conversationLessons.close();conversationSetup.close();connectionIds.clear();
         for (EngineeringSession project : projects.values()) project.pause("Server stopping; explicit reconciliation required on restart");
         reservations.close(); selections.clear();
     }

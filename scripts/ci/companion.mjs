@@ -46,10 +46,13 @@ const store = new MemoryStore(join(config.directory, "projects.sqlite"));
 const server = createCompanionServer({
   token: config.token,
   store,
+  schematicDirectory: join(config.directory, "schematics"),
   // Fixed synthetic stages can burst across several projects in this suite.
   // This provider cannot invoke the SDK; production retains its default4/minute.
   actorPlansPerMinute: 24,
-  serverPlansPerHour: 64,
+  // Expanded fixed connected/imported stages exceed the old64/hour fixture cap.
+  // This remains CI-only deterministic replay; production stays4/minute,24/hour.
+  serverPlansPerHour: 96,
   provider: {
     async interpret(input, _signal, context, capabilities) {
       const source = JSON.parse(context);
@@ -136,6 +139,7 @@ const server = createCompanionServer({
                       "CI build selected lamp.",
                       "CI build selected comparator.",
                       "CI build selected half-adder.",
+                      "CI build imported design.",
                     ].includes(input.message)
                   ? "build"
                   : [

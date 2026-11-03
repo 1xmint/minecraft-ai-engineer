@@ -78,7 +78,7 @@ final class Companion {
     }
     // Interpretation has required nullable targets: absent and explicit null differ.
     // Keep other established wire codecs unchanged.
-    static String encodeBody(String route,JsonObject body){return route.equals("/v2/interpret")?body.toString():LocalFiles.GSON.toJson(body);}
+    static String encodeBody(String route,JsonObject body){return Set.of("/v2/interpret","/v2/schematic/import").contains(route)?body.toString():LocalFiles.GSON.toJson(body);}
     static CompletableFuture<JsonObject> request(String route, JsonObject body) {
         try {
             JsonObject config = JsonParser.parseString(Files.readString(LocalFiles.configDir().resolve("companion.json"))).getAsJsonObject();
