@@ -4,6 +4,19 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Expiry-corrected sourced1b2c7f / CI41535410497 completed SUCCESS; actual marker
+and both required native passes inspected. New CI-only projectAuthority fixture
+uses a separate creative controller connection and survival physical actor with
+no project grants. Real EngineeringSession.claim/validateMutation(BUILD,target)
+governs actual native placement: live lease succeeds; release, revoked grant,
+unreserved destination and removed controller connection must deny without item
+consumption. This uses real core reservation/grant logic but a fake CI controller,
+not human acceptance, and writeAhead is still a no-op fixture (not durable WAL).
+Scoped Java compilation passed; new combined native proof pending CI.
+Full integration runs41533141692 and41533180250 both terminated with timeout
+waiting connected-functional.done; inspect artifacts for the actual owner flow
+before changing behavior or retrying.
+
 Focused GPT-6-Luna source review found one expiry boundary error: prototype
 accepted now==expires, unlike core reservations. Candidate now rejects >=expiry;
 native proof adds exact-expiry refusal and permits a live now+1 placement ticket.

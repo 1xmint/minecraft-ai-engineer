@@ -85,6 +85,7 @@ public final class PhysicalBuilderGameTests {
                 }
                 helper.assertTrue(collected==1,"Exactly one mined drop is collected through physical pickup");
                 gatedActions(helper,actor,support,placed);
+                projectAuthority(helper,actor,support,placed);
                 System.out.println("ENGINEER_PHYSICAL_PROBE survival-placement=1 consumed=1 empty-refused=true reach-refused=true mined=true walked=true collected=1 cancelled=true");
                 PhysicalActionGate.forget(actor);server.getPlayerList().remove(actor);helper.succeed();
             }catch(Exception failed){PhysicalActionGate.forget(actor);server.getPlayerList().remove(actor);throw new RuntimeException(failed);}
@@ -118,5 +119,47 @@ public final class PhysicalBuilderGameTests {
         actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
         helper.assertTrue(level.getBlockState(target).isAir() && actor.getMainHandItem().is(Items.WATER_BUCKET),"Unsupported bucket cannot bypass the placement ticket gate");
         System.out.println("ENGINEER_PHYSICAL_AUTHORITY missing=denied revoked=denied expired=denied wrong-destination=denied edited=denied wal-failure=denied one-use=true bucket=denied live-place=true live-mine=true");
+    }
+    private static void projectAuthority(GameTestHelper helper,ServerPlayer actor,BlockPos support,BlockPos target) throws Exception {
+        var level=actor.level();var server=level.getServer();var client=ClientInformation.createDefault();
+        var profile=new GameProfile(UUID.fromString("762fbfe0-89f7-4fd1-b266-cdc97bc85e7a"),"ControllerProbe");
+        var human=(ServerPlayer)Class.forName("carpet.patches.EntityPlayerMPFake")
+            .getMethod("respawnFake",net.minecraft.server.MinecraftServer.class,net.minecraft.server.level.ServerLevel.class,GameProfile.class,ClientInformation.class)
+            .invoke(null,server,level,profile,client);
+        var connection=(Connection)Class.forName("carpet.patches.FakeClientConnection").getConstructor(PacketFlow.class).newInstance(PacketFlow.SERVERBOUND);
+        server.getPlayerList().placeNewPlayer(connection,human,new CommonListenerCookie(profile,0,client,false));
+        human.gameMode.changeGameModeForPlayer(GameType.CREATIVE);
+        human.snapTo(actor.getX(),actor.getY(),actor.getZ(),0,0);
+        var manager=EngineerMod.managerFor(server);var owner=UUID.randomUUID();
+        var project=new EngineeringSession(manager,UUID.randomUUID(),owner,level.dimension().identifier().toString());
+        manager.projects.put(project.projectId,project);
+        try{
+            project.access.member(owner,human.getUUID(),ProjectAccess.Role.EDITOR);project.commandActor=human.getUUID();
+            project.corner1=target;project.corner2=target;
+            var cells=new com.google.gson.JsonArray();var cell=new com.google.gson.JsonObject();var pos=new com.google.gson.JsonArray();pos.add(0);pos.add(0);pos.add(0);cell.add("pos",pos);cell.addProperty("state","minecraft:dirt");cells.add(cell);
+            var candidate=SchematicBlueprint.candidate(cells,99,"a".repeat(64),"b".repeat(64),manager.worldId,project.dimension,project.projectId.toString());
+            project.proposeImported(Blueprint.parse(candidate,manager.worldId,project.dimension),target,0);
+            helper.assertTrue(!project.access.allows(actor.getUUID(),ProjectAccess.Permission.BUILD),"Physical actor receives no project membership or grant");
+            for(String scenario:java.util.List.of("live","released","revoked","outside","disconnected")){
+                level.setBlockAndUpdate(target,Blocks.AIR.defaultBlockState());
+                var destination=scenario.equals("outside")?target.offset(2,0,0):target;
+                var base=destination.below();level.setBlockAndUpdate(base,Blocks.STONE.defaultBlockState());level.setBlockAndUpdate(destination,Blocks.AIR.defaultBlockState());
+                actor.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.DIRT,1));
+                project.claim(ProjectAccess.Permission.BUILD,false);
+                PhysicalActionGate.arm(actor,"place",destination,Blocks.AIR.defaultBlockState(),server.getTickCount()+10,
+                    ()->project.validateMutation(ProjectAccess.Permission.BUILD,destination),()->{});
+                if(scenario.equals("released"))manager.release(project);
+                if(scenario.equals("revoked"))project.access.permission(owner,human.getUUID(),ProjectAccess.Permission.BUILD,false);
+                if(scenario.equals("disconnected"))server.getPlayerList().remove(human);
+                var hit=new net.minecraft.world.phys.BlockHitResult(new Vec3(base.getX()+0.5,base.getY()+1,base.getZ()+0.5),net.minecraft.core.Direction.UP,base,false);
+                actor.gameMode.useItemOn(actor,level,actor.getMainHandItem(),InteractionHand.MAIN_HAND,hit);
+                boolean live=scenario.equals("live");
+                helper.assertTrue(level.getBlockState(destination).is(live?Blocks.DIRT:Blocks.AIR) && actor.getMainHandItem().getCount()==(live?0:1),"Actual project lease governs physical destination/items: "+scenario);
+                manager.release(project);
+                if(scenario.equals("revoked"))project.access.permission(owner,human.getUUID(),ProjectAccess.Permission.BUILD,true);
+            }
+            helper.assertTrue(!actor.isCreative(),"Physical actor remains in survival while human permission uses the unchanged core");
+            System.out.println("ENGINEER_PHYSICAL_PROJECT_AUTHORITY live=placed released=denied revoked=denied outside-reservation=denied disconnected=denied actor-grants=none");
+        }finally{manager.release(project);manager.projects.remove(project.projectId);server.getPlayerList().remove(human);}
     }
 }
