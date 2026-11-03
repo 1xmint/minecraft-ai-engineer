@@ -26,6 +26,7 @@ public final class FullAdderGameTests {
                     for(var pin:design.pins()){
                         var actual=observe(helper,pin);ports.add(pin.id(),actual);
                         boolean logical=pin.physical()==FullAdderDesign.Physical.WIRE?actual.getAsInt()>0:actual.getAsBoolean();
+                        if(!expected.containsKey(pin.id()) || expected.get(pin.id())!=logical)diagnose(helper,design,vector,offset,pin.id());
                         helper.assertTrue(expected.containsKey(pin.id()) && expected.get(pin.id())==logical,"Wrong full-adder pin "+pin.id()+" vector="+vector+" elapsed="+offset+" actual="+actual);
                     }
                     var frame=new JsonObject();frame.addProperty("case",row);frame.addProperty("vector",vector);frame.addProperty("gameTick",now);frame.addProperty("elapsedTicks",offset);frame.add("ports",ports);samples.add(frame);
@@ -39,6 +40,14 @@ public final class FullAdderGameTests {
             var report=new JsonObject();report.addProperty("schemaVersion",1);report.addProperty("kind","full-adder-physical-prototype");report.addProperty("cells",design.cells().size());report.addProperty("pins",design.pins().size());report.addProperty("settleGameTicks",256);report.addProperty("stableSamples",8);report.add("samples",samples);
             System.out.println("Full-adder native observations: "+report);helper.succeed();
         });
+    }
+    private static void diagnose(GameTestHelper helper,FullAdderDesign design,int vector,int elapsed,String failed){
+        var report=new JsonObject();report.addProperty("vector",vector);report.addProperty("elapsed",elapsed);report.addProperty("failedPin",failed);
+        var ports=new JsonObject();for(var pin:design.pins())ports.add(pin.id(),observe(helper,pin));report.add("ports",ports);
+        var route=new JsonArray();for(var cell:design.cells())if(cell.pos().getX()==18 || cell.pos().getX()==20 || cell.pos().getZ()==21){
+            var value=new JsonObject();value.add("pos",Blueprint.jsonPos(cell.pos()));value.addProperty("state",Blueprint.describe(helper.getLevel().getBlockState(helper.absolutePos(cell.pos()))));route.add(value);
+        }
+        report.add("n1Route",route);System.out.println("Full-adder failure observations: "+report);
     }
     private static Map<String,Boolean> expected(int vector){
         boolean a=(vector&4)!=0,b=(vector&2)!=0,c=(vector&1)!=0;
