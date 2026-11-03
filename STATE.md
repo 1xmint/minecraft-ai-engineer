@@ -4,6 +4,16 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Dedicated physical chat source053f358 / CI41576664814 completed SUCCESS.
+Downloaded work/physical-chat-proof-41576664814; inspected all5 completion receipts
+and actual screenshot showing the companion rendered on stone platform. Both
+real clients exercised owner addressed-chat summon/dismiss, shared-editor denied
+summon/dismiss plus authorized location, and owner disconnect removed actor.
+Added exact-source screenshot/evidence to docs/physical-companion.md. This proves
+N1/N2 dedicated idle flow, not production online authentication, server-restart
+actor recovery, navigation, construction or survival gathering. Required full CI
+for PR47 remains pending; no merge/release yet.
+
 PR47 is draft, stacked on phase/28-imported-core. Source901a264 native lifecycle
 CI41575900486 passed. Dedicated chat41575903677 failed because the fixture shared
 Bob AFTER summon: authorization revision correctly removed the actor, so Bob's

@@ -1,8 +1,17 @@
 # Optional physical companion
 
-This development feature is awaiting native lifecycle and multiplayer proof. It
-is not included in alpha.2. It currently creates an idle visible companion;
+This development feature has passed native lifecycle and dedicated two-client
+chat proof; full integration checks remain pending. It is not included in alpha.2.
+It currently creates an idle visible companion;
 physical construction, gathering and navigation are not enabled.
+
+![The physical companion received and rendered by the actual Minecraft client](images/physical-companion.png)
+
+Screenshot from the dedicated offline CI fixture on source `053f358`,
+[run 41576664814](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41576664814).
+The run proves addressed-chat summon/dismiss, denied shared-editor actions and
+owner-disconnect cleanup. It does not establish production account login or the
+full human acceptance workflow.
 
 The server operator needs the free
 [Carpet 26.3 release](https://github.com/gnembon/fabric-carpet/releases/tag/v26.3),
