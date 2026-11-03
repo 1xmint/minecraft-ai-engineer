@@ -4,6 +4,113 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Physical restart sourceeb036d1 / CI41577467684 completed SUCCESS. Downloaded
+work/physical-restart-proof-41577467684 and inspected physical-restart.done plus
+runner success. Actual saved-world boot retained world/project, advanced epoch,
+had no actor/lease/test callback; only fresh chat created a new actor UUID received
+by the reconnected client, then explicit dismissal removed it. R1/R2 passed on
+that source. This is idle lifecycle recovery, not interrupted building/inventory
+recovery or production authenticated-human acceptance. Preserve this regression
+in the companion integration before merging; no full NPC/survival completion.
+
+Phase32 physical restart proof in work/physical-restart,
+phase/32-physical-restart, based on PR47 sourcee0129c4; PR47 itself is frozen for CI.
+R1: dedicated server reopens the SAME saved world/project with a fresh epoch and
+no actor/lease/test callback. R2: normal chat reports absent actor; only a new
+explicit request creates a fresh UUID received by the reconnected client, with no
+project grants. Proof extends actual two-client runner with pinned saved-world
+launcher and required physical-restart.done receipt, separate feedback branch.
+No runtime behavior changed and no replacement world can satisfy identity checks.
+Scoped client compilation and shell syntax checks passed; actual restart CI pending. This is lifecycle
+recovery only; physical construction/gathering/navigation remain unfinished.
+
+Dedicated physical chat source053f358 / CI41576664814 completed SUCCESS.
+Downloaded work/physical-chat-proof-41576664814; inspected all5 completion receipts
+and actual screenshot showing the companion rendered on stone platform. Both
+real clients exercised owner addressed-chat summon/dismiss, shared-editor denied
+summon/dismiss plus authorized location, and owner disconnect removed actor.
+Added exact-source screenshot/evidence to docs/physical-companion.md. This proves
+N1/N2 dedicated idle flow, not production online authentication, server-restart
+actor recovery, navigation, construction or survival gathering. Required full CI
+for PR47 remains pending; no merge/release yet.
+
+PR47 is draft, stacked on phase/28-imported-core. Source901a264 native lifecycle
+CI41575900486 passed. Dedicated chat41575903677 failed because the fixture shared
+Bob AFTER summon: authorization revision correctly removed the actor, so Bob's
+location request reported no actor. Fixture now shares first, then summons; no
+lifecycle guard changed. Downloaded evidence work/physical-chat-failure-41575903677
+and inspected screenshot: actual client received actor but camera fell away from
+the floating platform. Fixture camera now flies and clears chat before capture.
+Scoped client compilation passed; corrected real chat/screenshot proof pending.
+Claude PR46 integrated separately in work/memory-integration, never his branch:
+reason punctuation and service-refresh fixture corrected, no auth weakening;
+focused GPT-6-Luna review found owner/privacy/replay separation sound. Memory
+feedback41576575423/source30ee71d is live. All broad milestones remain incomplete.
+
+Dedicated physical chat proof now has two actual client roles and its own CI
+workflow/runner. Alice's addressed chat summons a server actor; the actual client
+must receive its UUID entity and captures a screenshot. Bob is a shared editor
+and real chat summon/dismiss must deny while authorized location works. Alice
+dismisses, re-summons, then disconnects; server must remove its actor. Separate
+workflow pins/verifies Carpet jar and supplies it only through a CI init script;
+ordinary build dependencies/full multiplayer harness unchanged. Scoped client
+compile and shell syntax checks passed; native dedicated flow is pending CI.
+Native lifecycle run41575306520 failed on an invalid fixture timing assumption:
+vanilla item drops can be picked up before walking starts. Assertion now checks
+zero dirt before mining; no supply occurs thereafter and final pickup still
+requires exactly1 native dirt. Do not characterize legitimate early pickup as an
+inventory injection failure. Re-run focused native lifecycle after this change.
+
+Extended lifecycle sourcee79fb3b / CI41574979258 completed SUCCESS; inspected
+actual owner/editor/action/material/XP/dismiss/selection/grant/disconnect marker
+and both required native passes. These are production lifecycle methods driven
+with native CI connections, not an actual dedicated chat/UI proof. Merged current
+combined core through0a5a077, including chronological observer receipts and strict
+trace-null serialization fix3d4f732. New combined source requires fresh CI; parent
+run41575231876 is pending. Previously dispatched combined41575015476 remains live
+on older source lacking the serialization correction; no pass is claimed.
+
+Lifecycle sourcef4d59af / CI41574545857 completed SUCCESS; inspected actual
+owner summon/editor denial/idle action+material denial/dismiss/grant cleanup
+marker and both required native passes. New candidate blocks XP orb pickup too,
+uses concurrent actor-registration lookup, and extends actual native lifecycle to
+selection change and owner removal before checking core disconnected-action
+denial. Scoped Java compilation passed. These extensions require fresh CI.
+Parent connected CI41573027130 failed only because Bob's single four-minute wait
+covered436-cell construction, interruption/revocation and final trial; artifact
+shows final approved trial actually running. Parent now follows each existing
+progress receipt in order without changing four-minute bound or functional checks.
+Combined41573034326 remains live; do not cancel to include the newer observer fix.
+
+Phase30 optional visible companion, work/physical-companion,
+phase/30-physical-companion, based on combined core0df5e59. Outcomes:
+
+- N1: owner says summon my companion and sees an empty survival player-like actor
+  in a checked3x3 stone/air workspace; unsupported optional dependency explains
+  refusal. Proof: actual native Carpet lifecycle plus chat routing/absence tests.
+- N2: viewer/editor cannot summon another owner's actor; owner can dismiss;
+  disconnect, selection/grant/revision change removes actor without restoring an
+  action. Proof: native denial/lifecycle cases and eventual dedicated player flow.
+- N3: actor receives no project grants; default-deny action gate prevents item,
+  mining and entity interactions. Existing mod works without Carpet. Proof: retained
+  phase29 native refusal suite and normal full CI without optional dependency.
+  Implementation uses proven optional Carpet26.3 reflection (no account lookup),
+  server-owned lifecycle and adopted event-time guards. No construction/gathering or
+  general movement claimed until separate executor/navigation/restart proof.
+
+Phase30 implementationf4d59af pushed with optional runtime lifecycle and default-
+deny vanilla action hooks, addressed-chat summon/location/dismiss, checked3x3
+stone/air spawn, random empty survival identity, owner/connection/selection/
+grant/revision cleanup, and dropped-item pickup denial. Scoped Java compilation
+passed including native lifecycle fixture. Exact Carpet manifest version is
+26.3+v260915 (upstream build.gradle appends date), checked before reflection.
+Focused read-only GPT-6-Luna review found no blocker for this idle scope. Cleanup
+is next-END-tick; no action ticket exists for idle actors. Material pickup is
+blocked, XP orb pickup and external physics are not claimed contained. Separate
+physical-lifecycle-feedback CI is submitted, native N1/N2 and dedicated chat flow
+still pending. Existing creative assistant and optional-dependency-absent behavior
+need full CI before merge/release. No construction/gathering completion claim.
+
 PR45 merged into public main as aaed3ef5e63b8afd42a2c3d47426b39dedd22cd6.
 Exact source42deb3c / CI41577981016 passed all5 jobs; inspected dedicated artifact
 work/connected-success-41577981016, restart/undo receipts and final independent
