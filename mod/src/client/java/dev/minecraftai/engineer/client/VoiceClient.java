@@ -62,7 +62,6 @@ public final class VoiceClient implements ClientModInitializer {
             controller.cancel(null);
             playback.stop();
         });
-        Thread.ofPlatform().daemon().name("engineer-voice-cleanup").start(VoiceAdapters::removeStaleRecordings);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             controller.cancel(null);
             playback.stop();

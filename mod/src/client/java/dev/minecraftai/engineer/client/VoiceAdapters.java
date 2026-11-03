@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import javax.sound.sampled.AudioFileFormat;
@@ -44,21 +43,6 @@ final class VoiceAdapters {
     interface Speaker {
         void speak(String text) throws Exception;
         void stop();
-    }
-
-    /** Removes recordings left behind by a crash: only engineer-voice-* folders holding nothing but speech.wav. */
-    static void removeStaleRecordings() {
-        Path temp = Path.of(System.getProperty("java.io.tmpdir"));
-        try (var folders = Files.newDirectoryStream(temp, "engineer-voice-*")) {
-            for (Path folder : folders) {
-                if (!Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) continue;
-                Path wav = folder.resolve("speech.wav");
-                try {
-                    if (Files.isRegularFile(wav, LinkOption.NOFOLLOW_LINKS)) Files.delete(wav);
-                    Files.delete(folder); // fails, and is left alone, if anything else is inside
-                } catch (IOException | SecurityException inUseOrNotOurs) { /* skip */ }
-            }
-        } catch (IOException | SecurityException unreadable) { /* nothing to clean */ }
     }
 
     static boolean microphonePresent() {

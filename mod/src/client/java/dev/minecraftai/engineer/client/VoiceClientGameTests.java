@@ -334,15 +334,18 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         try { early.speak("too late"); throw new AssertionError("A stopped speaker still spoke"); }
         catch (LocalProcess.Failure expected) { check(System.nanoTime() - before < TimeUnit.SECONDS.toNanos(5), "Stop before start never plays"); }
 
-        Path stale = Files.createTempDirectory("engineer-voice-");
-        Files.write(stale.resolve("speech.wav"), new byte[44]);
         Path foreign = Files.createTempDirectory("engineer-voice-");
-        Files.writeString(foreign.resolve("notes.txt"), "not ours");
-        VoiceAdapters.removeStaleRecordings();
-        check(!Files.exists(stale), "A recording left by a crash is removed at startup");
-        check(Files.exists(foreign.resolve("notes.txt")), "Folders holding anything else are left alone");
-        Files.delete(foreign.resolve("notes.txt"));
-        Files.delete(foreign);
+        byte[] otherRecording=new byte[]{1,2,3,4};
+        try {
+            Files.write(foreign.resolve("speech.wav"),otherRecording);
+            Files.writeString(foreign.resolve("notes.txt"),"not ours");
+            var isolated=new VoiceAdapters.ProcessRecognizer(new VoiceConfig.Command(List.of("sh","-c","head -c 4 \"$0\"; printf ' %s' \"$0\"","{wav}"),10));
+            String own=isolated.transcribe(new byte[32]);Path ownWav=Path.of(own.substring(5).strip());
+            check(!Files.exists(ownWav) && !Files.exists(ownWav.getParent()),"Recognition cleans only its own private directory");
+            check(java.util.Arrays.equals(Files.readAllBytes(foreign.resolve("speech.wav")),otherRecording) && Files.readString(foreign.resolve("notes.txt")).equals("not ours"),"Another instance's identically named audio and files remain unchanged");
+        } finally {
+            Files.deleteIfExists(foreign.resolve("speech.wav"));Files.deleteIfExists(foreign.resolve("notes.txt"));Files.deleteIfExists(foreign);
+        }
     }
 
     private interface Action { void run() throws Exception; }
@@ -374,10 +377,12 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         return null;
     }
 
-    private static void write(Path file, String text) throws java.io.IOException {
-        if (text == null) { Files.deleteIfExists(file); return; }
-        Files.createDirectories(file.getParent());
-        Files.writeString(file, text, StandardCharsets.UTF_8);
+    private static void write(Path file, String text) {
+        try {
+            if (text == null) { Files.deleteIfExists(file); return; }
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, text, StandardCharsets.UTF_8);
+        } catch(java.io.IOException failed){throw new java.io.UncheckedIOException("Voice fixture config could not be written",failed);}
     }
 
     private static ServerPlayer player(MinecraftServer server) { return server.getPlayerList().getPlayers().getFirst(); }

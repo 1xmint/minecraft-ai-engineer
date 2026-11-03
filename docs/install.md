@@ -73,8 +73,10 @@ This bundle is not proof of full human acceptance or production account login.
 ## Voice (optional, local)
 
 Voice is off until you turn it on, and typing always works without it. Speech is
-recognised and spoken by programs on your own computer. No audio is uploaded, no
-account or API key is needed, and nothing is billed.
+recognised and spoken by programs on your own computer. The mod sends no audio to
+Minecraft servers or OpenAI. Use trusted offline recogniser and speech programs;
+configured programs control their own network behavior. The supported local setup
+needs no account or API key and has no usage billing.
 
 1. Install a local speech recogniser, for example
    [whisper.cpp](https://github.com/ggml-org/whisper.cpp) with a small English
@@ -134,7 +136,9 @@ runs as a command.
 **Privacy.** The recording is held in memory, written to a private temporary
 folder only while your recogniser runs, and deleted straight after, whether it
 succeeded, failed or was cancelled. Recording stops after 30 seconds. The
-recogniser is stopped after `timeoutSeconds`.
+recogniser is stopped after `timeoutSeconds`. Each run cleans only its own private
+folder. A hard process or computer crash can leave that run's temporary audio;
+startup does not delete other clients' folders or active recordings.
 
 **If something is missing.** With no config, an invalid config, no microphone or a
 failing recogniser, pressing V shows one plain line explaining why and nothing is
@@ -166,8 +170,8 @@ check once on a real computer:
 available. Typing still works.`
 9. Break the recogniser path in the config and press V, speak, release. Expect
    `Speech recognition could not start ...` and typing still works.
-10. After each run, check your temporary folder has no `engineer-voice-*`
-    folder left behind.
+10. After normal completion or cancellation, check that this run's temporary
+    recording was removed. Leave other running clients' temporary folders alone.
 
 Still to be validated by a person: recognition quality and speed on real
 hardware, the Windows and Linux speaker commands above, microphone permission
