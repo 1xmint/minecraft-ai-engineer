@@ -4,6 +4,18 @@
 all six Phase2 features in docs/product-brief.md. Overall goal incomplete.
 Repo: https://github.com/1xmint/minecraft-ai-engineer.
 
+Inspected failed-restart source0df5e59 / CI41573034326 dedicated artifacts at
+work/imported-restart-failure-41573034326: connected-functional/interruption/
+revocation/player-edit receipts all passed, as did imported-build.done. Actual
+flow assertions before those receipts required the whole8-case half-adder pass
+and exact control restoration, then actual35-block imported geometry completion
+with interruption/viewer denial/no functional claim. Stored imported source has
+35 intended cells and verification untested. This proves those pre-restart flows
+on that source, not the full run: saved-server boot then failed strict trace load
+because firstMismatch:null was omitted. Fix3d4f732 and restart/undo/independent
+SQLite verification still need exact-source full CI. Do not discard actual partial
+evidence or inflate it to completed C3/I2/I3/overall milestones.
+
 Inspected source29785a2 / CI41533141692 Fabric artifact at
 work/imported-native-41533141692: all158 required native tests passed. This source
 includes imported182-material runtime admission and exact snapshot parity,
