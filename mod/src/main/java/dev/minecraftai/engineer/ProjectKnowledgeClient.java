@@ -133,7 +133,7 @@ final class ProjectKnowledgeClient {
                     if(lookup.kind()!=null && !lookup.kind().equals(string(note.get("kind"),32)) || lookup.changes() && !note.has("supersedes"))throw new IllegalArgumentException("Note outside the requested filter");
                 }
                 if(entries.isEmpty()){
-                    tell(f,lookup.why()?"Unknown: no recorded decision mentions '"+lookup.text()+"', so I can't say why it was chosen."
+                    tell(f,lookup.why()?(lookup.text()==null?"Unknown: no decisions are recorded for this project":"Unknown: no recorded decision mentions '"+lookup.text()+"'")+", so I can't say why it was chosen."
                             :"Unknown: no shared project notes match "+subject+".");
                     return;
                 }
@@ -146,7 +146,7 @@ final class ProjectKnowledgeClient {
         }));
     }
     private static String subject(ConversationMemoryText.Lookup lookup){
-        if(lookup.why())return "decisions mentioning '"+lookup.text()+"'";
+        if(lookup.why())return lookup.text()==null?"recorded decisions":"decisions mentioning '"+lookup.text()+"'";
         if(lookup.text()!=null)return "'"+lookup.text()+"'";
         if(lookup.changes())return "replacements";
         return lookup.kind()+"s";

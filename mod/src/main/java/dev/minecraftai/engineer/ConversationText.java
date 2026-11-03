@@ -22,6 +22,8 @@ final class ConversationText {
             case "explain the timing","show me how the timing works","how does the timing work" -> "explain the timing";
             case "explain the materials","what materials do i need","what do i need to build this" -> "explain the materials";
             case "what are you working on","what are we working on" -> "what are you working on";
+            case "where did we leave off","where were we","where did i leave off","catch me up","what were we doing" -> "where did we leave off";
+            case "why did we choose this","why did we choose that","why did we choose this part","why did we choose this design","why did we pick this","why this design" -> "why did we choose this";
             default -> null;
         };
     }

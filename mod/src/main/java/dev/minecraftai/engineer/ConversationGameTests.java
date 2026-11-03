@@ -45,6 +45,23 @@ public final class ConversationGameTests {
         rejects(helper,()->ProjectKnowledgeClient.validateNote(unwritten,owner),"Version 2 notes record the revision they were written against");
         helper.succeed();
     }
+    @GameTest public void groundedExplanationPhrasesAndEvidenceAreExact(GameTestHelper helper){
+        for(String text:new String[]{"Where did we leave off?","where were we","Catch me up."})
+            helper.assertTrue("where did we leave off".equals(ConversationText.lesson(text)),"Resume phrasing: "+text);
+        for(String text:new String[]{"Why did we choose this?","why did we pick this","Why this design?"}) {
+            helper.assertTrue("why did we choose this".equals(ConversationText.lesson(text)),"Why phrasing: "+text);
+            helper.assertTrue(ConversationMemoryText.lookup(text)==null,"A pronoun why goes to the explanation, not a note search: "+text);
+        }
+        helper.assertTrue(ConversationText.lesson("why did we choose comparators")==null && ConversationMemoryText.lookup("why did we choose comparators").why(),"A named why stays a literal note search");
+        helper.assertTrue(LessonAssistant.evidence(null,3).equals("untested"),"No record means untested, never an invented pass");
+        var task=new ComponentAssignments.Task("a","basis");task.verified="passed:generated-buffer:3 vectors@4";
+        helper.assertTrue(LessonAssistant.evidence(task,3).equals("passed:generated-buffer:3 vectors@4"),"A pass without a recorded scope is reported as stored");
+        var scope=new com.google.gson.JsonObject();scope.addProperty("blueprintRevision",3L);task.lastPassedScope=scope;
+        helper.assertTrue(LessonAssistant.evidence(task,3).equals("passed:generated-buffer:3 vectors@4 at design revision 3"),"A current pass names its revision");
+        String stale=LessonAssistant.evidence(task,4);
+        helper.assertTrue(stale.startsWith("passed:generated-buffer:3 vectors@4, but its last pass was at design revision 3 but the design is now revision 4"),"An old pass is marked stale after a design change: "+stale);
+        helper.succeed();
+    }
     @GameTest public void noteLookupsAreReadOnlyAndLiteral(GameTestHelper helper){
         var shown=ConversationMemoryText.lookup("Show me project note #12.");
         helper.assertTrue(shown.show() && shown.number()==12 && shown.text()==null,"A note is shown by its number");
