@@ -100,6 +100,17 @@ public final class ConversationGameTests {
         rejects(helper,()->ProjectKnowledgeClient.validateEntry(current,java.util.UUID.fromString("00000000-0000-4000-8000-000000000009"),2),"Only owner-authored notes are shown");
         helper.succeed();
     }
+    @GameTest public void guidanceQuestionsRouteToReadOnlyLessons(GameTestHelper helper){
+        for(String text:new String[]{"What should I do next?","what's next","What do I do next"})
+            helper.assertTrue("what should i do next".equals(ConversationText.lesson(text)),"Next-step phrasing: "+text);
+        for(String text:new String[]{"What is still untested?","what hasn't been tested","What still needs testing?"})
+            helper.assertTrue("what is still untested".equals(ConversationText.lesson(text)),"Untested phrasing: "+text);
+        for(String text:new String[]{"Why did you choose this?","why did you pick this"})
+            helper.assertTrue("why did we choose this".equals(ConversationText.lesson(text)),"Why phrasing: "+text);
+        for(String text:new String[]{"what should I build next","test what is still untested","what's next to build"})
+            helper.assertTrue(ConversationText.lesson(text)==null,"Not a guidance question: "+text);
+        helper.succeed();
+    }
     @GameTest public void projectSummaryKeepsStatementsAndReplacementsApart(GameTestHelper helper){
         for(String text:new String[]{"Summarize this project.","give me a project summary","What's the state of this project?"})
             helper.assertTrue(ProjectSummary.asks(text),"Summary phrasing: "+text);

@@ -1328,6 +1328,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Where we left off") || message.contains("Your lesson") || message.contains("Component a:")),"A revoked member's resume reveals no project, lesson or component records");
+        MESSAGES.clear();send(context,"engineer ask what is still untested");context.waitTicks(20);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Untested for the current design") || message.contains("History only")),"A revoked member cannot list untested components");
         write("lesson-denied.done","passed");
         if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
@@ -2897,6 +2899,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask why did we choose this");expectChat(context,"Why component b was chosen: I answer only from decisions recorded");
         await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Unknown: no decisions are recorded for this project") || message.contains("Project notes unavailable")),"Why with no recorded decisions reports unknown");
         check(MESSAGES.stream().noneMatch(message->message.contains("(decision, current)")),"No decision is invented for a project without notes");
+        context.waitTicks(120); // Keep chat pacing under the vanilla spam limit before the next questions.
+        // "What is still untested" keeps A's older pass as history, never as evidence for the revised design.
+        MESSAGES.clear();send(context,"engineer ask what is still untested");expectChat(context,"What is still untested in");
+        expectChat(context,"Untested for the current design: component a");
+        expectChat(context,"History only, not current evidence: component a: a pass was recorded at design revision "+read("lesson-a-revision"));
+        expectChat(context,"This answer started no work");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Recorded pass for the current design scope")),"A historical pass is never listed as current evidence");
+        MESSAGES.clear();send(context,"engineer ask what should I do next");expectChat(context,"Suggested next step for");expectChat(context,"/engineer component test ");expectChat(context,"This answer started no work");
         server.runOnServer(s->{var project=session(s,"Alice");var alice=project.cursors.get(player(s,"Alice").getUUID());
             check(alice.stage==3 && !alice.teaching && project.testTick<0 && project.verified.startsWith("stale:") && project.journal.size()==6,"Resume and why questions change no lesson, test or journal state");});
         write("lesson-recovery.done","passed");
