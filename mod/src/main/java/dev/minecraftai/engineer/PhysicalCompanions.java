@@ -37,6 +37,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
+        if(gatherRequest || placeRequest || blueprintRequest || jobRequest){var binding=actors.get(project.projectId);if(binding!=null)PhysicalWorkerMenus.requireSettled(binding.actor);}
         if(jobRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
@@ -106,15 +107,19 @@ final class PhysicalCompanions {
             manager.server.getPlayerList().placeNewPlayer(connection,actor,new CommonListenerCookie(profile,0,client,false));
             PhysicalActionGate.bindConnection(actor);
             actor.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
+            PhysicalWorkerMenus.finishRestore(actor);
             actor.snapTo(spawn.getX()+0.5,spawn.getY(),spawn.getZ()+0.5,0,0);
             actor.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);actor.resetFallDistance();
-            if(!identity.restore() && !actor.getInventory().isEmpty() || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an unprivileged identity");
+            if(!identity.restore() && (!actor.getInventory().isEmpty() || !PhysicalWorkerMenus.capture(actor).empty()) || manager.server.getPlayerList().isOp(actor.nameAndId()))throw new IllegalStateException("Companion did not start with an unprivileged identity");
             var pack=Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(actor);pack.getClass().getMethod("stopAll").invoke(pack);
             PhysicalWorkerStorage.save(actor);
             identity.activate(manager,project);
             actors.put(project.projectId,new Binding(project,owner.getUUID(),owner.connection,project.revision(),project.access.revision(),actor,pack,spawn));
         }catch(Exception failed){
-            if(actor!=null){if(manager.server.getPlayerList().getPlayer(actor.getUUID())==actor)manager.server.getPlayerList().remove(actor);PhysicalActionGate.forget(actor);}
+            if(actor!=null)try{
+                if(manager.server.getPlayerList().getPlayer(actor.getUUID())==actor)manager.server.getPlayerList().remove(actor);
+                PhysicalActionGate.forget(actor);
+            }catch(RuntimeException cleanup){failed.addSuppressed(cleanup);}
             throw new IllegalStateException("Physical companion could not be created safely; no construction was started",failed);
         }
     }

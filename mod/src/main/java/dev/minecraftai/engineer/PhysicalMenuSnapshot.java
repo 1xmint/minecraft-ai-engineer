@@ -20,6 +20,7 @@ final class PhysicalMenuSnapshot {
     }
     List<ItemStack> inputs(){return inputs.stream().map(ItemStack::copy).toList();}
     ItemStack cursor(){return cursor.copy();}
+    boolean empty(){return cursor.isEmpty() && inputs.stream().allMatch(ItemStack::isEmpty);}
     boolean matches(PhysicalMenuSnapshot other){
         for(int index=0;index<4;index++)if(!ItemStack.matches(inputs.get(index),other.inputs.get(index)))return false;
         return ItemStack.matches(cursor,other.cursor);

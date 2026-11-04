@@ -742,6 +742,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.getPlayerList().placeNewPlayer(connection,worker,new net.minecraft.server.network.CommonListenerCookie(profile,0,client,false));
             if(restore)PhysicalActionGate.bindConnection(worker);
             worker.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
+            if(restore)PhysicalWorkerMenus.finishRestore(worker);
             if(server.getPlayerList().isOp(worker.nameAndId()))throw new IllegalStateException("Worker must not be an operator");
             return worker;
         }catch(Exception failed){

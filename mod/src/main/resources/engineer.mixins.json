@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "dev.minecraftai.engineer.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["PistonEventMixin", "ServerRecoveryMixin", "ServerBlockEventsMixin", "WireConnectionMixin", "PhysicalPlaceMixin", "PhysicalGameModeMixin", "PhysicalEntityMixin", "PhysicalPickupMixin", "PhysicalExperienceMixin", "PhysicalDropMixin"],
+  "mixins": ["PistonEventMixin", "ServerRecoveryMixin", "ServerBlockEventsMixin", "WireConnectionMixin", "PhysicalPlaceMixin", "PhysicalGameModeMixin", "PhysicalEntityMixin", "PhysicalPickupMixin", "PhysicalExperienceMixin", "PhysicalDropMixin", "PhysicalMenuSaveMixin", "PhysicalMenuCloseMixin", "PhysicalMenuClickMixin"],
   "injectors": { "defaultRequire": 1 }
 }
