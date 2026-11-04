@@ -590,30 +590,33 @@ final class EngineeringSession implements BuildExecutor {
         for (Change c : journal) if(c.operation().equals(activeOperation)) expected.put(c.pos(), c.after());
         return expected;
     }
-    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual,Blueprint connectedOperation) {
-        if(ConnectedIntention.describes(blueprint.source())){
+    private ConnectedWireUndo.Frame connectedFrame(){
+        return operationScopes.connected(activeOperation)?ConnectedWireUndo.Frame.capture(operationScopes.connectedBlocks(activeOperation,blueprint),journal,activeOperation):null;
+    }
+    private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual,ConnectedWireUndo.Frame connectedOperation) {
+        if(connectedOperation!=null || ConnectedIntention.describes(blueprint.source())){
             if(expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
             if(expected.is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && connectedOperation!=null){
                 // Only assistant-written cells may use native partial-construction arms.
                 // Adopted player wires retain the original exact static comparison.
-                Change owned=null;for(var change:journal)if(change.operation().equals(activeOperation) && change.pos().equals(pos))owned=change;
-                if(owned!=null && Blueprint.matches(owned.after(),expected))
-                    return ConnectedWireUndo.matchesValidated(connectedOperation,owned,actual,level());
+                if(connectedOperation.owns(pos,expected))return connectedOperation.matches(pos,expected,actual,level());
             }
         }
         if((operationKind.equals("REPAIR") || GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source())) && expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
         return Blueprint.matches(expected,actual);
     }
     void reconcile() {
+        reconcile(connectedFrame());
+    }
+    private void reconcile(ConnectedWireUndo.Frame connectedOperation) {
         requireCreative();
         if (undoRequested) throw new IllegalStateException("Undo was interrupted; use /engineer undo to reconcile it");
-        Blueprint connectedOperation=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
-            ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
+        var expected=expectedNow();
         if(connectedOperation!=null){
-            var reads=new HashSet<BlockPos>(expectedNow().keySet());reads.addAll(dependencies.keySet());
+            var reads=new HashSet<BlockPos>(expected.keySet());reads.addAll(dependencies.keySet());
             for(var pos:reads)if(!level().hasChunkAt(pos))throw new IllegalStateException("Connected reconciliation needs all recorded cells and dependencies loaded");
         }
-        for (Map.Entry<BlockPos, BlockState> entry : expectedNow().entrySet()) {
+        for (Map.Entry<BlockPos, BlockState> entry : expected.entrySet()) {
             validateTarget(entry.getKey());
             BlockState actual = level().getBlockState(entry.getKey());
             if (!matchesExpected(entry.getKey(),entry.getValue(), actual,connectedOperation)) {
@@ -758,12 +761,10 @@ final class EngineeringSession implements BuildExecutor {
                     if(operationKind.equals("REPAIR"))validateShutterRepairFrame(true);
                     else ShutterEnvironment.validateConstructionReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());
                 }
-                reconcile();
+                var connectedBuild=connectedFrame();reconcile(connectedBuild);
                 if (server.getTickCount() < nextPlacement) return;
-                nextPlacement=server.getTickCount()+4;
+                nextPlacement=server.getTickCount()+(ConnectedIntention.fullAdder(blueprint.source())?1:4);
                 if(operationKind.equals("STRUCTURAL")){tickStructural();return;}
-                Blueprint connectedBuild=ConnectedIntention.describes(blueprint.source()) && operationScopes.contains(activeOperation)
-                    ?ConnectedIntention.validated(operationScopes.blueprint(activeOperation)).blueprint():null;
                 for (Blueprint.PlannedBlock b : assignmentBlocks()) {
                     if(operationKind.equals("REPAIR") && !repairTargets.contains(b.pos()))continue;
                     BlockState actual = level().getBlockState(b.pos());
@@ -784,7 +785,9 @@ final class EngineeringSession implements BuildExecutor {
                     if(operationKind.equals("REPAIR") && ShutterDesign.describes(blueprint.source()))validateShutterRepairFrame(true);
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
-                    pendingPlacement=false;save(); return;
+                    pendingPlacement=false;save();
+                    if("true".equals(System.getenv("CI")) && ConnectedIntention.fullAdder(blueprint.source()) && journal.size()%256==0)System.out.println("Full-adder construction progress: "+journal.size()+"/"+blueprint.blocks().size());
+                    return;
                 }
                 if(connectedBuild!=null && assignmentBlocks().stream().anyMatch(block->!Blueprint.matches(block.state(),level().getBlockState(block.pos())))){
                     detail="Waiting for native connected wire geometry to settle";return;
@@ -1443,7 +1446,9 @@ final class EngineeringSession implements BuildExecutor {
         validateDeclaredPrerequisites();
         for (Blueprint.PlannedBlock b:assignmentBlocks()) { validateTarget(b.pos()); if (!Blueprint.matches(b.state(),level().getBlockState(b.pos()))) throw new IllegalStateException("Complete/correct the blueprint before testing"); }
         Set<BlockPos> planned=new HashSet<>(); assignmentBlocks().forEach(b->planned.add(b.pos()));
+        Set<BlockPos> checked=new HashSet<>();
         for (Blueprint.PlannedBlock b:assignmentBlocks()) for (BlockPos p:BlockPos.betweenClosed(b.pos().offset(-2,-2,-2),b.pos().offset(2,2,2))) {
+            if(!checked.add(p.immutable()))continue;
             if (!level().hasChunkAt(p))throw new IllegalStateException("Test stopped: isolation margin is unloaded at "+p.toShortString());
             if (!planned.contains(p) && !level().getBlockState(p).isAir())throw new IllegalStateException("Test needs a two-block air margin around the floating circuit; occupied at "+p.toShortString());
         }
