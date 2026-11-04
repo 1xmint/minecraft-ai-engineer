@@ -7,7 +7,6 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Items;
 
 /** Write-ahead observations, never a resumable lease or permission to retry. */
 final class PhysicalGatherRecord {
@@ -15,6 +14,8 @@ final class PhysicalGatherRecord {
     private final Object connection;
     private final BlockPos source;
     private final Runnable authority;
+    private final PhysicalMaterial material;
+    private final net.minecraft.world.level.block.state.BlockState sourceState;
     private final Path file;
     private final JsonObject facts;
     private String stage="NEW";
@@ -23,8 +24,10 @@ final class PhysicalGatherRecord {
 
     PhysicalGatherRecord(Path directory,String world,UUID project,ServerPlayer worker,BlockPos source,Runnable authority) {
         this.worker=worker;connection=worker.connection;this.source=source.immutable();this.authority=authority;
+        sourceState=worker.level().getBlockState(source);material=PhysicalMaterial.source(sourceState);
         file=directory.resolve(project+".gather-"+UUID.randomUUID()+".json");facts=new JsonObject();
-        facts.addProperty("schemaVersion",1);facts.addProperty("world",world);facts.addProperty("project",project.toString());
+        facts.addProperty("schemaVersion",material==PhysicalMaterial.DIRT?1:2);facts.addProperty("world",world);facts.addProperty("project",project.toString());
+        if(material!=PhysicalMaterial.DIRT){facts.addProperty("material",material.id);facts.addProperty("sourceState",Blueprint.describe(sourceState));facts.addProperty("expectedItem",material.itemId);facts.addProperty("expectedCount",1);}
         facts.addProperty("worker",worker.getUUID().toString());facts.addProperty("dimension",worker.level().dimension().identifier().toString());
         var position=new JsonObject();position.addProperty("x",source.getX());position.addProperty("y",source.getY());position.addProperty("z",source.getZ());facts.add("source",position);
         live();if(!worker.getInventory().isEmpty() || Files.exists(file))throw new IllegalStateException("Gather record requires a fresh empty worker");
@@ -45,7 +48,7 @@ final class PhysicalGatherRecord {
         try{LocalFiles.write(file,value);facts.add("events",events.deepCopy());stage=next;}catch(RuntimeException failed){uncertain=true;throw failed;}
     }
     void prepareMine(){
-        require("NEW");if(!worker.level().getBlockState(source).is(net.minecraft.world.level.block.Blocks.DIRT) || !worker.getInventory().isEmpty())throw new IllegalStateException("Mining baseline changed");
+        require("NEW");if(!worker.level().getBlockState(source).equals(sourceState) || !worker.getInventory().isEmpty())throw new IllegalStateException("Mining baseline changed");
         persist("MINE_PREPARED");
     }
     void observeDrop(ItemEntity emitted){
@@ -56,7 +59,7 @@ final class PhysicalGatherRecord {
     void preparePickup(ItemEntity emitted){
         require("DROP_OBSERVED");
         if(!drop.equals(emitted.getUUID()) || emitted.level()!=worker.level() || !emitted.isAlive()
-            || !emitted.getItem().is(Items.DIRT) || emitted.getItem().getCount()!=1 || !worker.getInventory().isEmpty())
+            || !emitted.getItem().is(material.item) || emitted.getItem().getCount()!=1 || !worker.getInventory().isEmpty())
             throw new IllegalStateException("Pickup baseline changed");
         persist("PICKUP_PREPARED");
     }
@@ -64,7 +67,7 @@ final class PhysicalGatherRecord {
         require("PICKUP_PREPARED");int count=0;
         for(int slot=0;slot<worker.getInventory().getContainerSize();slot++) {
             var stack=worker.getInventory().getItem(slot);if(stack.isEmpty())continue;
-            if(!stack.is(Items.DIRT))throw new IllegalStateException("Unexpected gathered inventory");count+=stack.getCount();
+            if(!stack.is(material.item))throw new IllegalStateException("Unexpected gathered inventory");count+=stack.getCount();
         }
         var remaining=worker.level().getEntity(drop);
         if(count!=1 || remaining!=null && remaining.isAlive() || !worker.level().getBlockState(source).isAir())throw new IllegalStateException("Pickup outcome is uncertain");

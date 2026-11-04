@@ -22,10 +22,8 @@ final class PhysicalGatherInspection {
             var identityPath=manager.directory.resolve(project.projectId+".physical-worker.json");
             if(!Files.exists(identityPath))throw new IllegalStateException("Worker identity is missing; no replacement was created");
             var identity=PhysicalWorkerIdentity.open(manager,project);
-            var profile=new com.mojang.authlib.GameProfile(identity.id(),"Eng_"+identity.id().toString().substring(0,8));
-            var saved=new ServerPlayer(manager.server,project.level(),profile,net.minecraft.server.level.ClientInformation.createDefault());
             com.google.gson.JsonArray inventory=null;
-            try{PhysicalWorkerStorage.restore(saved);inventory=PhysicalWorkerStorage.inventory(saved);}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
+            try{inventory=PhysicalWorkerStorage.savedInventory(project.player(),new net.minecraft.server.players.NameAndId(identity.id(),"Eng_"+identity.id().toString().substring(0,8)));}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
             int number=0;for(var file:records) {
                 if(Files.size(file)>262144)throw new IllegalStateException("Gather record exceeds recovery inspection limit");
                 var record=JsonParser.parseString(Files.readString(file)).getAsJsonObject();validate(record,manager,project,identity.id());
@@ -52,11 +50,20 @@ final class PhysicalGatherInspection {
     private static void validate(JsonObject value,ProjectManager manager,EngineeringSession project,UUID worker) {
         String stage=value.get("stage").getAsString();int index=STAGES.indexOf(stage);
         var keys=new java.util.HashSet<>(Set.of("schemaVersion","world","project","worker","dimension","source","inventoryBefore","stage","events"));
+        int version=value.get("schemaVersion").getAsBigDecimal().intValueExact();
+        if(version==2){
+            keys.addAll(Set.of("material","sourceState","expectedItem","expectedCount"));
+        }
         if(index>=2)keys.add("drop");if(index==4)keys.add("inventorySaved");
-        if(index<0 || !value.keySet().equals(keys) || value.get("schemaVersion").getAsBigDecimal().intValueExact()!=1
+        if(index<0 || !value.keySet().equals(keys) || version!=1 && version!=2
             || !value.get("world").getAsString().equals(manager.worldId) || !value.get("project").getAsString().equals(project.projectId.toString())
             || !value.get("worker").getAsString().equals(worker.toString()) || !value.get("dimension").getAsString().equals(project.dimension))
             throw new IllegalStateException("Gather record scope or schema changed");
+        if(version==2){
+            var material=PhysicalMaterial.named(value.get("material").getAsString());
+            if(material!=PhysicalMaterial.OAK_LOG || !value.get("expectedItem").getAsString().equals(material.itemId) || value.get("expectedCount").getAsBigDecimal().intValueExact()!=1
+                || !Blueprint.state(value.get("sourceState").getAsString()).is(material.block))throw new IllegalStateException("Unknown oak gather contract");
+        }
         var events=value.getAsJsonArray("events");if(events.size()!=index+1)throw new IllegalStateException("Invalid gather event history");
         for(int i=0;i<events.size();i++)if(!events.get(i).getAsString().equals(STAGES.get(i)))throw new IllegalStateException("Invalid gather stage order");
         if(!value.getAsJsonObject("source").keySet().equals(Set.of("x","y","z")) || value.getAsJsonArray("inventoryBefore").size()>128)throw new IllegalStateException("Invalid gather snapshots");

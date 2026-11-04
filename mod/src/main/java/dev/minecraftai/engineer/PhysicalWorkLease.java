@@ -24,27 +24,37 @@ final class PhysicalWorkLease implements AutoCloseable {
     private boolean closed;
 
     PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads) {
+        this(manager,project,human,writes,reads,Set.of());
+    }
+    static PhysicalWorkLease movement(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> occupancy,Set<BlockPos> reads){
+        return new PhysicalWorkLease(manager,project,human,Set.of(),reads,occupancy);
+    }
+    private PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads,Set<BlockPos> occupancy) {
         this.manager=manager;this.project=project;owner=human.getUUID();connection=human.connection;
         revision=project.revision();authorization=project.access.revision();
         blueprint=project.blueprint;operation=project.activeOperation;component=project.activeComponent;
         var assignment=blueprint==null?null:project.assignments.task(blueprint,component);
         basis=assignment==null?null:assignment.basis;generation=assignment==null?0:assignment.generation;
-        var all=new HashSet<BlockPos>();writes.forEach(p->all.add(p.immutable()));reads.forEach(p->all.add(p.immutable()));
+        var all=new HashSet<BlockPos>();writes.forEach(p->all.add(p.immutable()));reads.forEach(p->all.add(p.immutable()));occupancy.forEach(p->all.add(p.immutable()));
         footprint=Set.copyOf(all);
         authority();
         var observed=new java.util.HashMap<BlockPos,net.minecraft.world.level.block.state.BlockState>();
         // Mutable write cells have their own exact-before action tickets. Read-only
         // supports and walking cells must retain the captured state throughout.
-        for(var pos:reads)if(!writes.contains(pos))observed.put(pos.immutable(),project.level().getBlockState(pos));
+        for(var pos:all)if(!writes.contains(pos))observed.put(pos.immutable(),project.level().getBlockState(pos));
         dependencies=java.util.Map.copyOf(observed);
-        fence=manager.reservations.acquire(manager.scope(project),owner,revision,authorization,ProjectAccess.Permission.BUILD,writes,reads,manager.server.getTickCount());
+        fence=occupancy.isEmpty()?manager.reservations.acquire(manager.scope(project),owner,revision,authorization,ProjectAccess.Permission.BUILD,writes,reads,manager.server.getTickCount())
+            :manager.reservations.acquireMovement(manager.scope(project),owner,revision,authorization,occupancy,reads,manager.server.getTickCount());
     }
-    private void authority() {
-        if(!manager.server.isSameThread() || closed)throw new IllegalStateException("Physical authority is not current");
+    static void requireIdle(EngineeringSession project){
         if(project.delegation!=null || project.hasPendingTest() || project.shutterMotion!=null
             || project.pendingPlacement || project.undoRequested || !project.journal.isEmpty() || !project.baseline.isEmpty()
             || Set.of("EXECUTING","PLANNING","VERIFYING").contains(project.state))
             throw new IllegalStateException("Stop and reconcile existing project work before physical delegation");
+    }
+    private void authority() {
+        if(!manager.server.isSameThread() || closed)throw new IllegalStateException("Physical authority is not current");
+        requireIdle(project);
         var human=manager.server.getPlayerList().getPlayer(owner);
         if(human==null || human.hasDisconnected() || human.connection!=connection || !project.owner.equals(owner)
             || !project.projectId.equals(manager.selections.get(owner)) || human.level()!=project.level()
@@ -72,10 +82,17 @@ final class PhysicalWorkLease implements AutoCloseable {
         }
     }
     void validate(BlockPos target) {
+        validateDependencies();
+        manager.reservations.validateWrite(manager.scope(project),fence,owner,revision,authorization,target,manager.server.getTickCount());
+    }
+    void validateMovement(Set<BlockPos> occupied){
+        validateDependencies();
+        manager.reservations.validateOccupancy(manager.scope(project),fence,owner,revision,authorization,occupied,manager.server.getTickCount());
+    }
+    private void validateDependencies(){
         authority();
         for(var observed:dependencies.entrySet())if(!project.level().getBlockState(observed.getKey()).equals(observed.getValue()))
             throw new IllegalStateException("Physical support or path was edited; reconcile before continuing");
-        manager.reservations.validateWrite(manager.scope(project),fence,owner,revision,authorization,target,manager.server.getTickCount());
     }
     @Override public void close() {
         if(!manager.server.isSameThread())throw new IllegalStateException("Server thread required");
