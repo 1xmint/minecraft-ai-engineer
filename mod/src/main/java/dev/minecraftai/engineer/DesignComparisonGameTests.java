@@ -136,7 +136,7 @@ public final class DesignComparisonGameTests {
     @GameTest public void importedGeometryIsNeverLabelledTested(GameTestHelper helper){
         var placement=new com.google.gson.JsonArray();
         for(int x=0;x<3;x++){var cell=new JsonObject();var pos=new com.google.gson.JsonArray();pos.add(x);pos.add(0);pos.add(0);cell.add("pos",pos);cell.addProperty("state","minecraft:stone");placement.add(cell);}
-        var imported=Blueprint.parse(SchematicBlueprint.candidate(placement,7,"d".repeat(64),"s".repeat(64),WORLD,DIM,UUID.randomUUID().toString()),WORLD,DIM);
+        var imported=Blueprint.parse(SchematicBlueprint.candidate(placement,7,"d".repeat(64),"e".repeat(64),WORLD,DIM,UUID.randomUUID().toString()),WORLD,DIM);
         // Even a task record claiming a current-scope pass cannot make imported geometry tested or timed.
         var m=DesignComparison.measure("imported",imported,passed(imported));
         helper.assertTrue(m.imported() && !m.currentPass() && m.timing()==null && m.status().equals(ComparisonEvidence.IMPORTED_STATUS)
