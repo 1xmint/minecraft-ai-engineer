@@ -19,6 +19,8 @@ final class VoiceController {
     interface Output {
         void prefill(String chatText);
         void notice(String text);
+        /** False when the chat box may not be filled now (a screen is open, the window lost focus or the world is gone). */
+        default boolean ready() { return true; }
     }
 
     static final int MAX_LISTEN_TICKS = 30 * 20, NOTICE_TICKS = 100, MAX_CHAT = 256;
@@ -101,6 +103,7 @@ final class VoiceController {
         state = State.IDLE;
         current = null;
         if (error != null) { notice(error); return; }
+        if (!output.ready()) { notice("Voice cancelled. Nothing was sent."); return; } // Never overwrite what the player opened meanwhile.
         String heard = clean(text);
         if (heard.isEmpty()) { notice("I did not hear any words. Try again, or type."); return; }
         output.prefill(PREFIX + heard);
@@ -135,4 +138,7 @@ final class VoiceController {
     }
 
     String lastNotice() { return notice; }
+
+    /** Shows a voice notice from elsewhere in the voice client, such as a failed speech program. */
+    void report(String text) { notice(text); }
 }
