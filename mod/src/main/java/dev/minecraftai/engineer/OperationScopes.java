@@ -22,6 +22,7 @@ final class OperationScopes {
 
     private final Map<String, Snapshot> snapshots = new HashMap<>();
     private final Map<String, Operation> operations = new HashMap<>();
+    private final Map<String,Map<BlockPos,Blueprint.PlannedBlock>> connectedCellIndexes=new HashMap<>();
     private String world;
     private String dimension;
     private String project;
@@ -108,6 +109,7 @@ final class OperationScopes {
         project = nextProject;
         snapshots.clear(); snapshots.putAll(nextSnapshots);
         operations.clear(); operations.putAll(nextOperations);
+        connectedCellIndexes.keySet().retainAll(nextSnapshots.keySet());
     }
 
     boolean contains(String operation) { return operations.containsKey(operation); }
@@ -118,6 +120,17 @@ final class OperationScopes {
     boolean fullAdder(String operation){
         var mapping=operations.get(operation);if(mapping==null)return false;var snapshot=snapshots.get(mapping.snapshot());
         return snapshot.transition()==null && ConnectedIntention.fullAdder(snapshot.parsed().source());
+    }
+    boolean connectedRoot(String operation){var mapping=operations.get(operation);return mapping!=null && mapping.component().equals("root") && connected(operation);}
+    /** A private, capture/load-validated historical cell. Never exposes source JSON. */
+    Blueprint.PlannedBlock connectedCell(String operation,String component,BlockPos target){
+        if(!connectedRoot(operation))throw new IllegalArgumentException("Not a captured root connected operation");
+        validate(operation,component,target);var mapping=operations.get(operation);var snapshot=snapshots.get(mapping.snapshot());
+        var index=connectedCellIndexes.computeIfAbsent(snapshot.id(),id->{
+            var cells=new HashMap<BlockPos,Blueprint.PlannedBlock>();for(var cell:snapshot.parsed().blocks())if(cells.put(cell.pos(),cell)!=null)throw new IllegalArgumentException("Duplicate captured connected cell");
+            return Map.copyOf(cells);
+        });
+        return index.get(target);
     }
     /** Already-validated private intent cells only: no mutable source, world state or authority is returned. */
     List<Blueprint.PlannedBlock> connectedBlocks(String operation,Blueprint current){
@@ -230,6 +243,7 @@ final class OperationScopes {
         used.forEach(id -> nextSnapshots.put(id, snapshots.get(id)));
         operations.clear(); operations.putAll(nextOperations);
         snapshots.clear(); snapshots.putAll(nextSnapshots);
+        connectedCellIndexes.keySet().retainAll(used);
         if (operations.isEmpty()) { world = null; dimension = null; project = null; }
     }
 

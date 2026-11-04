@@ -25,6 +25,9 @@ public final class FullAdderGameTests {
         var scopes=new OperationScopes();String operation=UUID.randomUUID().toString();scopes.capture(operation,"root",blueprint,false);
         var cells=scopes.connectedBlocks(operation,blueprint);var wire=cells.stream().filter(cell->cell.state().is(Blocks.REDSTONE_WIRE)).findFirst().orElseThrow();
         var first=new EngineeringSession.Change(wire.pos(),Blocks.AIR.defaultBlockState(),wire.state(),operation,"root");
+        var captured=scopes.connectedCell(operation,"root",wire.pos());helper.assertTrue(ConnectedWireUndo.matchesPlanned(captured,first,wire.state(),helper.getLevel())==ConnectedWireUndo.matchesValidated(blueprint,first,wire.state(),helper.getLevel()),"Indexed historical ownership agrees with the validated source matcher");
+        helper.assertTrue(!ConnectedWireUndo.matchesPlanned(captured,first,Blocks.STONE.defaultBlockState(),helper.getLevel()),"Indexed historical wire matching still rejects later edits");
+        rejects(helper,()->scopes.connectedCell(operation,"other",wire.pos()),"A different component cannot borrow the connected index");
         var foreign=new EngineeringSession.Change(wire.pos(),Blocks.AIR.defaultBlockState(),Blocks.STONE.defaultBlockState(),UUID.randomUUID().toString(),"root");
         var frame=ConnectedWireUndo.Frame.capture(cells,List.of(first,foreign),operation);
         helper.assertTrue(frame.owns(wire.pos(),wire.state()) && frame.matches(wire.pos(),wire.state(),wire.state(),helper.getLevel()),"Other operations cannot replace captured wire ownership");
@@ -34,10 +37,13 @@ public final class FullAdderGameTests {
         helper.assertTrue(!ConnectedWireUndo.Frame.capture(cells,List.of(first,later),operation).owns(wire.pos(),wire.state()),"The last active-operation change wins");
         helper.assertTrue(!ConnectedWireUndo.Frame.capture(List.of(),List.of(first),operation).matches(wire.pos(),wire.state(),wire.state(),helper.getLevel()),"Missing canonical wire never falls back to a static match");
         scopes.json().remove("snapshots");scopes.blueprint(operation).source().remove("connected");
+        helper.assertTrue(scopes.connectedCell(operation,"root",wire.pos()).equals(captured),"Detached source edits cannot change historical undo cells");
         helper.assertTrue(scopes.connectedBlocks(operation,blueprint).equals(cells),"Detached exports cannot mutate captured intent");
         blueprint.source().addProperty("unexpectedMutation",true);
         boolean denied=false;try{scopes.connectedBlocks(operation,blueprint);}catch(IllegalStateException expected){denied=true;}
-        helper.assertTrue(denied,"Mutable live source changes require fresh admission");helper.succeed();
+        helper.assertTrue(denied,"Mutable live source changes require fresh admission");
+        var restored=OperationScopes.read(scopes.json(),world,dimension,project);helper.assertTrue(restored.connectedCell(operation,"root",wire.pos()).equals(captured),"Reload rebuilds historical ownership only from validated saved intent");
+        restored.retain(Set.of());helper.assertTrue(!restored.connectedRoot(operation),"Pruning removes indexed operation eligibility");rejects(helper,()->restored.connectedCell(operation,"root",wire.pos()),"Pruned indexes cannot recover old ownership");helper.succeed();
     }
     @GameTest public void workspaceVolumeDoesNotIncreaseExecutionAuthority(GameTestHelper helper){
         var a=new BlockPos(28_000_000,100,28_000_000);var b=a.offset(127,3,127);

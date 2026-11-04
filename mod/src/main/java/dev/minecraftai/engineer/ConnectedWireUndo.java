@@ -34,7 +34,8 @@ final class ConnectedWireUndo {
         var owned=canonical.blocks().stream().filter(block->block.pos().equals(change.pos())).findFirst().orElse(null);
         return matchesPlanned(owned,change,actual,level);
     }
-    private static boolean matchesPlanned(Blueprint.PlannedBlock owned,EngineeringSession.Change change,BlockState actual,BlockGetter level){
+    /** Caller supplies a capture/load-validated private intent cell, not a current-world cache. */
+    static boolean matchesPlanned(Blueprint.PlannedBlock owned,EngineeringSession.Change change,BlockState actual,BlockGetter level){
         if(!actual.is(Blocks.REDSTONE_WIRE) || !change.after().is(Blocks.REDSTONE_WIRE) || owned==null || !owned.pos().equals(change.pos()) || !Blueprint.matches(owned.state(),change.after()))return false;
         // A just-written wire may retain its exact recorded arms until a later
         // neighbor update. Accept that finite state as well as native evolution.
