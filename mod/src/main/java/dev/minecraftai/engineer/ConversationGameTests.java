@@ -45,6 +45,24 @@ public final class ConversationGameTests {
         rejects(helper,()->ProjectKnowledgeClient.validateNote(unwritten,owner),"Version 2 notes record the revision they were written against");
         helper.succeed();
     }
+    @GameTest public void groundedExplanationPhrasesAndEvidenceAreExact(GameTestHelper helper){
+        for(String text:new String[]{"Where did we leave off?","where were we","Catch me up."})
+            helper.assertTrue("where did we leave off".equals(ConversationText.lesson(text)),"Resume phrasing: "+text);
+        for(String text:new String[]{"Why did we choose this?","why did we pick this","Why this design?"}) {
+            helper.assertTrue("why did we choose this".equals(ConversationText.lesson(text)),"Why phrasing: "+text);
+            helper.assertTrue(ConversationMemoryText.lookup(text)==null,"A pronoun why goes to the explanation, not a note search: "+text);
+        }
+        helper.assertTrue(ConversationText.lesson("why did we choose comparators")==null && ConversationMemoryText.lookup("why did we choose comparators").why(),"A named why stays a literal note search");
+        var source=MechanismGameTests.generatedSource(4,4);source.addProperty("revision",3);var blueprint=Blueprint.parse(source,"test","minecraft:overworld");
+        helper.assertTrue(LessonAssistant.evidence(null,blueprint).equals("untested"),"No record means untested, never an invented pass");
+        var task=new ComponentAssignments.Task("root",ComponentAssignments.basis(blueprint,"root"));task.verified="passed:generated-buffer:3 vectors@4";
+        helper.assertTrue(LessonAssistant.evidence(task,blueprint).contains("no complete original scope"),"A pass without scope is never presented as current");
+        var scope=new com.google.gson.JsonObject();scope.addProperty("projectId",blueprint.projectId());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",3L);scope.addProperty("component","root");scope.addProperty("basis",task.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);task.lastPassedScope=scope;
+        helper.assertTrue(LessonAssistant.evidence(task,blueprint).equals("passed:generated-buffer:3 vectors@4 at design revision 3"),"A current complete pass names its revision");
+        source.addProperty("revision",4);String stale=LessonAssistant.evidence(task,Blueprint.parse(source,"test","minecraft:overworld"));
+        helper.assertTrue(stale.startsWith("passed:generated-buffer:3 vectors@4, but its last pass was at design revision 3 but the design is now revision 4"),"An old pass is marked stale after a design change: "+stale);
+        helper.succeed();
+    }
     @GameTest public void noteLookupsAreReadOnlyAndLiteral(GameTestHelper helper){
         var shown=ConversationMemoryText.lookup("Show me project note #12.");
         helper.assertTrue(shown.show() && shown.number()==12 && shown.text()==null,"A note is shown by its number");
@@ -80,6 +98,31 @@ public final class ConversationGameTests {
         var extra=current.deepCopy();extra.addProperty("verified",true);
         rejects(helper,()->ProjectKnowledgeClient.validateEntry(extra,owner,2),"Entries carry no verification or other fields");
         rejects(helper,()->ProjectKnowledgeClient.validateEntry(current,java.util.UUID.fromString("00000000-0000-4000-8000-000000000009"),2),"Only owner-authored notes are shown");
+        helper.succeed();
+    }
+    @GameTest public void guidanceQuestionsRouteToReadOnlyLessons(GameTestHelper helper){
+        for(String text:new String[]{"What should I do next?","what's next","What do I do next"})
+            helper.assertTrue("what should i do next".equals(ConversationText.lesson(text)),"Next-step phrasing: "+text);
+        for(String text:new String[]{"What is still untested?","what hasn't been tested","What still needs testing?"})
+            helper.assertTrue("what is still untested".equals(ConversationText.lesson(text)),"Untested phrasing: "+text);
+        for(String text:new String[]{"Why did you choose this?","why did you pick this"})
+            helper.assertTrue("why did we choose this".equals(ConversationText.lesson(text)),"Why phrasing: "+text);
+        for(String text:new String[]{"what should I build next","test what is still untested","what's next to build"})
+            helper.assertTrue(ConversationText.lesson(text)==null,"Not a guidance question: "+text);
+        helper.succeed();
+    }
+    @GameTest public void projectSummaryKeepsStatementsAndReplacementsApart(GameTestHelper helper){
+        for(String text:new String[]{"Summarize this project.","give me a project summary","What's the state of this project?"})
+            helper.assertTrue(ProjectSummary.asks(text),"Summary phrasing: "+text);
+        for(String text:new String[]{"summarize this project and build it","the sign says summarize this project","what do you remember about this project"})
+            helper.assertTrue(!ProjectSummary.asks(text),"Not a summary request: "+text);
+        var notes=com.google.gson.JsonParser.parseString("[{\"revision\":1,\"kind\":\"goal\",\"text\":\"small\"},{\"revision\":2,\"kind\":\"decision\",\"text\":\"repeaters\"},{\"revision\":3,\"kind\":\"decision\",\"text\":\"comparators\",\"supersedes\":2}]").getAsJsonArray();
+        var lines=ProjectSummary.statements(notes,3,false,entry->"N"+entry.getAsJsonObject("note").get("revision").getAsLong()+(entry.has("replaces")?" replaces "+entry.getAsJsonObject("replaces").get("revision").getAsLong():""));
+        helper.assertTrue(lines.get(0).contains("2 current, 1 replaced") && lines.get(0).contains("not evidence"),"Counts current and replaced notes and says notes are not evidence: "+lines.get(0));
+        helper.assertTrue(lines.get(1).equals("N3 replaces 2") && lines.get(2).equals("N1") && lines.stream().noneMatch(line->line.equals("N2")),"Current notes newest first; the replaced note is counted, not listed as current");
+        helper.assertTrue(ProjectSummary.statements(new com.google.gson.JsonArray(),0,false,entry->"x").get(0).startsWith("Player statements: none recorded"),"No notes is said plainly");
+        var window=com.google.gson.JsonParser.parseString("[{\"revision\":40,\"kind\":\"goal\",\"text\":\"late\"}]").getAsJsonArray();
+        helper.assertTrue(ProjectSummary.statements(window,40,true,entry->"x").stream().anyMatch(line->line.contains("Notes before note 40 are stored but not included")),"Older history is acknowledged, not dropped silently");
         helper.succeed();
     }
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){

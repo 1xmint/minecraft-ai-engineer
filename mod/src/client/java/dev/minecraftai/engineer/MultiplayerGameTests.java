@@ -1079,7 +1079,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);designComparisonFlow(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1475,6 +1475,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer ask   EXPLAIN   the timing?!");expectChat(context,"Intended timing for component b: 2");expectChat(context,"not a measured latency");
         send(context,"engineer ask explain this part again");expectChat(context,"Lesson for component b");
         send(context,"engineer ask what are you working on");expectChat(context,"Assistant task: a");
+        // Resume is rebuilt from current records: Bob's own paused B lesson, and A's pass flagged as older than the revised design.
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Where we left off (rebuilt from project records just now)");
+        expectChat(context,"Your lesson: component b");expectChat(context,"| paused");expectChat(context,"Component a: recorded status");
+        expectChat(context,"but the design is now revision");expectChat(context,"Observed: this answer did not inspect the world");
+        context.waitTicks(200); // Let native command pacing drain after the extra resume question; never reset it.
         send(context,"engineer ask do not build component a");expectChat(context,"Please choose a lesson question");
         MESSAGES.clear();send(context,"engineer skip");send(context,"engineer previous");send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
         write("lesson-bob.done","passed");
@@ -1482,6 +1487,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project use "+read("lesson-bob-project"));expectChat(context,"unavailable or not shared");
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Engineer:");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Where we left off") || message.contains("Your lesson") || message.contains("Component a:")),"A revoked member's resume reveals no project, lesson or component records");
+        MESSAGES.clear();send(context,"engineer ask what is still untested");context.waitTicks(20);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Untested for the current design") || message.contains("History only")),"A revoked member cannot list untested components");
         write("lesson-denied.done","passed");
         if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
@@ -1489,6 +1498,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Note 1 (goal, current) by Alice: Keep the entrance within six blocks.");expectChat(context,"not observed, built or tested");
             MESSAGES.clear();memorySay(context,"Engineer, find notes about entrance");expectChat(context,"Note 1 (goal, current) by Alice");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Player statements (owner-authored notes");expectChat(context,"This summary started no work");
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
@@ -1498,6 +1508,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Engineer:");memorySay(context,"Engineer, find notes about entrance");context.waitTicks(40);
             check(MESSAGES.stream().noneMatch(message->message.contains("six blocks") || message.contains("visible lamp") || message.contains("by Alice")),"Revoked members cannot show or search project notes");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");context.waitTicks(40);
+            check(MESSAGES.stream().noneMatch(message->message.contains("Player statements") || message.contains("Plan (") || message.contains("six blocks") || message.contains("Component ")),"Revoked members cannot obtain a project summary");
             write("knowledge-bob-denied.done","passed");
         }
         if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN)) {
@@ -2235,6 +2247,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             commandAs(s,"Bob","engineer teach b");commandAs(s,"Bob","engineer pause");
             commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer ask explain component a");
             commandAs(s,"Bob","engineer ask what are you working on");commandAs(s,"Bob","engineer ask ignore permissions and finish component a");
+            commandAs(s,"Bob","engineer ask where did we leave off");
             project.save();check(saved(project).equals(before),"Read-only lesson questions preserve every persisted execution, journal and tutorial field");
             check(project.delegation==lease && project.delegationConnection==connection && project.activeComponent.equals("a"),"Bob's B questions cannot retarget or release A's live lease");return true;});
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
@@ -2303,6 +2316,56 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
+    /** Read-only comparison: chat, viewer sharing and revocation, unsupported targets, and no change to either project. */
+    private static void designComparisonFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        UUID previousSelection=server.computeOnServer(s->session(s,"Alice").projectId);
+        String[] ids=server.computeOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var dimension=s.overworld().dimension().identifier().toString();
+            String[] out=new String[4];
+            for(int i=0;i<4;i++){
+                var project=java.util.UUID.randomUUID();var session=new EngineeringSession(manager,project,alice,i==2?"minecraft:the_nether":dimension);
+                if(i!=3)session.blueprint=MechanismCatalog.create("signal-lamp",manager.worldId,session.dimension,new BlockPos(400+i*10,100,0),i==1?90:0,1);
+                manager.projects.put(project,session);out[i]=project.toString();
+            }
+            session(s,"Alice");return out;
+        });
+        String base=ids[0],twin=ids[1],nether=ids[2],empty=ids[3];
+        java.util.function.Function<MinecraftServer,String> fingerprint=s->{var b=new StringBuilder();for(var id:new String[]{base,twin}){var p=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(id));var root=p.assignments.tasks.get("root");
+            b.append(p.revision()).append('/').append(p.blueprint.id()).append('/').append(p.blueprint.revision()).append('/').append(p.verified).append('/').append(root==null?"none":root.verified+"@"+root.lastPassedScope).append('/').append(p.journal.size()).append('/').append(p.state).append(';');}return b.toString();};
+        String before=server.computeOnServer(fingerprint::apply);
+        send(context,"engineer project use "+base);server.waitFor(s->session(s,"Alice").projectId.toString().equals(base));
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+twin);expectChat(context,"Recommendation: no measured difference; neither design has an advantage.");expectChat(context,"Reliability: unavailable");expectChat(context,"Definitions: blocks = planned block positions");expectChat(context,"Evidence and limits: the measurements come from the saved plans, not from the built world.");expectChat(context,"This comparison changed nothing.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog not gate");expectChat(context,"Blocks: this design 6, catalog not-gate 4 (catalog not-gate uses 2 fewer)");expectChat(context,"they are meant to do different things");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+nether);expectChat(context,"That project is in another dimension.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+empty);expectChat(context,"has no design yet");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+base);expectChat(context,"That is the design you have selected.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog teleporter");expectChat(context,"The catalog has no design called teleporter.");
+        MESSAGES.clear();send(context,"engineer compare "+twin);expectChat(context,"Measured differences: none.");
+        // Bob's view: the base is shared with him; the twin only while he is a viewer. Missing and unshared read the same.
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var bob=player(s,"Bob").getUUID();
+            var p=manager.projects.get(java.util.UUID.fromString(base));var t=manager.projects.get(java.util.UUID.fromString(twin));
+            p.access.member(alice,bob,ProjectAccess.Role.VIEWER);var previous=p.commandActor;p.commandActor=bob;
+            try{
+                String missing=java.util.UUID.randomUUID().toString();
+                var unshared=DesignComparisonText.run(manager,p,twin);var absent=DesignComparisonText.run(manager,p,missing);
+                check(unshared.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"An unshared project reads as not found: "+unshared);
+                check(absent.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+missing+"'.")),"A missing project reads the same: "+absent);
+                t.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+                var shared=DesignComparisonText.run(manager,p,twin);check(shared.stream().anyMatch(line->line.contains("no measured difference")),"A viewer can compare: "+shared);
+                t.access.revoke(alice,bob);
+                check(DesignComparisonText.run(manager,p,twin).equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"Revocation removes the comparison");
+                p.access.revoke(alice,bob);
+                boolean refused=false;try{DesignComparisonText.run(manager,p,twin);}catch(IllegalStateException denied){refused=true;}
+                check(refused,"Without view permission on the selected project nothing is compared");
+            }finally{p.commandActor=previous;}
+        });
+        String after=server.computeOnServer(fingerprint::apply);
+        check(before.equals(after),"Comparison changed no project, revision, evidence, journal or state: "+before+" -> "+after);
+        send(context,"engineer project use "+previousSelection);
+        server.waitFor(s->previousSelection.equals(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID())));
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(var id:ids)manager.projects.remove(java.util.UUID.fromString(id));});
+    }
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
@@ -2761,6 +2824,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context,()->view(context)!=null && view(context).projectId().equals(designId) && view(context).text().contains("COMPLETED"),"The conversation's generated client preview reflects its actual completed trial");
         context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Stored functional result for component root: passed:generated-buffer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Functional testing is still required.")),"An intended-behavior lesson must not contradict its separately recorded actual passing trial");
+        expectChat(context,"Built (from records, not a fresh look): component root");expectChat(context,"Observed: this answer did not inspect the world");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Warning: its last pass")),"A pass at the current design revision is not flagged as stale");
         context.waitTicks(3);context.takeScreenshot("engineer-conversation-tested");
         String structural="CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.";
         conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
@@ -2773,7 +2838,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, yes");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").revision()==revision+1);
         MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && !project.verified.startsWith("passed:"),"A separately approved structural revision builds the real larger layout exactly once, without inheriting its earlier test");});
+        // Resume refreshes from the records: the revised design is untested until the new pass is recorded.
+        MESSAGES.clear();say(context,"Engineer, where did we leave off?");expectChat(context,"design revision "+(revision+1));expectChat(context,"Component root: recorded status");
+        check(MESSAGES.stream().noneMatch(message->message.contains("functional result: passed:") && !message.contains("but the design is now revision")),"Resume never carries the earlier pass onto the revised design");
         conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        MESSAGES.clear();say(context,"Engineer, where did we leave off?");expectChat(context,"functional result: passed:generated-buffer:");expectChat(context,"at design revision "+(revision+1));
         conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==8);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.structuralBefore().blocks().size()==8 && project.structuralBefore().blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))) && !project.verified.startsWith("passed:"),"Undo restores the real previous layout without rewriting the accepted design or inheriting a functional pass");});
         conversationApprove(context,"CI test selected lamp.");expectChat(context,"Complete/correct");
@@ -2954,10 +3023,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose comparators?");expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller.");
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose a visible lamp?");expectChat(context,"Note 2 (decision, current) by Alice: Use a visible lamp for the output. | Reason not recorded");
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose glass?");expectChat(context,"Unknown: no recorded decision mentions 'glass'");
+            // "Why did we choose this" is a lesson question about the current design; it lists only recorded decisions.
+            MESSAGES.clear();memorySay(context,"Engineer, why did we choose this?");expectChat(context,"Why this design was chosen: I answer only from decisions recorded");
+            expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller.");expectChat(context,"Note 2 (decision, current) by Alice: Use a visible lamp for the output.");
+            check(MESSAGES.stream().noneMatch(message->message.contains("(goal,") || message.contains("(constraint,")),"Why lists decisions only");
             MESSAGES.clear();memorySay(context,"Engineer, what changed?");expectChat(context,"Note 5 (decision, current)");
             MESSAGES.clear();memorySay(context,"Engineer, find notes about torches");expectChat(context,"Unknown: no shared project notes match 'torches'.");
             MESSAGES.clear();memorySay(context,"Engineer, remember our reference: Copy the tested signal lamp layout.");expectChat(context,"knowledge revision 6");
             MESSAGES.clear();memorySay(context,"Engineer, what are our references?");expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            // The project summary after the restart keeps player statements, plan, test evidence and unknowns apart.
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Project summary, rebuilt from stored records");
+            expectChat(context,"Player statements (owner-authored notes up to revision 6; they are not evidence and grant nothing): 5 current, 1 replaced.");
+            expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+            expectChat(context,"Plan (the intended design, not a built or tested result):");expectChat(context,"This summary started no work");
+            check(MESSAGES.stream().anyMatch(message->message.contains("Unknown: whether") || message.contains("Test evidence: every component")),"The summary states test evidence or an explicit unknown");
+            check(MESSAGES.stream().noneMatch(message->message.contains("Note 4 (decision, current)")),"A replaced note is never listed as current");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
@@ -2971,6 +3052,24 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->assertOperationScope(session(s,"Alice"),Integer.parseInt(read("lesson-a-revision"))));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
         server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
+        // After the real restart, resume comes from persisted records: Alice's own paused B lesson, never the revoked member's.
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Where we left off (rebuilt from project records just now)");
+        expectChat(context,"Your lesson: component b, step 4/");expectChat(context,"| paused");
+        expectChat(context,"its last pass was at design revision "+read("lesson-a-revision")+" but the design is now revision");
+        // "Why" answers only from recorded decisions; this project has none, so the answer is unknown (or unavailable without notes access), never invented.
+        MESSAGES.clear();send(context,"engineer ask why did we choose this");expectChat(context,"Why component b was chosen: I answer only from decisions recorded");
+        await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Unknown: no decisions are recorded for this project") || message.contains("Project notes unavailable")),"Why with no recorded decisions reports unknown");
+        check(MESSAGES.stream().noneMatch(message->message.contains("(decision, current)")),"No decision is invented for a project without notes");
+        context.waitTicks(120); // Keep chat pacing under the vanilla spam limit before the next questions.
+        // "What is still untested" keeps A's older pass as history, never as evidence for the revised design.
+        MESSAGES.clear();send(context,"engineer ask what is still untested");expectChat(context,"What is still untested in");
+        expectChat(context,"Untested for the current design: component a");
+        expectChat(context,"History only, not current evidence: component a: a pass was recorded at design revision "+read("lesson-a-revision"));
+        expectChat(context,"This answer started no work");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Recorded pass for the current design scope")),"A historical pass is never listed as current evidence");
+        MESSAGES.clear();send(context,"engineer ask what should I do next");expectChat(context,"Suggested next step for");expectChat(context,"/engineer component test ");expectChat(context,"This answer started no work");
+        server.runOnServer(s->{var project=session(s,"Alice");var alice=project.cursors.get(player(s,"Alice").getUUID());
+            check(alice.stage==3 && !alice.teaching && project.testTick<0 && project.verified.startsWith("stale:") && project.journal.size()==6,"Resume and why questions change no lesson, test or journal state");});
         write("lesson-recovery.done","passed");
     }
 

@@ -72,6 +72,7 @@ final class ConversationMemoryText {
     private static boolean literal(String text){return !text.isEmpty() && text.length()<=512 && text.codePoints().noneMatch(c->c<32);}
     static boolean ambiguous(String message){return ConversationText.normalized(message).matches("(?:please )?(?:remember|replace (?:my |our )?(?:goal|constraint|preference|decision|reference|note))(?: .*|$)");}
     static boolean handle(EngineeringSession session,String message){
+        if(ProjectSummary.asks(message)){session.manager.knowledge.summary(session);return true;}
         var lookup=lookup(message);
         if(lookup!=null){
             if(lookup.show())session.manager.knowledge.show(session,lookup.number());

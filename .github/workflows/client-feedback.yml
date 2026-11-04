@@ -1,0 +1,41 @@
+name: Client experience feedback
+on:
+  push:
+    branches: [work/player-experience-feedback]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: client-experience-feedback-${{ github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  minecraft-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Prepare software graphics
+        run: bash scripts/ci/graphics.sh
+      - name: Drive native client overlays, transcript cancellation and local playback
+        working-directory: mod
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --console=plain --no-daemon --max-workers=2 runClientGameTest 2>&1 | tee client-feedback.log
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: client-experience-evidence
+          path: |
+            mod/client-feedback.log
+            mod/run/clientGameTest/logs/latest.log
+            mod/run/clientGameTest/screenshots/
+          if-no-files-found: warn
+          retention-days: 7
