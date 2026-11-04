@@ -728,6 +728,11 @@ final class EngineeringSession implements BuildExecutor {
             state="PAUSED";detail="Mechanical position reconciled from current observation; motion remains guarded and untested";save();checkpoint();tell(detail);
         }finally{if(claimed && !shutterRecovery.running())manager.release(this);}
     }
+    void requireStopPermission() {
+        access.require(actor(),ProjectAccess.Permission.VIEW);
+        if(undoRequested && controller.equals(actor()) && access.allows(actor(),ProjectAccess.Permission.UNDO))return;
+        access.require(actor(),ProjectAccess.Permission.BUILD);
+    }
     @Override public void pause(String reason) {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;

@@ -251,7 +251,7 @@ final class ProjectKnowledgeClient {
         if(message==null || message.isBlank() || message.length()>1000 || message.codePoints().anyMatch(c->c<32 && c!=9 && c!=10 && c!=13))throw new IllegalArgumentException("Keep the request within 1000 characters");
         String normalized=message==null?"":message.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();
         if(Set.of("stop","stop building","stopbuilding").contains(normalized)) {
-            s.access.require(s.actor(),ProjectAccess.Permission.BUILD);EngineerMod.cancelPlan(s);s.pause("Project stopped by an authorized player");return;
+            s.requireStopPermission();EngineerMod.cancelPlan(s);s.pause("Project stopped by an authorized player");return;
         }
         if(Set.of("explain this part again","explain this part","what does this part do","explain the timing","show me how the timing works","explain the materials","what are you working on").contains(normalized)) {
             LessonAssistant.ask(s,normalized);return;

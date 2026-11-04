@@ -10,6 +10,16 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual physical prototype proof; this does not admit project execution or saved evidence. */
 public final class FullAdderGameTests {
+    @GameTest public void undoControllerCanStopWithoutBuildPermission(GameTestHelper helper){
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var owner=UUID.randomUUID();var editor=UUID.randomUUID();
+        var session=new EngineeringSession(manager,UUID.randomUUID(),owner,helper.getLevel().dimension().identifier().toString());
+        session.access.member(owner,editor,ProjectAccess.Role.EDITOR);session.access.permission(owner,editor,ProjectAccess.Permission.BUILD,false);session.access.permission(owner,editor,ProjectAccess.Permission.UNDO,true);
+        session.commandActor=editor;session.controller=editor;session.undoRequested=true;session.requireStopPermission();
+        session.undoRequested=false;boolean refused=false;try{session.requireStopPermission();}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,"Undo-only membership cannot stop unrelated building");
+        session.undoRequested=true;session.controller=owner;refused=false;try{session.requireStopPermission();}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,"Undo-only membership cannot stop another controller's work");
+        session.controller=editor;session.access.permission(owner,editor,ProjectAccess.Permission.UNDO,false);refused=false;try{session.requireStopPermission();}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,"Revoked undo permission is checked at stop time");
+        session.access.permission(owner,editor,ProjectAccess.Permission.BUILD,true);session.requireStopPermission();helper.succeed();
+    }
     @GameTest public void connectedTestMarginKeepsExactTwoBlockGeometry(GameTestHelper helper){
         var mutable=new BlockPos.MutableBlockPos(0,0,0);var cells=new ArrayList<Blueprint.PlannedBlock>();cells.add(new Blueprint.PlannedBlock(mutable,Blocks.STONE.defaultBlockState(),"one","root"));cells.add(new Blueprint.PlannedBlock(new BlockPos(1,0,0),Blocks.STONE.defaultBlockState(),"one","root"));
         var area=new ConnectedTestArea(cells);helper.assertTrue(area.margin().size()==148,"Two adjacent radius-two cubes cover150positions minus2planned cells");

@@ -173,3 +173,12 @@ entry keeps existing live preflight, neighbor checks and durable saves. Other
 designs retain their current path. The driven flow now stops a partially applied
 undo, proves no progress while paused, and explicitly requests undo again before
 checking complete removal. Scoped Java/client compile passed; runtime CI pending.
+
+Bounded undo source5946dc5 passed native41913040185; its full player flow
+41913045469 is still live on the unchanged head. GPT-6-Luna confirmed lease
+renewal, fresh authorization, pause/retry and reload ordering, and found a
+stop-permission mismatch for UNDO-only editors. A separate follow-up now
+allows the current undo controller with current UNDO and VIEW to stop their
+own undo; other stops still require BUILD. Both command and conversation
+use the same check. Native permission-matrix coverage added; scoped Java
+compile and diff checks passed. Independent review found no remaining issue.
