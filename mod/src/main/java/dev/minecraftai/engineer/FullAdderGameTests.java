@@ -49,8 +49,35 @@ public final class FullAdderGameTests {
                 }
             }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
             System.out.println("ENGINEER_FULL_ADDER_DEFINITION "+design.definition());
+            validateIntention(helper,design);
             System.out.println("Full-adder native observations: "+report);helper.succeed();
         });
+    }
+    private static void validateIntention(GameTestHelper helper,FullAdderDesign design){
+        var identity=UUID.fromString("0d3574ee-7b0f-4d8b-b38f-cef756e319ca");var anchor=new BlockPos(0,80,0);
+        for(int angle:List.of(0,90,180,270)){
+            var intention=ConnectedIntention.createFullAdder(identity,1,identity,"test","minecraft:overworld",anchor,angle);var source=intention.source();var blueprint=intention.blueprint();
+            helper.assertTrue(ConnectedIntention.read(source,"test","minecraft:overworld",identity).source().equals(source) && Blueprint.parse(source,"test","minecraft:overworld").equals(blueprint),"Full-adder source parses only its exact canonical geometry/identity");
+            helper.assertTrue(blueprint.blocks().size()==3544 && blueprint.stages().size()==5 && source.get("verification").getAsString().equals("untested"),"Full-adder preview is complete geometry without a functional claim");
+            var contract=EngineeringContracts.contract(blueprint);helper.assertTrue(contract.template().equals("full-adder") && contract.ports().size()==5 && contract.ports().stream().filter(MechanismCatalog.Port::input).count()==3,"Only the three external levers and two result lamps enter the full-adder contract");
+            var expected=new HashMap<BlockPos,net.minecraft.world.level.block.state.BlockState>();for(var cell:design.cells())expected.put(cell.pos().subtract(new BlockPos(50,0,42)).rotate(Blueprint.rotation(angle)).offset(anchor),cell.state().rotate(Blueprint.rotation(angle)));
+            for(var cell:blueprint.blocks())helper.assertTrue(cell.state().equals(expected.get(cell.pos())),"Full-adder source retains every rotated native state and centered position");
+            for(String fault:List.of("owner","pass","geometry","graph","digest","bounds")){
+                var forged=source.deepCopy();switch(fault){
+                    case "owner"->forged.addProperty("owner",identity.toString());
+                    case "pass"->forged.addProperty("verification","passed");
+                    case "geometry"->forged.getAsJsonArray("blocks").get(0).getAsJsonObject().addProperty("state","minecraft:dirt");
+                    case "graph"->forged.getAsJsonObject("connected").getAsJsonArray("ports").get(0).getAsJsonObject().addProperty("role","signal_input");
+                    case "digest"->forged.addProperty("graphDigest","0".repeat(64));
+                    case "bounds"->forged.getAsJsonObject("bounds").getAsJsonObject("max").addProperty("x",64);
+                }
+                rejects(helper,()->ConnectedIntention.read(forged,"test","minecraft:overworld",identity),"Reject forged full-adder source: "+fault);
+            }
+            rejects(helper,()->ConnectedIntention.read(source,"other","minecraft:overworld",identity),"Full-adder source cannot cross world identity");
+            if(angle==0)System.out.println("ENGINEER_FULL_ADDER_INTENTION "+source);
+        }
+        rejects(helper,()->ConnectedIntention.createFullAdder(identity,1,identity,"test","minecraft:overworld",new BlockPos(29_999_984,80,0),0),"Full-adder rotation/anchor cannot wrap world bounds");
+        rejects(helper,()->ConnectedIntention.createFullAdder(identity,1,identity,"test","minecraft:overworld",anchor,45),"Full-adder source refuses unsupported rotation");
     }
     private static JsonArray validateRecorded(GameTestHelper helper,FullAdderDesign design,JsonArray samples,long[] starts){
         var cases=new JsonArray();for(int index=0;index<16;index++){

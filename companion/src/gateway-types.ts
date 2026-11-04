@@ -141,7 +141,7 @@ export function serverBlueprint(
   }
   if (
     v.connected !== undefined ||
-    object(v.provenance).template === "half-adder"
+    ["half-adder", "full-adder"].includes(String(object(v.provenance).template))
   ) {
     try {
       return readConnectedIntention(v, {
