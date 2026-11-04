@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Server-thread, requester-private teaching from intended data and stored evidence only. */
 final class LessonAssistant {
-    private enum Topic { DETAIL,TIMING,MATERIALS,STATUS,RESUME,WHY }
+    private enum Topic { DETAIL,TIMING,MATERIALS,STATUS,RESUME,WHY,NEXT,UNTESTED }
     private static final Pattern EXPLICIT=Pattern.compile("explain (?:the )?(?:(timing|materials) for )?component ([a-z][a-z0-9_-]{0,31})");
     private static final Pattern EXPLICIT_WHY=Pattern.compile("why did we choose component ([a-z][a-z0-9_-]{0,31})");
     static final String NOT_OBSERVED="Observed: this answer did not inspect the world; run /engineer diagnose to compare the world with the design.";
@@ -32,11 +32,15 @@ final class LessonAssistant {
                 case "what are you working on" -> Topic.STATUS;
                 case "where did we leave off" -> Topic.RESUME;
                 case "why did we choose this" -> Topic.WHY;
+                case "what should i do next" -> Topic.NEXT;
+                case "what is still untested" -> Topic.UNTESTED;
                 default -> null;
             };
         }
-        if(topic==null) {s.tell("Please choose a lesson question: explain this part again; explain the timing; where did we leave off; why did we choose this; what are you working on; or explain component <id>. Questions do not start world work.");return;}
+        if(topic==null) {s.tell("Please choose a lesson question: explain this part again; explain the timing; where did we leave off; why did we choose this; what are you working on; what should I do next; what is still untested; or explain component <id>. Questions do not start world work.");return;}
         if(topic==Topic.RESUME) {resume(s);return;}
+        if(topic==Topic.NEXT) {ProjectGuidance.next(s).forEach(s::tell);return;}
+        if(topic==Topic.UNTESTED) {ProjectGuidance.untested(s).forEach(s::tell);return;}
         if(topic==Topic.STATUS) {
             s.tell("Assistant task: "+s.activeComponent+" | "+s.state+". This is project status, not a new inspection.");
             String current=currentComponent(s,false);
