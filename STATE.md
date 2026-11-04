@@ -123,3 +123,5 @@ Evidence for parents, not yet this combination:
    work, then audit the entire original scope before any goal-complete claim.
 
 Historical investigations and failed runs remain in Git history/CI artifacts.
+
+2026-11-04 integration update: PR65 merged d665570 from exact2313437. Full CI41741571086 all five passed and same-source focused41742617014 attempt2 passed; inspected build-navigation/oak restart receipts and independent ordered oak/native inventory verification. PR52/54/56/59 and docs53 closed as superseded by this merge, not separately merged. Parent native source3bc5158 also passed focused41741356685. Merged main ancestry here; only STATE conflicted, retained this condensed note, and the code tree is unchanged from3060034. Keep PR66's live run41777328584 stable; advance its branch only when that run is terminal. Full-adder225cf57 independently passed native CI41777116255 with3544cells,35pins and128samples; all8vectors occurred forward/reverse with8samples each. Full-adder source/trial integration remains to build.
