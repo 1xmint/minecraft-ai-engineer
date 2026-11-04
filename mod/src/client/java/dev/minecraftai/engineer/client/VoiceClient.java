@@ -44,7 +44,7 @@ public final class VoiceClient implements ClientModInitializer {
         talk = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.engineer.voice_talk", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, category));
         stop = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.engineer.voice_stop", InputConstants.Type.KEYBOARD, InputConstants.KEY_B, category));
         playback = new VoicePlayback(() -> speakers.get(), () -> controller == null || controller.state() == VoiceController.State.IDLE,
-                failure -> Minecraft.getInstance().execute(() -> controller.report(failure)));
+                failure -> Minecraft.getInstance().execute(() -> failure.deliver(controller::report)));
         controller = new VoiceController(() -> setups.get(), RECOGNITION, r -> Minecraft.getInstance().execute(r), new VoiceController.Output() {
             @Override public void prefill(String chatText) { Minecraft.getInstance().gui.setScreen(new ChatScreen(chatText, false)); }
             @Override public void notice(String text) {

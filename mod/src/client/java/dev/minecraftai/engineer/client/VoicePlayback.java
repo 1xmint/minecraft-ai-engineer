@@ -16,14 +16,17 @@ final class VoicePlayback {
 
     private final Supplier<VoiceAdapters.Speaker> speakers;
     private final BooleanSupplier idle;
-    private final Consumer<String> failures;
+    record FailureNotice(String text,BooleanSupplier current) {
+        void deliver(Consumer<String> output){if(current.getAsBoolean())output.accept(text);}
+    }
+    private final Consumer<FailureNotice> failures;
     private final ArrayDeque<String> queue = new ArrayDeque<>();
     private VoiceAdapters.Speaker current;
     private Thread worker;
     private int spoken, generation;
 
     /** failures receives one plain line when the speech program fails on its own (never when stop ended it). */
-    VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle, Consumer<String> failures) {
+    VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle, Consumer<FailureNotice> failures) {
         this.speakers = speakers;
         this.idle = idle;
         this.failures = failures;
@@ -66,7 +69,7 @@ final class VoicePlayback {
             catch (Exception failed) {
                 boolean own;
                 synchronized (this) { own = run == generation; if (own) queue.clear(); }
-                if (own) failures.accept(failure(failed));
+                if (own) failures.accept(new FailureNotice(failure(failed),()->{synchronized(this){return run==generation;}}));
             }
             synchronized (this) { current = null; if (run == generation) spoken++; }
         }

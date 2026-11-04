@@ -103,7 +103,7 @@ final class VoiceStaleChecks {
             @Override public void speak(String text) throws Exception { throw new LocalProcess.Failure("could not start espeak-ng"); }
             @Override public void stop() { }
         };
-        var playback = new VoicePlayback(() -> missing, () -> true, line -> { synchronized (failures) { failures.add(line); } reported.countDown(); });
+        var playback = new VoicePlayback(() -> missing, () -> true, notice -> notice.deliver(line -> { synchronized (failures) { failures.add(line); } reported.countDown(); }));
         check(playback.offer("Engineer: hello", false), "The reply is queued");
         check(reported.await(5, TimeUnit.SECONDS), "A failing speech program is reported");
         waitIdle(playback);
@@ -124,12 +124,23 @@ final class VoiceStaleChecks {
             }
             @Override public void stop() { release.countDown(); }
         };
-        var stoppable = new VoicePlayback(() -> slow, () -> true, line -> { synchronized (stoppedFailures) { stoppedFailures.add(line); } });
+        var stoppable = new VoicePlayback(() -> slow, () -> true, notice -> notice.deliver(line -> { synchronized (stoppedFailures) { stoppedFailures.add(line); } }));
         stoppable.offer("Engineer: a long answer", false);
         check(speaking.await(5, TimeUnit.SECONDS), "Speech started");
         stoppable.stop();
         waitIdle(stoppable);
         synchronized (stoppedFailures) { check(stoppedFailures.isEmpty(), "Stopping on purpose is not reported as a failure: " + stoppedFailures); }
+
+        // Stop/disconnect can happen after the speaker failed but before its queued
+        // client-thread notice runs. Recheck the generation at actual delivery.
+        var queued = new ArrayList<VoicePlayback.FailureNotice>();
+        var enqueued = new CountDownLatch(1);
+        var delayed = new VoicePlayback(() -> missing, () -> true, notice -> { synchronized(queued){queued.add(notice);} enqueued.countDown(); });
+        delayed.offer("Engineer: reply before stop",false);
+        check(enqueued.await(5,TimeUnit.SECONDS),"Failure reaches the pending client delivery queue");
+        waitIdle(delayed);delayed.stop();
+        var delivered=new ArrayList<String>();synchronized(queued){queued.getFirst().deliver(delivered::add);}
+        check(delivered.isEmpty(),"A queued old failure cannot report after an intentional stop/disconnect");
     }
 
     private static void waitIdle(VoicePlayback playback) throws InterruptedException {
