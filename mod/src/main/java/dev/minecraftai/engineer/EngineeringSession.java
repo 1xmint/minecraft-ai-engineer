@@ -742,6 +742,13 @@ final class EngineeringSession implements BuildExecutor {
         if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
+        if (undoRequested && state.equals("EXECUTING")) {
+            try {
+                validateMutation(ProjectAccess.Permission.UNDO);
+                if(applyUndoEntriesReserved(1))finishUndo();
+            }catch(RuntimeException failure){pause("Undo paused: "+failure.getMessage());}
+            tickTutorials();return;
+        }
         if(blueprint!=null && ComponentTree.composite(blueprint) && server.getTickCount()%10==0) {
             boolean changed=false;
             for(var task:assignments.tasks.values())if(task.verified.startsWith("passed:") && !componentGeometryMatches(task.id)) {
@@ -1263,6 +1270,14 @@ final class EngineeringSession implements BuildExecutor {
     }
     void undo() {
         if(!beginUndo())return;
+        if(operationScopes.fullAdder(undoOperation)) {
+            // Keep the fresh undo lease, but never run the whole durable journal
+            // in one server tick. Reload/stop retains the explicit undo target.
+            try {
+                state="EXECUTING";detail="Undoing the full adder; say stop to pause";
+                save();checkpoint();tell(detail);return;
+            }catch(RuntimeException failure){pause("Undo could not start: "+failure.getMessage());throw failure;}
+        }
         try { undoReserved(); } finally { manager.release(this); }
     }
     /** Real production prepare/WAL phase; completion may resume after interruption. */

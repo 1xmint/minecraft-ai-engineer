@@ -161,3 +161,15 @@ PR72 merged b48f932 after exact bf73540 passed all five checks41898933908 and co
 Geometry sourcecf137ed passed native41903727778; driven41904043755 is live and must remain on its exact head. Prepared a separate undo metadata index from private capture/load-validated connected root snapshots. Every lookup checks operation/component/position, and the same existing native wire matcher still reads live geometry. The index stores no world/grant state and is pruned with snapshots. Transitions/other connected and analog cases keep the prior fallback; all undo action, neighbor, journal and durability checks are unchanged. GPT-6-Luna reviewed and found no concrete stale-ownership bypass. Tests compare indexed/canonical matching, reject edits/wrong components, detach exported sources, reload validated data and reject pruned operations. Scoped compileJava passed before final reload/prune test additions; actual native CI required. No undo runtime completion or speedup claimed yet.
 
 Undo index99c823a passed native41904669543. Geometry-only player run41904043755 failed before gameplay: Bob's downloadAssets task hit a shared Fabric Loom asset .lock disappearing during output inspection while Alice's launcher ran the same task. Alice then correctly timed out waiting for his connection; no game feature assertion ran. Prepare downloadAssets serially with each checkout's compile, then exclude that already-completed task from both concurrent client launches. Shell syntax passed; run actual flow with tested undo/index/geometry source plus this CI-only launcher correction. No deadline or gameplay assertion change.
+
+## Bounded full-adder undo candidate (2026-11-04)
+
+E2 outcome: undo must finish without freezing the server, and stop must retain
+remaining owned changes without authority. Driven source80cbc80/run41907675920
+completed both full trials but Minecraft's 60-second tick watchdog terminated
+synchronous undo inside a durable checkpoint. Full-adder historical operations
+now schedule one journal entry per server tick with fresh UNDO validation; each
+entry keeps existing live preflight, neighbor checks and durable saves. Other
+designs retain their current path. The driven flow now stops a partially applied
+undo, proves no progress while paused, and explicitly requests undo again before
+checking complete removal. Scoped Java/client compile passed; runtime CI pending.
