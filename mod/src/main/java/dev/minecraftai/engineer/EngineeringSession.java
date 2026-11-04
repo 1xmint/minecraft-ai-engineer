@@ -71,6 +71,8 @@ final class EngineeringSession implements BuildExecutor {
     boolean pendingPlacement;
     boolean undoRequested;
     long nextPlacement;
+    private long constructionSaveNanos,constructionTimingStart;
+    private int constructionSaveCount;
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -786,7 +788,7 @@ final class EngineeringSession implements BuildExecutor {
                     if(!level().getBlockState(b.pos()).equals(actual))throw new IllegalStateException("World changed immediately before the authorized write at "+b.pos().toShortString());
                     if (!level().setBlockAndUpdate(b.pos(),after)) throw new IllegalStateException("Minecraft rejected placement");
                     pendingPlacement=false;save();
-                    if("true".equals(System.getenv("CI")) && ConnectedIntention.fullAdder(blueprint.source()) && journal.size()%256==0)System.out.println("Full-adder construction progress: "+journal.size()+"/"+blueprint.blocks().size());
+                    if("true".equals(System.getenv("CI")) && ConnectedIntention.fullAdder(blueprint.source()) && journal.size()%256==0)System.out.println("Full-adder construction progress: "+journal.size()+"/"+blueprint.blocks().size()+"; checkpointMs="+constructionSaveNanos/1_000_000+"; saves="+constructionSaveCount+"; elapsedMs="+(System.nanoTime()-constructionTimingStart)/1_000_000);
                     return;
                 }
                 if(connectedBuild!=null && assignmentBlocks().stream().anyMatch(block->!Blueprint.matches(block.state(),level().getBlockState(block.pos())))){
@@ -1504,6 +1506,8 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     void save() {
+        long timing="true".equals(System.getenv("CI")) && state.equals("EXECUTING") && blueprint!=null && ConnectedIntention.fullAdder(blueprint.source())?System.nanoTime():0;
+        if(timing!=0 && constructionTimingStart==0)constructionTimingStart=timing;
         if(shutterMotion!=null){shutterMotion.requireScope(level(),acceptedMotionScope());shutterOwned=true;}
         if(shutterOwned && (blueprint==null || !ShutterDesign.describes(blueprint.source())))throw new IllegalStateException("Mechanical control requires its accepted mechanical design");
         if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
@@ -1531,7 +1535,8 @@ final class EngineeringSession implements BuildExecutor {
         for(Change c:journal) { JsonObject x=new JsonObject(); x.add("pos",Blueprint.jsonPos(c.pos())); x.addProperty("before",Blueprint.describe(c.before())); x.addProperty("after",Blueprint.describe(c.after()));x.addProperty("operation",c.operation());x.addProperty("component",c.component()); changes.add(x); }
         json.add("journal",changes); JsonArray initial=new JsonArray(); baseline.forEach((pos,state)->{JsonObject x=new JsonObject();x.add("pos",Blueprint.jsonPos(pos));x.addProperty("state",Blueprint.describe(state));initial.add(x);});json.add("baseline",initial);
         JsonArray surrounding=new JsonArray();dependencies.forEach((pos,state)->{var item=new JsonObject();item.add("pos",Blueprint.jsonPos(pos));item.addProperty("state",Blueprint.describe(state));surrounding.add(item);});json.add("dependencies",surrounding);
-        LocalFiles.write(file,json);
+        LocalFiles.checkpoint(file,json);
+        if(timing!=0){constructionSaveNanos+=System.nanoTime()-timing;constructionSaveCount++;}
     }
     void load() {
         if(!Files.exists(file)) return;
