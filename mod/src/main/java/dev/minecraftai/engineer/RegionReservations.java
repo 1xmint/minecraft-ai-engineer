@@ -11,10 +11,10 @@ final class RegionReservations {
     private static final long LEASE_TICKS = 100;
     private static final class Lease {
         final Fence fence;
-        final Set<BlockPos> writes, reads;
+        final Set<BlockPos> writes, reads, occupancy;
         long expires;
-        Lease(Fence fence, Set<BlockPos> writes, Set<BlockPos> reads, long now) {
-            this.fence = fence; this.writes = Set.copyOf(writes); this.reads = Set.copyOf(reads); expires = now + LEASE_TICKS;
+        Lease(Fence fence, Set<BlockPos> writes, Set<BlockPos> reads, Set<BlockPos> occupancy, long now) {
+            this.fence = fence; this.writes = immutable(writes); this.reads = immutable(reads); this.occupancy=immutable(occupancy); expires = now + LEASE_TICKS;
         }
     }
     private final UUID epoch;
@@ -23,17 +23,28 @@ final class RegionReservations {
 
     Fence acquire(Scope scope, UUID actor, int projectRevision, long authorityRevision,
                   ProjectAccess.Permission action, Set<BlockPos> writes, Set<BlockPos> reads, long now) {
-        if (writes.isEmpty() || writes.size() > 4096 || reads.size() > 65536 || projectRevision < 1 || authorityRevision < 1)
+        if(writes.isEmpty())throw new IllegalStateException("Block assignments require write targets");
+        return acquire(scope,actor,projectRevision,authorityRevision,action,writes,reads,Set.of(),now);
+    }
+    /** Exclusive body space is scheduling authority only, never a block-action ticket. */
+    Fence acquireMovement(Scope scope,UUID actor,int projectRevision,long authorityRevision,Set<BlockPos> occupancy,Set<BlockPos> reads,long now){
+        if(occupancy.isEmpty())throw new IllegalStateException("Movement requires a captured route");
+        return acquire(scope,actor,projectRevision,authorityRevision,ProjectAccess.Permission.BUILD,Set.of(),reads,occupancy,now);
+    }
+    private Fence acquire(Scope scope,UUID actor,int projectRevision,long authorityRevision,ProjectAccess.Permission action,Set<BlockPos> writes,Set<BlockPos> reads,Set<BlockPos> occupancy,long now){
+        if (writes.size() > 4096 || occupancy.size()>4096 || reads.size() > 65536 || projectRevision < 1 || authorityRevision < 1)
             throw new IllegalStateException("Assignment exceeds its bounded reservation");
         leases.entrySet().removeIf(entry -> entry.getValue().expires <= now);
         for (var entry : leases.entrySet()) {
             Scope other = entry.getKey(); Lease lease = entry.getValue();
             if (other.equals(scope) || !other.world().equals(scope.world()) || !other.dimension().equals(scope.dimension())) continue;
-            if (intersects(writes, lease.writes) || intersects(writes, lease.reads) || intersects(reads, lease.writes))
+            if (intersects(writes, lease.writes) || intersects(writes, lease.reads) || intersects(reads, lease.writes)
+                || intersects(occupancy,lease.occupancy) || intersects(occupancy,lease.writes) || intersects(occupancy,lease.reads)
+                || intersects(writes,lease.occupancy) || intersects(reads,lease.occupancy))
                 throw new IllegalStateException("Another assignment reserves this region or its test/support dependencies; pause it or wait");
         }
         var fence = new Fence(epoch, UUID.randomUUID(), actor, projectRevision, authorityRevision, action);
-        leases.put(scope, new Lease(fence, writes, reads, now));
+        leases.put(scope, new Lease(fence, writes, reads, occupancy, now));
         return fence;
     }
     void validate(Scope scope, Fence fence, UUID actor, int projectRevision, long authorityRevision, long now) {
@@ -50,6 +61,10 @@ final class RegionReservations {
         if(!leases.get(scope).writes.contains(target))
             throw new IllegalStateException("Mutation target is outside the reserved write set");
     }
+    void validateOccupancy(Scope scope,Fence fence,UUID actor,int projectRevision,long authorityRevision,Set<BlockPos> occupied,long now){
+        validate(scope,fence,actor,projectRevision,authorityRevision,now);
+        if(!leases.get(scope).occupancy.containsAll(occupied))throw new IllegalStateException("Movement exceeds its captured occupancy");
+    }
     /** Deferred physics needs every possible write plus its complete captured read closure. */
     void validateFootprint(Scope scope,Fence fence,UUID actor,int projectRevision,long authorityRevision,Set<BlockPos> writes,Set<BlockPos> reads,long now){
         validate(scope,fence,actor,projectRevision,authorityRevision,now);
@@ -64,7 +79,7 @@ final class RegionReservations {
         if(fence==null || lease==null || !lease.fence.equals(fence) || !epoch.equals(fence.epoch()) || lease.expires<=now)
             throw new IllegalStateException("Execution footprint expired or changed");
         Set<BlockPos> footprint=new HashSet<>(lease.writes);
-        if(includeReads)footprint.addAll(lease.reads);
+        if(includeReads){footprint.addAll(lease.reads);footprint.addAll(lease.occupancy);}
         return Set.copyOf(footprint);
     }
     void release(Scope scope, Fence fence) {
@@ -77,5 +92,8 @@ final class RegionReservations {
         Set<BlockPos> small = a.size() <= b.size() ? a : b, large = small == a ? b : a;
         for (BlockPos p : small) if (large.contains(p)) return true;
         return false;
+    }
+    private static Set<BlockPos> immutable(Set<BlockPos> positions){
+        Set<BlockPos> result=new HashSet<>();positions.forEach(pos->result.add(pos.immutable()));return Set.copyOf(result);
     }
 }

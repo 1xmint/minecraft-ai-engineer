@@ -34,7 +34,11 @@ final class PhysicalPlacementTask implements AutoCloseable {
             count+=stack.getCount();if(slot<9)selected=slot;
         }
         if(count!=1 || selected<0)throw new IllegalStateException("The companion needs exactly one retained dirt item in its hotbar");
-        if(!level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(target),Vec3.atLowerCornerOf(target.offset(1,1,1)))).isEmpty())throw new IllegalStateException("Move entities out of the placement cell");
+        var blocking=level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(target),Vec3.atLowerCornerOf(target.offset(1,1,1))));
+        if(!blocking.isEmpty()){
+            System.getLogger(PhysicalPlacementTask.class.getName()).log(System.Logger.Level.WARNING,"Placement blocked: target="+target+", worker="+worker.getUUID()+" at "+worker.position()+", workerBox="+worker.getBoundingBox()+", entities="+blocking.stream().map(entity->net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())+" "+entity.getUUID()+" at "+entity.position()+" box="+entity.getBoundingBox()).toList());
+            throw new IllegalStateException("Move entities out of the placement cell");
+        }
         var reads=new HashSet<BlockPos>();for(var cell:BlockPos.betweenClosed(target.offset(-1,-1,-1),target.offset(1,1,1)))if(!cell.equals(target)){
             if(!project.contains(cell) || !level.hasChunkAt(cell))throw new IllegalStateException("Placement neighborhood must be loaded in the workspace");
             var state=level.getBlockState(cell);
@@ -42,7 +46,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
             reads.add(cell.immutable());
         }
         reads.addAll(planReads);
-        lease=new PhysicalWorkLease(manager,project,project.player(),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
+        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
         file=manager.directory.resolve(project.projectId+".place-"+UUID.randomUUID()+".json");
         record.addProperty("schemaVersion",1);record.addProperty("world",manager.worldId);record.addProperty("dimension",project.dimension);
         record.addProperty("project",project.projectId.toString());record.addProperty("worker",worker.getUUID().toString());
@@ -66,9 +70,11 @@ final class PhysicalPlacementTask implements AutoCloseable {
     private void call(String name,Class<?>[] types,Object... args){try{pack.getClass().getMethod(name,types).invoke(pack,args);}catch(Exception failure){throw new IllegalStateException("Native placement action failed",failure);}}
     private void authority(){
         if(closed || worker.level()!=level || worker.connection!=connection || worker.hasDisconnected() || !worker.isAlive()
-            || level.getServer().getPlayerList().getPlayer(worker.getUUID())!=worker || !worker.blockPosition().equals(start)
-            || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || level.getServer().getTickCount()>=expires)
+            || level.getServer().getPlayerList().getPlayer(worker.getUUID())!=worker
+            || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL)
             throw new IllegalStateException("Placement worker authority changed");
+        if(!worker.blockPosition().equals(start))throw new IllegalStateException("Companion moved from its placement stance; inspect its position before retry");
+        if(level.getServer().getTickCount()>=expires)throw new IllegalStateException("Native placement expired before completion");
         lease.validate(target);
         intention.run();
     }

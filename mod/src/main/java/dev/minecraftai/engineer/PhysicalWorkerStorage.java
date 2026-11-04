@@ -12,19 +12,39 @@ final class PhysicalWorkerStorage {
         if(!server.isSameThread() || worker.connection!=null)throw new IllegalStateException("Load worker data before joining on the server thread");
         var identity=worker.getUUID();
         var tag=server.getPlayerList().loadPlayerData(worker.nameAndId()).orElseThrow(()->new IllegalStateException("No saved worker data; resources require explicit recovery"));
-        var problems=new ProblemReporter.Collector();worker.load(TagValueInput.create(problems,server.registryAccess(),tag));
+        var problems=new ProblemReporter.Collector();var input=TagValueInput.create(problems,server.registryAccess(),tag);
+        decodeInventory(server.registryAccess(),identity,input,problems);worker.load(input);
         if(!problems.isEmpty() || !worker.getUUID().equals(identity))throw new IllegalStateException("Worker data did not restore cleanly with its bound identity");
     }
     static void save(ServerPlayer worker){
         var server=worker.level().getServer();
         if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || worker.isCreative())throw new IllegalStateException("Save requires the current native survival worker");
         server.getPlayerList().saveAll();
-        // Native saving can report an I/O failure without throwing. An older file
-        // existing is insufficient: decode it into an unjoined player and compare
-        // every slot, including item components, before acknowledging persistence.
-        var saved=new ServerPlayer(server,worker.level(),worker.getGameProfile(),worker.clientInformation());
-        restore(saved);
-        if(!inventory(saved).equals(inventory(worker)))throw new IllegalStateException("Saved worker inventory differs; stop for explicit recovery");
+        // Constructing even an unjoined ServerPlayer rebinds the UUID's cached
+        // advancement handler. Decode inventory data alone, with no player clone.
+        if(!savedInventory(worker,worker.nameAndId()).equals(inventory(worker)))throw new IllegalStateException("Saved worker inventory differs; stop for explicit recovery");
+    }
+    static com.google.gson.JsonArray savedInventory(ServerPlayer reader,net.minecraft.server.players.NameAndId identity){
+        var server=reader.level().getServer();
+        if(!server.isSameThread())throw new IllegalStateException("Inspect native inventory on the server thread");
+        var tag=server.getPlayerList().loadPlayerData(identity).orElseThrow(()->new IllegalStateException("No saved worker data; resources require explicit recovery"));
+        var problems=new ProblemReporter.Collector();var input=TagValueInput.create(problems,server.registryAccess(),tag);
+        return decodeInventory(server.registryAccess(),identity.id(),input,problems);
+    }
+    static com.google.gson.JsonArray decodeInventory(net.minecraft.core.HolderLookup.Provider registries,java.util.UUID identity,net.minecraft.world.level.storage.ValueInput input,ProblemReporter.Collector problems){
+        if(!input.read("UUID",net.minecraft.core.UUIDUtil.CODEC).orElseThrow(()->new IllegalStateException("Saved worker identity is missing")).equals(identity))throw new IllegalStateException("Saved worker identity differs");
+        var equipment=input.read("equipment",net.minecraft.world.entity.EntityEquipment.CODEC).orElseGet(net.minecraft.world.entity.EntityEquipment::new);
+        var slots=new net.minecraft.world.item.ItemStack[net.minecraft.world.entity.player.Inventory.INVENTORY_SIZE+net.minecraft.world.entity.player.Inventory.EQUIPMENT_SLOT_MAPPING.size()];
+        java.util.Arrays.fill(slots,net.minecraft.world.item.ItemStack.EMPTY);var seen=new java.util.HashSet<Integer>();
+        for(var saved:input.list("Inventory",net.minecraft.world.ItemStackWithSlot.CODEC).orElseThrow(()->new IllegalStateException("Saved worker inventory is missing or malformed"))){
+            if(!saved.isValidInContainer(net.minecraft.world.entity.player.Inventory.INVENTORY_SIZE) || !seen.add(saved.slot()))throw new IllegalStateException("Saved inventory slot is invalid or duplicated");
+            slots[saved.slot()]=saved.stack();
+        }
+        for(var entry:net.minecraft.world.entity.player.Inventory.EQUIPMENT_SLOT_MAPPING.int2ObjectEntrySet())slots[entry.getIntKey()]=equipment.get(entry.getValue());
+        if(!problems.isEmpty())throw new IllegalStateException("Saved worker inventory did not decode cleanly");
+        var operations=registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);var result=new com.google.gson.JsonArray();
+        for(var stack:slots)result.add(net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.encodeStart(operations,stack).getOrThrow());
+        return result;
     }
     static com.google.gson.JsonArray inventory(ServerPlayer worker){
         var result=new com.google.gson.JsonArray();

@@ -465,7 +465,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         awaitFile(context,"full-adder-revoked.ready");MESSAGES.clear();send(context,"engineer project use "+read("full-adder-project"));expectChat(context,"unavailable or not shared");send(context,"engineer resume");context.waitTicks(25);check(MESSAGES.stream().noneMatch(message->message.contains("Interrupted test reconciled") || message.contains("Reconciled; resuming")),"Revoked editor receives no restoration or execution acknowledgment");write("full-adder-revoked.done","passed");disconnect(context);
     }
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
-        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;
+        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery;
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -562,6 +562,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-restart.done","passed");
             physicalGatherStopFlow(context,server);
+            physicalNavigationFlow(context,server);
             UUID beforeGatherProject=server.computeOnServer(s->session(s,"Alice").projectId);
             send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(beforeGatherProject));
             server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
@@ -590,7 +591,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(refused,"Changing a preceding intended support invalidates the physical blueprint step");
             });
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
-            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring grants");});
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(gatherer);check(body!=null && countDirt(body)==1 && body.getDeltaMovement().horizontalDistanceSqr()<1.0e-8 && !session(s,"Alice").access.allows(gatherer,ProjectAccess.Permission.BUILD),"Explicit resummon retains gathered resources without restoring motion or grants");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");expectChat(context,"Observation only");
             server.runOnServer(s->check(countDirt(s.getPlayerList().getPlayer(gatherer))==1 && session(s,"Alice").delegation==null,"Recovery inspection changes no inventory and restores no project lease"));
             server.runCommand("setblock 2433 101 4 minecraft:redstone_wire");
@@ -604,12 +605,168 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->check(session(s,"Alice").verified.equals("untested") && session(s,"Alice").journal.isEmpty(),"Physical geometry does not fabricate a functional pass or creative undo history"));
             write("physical-blueprint.done","passed");
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-gather.done","passed");
+            physicalBlueprintJobFlow(context,server);
+            physicalBuildNavigationFlow(context,server);
+            oakRecovery=physicalOakFlow(context,server);
         }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            server.runOnServer(s->{var manager=EngineerMod.managerFor(s);check(manager.worldId.equals(oakRecovery.world()) && !manager.epoch.equals(oakRecovery.epoch()),"Oak proof restarts the same saved world under a fresh epoch");check(s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")),"Oak resources restore no actor or old tickets automatically");});
+            send(context,"engineer project use "+oakRecovery.project());server.waitFor(s->oakRecovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var body=s.getPlayerList().getPlayer(oakRecovery.worker());check(body!=null && PhysicalWorkerStorage.inventory(body).equals(oakRecovery.inventory()) && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1,"Actual world restart preserves the exact oak inventory under the same native identity");check(s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native mined source remains absent after saved-world restart");check(!body.gameMode.destroyBlock(new BlockPos(2631,101,6)),"Restored oak inventory grants no native mining authority");});
+            MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"inventory saving was verified at completion");expectChat(context,"saved inventory matches the recorded snapshot");
+            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"Preloaded oak inventory refuses a second gather without clearing or replacing resources"));
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak-restarted.done","passed");
+        }
+    }
+    private record OakRecovery(String project,UUID worker,com.google.gson.JsonArray inventory,String world,UUID epoch) { }
+    private static OakRecovery physicalOakFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2624 -16 2656 32");server.runCommand("fill 2630 100 0 2635 100 9 minecraft:stone");server.runCommand("setblock 2631 101 4 minecraft:oak_log[axis=x]");server.runCommand("setblock 2631 101 6 minecraft:oak_log");server.runCommand("tp Alice 2634.5 101 8 180 0");
+        send(context,"engineer select1 2630 100 0");send(context,"engineer select2 2634 102 7");server.waitFor(s->new BlockPos(2634,102,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");PhysicalWorkerStorage.save(body);checkAdvancementOwner(body);check(PhysicalWorkerStorage.savedInventory(body,body.nameAndId()).equals(PhysicalWorkerStorage.inventory(body)),"Read-only native decoding matches the active body");checkAdvancementOwner(body);var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 4");expectChat(context,"Requested resource does not match");
+        server.runCommand("setblock 2631 102 4 minecraft:oak_leaves[persistent=true]");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved flat walking route");
+        server.runCommand("setblock 2631 102 4 minecraft:air");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
+        var recovery=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
+            int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==1 && s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native hand mining and exact pickup produce one retained oak log");
+            check(s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"The other original log is untouched");
+            try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==1,"Refused oak requests create no gather journals");var out=directory().resolve("oak-gather-records");Files.createDirectories(out);Files.copy(records.getFirst(),out.resolve("oak.json"));}catch(java.io.IOException failed){throw new IllegalStateException(failed);}
+            return new OakRecovery(project.projectId.toString(),worker,PhysicalWorkerStorage.inventory(body),manager.worldId,manager.epoch);
+        });
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");server.runOnServer(s->checkAdvancementOwner(s.getPlayerList().getPlayer(worker)));
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak.done","passed");return recovery;
+    }
+    private static void checkAdvancementOwner(ServerPlayer worker){
+        try{var field=net.minecraft.server.PlayerAdvancements.class.getDeclaredField("player");field.setAccessible(true);check(field.get(worker.getAdvancements())==worker,"Pinned vanilla advancement cache remains bound to the actual connected worker after save/inspection");}
+        catch(ReflectiveOperationException failed){throw new AssertionError("Could not verify pinned advancement ownership",failed);}
+    }
+    private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x){
+        return setupPhysicalBlueprintJob(context,server,x,false);
+    }
+    private static UUID setupPhysicalBlueprintJob(ClientGameTestContext context,TestDedicatedServerContext server,int x,boolean routed){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add "+(x-8)+" -16 "+(x+24)+" 32");server.runCommand("fill "+x+" 100 0 "+(x+5)+" 100 9 minecraft:stone");
+        server.runCommand("setblock "+(x+1)+" 101 3 minecraft:dirt");server.runCommand("setblock "+(x+1)+" 101 5 minecraft:dirt");server.runCommand("tp Alice "+(x+4.5)+" 101 8 180 0");
+        send(context,"engineer select1 "+x+" 100 0");send(context,"engineer select2 "+(x+4)+" 102 6");server.waitFor(s->new BlockPos(x+4,102,6).equals(session(s,"Alice").corner2));
+        if(routed){
+            server.runCommand("fill "+x+" 100 0 "+(x+15)+" 100 12 minecraft:stone");
+            server.runCommand("setblock "+(x+1)+" 101 3 minecraft:air");server.runCommand("setblock "+(x+1)+" 101 5 minecraft:air");
+            server.runCommand("setblock "+(x+10)+" 101 3 minecraft:dirt");server.runCommand("setblock "+(x+10)+" 101 6 minecraft:dirt");
+            server.runCommand("fill "+(x+6)+" 101 0 "+(x+6)+" 102 7 minecraft:stone");server.runCommand("tp Alice "+(x+14.5)+" 101 11 180 0");
+            send(context,"engineer select2 "+(x+15)+" 102 12");server.waitFor(s->new BlockPos(x+15,102,12).equals(session(s,"Alice").corner2));
+        }
+        server.runOnServer(s->{var project=session(s,"Alice");var source=ImportedBlueprintGameTests.source();
+            source.addProperty("id",UUID.randomUUID().toString());source.addProperty("worldId",project.worldId);source.addProperty("dimension",project.dimension);source.addProperty("projectId",project.projectId.toString());source.addProperty("rotation",0);source.add("anchor",Blueprint.jsonPos(new BlockPos(x+3,101,3)));
+            var template=source.getAsJsonArray("blocks").get(0).getAsJsonObject();var blocks=new com.google.gson.JsonArray();
+            for(int z=0;z<2;z++){var support=template.deepCopy();support.add("pos",Blueprint.jsonPos(new BlockPos(0,-1,z)));blocks.add(support);}
+            for(int z=0;z<2;z++){var cell=template.deepCopy();cell.add("pos",Blueprint.jsonPos(new BlockPos(0,0,z)));cell.addProperty("state","minecraft:dirt");blocks.add(cell);}
+            source.add("blocks",blocks);project.accept(Blueprint.parse(source,project.worldId,project.dimension));
+        });
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(player(s,"Alice").gameMode.getGameModeForPlayer()==net.minecraft.world.level.GameType.SURVIVAL && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Batch starts with a survival owner and no supplied worker inventory"));
+        return worker;
+    }
+    private static java.util.List<net.minecraft.world.level.block.state.BlockState> physicalJobCells(MinecraftServer server,int x){
+        return java.util.List.of(server.overworld().getBlockState(new BlockPos(x+1,101,3)),server.overworld().getBlockState(new BlockPos(x+1,101,5)),server.overworld().getBlockState(new BlockPos(x+3,101,3)),server.overworld().getBlockState(new BlockPos(x+3,101,4)));
     }
     private static com.google.gson.JsonArray physicalWorkerInventory(MinecraftServer server,UUID id){
         var worker=server.getPlayerList().getPlayer(id);if(worker!=null)return PhysicalWorkerStorage.inventory(worker);
-        var saved=new ServerPlayer(server,server.overworld(),new com.mojang.authlib.GameProfile(id,"Eng_"+id.toString().substring(0,8)),net.minecraft.server.level.ClientInformation.createDefault());
-        PhysicalWorkerStorage.restore(saved);return PhysicalWorkerStorage.inventory(saved);
+        return PhysicalWorkerStorage.savedInventory(player(server,"Alice"),new net.minecraft.server.players.NameAndId(id,"Eng_"+id.toString().substring(0,8)));
+    }
+    private static void physicalBlueprintStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID worker=setupPhysicalBlueprintJob(context,server,2480);
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var owner=player(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+            var other=manager.projects.values().stream().filter(p->p!=project && p.owner.equals(owner.getUUID())).findFirst().orElseThrow();
+            try(var job=new PhysicalBlueprintJob(manager,project,body,inventoryPack(body))){
+                job.tick();manager.use(owner,other.projectId);
+                try{
+                    check(!body.gameMode.destroyBlock(new BlockPos(2481,101,3)),"Changed owner selection denies the exact native mine at event time");
+                    boolean refused=false;try{job.tick();}catch(IllegalStateException expected){refused=true;}
+                    check(refused && s.overworld().getBlockState(new BlockPos(2481,101,3)).is(Blocks.DIRT) && body.getInventory().isEmpty(),"Changed owner selection stops the active job without native resource mutation");
+                }finally{manager.use(owner,project.projectId);}
+            }
+        });
+        // Slow the fixture's tick clock for a deterministic opportunity to issue
+        // actual client chat while the native job is still running. No mutation
+        // or expiry assertion is relaxed, and the normal clock is restored.
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        try{
+            MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");
+            MESSAGES.clear();say(context,"Engineer, stop building");expectChat(context,"Physical work stopped. Saved inventory was checked");
+            var cells=server.computeOnServer(s->physicalJobCells(s,2480));var inventory=server.computeOnServer(s->physicalWorkerInventory(s,worker));
+            int stopped=server.computeOnServer(MinecraftServer::getTickCount);server.waitFor(s->s.getTickCount()>=stopped+20,30_000);
+            server.runOnServer(s->check(physicalJobCells(s,2480).equals(cells) && physicalWorkerInventory(s,worker).equals(inventory),"Actual chat stop leaves native source/target cells and retained inventory unchanged for twenty server ticks"));
+        }finally{server.runOnServer(s->s.tickRateManager().setTickRate(20f));}
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-stop.done","passed");
+    }
+    private static void physicalBlueprintJobFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        physicalBlueprintStopFlow(context,server);UUID worker=setupPhysicalBlueprintJob(context,server,2500);
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells");
+        server.runOnServer(s->{var project=session(s,"Alice");check(s.overworld().getBlockState(new BlockPos(2501,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2501,101,5)).isAir()
+            && s.overworld().getBlockState(new BlockPos(2503,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2503,101,4)).is(Blocks.DIRT)
+            && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Two native gathered resources become two intended cells without inventory supply");
+            check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"Batch geometry fabricates neither functional proof nor creative history/lease");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-blueprint-job.done","passed");
+    }
+    private static void physicalBuildNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID worker=setupPhysicalBlueprintJob(context,server,2580,true);
+        server.runOnServer(s->{
+            var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");
+            try(var job=new PhysicalBlueprintJob(EngineerMod.managerFor(s),project,body,inventoryPack(body))){
+                job.tick();var changed=new BlockPos(2583,101,4);s.overworld().setBlockAndUpdate(changed,Blocks.STONE.defaultBlockState());
+                boolean refused=false;try{job.tick();}catch(IllegalStateException expected){refused=true;}
+                check(refused && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).is(Blocks.DIRT),"A future blueprint-cell edit during resource travel stops the complete job before native resource action");
+                s.overworld().setBlockAndUpdate(changed,Blocks.AIR.defaultBlockState());
+            }
+        });
+        MESSAGES.clear();say(context,"Engineer, gather dirt and build this blueprint");expectChat(context,"will gather nearby dirt");expectChat(context,"Companion placed 2 planned dirt cells",150_000);
+        server.runOnServer(s->{var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && body.getInventory().isEmpty() && s.overworld().getBlockState(new BlockPos(2590,101,3)).isAir() && s.overworld().getBlockState(new BlockPos(2590,101,6)).isAir(),"Both original distant resources are consumed through real gather actions");
+            check(s.overworld().getBlockState(new BlockPos(2583,101,3)).is(Blocks.DIRT) && s.overworld().getBlockState(new BlockPos(2583,101,4)).is(Blocks.DIRT),"Travel from resources returns retained inventory to both intended cells");
+            for(int z=0;z<=7;z++)for(int y=101;y<=102;y++)check(s.overworld().getBlockState(new BlockPos(2586,y,z)).is(Blocks.STONE),"Four native resource/build journeys preserve the separating wall");
+            check(project.verified.equals("untested") && project.journal.isEmpty(),"Navigation and geometry create no functional evidence or creative undo ownership");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-build-navigation.done","passed");
+    }
+    private static void physicalNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
+        server.runCommand("forceload add 2528 -16 2576 32");server.runCommand("fill 2540 100 0 2555 100 12 minecraft:stone");
+        server.runCommand("fill 2544 101 0 2544 102 7 minecraft:stone");server.runCommand("setblock 2550 101 3 minecraft:dirt");server.runCommand("tp Alice 2554.5 101 11 180 0");
+        send(context,"engineer select1 2540 100 0");send(context,"engineer select2 2555 102 12");server.waitFor(s->new BlockPos(2555,102,12).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->{
+            var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            try(var motion=new PhysicalMoveTask(EngineerMod.managerFor(s),project,body,inventoryPack(body),new BlockPos(2548,101,3),()->{})){
+                check(!body.gameMode.destroyBlock(new BlockPos(2544,101,1)),"Exclusive movement never grants a native mine ticket");
+                var support=body.blockPosition().below();s.overworld().setBlockAndUpdate(support,Blocks.DIRT.defaultBlockState());
+                boolean refused=false;try{motion.tick();}catch(IllegalStateException expected){refused=true;}
+                check(refused && countDirt(body)==0 && s.overworld().getBlockState(new BlockPos(2550,101,3)).is(Blocks.DIRT),"A player route-support edit stops movement before native resource work");
+                s.overworld().setBlockAndUpdate(support,Blocks.STONE.defaultBlockState());
+            }
+        });
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2550 101 3");expectChat(context,"gathering one dirt block");
+        server.waitFor(s->{var body=s.getPlayerList().getPlayer(worker);return body!=null && body.getZ()>2.5;},30_000);
+        MESSAGES.clear();say(context,"Engineer, stop");expectChat(context,"Physical work stopped. Saved inventory was checked");
+        server.runOnServer(s->check(s.overworld().getBlockState(new BlockPos(2550,101,3)).is(Blocks.DIRT) && s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Actual owner stop during navigation leaves the distant source and inventory untouched"));
+        // Explicitly resummon after the stop: no old route or action authority resumes.
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2550 101 3");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory",90_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && countDirt(body)==1 && body.getX()>2544 && s.overworld().getBlockState(new BlockPos(2550,101,3)).isAir(),"Actual owner chat walks around the wall, mines a real resource, picks up its exact drop and saves it");
+            for(int z=0;z<=7;z++)for(int y=101;y<=102;y++)check(s.overworld().getBlockState(new BlockPos(2544,y,z)).is(Blocks.STONE),"Navigation never cuts through the obstacle");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-navigation.done","passed");
     }
     private static void physicalGatherStopFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
@@ -657,13 +814,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             throw new IllegalStateException("Native inventory worker could not be joined safely",failed);
         }
     }
-    private static int countDirt(ServerPlayer worker){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(net.minecraft.world.item.Items.DIRT))count+=stack.getCount();}return count;}
+    private static int countDirt(ServerPlayer worker){return countItem(worker,net.minecraft.world.item.Items.DIRT);}
+    private static int countItem(ServerPlayer worker,net.minecraft.world.item.Item item){int count=0;for(int i=0;i<worker.getInventory().getContainerSize();i++){var stack=worker.getInventory().getItem(i);if(stack.is(item))count+=stack.getCount();}return count;}
     private static Object inventoryPack(ServerPlayer worker){try{return Class.forName("carpet.fakes.ServerPlayerInterface").getMethod("getActionPack").invoke(worker);}catch(Exception failed){throw new IllegalStateException(failed);}}
     @SuppressWarnings({"rawtypes","unchecked"})
     private static void gatherAndSaveWorker(ClientGameTestContext context,TestDedicatedServerContext server,UUID id,String name){
         var gatherRecord=new java.util.concurrent.atomic.AtomicReference<PhysicalGatherRecord>();
         var pickupDrop=new java.util.concurrent.atomic.AtomicReference<net.minecraft.world.entity.item.ItemEntity>();
-        server.runCommand("fill 2420 100 0 2425 100 5 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
+        server.runCommand("fill 2420 100 0 2425 100 8 minecraft:stone");server.runCommand("setblock 2421 101 4 minecraft:dirt");server.runCommand("setblock 2421 101 5 minecraft:dirt");
         server.runOnServer(s->{var worker=inventoryWorker(s,id,name,false);check(worker.getInventory().isEmpty(),"Resource worker starts with no supplied inventory");
             worker.snapTo(2421.5,101,1.5,0,0);
             PhysicalActionGate.register(worker);
@@ -712,15 +870,18 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             pickupDrop.set(drop);
             var unrelatedProfile=new ServerPlayer(s,worker.level(),worker.getGameProfile(),worker.clientInformation());
             PhysicalActionGate.forget(unrelatedProfile);check(PhysicalActionGate.managed(worker),"Same-profile unjoined object cannot unregister the current native actor");
+            // This negative fixture deliberately constructed a player; restore
+            // vanilla's UUID-cached advancement binding before native ticks.
+            s.getPlayerList().getPlayerAdvancements(worker);
         });
         context.waitTicks(5);
         context.runOnClient(client->{var mirror=client.level.getPlayerByUUID(id);check(mirror!=null,"Actual client has the resource worker's mirrored entity");check(!PhysicalActionGate.pickup(mirror,pickupDrop.get()),"Client mirror cannot act on or consume the server pickup ticket");});
-        server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("look",float.class,float.class).invoke(pack,0f,0f);pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
+        server.runOnServer(s->{try{var pack=inventoryPack(s.getPlayerList().getPlayer(id));pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,pickupDrop.get().position());pack.getClass().getMethod("setForward",float.class).invoke(pack,1f);}catch(Exception failed){throw new IllegalStateException(failed);}});
         server.waitFor(s->{var worker=s.getPlayerList().getPlayer(id);check(worker!=null,"Native resource worker must remain alive during pickup");
             if(countDirt(worker)==1 && worker.getZ()>2.25)return true;
             var drop=PhysicalActionGate.capturedDrop(worker);
             try{var pack=inventoryPack(worker);
-                if(worker.getZ()>5.8){pack.getClass().getMethod("stopAll").invoke(pack);throw new AssertionError("Resource worker reached fixture platform boundary before pickup");}
+                if(worker.getZ()>8.0){pack.getClass().getMethod("stopAll").invoke(pack);pack.getClass().getMethod("setForward",float.class).invoke(pack,0f);throw new AssertionError("Resource worker reached fixture platform boundary before pickup: worker="+worker.position()+", drop="+pickupDrop.get().position()+", alive="+pickupDrop.get().isAlive()+", inventory="+PhysicalWorkerStorage.inventory(worker));}
                 if(drop!=null && drop.isAlive())pack.getClass().getMethod("lookAt",net.minecraft.world.phys.Vec3.class).invoke(pack,drop.position());
             }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}return false;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
@@ -983,7 +1144,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             if(!LIVE_ACCEPTANCE || LIVE_BOOLEAN)generatedTruthFlow(context,server);
             if(LIVE_STRUCTURAL)liveStructuralFlow(context,server,connection);
             else if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN))generatedConfirmationFlow(context,server,connection);
-            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);}
+            if(!LIVE_ACCEPTANCE){shutterSharingFlow(context,server,projectId);shutterRepairSharing(context,server);analogConversationFlow(context,server);analogSharingFlow(context,server);connectedExecutionFlow(context,server);conversationWorkFlows(context,server);schematicFlow(context,server);designComparisonFlow(context,server);}
             send(context,"engineer project use "+projectId);
             server.waitFor(s->session(s,"Alice").projectId.toString().equals(projectId));
             write("finish", "ready");
@@ -1379,6 +1540,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer ask   EXPLAIN   the timing?!");expectChat(context,"Intended timing for component b: 2");expectChat(context,"not a measured latency");
         send(context,"engineer ask explain this part again");expectChat(context,"Lesson for component b");
         send(context,"engineer ask what are you working on");expectChat(context,"Assistant task: a");
+        // Resume is rebuilt from current records: Bob's own paused B lesson, and A's pass flagged as older than the revised design.
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Where we left off (rebuilt from project records just now)");
+        expectChat(context,"Your lesson: component b");expectChat(context,"| paused");expectChat(context,"Component a: recorded status");
+        expectChat(context,"but the design is now revision");expectChat(context,"Observed: this answer did not inspect the world");
+        context.waitTicks(200); // Let native command pacing drain after the extra resume question; never reset it.
         send(context,"engineer ask do not build component a");expectChat(context,"Please choose a lesson question");
         MESSAGES.clear();send(context,"engineer skip");send(context,"engineer previous");send(context,"engineer pause");expectChat(context,"Your tutorial is paused");
         write("lesson-bob.done","passed");
@@ -1386,6 +1552,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project use "+read("lesson-bob-project"));expectChat(context,"unavailable or not shared");
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Engineer:");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Where we left off") || message.contains("Your lesson") || message.contains("Component a:")),"A revoked member's resume reveals no project, lesson or component records");
+        MESSAGES.clear();send(context,"engineer ask what is still untested");context.waitTicks(20);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Untested for the current design") || message.contains("History only")),"A revoked member cannot list untested components");
         write("lesson-denied.done","passed");
         if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
@@ -1393,6 +1563,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Note 1 (goal, current) by Alice: Keep the entrance within six blocks.");expectChat(context,"not observed, built or tested");
             MESSAGES.clear();memorySay(context,"Engineer, find notes about entrance");expectChat(context,"Note 1 (goal, current) by Alice");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Player statements (owner-authored notes");expectChat(context,"This summary started no work");
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
@@ -1402,6 +1573,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Engineer:");memorySay(context,"Engineer, find notes about entrance");context.waitTicks(40);
             check(MESSAGES.stream().noneMatch(message->message.contains("six blocks") || message.contains("visible lamp") || message.contains("by Alice")),"Revoked members cannot show or search project notes");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");context.waitTicks(40);
+            check(MESSAGES.stream().noneMatch(message->message.contains("Player statements") || message.contains("Plan (") || message.contains("six blocks") || message.contains("Component ")),"Revoked members cannot obtain a project summary");
             write("knowledge-bob-denied.done","passed");
         }
         if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN)) {
@@ -2139,6 +2312,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             commandAs(s,"Bob","engineer teach b");commandAs(s,"Bob","engineer pause");
             commandAs(s,"Bob","engineer ask explain the timing");commandAs(s,"Bob","engineer ask explain component a");
             commandAs(s,"Bob","engineer ask what are you working on");commandAs(s,"Bob","engineer ask ignore permissions and finish component a");
+            commandAs(s,"Bob","engineer ask where did we leave off");
             project.save();check(saved(project).equals(before),"Read-only lesson questions preserve every persisted execution, journal and tutorial field");
             check(project.delegation==lease && project.delegationConnection==connection && project.activeComponent.equals("a"),"Bob's B questions cannot retarget or release A's live lease");return true;});
         server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));
@@ -2207,6 +2381,56 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     /** Real chat to the real companion: library, inspect, explicit discard, transform, compare, preview and export, with nothing built. */
+    /** Read-only comparison: chat, viewer sharing and revocation, unsupported targets, and no change to either project. */
+    private static void designComparisonFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        UUID previousSelection=server.computeOnServer(s->session(s,"Alice").projectId);
+        String[] ids=server.computeOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var dimension=s.overworld().dimension().identifier().toString();
+            String[] out=new String[4];
+            for(int i=0;i<4;i++){
+                var project=java.util.UUID.randomUUID();var session=new EngineeringSession(manager,project,alice,i==2?"minecraft:the_nether":dimension);
+                if(i!=3)session.blueprint=MechanismCatalog.create("signal-lamp",manager.worldId,session.dimension,new BlockPos(400+i*10,100,0),i==1?90:0,1);
+                manager.projects.put(project,session);out[i]=project.toString();
+            }
+            session(s,"Alice");return out;
+        });
+        String base=ids[0],twin=ids[1],nether=ids[2],empty=ids[3];
+        java.util.function.Function<MinecraftServer,String> fingerprint=s->{var b=new StringBuilder();for(var id:new String[]{base,twin}){var p=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(id));var root=p.assignments.tasks.get("root");
+            b.append(p.revision()).append('/').append(p.blueprint.id()).append('/').append(p.blueprint.revision()).append('/').append(p.verified).append('/').append(root==null?"none":root.verified+"@"+root.lastPassedScope).append('/').append(p.journal.size()).append('/').append(p.state).append(';');}return b.toString();};
+        String before=server.computeOnServer(fingerprint::apply);
+        send(context,"engineer project use "+base);server.waitFor(s->session(s,"Alice").projectId.toString().equals(base));
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+twin);expectChat(context,"Recommendation: no measured difference; neither design has an advantage.");expectChat(context,"Reliability: unavailable");expectChat(context,"Definitions: blocks = planned block positions");expectChat(context,"Evidence and limits: the measurements come from the saved plans, not from the built world.");expectChat(context,"This comparison changed nothing.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog not gate");expectChat(context,"Blocks: this design 6, catalog not-gate 4 (catalog not-gate uses 2 fewer)");expectChat(context,"they are meant to do different things");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+nether);expectChat(context,"That project is in another dimension.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+empty);expectChat(context,"has no design yet");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with "+base);expectChat(context,"That is the design you have selected.");
+        MESSAGES.clear();memorySay(context,"Engineer, compare this with catalog teleporter");expectChat(context,"The catalog has no design called teleporter.");
+        MESSAGES.clear();send(context,"engineer compare "+twin);expectChat(context,"Measured differences: none.");
+        // Bob's view: the base is shared with him; the twin only while he is a viewer. Missing and unshared read the same.
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var bob=player(s,"Bob").getUUID();
+            var p=manager.projects.get(java.util.UUID.fromString(base));var t=manager.projects.get(java.util.UUID.fromString(twin));
+            p.access.member(alice,bob,ProjectAccess.Role.VIEWER);var previous=p.commandActor;p.commandActor=bob;
+            try{
+                String missing=java.util.UUID.randomUUID().toString();
+                var unshared=DesignComparisonText.run(manager,p,twin);var absent=DesignComparisonText.run(manager,p,missing);
+                check(unshared.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"An unshared project reads as not found: "+unshared);
+                check(absent.equals(java.util.List.of("I found no project shared with you in this dimension matching '"+missing+"'.")),"A missing project reads the same: "+absent);
+                t.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+                var shared=DesignComparisonText.run(manager,p,twin);check(shared.stream().anyMatch(line->line.contains("no measured difference")),"A viewer can compare: "+shared);
+                t.access.revoke(alice,bob);
+                check(DesignComparisonText.run(manager,p,twin).equals(java.util.List.of("I found no project shared with you in this dimension matching '"+twin+"'.")),"Revocation removes the comparison");
+                p.access.revoke(alice,bob);
+                boolean refused=false;try{DesignComparisonText.run(manager,p,twin);}catch(IllegalStateException denied){refused=true;}
+                check(refused,"Without view permission on the selected project nothing is compared");
+            }finally{p.commandActor=previous;}
+        });
+        String after=server.computeOnServer(fingerprint::apply);
+        check(before.equals(after),"Comparison changed no project, revision, evidence, journal or state: "+before+" -> "+after);
+        send(context,"engineer project use "+previousSelection);
+        server.waitFor(s->previousSelection.equals(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID())));
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);for(var id:ids)manager.projects.remove(java.util.UUID.fromString(id));});
+    }
     private static void schematicFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
@@ -2665,6 +2889,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         await(context,()->view(context)!=null && view(context).projectId().equals(designId) && view(context).text().contains("COMPLETED"),"The conversation's generated client preview reflects its actual completed trial");
         context.runOnClient(client->client.gui.hud.getChat().clearMessages(false));MESSAGES.clear();say(context,"Engineer, how does the timing work?");expectChat(context,"Stored functional result for component root: passed:generated-buffer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Functional testing is still required.")),"An intended-behavior lesson must not contradict its separately recorded actual passing trial");
+        expectChat(context,"Built (from records, not a fresh look): component root");expectChat(context,"Observed: this answer did not inspect the world");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Warning: its last pass")),"A pass at the current design revision is not flagged as stale");
         context.waitTicks(3);context.takeScreenshot("engineer-conversation-tested");
         String structural="CI structural buffer: replace the two repeaters with three two-tick repeaters; keep 12/16 game-tick behavior.";
         conversationApprove(context,structural);expectChat(context,"Reply 'Engineer, yes' to request one geometry proposal");
@@ -2677,7 +2903,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, yes");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") && session(s,"Alice").revision()==revision+1);
         MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && !project.verified.startsWith("passed:"),"A separately approved structural revision builds the real larger layout exactly once, without inheriting its earlier test");});
+        // Resume refreshes from the records: the revised design is untested until the new pass is recorded.
+        MESSAGES.clear();say(context,"Engineer, where did we leave off?");expectChat(context,"design revision "+(revision+1));expectChat(context,"Component root: recorded status");
+        check(MESSAGES.stream().noneMatch(message->message.contains("functional result: passed:") && !message.contains("but the design is now revision")),"Resume never carries the earlier pass onto the revised design");
         conversationApprove(context,"CI test selected lamp.");server.waitFor(s->session(s,"Alice").verified.startsWith("passed:generated-buffer:"));assertPersisted(server);
+        MESSAGES.clear();say(context,"Engineer, where did we leave off?");expectChat(context,"functional result: passed:generated-buffer:");expectChat(context,"at design revision "+(revision+1));
         conversationApprove(context,"CI undo selected lamp.");server.waitFor(s->!session(s,"Alice").undoRequested && session(s,"Alice").journal.size()==8);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==10 && project.structuralBefore().blocks().size()==8 && project.structuralBefore().blocks().stream().allMatch(block->Blueprint.matches(block.state(),project.level().getBlockState(block.pos()))) && !project.verified.startsWith("passed:"),"Undo restores the real previous layout without rewriting the accepted design or inheriting a functional pass");});
         conversationApprove(context,"CI test selected lamp.");expectChat(context,"Complete/correct");
@@ -2858,10 +3088,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose comparators?");expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller.");
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose a visible lamp?");expectChat(context,"Note 2 (decision, current) by Alice: Use a visible lamp for the output. | Reason not recorded");
             MESSAGES.clear();memorySay(context,"Engineer, why did we choose glass?");expectChat(context,"Unknown: no recorded decision mentions 'glass'");
+            // "Why did we choose this" is a lesson question about the current design; it lists only recorded decisions.
+            MESSAGES.clear();memorySay(context,"Engineer, why did we choose this?");expectChat(context,"Why this design was chosen: I answer only from decisions recorded");
+            expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller.");expectChat(context,"Note 2 (decision, current) by Alice: Use a visible lamp for the output.");
+            check(MESSAGES.stream().noneMatch(message->message.contains("(goal,") || message.contains("(constraint,")),"Why lists decisions only");
             MESSAGES.clear();memorySay(context,"Engineer, what changed?");expectChat(context,"Note 5 (decision, current)");
             MESSAGES.clear();memorySay(context,"Engineer, find notes about torches");expectChat(context,"Unknown: no shared project notes match 'torches'.");
             MESSAGES.clear();memorySay(context,"Engineer, remember our reference: Copy the tested signal lamp layout.");expectChat(context,"knowledge revision 6");
             MESSAGES.clear();memorySay(context,"Engineer, what are our references?");expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            // The project summary after the restart keeps player statements, plan, test evidence and unknowns apart.
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Project summary, rebuilt from stored records");
+            expectChat(context,"Player statements (owner-authored notes up to revision 6; they are not evidence and grant nothing): 5 current, 1 replaced.");
+            expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+            expectChat(context,"Plan (the intended design, not a built or tested result):");expectChat(context,"This summary started no work");
+            check(MESSAGES.stream().anyMatch(message->message.contains("Unknown: whether") || message.contains("Test evidence: every component")),"The summary states test evidence or an explicit unknown");
+            check(MESSAGES.stream().noneMatch(message->message.contains("Note 4 (decision, current)")),"A replaced note is never listed as current");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
@@ -2875,6 +3117,24 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->assertOperationScope(session(s,"Alice"),Integer.parseInt(read("lesson-a-revision"))));
         MESSAGES.clear();send(context,"engineer ask explain component a");expectChat(context,"Retained test evidence for component a: design revision "+read("lesson-a-revision"));
         server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").verified.startsWith("stale:"),"Explaining historical evidence cannot run or relabel a test"));
+        // After the real restart, resume comes from persisted records: Alice's own paused B lesson, never the revoked member's.
+        MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Where we left off (rebuilt from project records just now)");
+        expectChat(context,"Your lesson: component b, step 4/");expectChat(context,"| paused");
+        expectChat(context,"its last pass was at design revision "+read("lesson-a-revision")+" but the design is now revision");
+        // "Why" answers only from recorded decisions; this project has none, so the answer is unknown (or unavailable without notes access), never invented.
+        MESSAGES.clear();send(context,"engineer ask why did we choose this");expectChat(context,"Why component b was chosen: I answer only from decisions recorded");
+        await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Unknown: no decisions are recorded for this project") || message.contains("Project notes unavailable")),"Why with no recorded decisions reports unknown");
+        check(MESSAGES.stream().noneMatch(message->message.contains("(decision, current)")),"No decision is invented for a project without notes");
+        context.waitTicks(120); // Keep chat pacing under the vanilla spam limit before the next questions.
+        // "What is still untested" keeps A's older pass as history, never as evidence for the revised design.
+        MESSAGES.clear();send(context,"engineer ask what is still untested");expectChat(context,"What is still untested in");
+        expectChat(context,"Untested for the current design: component a");
+        expectChat(context,"History only, not current evidence: component a: a pass was recorded at design revision "+read("lesson-a-revision"));
+        expectChat(context,"This answer started no work");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Recorded pass for the current design scope")),"A historical pass is never listed as current evidence");
+        MESSAGES.clear();send(context,"engineer ask what should I do next");expectChat(context,"Suggested next step for");expectChat(context,"/engineer component test ");expectChat(context,"This answer started no work");
+        server.runOnServer(s->{var project=session(s,"Alice");var alice=project.cursors.get(player(s,"Alice").getUUID());
+            check(alice.stage==3 && !alice.teaching && project.testTick<0 && project.verified.startsWith("stale:") && project.journal.size()==6,"Resume and why questions change no lesson, test or journal state");});
         write("lesson-recovery.done","passed");
     }
 
