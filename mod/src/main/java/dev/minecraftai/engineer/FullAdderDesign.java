@@ -88,11 +88,14 @@ final class FullAdderDesign {
     private void vertical(int x,int low,int high,boolean south){
         if(high-low<8)throw new IllegalStateException("Full-adder route too short for insulated ramps");
         for(int z=low;z<=high;z++){
-            int y=z==low || z==high?1:z==low+1 || z==high-1?2:3;wire(x,y,z);
+            int y=z<=low+2 || z==high?1:z==low+3 || z==high-1?2:3;wire(x,y,z);
         }
+        // Every branch refreshes at the trunk. A long source descent followed by
+        // trunk travel can leave too little strength to reach the first upper buffer.
+        replaceWire(x,1,low+1,repeater(south?"north":"south"));
         // Solid ramp shoulders match the proven climb/descent profile. Only the
         // level upper span crosses other trunks, with nonconducting glass below.
-        put(x,2,low+2,"minecraft:stone");put(x,2,high-2,"minecraft:stone");
+        put(x,2,low+4,"minecraft:stone");put(x,2,high-2,"minecraft:stone");
         int last=low;
         for(int z=low+9;z<=high-3;z+=10){replaceWire(x,3,z,repeater(south?"north":"south"));last=z;}
         if(high-last>14)throw new IllegalStateException("Unbuffered full-adder vertical route");
