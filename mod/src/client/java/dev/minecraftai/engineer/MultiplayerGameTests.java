@@ -1489,6 +1489,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(MESSAGES.stream().noneMatch(message->message.contains("Lesson for component a")),"A revoked lesson cannot reveal component facts");
         MESSAGES.clear();send(context,"engineer ask where did we leave off");expectChat(context,"Engineer:");
         check(MESSAGES.stream().noneMatch(message->message.contains("Where we left off") || message.contains("Your lesson") || message.contains("Component a:")),"A revoked member's resume reveals no project, lesson or component records");
+        MESSAGES.clear();send(context,"engineer ask what is still untested");context.waitTicks(20);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Untested for the current design") || message.contains("History only")),"A revoked member cannot list untested components");
         write("lesson-denied.done","passed");
         if(!LIVE_ACCEPTANCE || LIVE_DISCUSSION || LIVE_NATURAL) {
             awaitFile(context,"knowledge-bob-request");MESSAGES.clear();
@@ -1496,6 +1498,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Keep the entrance within six blocks.");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Note 1 (goal, current) by Alice: Keep the entrance within six blocks.");expectChat(context,"not observed, built or tested");
             MESSAGES.clear();memorySay(context,"Engineer, find notes about entrance");expectChat(context,"Note 1 (goal, current) by Alice");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Player statements (owner-authored notes");expectChat(context,"This summary started no work");
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
@@ -1505,6 +1508,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
             MESSAGES.clear();memorySay(context,"Engineer, show note 1");expectChat(context,"Engineer:");memorySay(context,"Engineer, find notes about entrance");context.waitTicks(40);
             check(MESSAGES.stream().noneMatch(message->message.contains("six blocks") || message.contains("visible lamp") || message.contains("by Alice")),"Revoked members cannot show or search project notes");
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");context.waitTicks(40);
+            check(MESSAGES.stream().noneMatch(message->message.contains("Player statements") || message.contains("Plan (") || message.contains("six blocks") || message.contains("Component ")),"Revoked members cannot obtain a project summary");
             write("knowledge-bob-denied.done","passed");
         }
         if(!LIVE_ACCEPTANCE || (LIVE_GENERATED && !LIVE_BOOLEAN)) {
@@ -3026,6 +3031,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, find notes about torches");expectChat(context,"Unknown: no shared project notes match 'torches'.");
             MESSAGES.clear();memorySay(context,"Engineer, remember our reference: Copy the tested signal lamp layout.");expectChat(context,"knowledge revision 6");
             MESSAGES.clear();memorySay(context,"Engineer, what are our references?");expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            // The project summary after the restart keeps player statements, plan, test evidence and unknowns apart.
+            MESSAGES.clear();memorySay(context,"Engineer, summarize this project");expectChat(context,"Project summary, rebuilt from stored records");
+            expectChat(context,"Player statements (owner-authored notes up to revision 6; they are not evidence and grant nothing): 5 current, 1 replaced.");
+            expectChat(context,"Note 6 (reference, current) by Alice: Copy the tested signal lamp layout.");
+            expectChat(context,"Note 5 (decision, current) by Alice: Use comparators for the delay | Reason: they are smaller. | Replaces note 4");
+            expectChat(context,"Plan (the intended design, not a built or tested result):");expectChat(context,"This summary started no work");
+            check(MESSAGES.stream().anyMatch(message->message.contains("Unknown: whether") || message.contains("Test evidence: every component")),"The summary states test evidence or an explicit unknown");
+            check(MESSAGES.stream().noneMatch(message->message.contains("Note 4 (decision, current)")),"A replaced note is never listed as current");
         }
         server.runOnServer(s->assertKnowledgeHasNoWorldAuthority(session(s,"Alice")));write("knowledge-recovery.done","passed");
     }
@@ -3047,6 +3060,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();send(context,"engineer ask why did we choose this");expectChat(context,"Why component b was chosen: I answer only from decisions recorded");
         await(context,()->MESSAGES.stream().anyMatch(message->message.contains("Unknown: no decisions are recorded for this project") || message.contains("Project notes unavailable")),"Why with no recorded decisions reports unknown");
         check(MESSAGES.stream().noneMatch(message->message.contains("(decision, current)")),"No decision is invented for a project without notes");
+        context.waitTicks(120); // Keep chat pacing under the vanilla spam limit before the next questions.
+        // "What is still untested" keeps A's older pass as history, never as evidence for the revised design.
+        MESSAGES.clear();send(context,"engineer ask what is still untested");expectChat(context,"What is still untested in");
+        expectChat(context,"Untested for the current design: component a");
+        expectChat(context,"History only, not current evidence: component a: a pass was recorded at design revision "+read("lesson-a-revision"));
+        expectChat(context,"This answer started no work");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Recorded pass for the current design scope")),"A historical pass is never listed as current evidence");
+        MESSAGES.clear();send(context,"engineer ask what should I do next");expectChat(context,"Suggested next step for");expectChat(context,"/engineer component test ");expectChat(context,"This answer started no work");
         server.runOnServer(s->{var project=session(s,"Alice");var alice=project.cursors.get(player(s,"Alice").getUUID());
             check(alice.stage==3 && !alice.teaching && project.testTick<0 && project.verified.startsWith("stale:") && project.journal.size()==6,"Resume and why questions change no lesson, test or journal state");});
         write("lesson-recovery.done","passed");

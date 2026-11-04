@@ -53,7 +53,7 @@ final class ConversationLessons {
         }
         if(topic==null)return false;
         questions.remove(s.actor());
-        if(topic.equals("what are you working on") || topic.equals("where did we leave off")){LessonAssistant.ask(s,topic);return true;}
+        if(Set.of("what are you working on","where did we leave off","what should i do next","what is still untested").contains(topic)){LessonAssistant.ask(s,topic);return true;}
         if(s.blueprint==null){s.tell("We do not have a design to explain yet. Tell me what you want to make.");return true;}
         if(!ComponentTree.composite(s.blueprint)){
             if(LessonAssistant.currentComponent(s,s.actor(),false)==null)s.teachComponent("root");

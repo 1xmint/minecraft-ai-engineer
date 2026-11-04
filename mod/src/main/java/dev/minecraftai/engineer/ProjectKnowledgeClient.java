@@ -85,6 +85,24 @@ final class ProjectKnowledgeClient {
             finally{finish(f);}
         }));
     }
+    /** A sectioned project summary: notes from the companion, then plan and evidence from current records. Read-only. */
+    void summary(EngineeringSession s) {
+        var f=start(s);tell(f,"Project summary, rebuilt from stored records just now; no model request or world inspection.");
+        f.future=request(f,"/v2/knowledge/read",new JsonObject());
+        f.future.whenComplete((reply,error)->manager.server.execute(()->{
+            if(!current(f)){finish(f);return;}
+            try {
+                List<String> statements;
+                try {
+                    if(error!=null)throw new IllegalStateException("Project notes unavailable");
+                    var knowledge=reply.getAsJsonObject("knowledge");long revision=validateKnowledge(knowledge,s.owner);
+                    statements=ProjectSummary.statements(knowledge.getAsJsonArray("notes"),revision,knowledge.get("hasEarlier").getAsBoolean(),entry->line(entry,false));
+                }catch(RuntimeException unavailable){statements=List.of("Player statements: unknown. Project notes are unavailable right now, so none are included.");}
+                for(String line:statements)tell(f,line);
+                for(String line:ProjectSummary.records(f.session))tell(f,line);
+            }finally{finish(f);}
+        }));
+    }
     /** One stored note by number from the whole history. Reading never writes, aborts work or calls a model. */
     void show(EngineeringSession s,int number) {
         if(number<1)throw new IllegalArgumentException("Note numbers start at 1.");
