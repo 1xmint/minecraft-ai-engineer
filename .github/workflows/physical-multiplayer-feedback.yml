@@ -1,12 +1,12 @@
 name: Physical worker resource recovery
 on:
   push:
-    branches: [work/physical-blueprint-feedback]
+    branches: [work/physical-oak-feedback]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: physical-blueprint-${{ github.ref }}
+  group: physical-oak-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   multiplayer:

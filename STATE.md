@@ -1,160 +1,125 @@
 # Current state
 
-Updated 2026-11-03. Goal: **complete all milestones**, meaning the entire original
-Phase 1 brief and all six Phase 2 extensions. The goal remains incomplete.
-Requirements: docs/product-brief.md, including its multiplayer-first amendment.
+Updated 2026-11-04. Goal: **complete all milestones**: the full original Phase 1
+brief and all six Phase 2 extensions. The goal is incomplete. Requirements live
+in docs/product-brief.md, including its multiplayer-first amendment.
 Repository: https://github.com/1xmint/minecraft-ai-engineer.
+
+## Outcomes
+
+- E1: durable attributed reasons, preferences, references, retrieval and useful
+  summaries; replacement history, revocation/privacy and restart proof.
+- E2: connected engineering beyond the half-adder: arithmetic, registers/memory,
+  displays/computers, timing, interference and adapting existing structures.
+- E3: useful explanation/teaching, diagnosis/repair and visual guidance grounded
+  in actual intended, observed and scope-valid tested state.
+- E4: the brief's actual signed-in human ten-step acceptance, production-account
+  feasibility, verified release packaging and later-session explanation.
+- P2: offline voice, visible NPC machine construction, genuine survival gathering/
+  tools/crafting, practical schematic reuse, measured optimization and multiple
+  builders. Bounded prototypes are foundations, not completion of these outcomes.
 
 ## Decisions and constraints
 
-- Dedicated Fabric server first, compatible logical-server core for solo play;
-  authenticated connections, server-owned permissions/memory and optional overlays.
-- Ordinary addressed conversation is the player interface. Commands are fallback
-  and test interfaces; command-only proofs do not complete the experience.
-- World observations, intended geometry and functional verification stay distinct.
-  Native tick evidence is required for a functional pass. Imported geometry is untested.
-- One private operator-owned companion on the operator's PC. No paid APIs, separate
-  keys, hosting service, credential sharing or SDK/model calls in the current native
-  execution workstream. Production Mojang login and shared subscription eligibility
-  remain unproven; do not infer them from offline fixtures or archived receipts.
-- Creative direct editing remains separately fenced. Native survival work requires
-  fresh owner delegation, current human/worker connections, revisions, assignments,
-  loaded workspace reservations and event-time native action/pickup tickets. Never
-  supply/replace inventory, overwrite player edits, or restore authority on restart.
-- Tests run on GitHub CI, never Josh's PC. Locally use scoped compile/lint/syntax
-  checks only; one Gradle invocation at a time, --no-daemon --max-workers=1.
-- Protected main, exact green PR heads, no bypass. Merge green work promptly.
-  Keep active candidates stable while live CI runs; observation timeout is not failure.
-- CI-only deterministic fixture quota is 24/minute and 96/hour. Production remains
-  4/minute and 24/hour. Never raise production quota to accommodate CI.
+- Dedicated Fabric server first; compatible logical-server core for solo play.
+  Server-owned permissions, memory and construction; optional authorized overlays.
+  Normal addressed conversation is the player interface; commands are fallback.
+- Intended geometry, observations and functional evidence remain separate. A pass
+  requires actual game ticks and the complete project/blueprint/component scope.
+  Imported geometry and remembered claims carry no authority or verification.
+- One private operator-owned companion on the operator's PC. No separately billed
+  APIs/keys, hosting, credential sharing or model calls in native execution work.
+  Production Mojang login and shared subscription eligibility remain unproven.
+- Native survival requires fresh owner delegation, exact human/worker connections,
+  revisions/assignments, loaded workspace, reservations and event-time tickets.
+  Never supply/replace inventory, creatively compensate or replay old authority.
+- Tests run in GitHub CI. Locally scoped compile/format/syntax only; one Gradle
+  process at a time, --no-daemon --max-workers=1. Protected main, green exact heads,
+  no bypass. Keep candidates stable during live CI; timeout is not terminal.
+- Production quotas remain 4/minute and 24/hour. CI fixtures alone use 24/96.
+- Claude owns memory, explanations, comparison and local voice. Codex owns native
+  construction/survival, larger circuits, multi-builder coordination, integration,
+  release and final acceptance. Check current branches before duplicating work.
 
-## Outcomes still required
+## Landed and published
 
-- E1: durable reasons, preferences, references, retrieval and useful project summaries,
-  with attribution, revocation, replacement history and restart proof. Literal notes
-  and explicit reason/replacement history are implemented; richer retrieval is not done.
-- E2: larger connected engineering beyond current catalog/half-adder slices, including
-  memory/registers/arithmetic/displays/computers, timing, interference and adaptation
-  of existing structures. Geometry is not circuit correctness.
-- E3: broader diagnosis/repair, timing explanations and visual guidance. Existing
-  catalog/mechanical/analog/connected evidence and limited repairs are foundations.
-- E4: actual human ten-step acceptance from the brief: signed-in preview, player builds
-  the first section, AI finishes the rest, interruption/change/resume, real test,
-  game/service restart and later explanation/visual proof. Scripted CI is not this
-  human acceptance. Repackage verified work and prove production account feasibility.
-- Phase 2: offline voice conversation; visible NPC constructing machines; genuine
-  survival gathering/tools/crafting; practical schematic reuse/building; measured
-  design optimization; multiple AI builders. None is broadly complete. Each needs
-  real user-flow and refusal/restart evidence appropriate to its scope.
+- Latest published download remains v0.1.0-alpha.2; it predates recent integrations.
+- Main7acfb33 includes creative tutorials/build/test/repair/undo, permissions and
+  conflict guards, optional overlays, and server-side durable memory.
+- Half-adder PR45/aaed3ef: 436 cells/20 pins, actual forward/reverse truth tables,
+  conversation, interruption/revocation and saved-world retest. Source42deb3c,
+  full CI41577981016 passed. Keep its canonical v1 source and digest unchanged.
+- Schematics integrated PR49/1d1dcb7: Sponge v3 codecs, inspection/comparison,
+  transforms, in-game library and bounded imported creative construction. Source
+  7ba44a3/full41581459104 passed; independent memory/build/restart/undo inspected.
+  Broad real-world mechanisms still unsupported; imports have no pass/ownership.
+- Optional idle Carpet companion PR47/ff4a021, full41682037419 passed.
+- Literal reasons/history PR48/f259fdc, full41688991149 passed; retrieval PR60/
+  7acfb33, exact d99eab5/full41734780134 passed. Independent DB requires exactly
+  six attributed notes including reference6; refused writes leave no rows.
+- Native dirt PR50/a067f25: source5cec203/full41696617329 and focused41696644888.
+  Next-cell placement PR51/9348e41: sourced48d27e/full41704803030 passed.
 
-## Landed on main
+## Now: combined player experience integration (E1/E3/P2)
 
-- Public repo, pinned toolchain/CI, alpha.2 multiplayer preview and optional overlays.
-  Alpha.2 is still the latest published release and predates recent integrations.
-- Creative engineering, tutorials/shared components, bounded construction, permissions,
-  conflicts, tests/repair/undo and durable server-side memory have scripted CI coverage.
-  Human acceptance and arbitrary engineering capability remain unfinished.
-- Connected half-adder: 436 cells, 20 pins, actual forward/reverse truth-table traces,
-  conversation, revocation, interruption, saved-world retest and owned undo. PR45
-  merged aaed3ef; exact source42deb3c CI41577981016 all five checks passed.
-- Schematics: Sponge v3 codec/CLI, analysis, transforms and in-game library. Imported
-  creative construction supports a pinned inert-material set plus five circuit
-  exceptions; many real mechanisms remain unsupported. Files carry no authority/pass.
-  PR49 merged 1d1dcb7; source7ba44a3 CI41581459104 all five checks passed. Actual imported
-  build/restart/undo receipts and final independent SQLite verification inspected.
-- Optional idle visible Carpet companion: PR47 merged ff4a021; source1fdbde7
-  CI41682037419 all five checks passed. Focused earlier actual chat/render/disconnect/
-  saved-world restart proofs exist. No NPC construction was claimed by this merge.
-- Literal reason/replacement memory: PR48 merged f259fdc; source5340e4a
-  CI41688991149 all five checks passed. Independent verifier checks exactly five notes,
-  literal reasons and replacement provenance; refused writes create no rows.
-  Claude's PR46 code was integrated through this own branch, not by editing his branch.
+Phase44 branch phase/44-player-experience combines voice integration28dd18b with
+native integration2313437. Only STATE conflicted; the multiplayer fixture merged
+automatically. No execution authority is widened by explanations or voice.
 
-## Active integration chain
+Outcomes: (1) the same build supports memory/explanation/comparison and native
+construction with current permissions; (2) optional voice yields editable chat,
+never automatic sending; (3) native exact inventory survives same-world restart
+and stop/revocation/conflicts refuse further work. Task: compile the combined
+Java/client code, run full CI, inspect multiplayer/memory/client receipts, and
+merge only the exact green source. Human microphone/speaker acceptance is separate.
 
-- PR50 / phase/33-physical-build: stable per-project worker identity, strict native
-  save/load, separate physical leases, exact native mine/drop/pickup/place tickets,
-  owner chat gather/retain/place and read-only recovery inspection. Source125b298
-  passed full CI41688519989 and focused CI41688532963. Actual mirror/clone isolation,
-  native pickup/save/restart, owner-Survival gather/retained placement, redstone-neighbor
-  refusal and final independent memory checks were inspected. Combining with newly
-  merged memory now requires fresh compile and exact-source CI.
-- PR51 / phase/34-physical-blueprint: next accepted single-root stone/dirt cell uses
-  retained inventory. Entire plan preflight, preceding-cell observations and all-plan
-  read reservations; occupied cells refuse. Sourceae01437 passed full CI41688912887
-  and focused CI41688767809. Actual blueprint cell placement and refusal receipts
-  inspected. Geometry creates no functional pass or creative undo ownership.
-- PR52 / phase/35-physical-blueprint-job: one fresh request alternates native gathering
-  and placement for up to32 dirt cells with existing stone supports. Original source
-  positions exclude all plan cells. Fixed owner/worker connections, blueprint and
-  assignment fences persist across phases; expected geometry advances only after
-  native placement plus verified save. Source8b9e015 focused CI41691988901 passed:
-  actual survival owner, two initial resources, two intended cells, empty supplied
-  inventory, no creative history/pass. Latest2c0b286 adds ordinary-chat stop and native
-  owner-selection revocation coverage; local compile passed, new CI pending.
+Evidence for parents, not yet this combination:
 
-## Native execution limits and recovery
+- PR65 native2313437: full41741571086 all five passed; dedicated multiplayer and
+  independent memory proof inspected. Focused41742617014 was cancelled; retry of
+  the same terminal handle is pending. Parent3bc5158 focused41741356685 passed:
+  inspected oak.done/oak-restarted.done and exact schema2 oak journal (axis=x,
+  one native log, ordered intents, empty before/retained after); strict independent
+  verifier passed. Actual route/build/stop fixtures also passed.
+- PR62 grounded23abc96: full41740052461 all five passed. Scope matcher prevents
+  same-revision/different-blueprint evidence becoming current timing. Missing or
+  stale scopes remain historical. Comparison cleanup restores explicit selection.
+- PR63 voice28dd18b: full41740086114 all five passed. Unique owned temporary audio
+  cleanup only; never scan/delete other clients' files. Trusted local executables,
+  bounded subprocesses/queues, transcript requires Enter, cancellation drops late
+  results. Earlier client screenshots inspected; injected audio is not real mic
+  acceptance. GPT-6-Luna focused privacy/scope reviews found no remaining issue.
 
-- Optional Carpet is pinned 26.3+v260915. No account lookup; worker profiles are private
-  world/dimension/project/owner bindings. Missing/corrupt data or live UUID/name
-  collisions refuse. An uninitialized profile retries the same UUID; existing native
-  data is loaded, never replaced with empty inventory. No grants/tickets persist.
-- Native pickup eligibility means the sole matching item emitted synchronously by
-  the authorized playerDestroy callback. It is not a guarantee against arbitrary
-  other mods spawning inside that callback. Unsupported entities/items are denied.
-- Current executors are dirt-only, short three-wide stone-supported corridors and
-  inert placement neighborhoods. Movement can be stopped on conflict; external
-  physics is not universally contained. General navigation/materials/tools are open.
-- Player data and chunks are separate saves. Clean stop/restart is proven for the
-  bounded slices; arbitrary crash atomicity is not. PICKUP_PREPARED/PLACE_PREPARED
-  may be unresolved. Never recreate items, compensate creatively, retry from matching
-  counts, or treat missing data/drop visibility as proof of emptiness/consumption.
-- Recovery inspection is owner-only, bounded and read-only. Stop cancels actions,
-  verifies current saved inventory and retains an idle binding; failure despawns
-  under default denial. A fresh request is required; interrupted records grant nothing.
+## Native limits and known problems
 
-## Next slices
+- Pinned optional Carpet26.3+v260915. Per-project native identity, exact stored
+  inventories and no restored grants. Verification reads strict detached43-slot
+  native codecs; never construct same-UUID observer ServerPlayers (vanilla rebinds
+  the advancement handler). Full-slot/component and corruption GameTests pass.
+- Bounded flat stone-supported inert navigation, dirt placement/batch construction,
+  one isolated oak log only. No natural trees, arbitrary terrain, tools, crafting,
+  native circuit placement or general survival completion yet.
+- Native pickup is the sole expected item emitted synchronously by authorized
+  destroy, not a universal guarantee against other mods emitting in that callback.
+- Chunk/player data are separate saves. Clean restart is proven for bounded slices;
+  arbitrary crash atomicity is not. Unresolved prepared records never recreate
+  items, compensate creatively or resume. Owner-only recovery inspection is read-only.
 
-1. Integrate memory with PR50; compile, fresh full/focused CI, inspect receipts, merge.
-2. Bring PR51/52 onto integrated parents. Prove ordinary-chat stop, selection/revocation,
-   human edits and restart/uncertain recovery before widening physical execution.
-3. Expand resource handling/navigation and real blueprint mechanisms; then coordinated
-   multiple builders. Do not call the current dirt prototype completion of Phase 2.
-4. Continue E1/E2/E3 and the voice/optimization lanes; don't duplicate Claude's active
-   work without checking branches. Schematics still need broader practical building.
-5. Complete production feasibility and actual human acceptance, then package verified
-   integrations. Keep the full original scope; no goal-complete claim from green CI.
+## Roadmap and parallel work
 
-Detailed historical logs, failed-run investigations and previous plans remain in
-Git history. This file describes current decisions and evidence, not every attempt.
+1. Finish exact combined integration above; update landed evidence after merge.
+2. E2 phase42 full-adder in work/full-adder: crossing3af8e29 passed64 native samples
+   in full41741392528. Fixed nine-NAND prototype07c263a failed real all-pin proof;
+   diagnosticfd0548d showed branch signal exhausted before first repeater. Source
+   225cf57 adds trunk-junction repeaters; focused native CI pending. No full-adder
+   admission/pass exists yet. Keep all35pins/all16rows/consecutive tick assertions.
+3. Native crafting after oak proof: actual menu/recipe actions, exact inventory and
+   cursor accounting, strict tickets, save/restart; never manufacture output items.
+4. Broaden genuine resources/terrain, native machine construction and coordinated
+   multiple builders; continue full E2 larger circuits and E3 repair/adaptation.
+5. Claude continues useful memory/summaries, grounded teaching, comparison and local
+   voice. Integrate proven work without duplicating his active branches.
+6. Complete production feasibility and actual human acceptance, package verified
+   work, then audit the entire original scope before any goal-complete claim.
 
-PR51 integration: sourceae01437 passed all five full checks and focused gameplay.
-This branch now incorporates PR50's memory integration and ordinary owner stop,
-including the separate actual-chat gather-stop scene. Preserve both the blueprint
-placement and gather-stop receipts. New combined source needs compile and CI;
-no previous green head is substituted for this combination.
-Combined PR51 server/client compilation and shell syntax passed. Fresh full and
-focused CI are required for this merge with memory and natural-stop coverage.
-
-PR50 landed as a067f25 from exact source5cec203; full CI41696617329 passed all five checks and focused CI41696644888 passed. PR51 source8563b16 passed full CI41699264227 and focused CI41699293611. Main is byte-identical to the merged parent source; squash ancestry conflicts were resolved by retaining this branch's already-tested extensions. New integration head requires fresh CI.
-
-## Memory retrieval integration (E1)
-
-Outcomes: owner/authorized viewer can show/search attributed current and replaced notes through conversation after restart; revoked/unknown connections reveal nothing; the final independent database proof requires exactly six notes, including the newly saved reference, while all refused writes leave no rows.
-Claude source70d973d (PR55) passed its compile, client, companion and planner checks and drove the full multiplayer flow; CI41729899854 failed only the final independent verifier, which still expected the five-note pre-retrieval fixture. Integrated current main9348e41 without changing Claude's branch. Updated verifier to require exact note6 reference text/schema/author/written-at revision and no invented reason/replacement; prior five notes and replacement provenance stay exact. GPT-6-Luna focused review found no concrete retrieval privacy issue. Fresh compile/format/syntax and combined-source CI required. M2/M3 remain separate and must bind current evidence to the full original scope rather than revision alone before integration.
-
-## Grounded engineering integration (E1/E3 and Phase 2 comparison)
-
-Outcomes: resume/explain labels intended, recorded build, observation and actual functional evidence; comparisons show exact geometry/material tradeoffs with no unsupported timing/reliability claim; a same-revision blueprint replacement or changed component scope keeps the old pass historical. Privacy, per-player lesson cursors and read-only behavior remain required.
-Integrated Claude M2 fd8ffec and M3 f61cc90 onto retrieval integrationd99eab5 without changing Claude branches. GPT-6-Luna found revision-only freshness could relabel retained evidence from a different blueprint identity. Added one shared display-only scope matcher using FunctionalTrial's strict historical-scope validation plus project/blueprint identity, revision, component and versioned basis checks. Explanations and timing comparisons use it; execution authority is unchanged. Added a real reconciliation test showing same-basis pass retention under a new ID cannot become current timing, mutations of every scope field are refused, and missing scopes are historical. Native timing display tests now use the existing validated generated fixture instead of revision-only synthetic scopes. Compile and combined CI pending.
-
-Combined grounded-engineering Java/client compilation, formatting and diff checks passed. GPT-6-Luna reviewed the scope matcher and historical labeling fix and found no concrete remaining evidence upgrade path. Native regression and full combined multiplayer CI remain required; these features are not yet integrated.
-
-## Local voice integration (Phase 2 voice)
-
-Outcomes: optional local push-to-talk records only while held, presents a transcript without sending, and Enter follows ordinary server authority; cancel/focus-loss/disconnect discard late results; native local process/temp cleanup never deletes another client's files; spoken replies can be stopped and missing hardware falls back to text. Real microphone/speaker human acceptance remains required.
-Integrated Claude voice sourceaca4b2e (PR61) onto grounded-engineering14b8c3b, preserving both design-comparison native tests and voice client test entrypoints. GPT-6-Luna identified unsafe global startup deletion of matching temp folders and an overbroad no-upload promise. Removed that scan entirely; recognition retains its per-run finally cleanup, tested against another directory containing speech.wav plus unrelated data. Documented trusted offline executable boundary and crash leftovers. Corrected fixture config writes to surface IOException as test failures without invalid checked exceptions in runTest. No permission, inference or command-execution path is added. Compile and full CI pending.
-
-Combined local-voice Java/client compilation, formatting and diff checks passed after fixture exception fixes and owned-only cleanup. CI must still prove real client transcript/cancel/playback flows and process/temp isolation. Human microphone/speaker recognition quality remains unproven.
-
-Merged grounded-engineering23abc96 after retrieval landed7acfb33. Included comparison fixture cleanup: restore and await the previous explicit selection before deleting temporary projects, preserving production ambiguity refusal. The inherited source14b8c3b had passed four checks but failed that fixture cleanup; current combined source needs fresh CI. Scope freshness and local voice privacy boundaries remain unchanged.
+Historical investigations and failed runs remain in Git history/CI artifacts.
