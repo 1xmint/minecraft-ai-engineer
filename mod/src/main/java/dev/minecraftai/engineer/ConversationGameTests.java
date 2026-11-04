@@ -100,6 +100,20 @@ public final class ConversationGameTests {
         rejects(helper,()->ProjectKnowledgeClient.validateEntry(current,java.util.UUID.fromString("00000000-0000-4000-8000-000000000009"),2),"Only owner-authored notes are shown");
         helper.succeed();
     }
+    @GameTest public void projectSummaryKeepsStatementsAndReplacementsApart(GameTestHelper helper){
+        for(String text:new String[]{"Summarize this project.","give me a project summary","What's the state of this project?"})
+            helper.assertTrue(ProjectSummary.asks(text),"Summary phrasing: "+text);
+        for(String text:new String[]{"summarize this project and build it","the sign says summarize this project","what do you remember about this project"})
+            helper.assertTrue(!ProjectSummary.asks(text),"Not a summary request: "+text);
+        var notes=com.google.gson.JsonParser.parseString("[{\"revision\":1,\"kind\":\"goal\",\"text\":\"small\"},{\"revision\":2,\"kind\":\"decision\",\"text\":\"repeaters\"},{\"revision\":3,\"kind\":\"decision\",\"text\":\"comparators\",\"supersedes\":2}]").getAsJsonArray();
+        var lines=ProjectSummary.statements(notes,3,false,entry->"N"+entry.getAsJsonObject("note").get("revision").getAsLong()+(entry.has("replaces")?" replaces "+entry.getAsJsonObject("replaces").get("revision").getAsLong():""));
+        helper.assertTrue(lines.get(0).contains("2 current, 1 replaced") && lines.get(0).contains("not evidence"),"Counts current and replaced notes and says notes are not evidence: "+lines.get(0));
+        helper.assertTrue(lines.get(1).equals("N3 replaces 2") && lines.get(2).equals("N1") && lines.stream().noneMatch(line->line.equals("N2")),"Current notes newest first; the replaced note is counted, not listed as current");
+        helper.assertTrue(ProjectSummary.statements(new com.google.gson.JsonArray(),0,false,entry->"x").get(0).startsWith("Player statements: none recorded"),"No notes is said plainly");
+        var window=com.google.gson.JsonParser.parseString("[{\"revision\":40,\"kind\":\"goal\",\"text\":\"late\"}]").getAsJsonArray();
+        helper.assertTrue(ProjectSummary.statements(window,40,true,entry->"x").stream().anyMatch(line->line.contains("Notes before note 40 are stored but not included")),"Older history is acknowledged, not dropped silently");
+        helper.succeed();
+    }
     @GameTest public void setupIntentsAreExplicitAndDoNotConfuseEngineeringWorkWithProjectSelection(GameTestHelper helper){
         helper.assertTrue(ConversationSetupText.parse("Let's start a new project!").operation()==ConversationSetupText.Operation.CREATE,"Explicit private-project creation is a local setup intent");
         helper.assertTrue(ConversationSetupText.parse("What projects can I work on?").operation()==ConversationSetupText.Operation.LIST,"Project discovery needs no model request");
