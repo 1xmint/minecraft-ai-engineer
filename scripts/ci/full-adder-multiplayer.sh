@@ -22,7 +22,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 git -C "$repo" worktree add --detach "$temporary/bob" HEAD
 for checkout in "$repo" "$temporary/bob"; do
-  (cd "$checkout/mod"; chmod +x gradlew; ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava)
+  (cd "$checkout/mod"; chmod +x gradlew; ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava downloadAssets)
 done
 # Synthetic offline fixture identity only. This entry point never calls an SDK/model.
 export MCE_CODEX_OPERATOR_UUID=10920508-d5d8-3eed-93d2-92f193afe7d7
@@ -40,7 +40,7 @@ launch() {
     set -euo pipefail
     cd "$1/mod"
     export MCE_MP_ROLE="$2" MCE_MP_COORD="$3" MCE_CONFIG_DIR="$3/../config-$2" MCE_DISABLE_OVERLAY="$5"
-    timeout 25m xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$4" -PmceTestRunDir="build/run/mp-$2" runClientGameTest
+    timeout 25m xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$4" -PmceTestRunDir="build/run/mp-$2" runClientGameTest -x downloadAssets
   ' _ "$checkout" "$role" "$coord" "$username" "$overlay" >"$evidence/$role.log" 2>&1 &
   pids+=("$!")
 }
