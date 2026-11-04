@@ -1548,6 +1548,7 @@ final class EngineeringSession implements BuildExecutor {
             access=ProjectAccess.read(owner,json.getAsJsonObject("access"));controller=UUID.fromString(json.get("controller").getAsString());
             projectRevision=json.get("projectRevision").getAsBigDecimal().intValueExact();if(projectRevision<1)throw new IllegalStateException("Invalid project revision");
             if(json.has("corner1")) corner1=Blueprint.pos(json.getAsJsonObject("corner1")); if(json.has("corner2")) corner2=Blueprint.pos(json.getAsJsonObject("corner2"));
+            if(corner2!=null){if(corner1==null)throw new IllegalStateException("Saved workspace has no first corner");ProjectManager.validateWorkspaceBounds(corner1,corner2);}
             if(json.has("blueprint")) blueprint=Blueprint.parse(json.getAsJsonObject("blueprint"),worldId,dimension);
             if(json.has("shutterOwned")){var ownership=json.get("shutterOwned");if(!ownership.isJsonPrimitive() || !ownership.getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid mechanical control metadata");shutterOwned=ownership.getAsBoolean();}
             else shutterOwned=blueprint!=null && ShutterDesign.describes(blueprint.source()); // Pre-release checkpoints previously guarded every mechanical intention.

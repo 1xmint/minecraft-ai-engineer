@@ -12,6 +12,11 @@ existing 64-block blueprint extent. Its version 2 graph and exact geometry bind 
 SHA-256 digest `8a2b25ed743c42b936e101dc19368a35b740fb48a0dc72781712d3152dc100be`.
 The half-adder's version 1 definition is unchanged.
 
+The layout needs a 99 by 4 by 79 workspace (31,284 block positions, including air).
+Selected workspaces support up to 65,536 positions and 128 blocks per axis.
+Construction remains limited to 4,096 planned blocks and recorded changes per
+assignment; explicit world inspections retain their separate 4,096-position cap.
+
 Native GameTests exercise all eight input combinations forward and backward.
 Each case observes every pin at eight consecutive actual game ticks after a
 256-tick settling interval. All three original lever states are restored.

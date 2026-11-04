@@ -10,6 +10,40 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual physical prototype proof; this does not admit project execution or saved evidence. */
 public final class FullAdderGameTests {
+    @GameTest public void workspaceVolumeDoesNotIncreaseExecutionAuthority(GameTestHelper helper){
+        var a=new BlockPos(28_000_000,100,28_000_000);var b=a.offset(127,3,127);
+        ProjectManager.validateWorkspaceBounds(a,b);ProjectManager.validateWorkspaceBounds(b,a);ProjectManager.validateWorkspaceBounds(a,a);
+        rejectsWorkspace(helper,()->ProjectManager.validateWorkspaceBounds(a,a.offset(127,4,127)),"Workspace volume remains bounded");
+        rejectsWorkspace(helper,()->ProjectManager.validateWorkspaceBounds(a,a.offset(128,0,0)),"Workspace axis remains bounded");
+        rejectsWorkspace(helper,()->ProjectManager.validateWorkspaceBounds(new BlockPos(Integer.MIN_VALUE,0,Integer.MIN_VALUE),new BlockPos(Integer.MAX_VALUE,0,Integer.MAX_VALUE)),"Oversized coordinates reject before volume multiplication");
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());String dimension=helper.getLevel().dimension().identifier().toString();var actor=UUID.randomUUID();var otherOwner=UUID.randomUUID();
+        var own=new EngineeringSession(manager,UUID.randomUUID(),actor,dimension);own.corner1=a;own.corner2=b;
+        var other=new EngineeringSession(manager,UUID.randomUUID(),otherOwner,dimension);other.corner1=a;other.corner2=b;manager.projects.put(other.projectId,other);
+        try{
+            rejectsWorkspace(helper,()->manager.workspace(own,actor,a,b),"Larger selection cannot overlap a private project without edit permission");
+            other.access.member(otherOwner,actor,ProjectAccess.Role.EDITOR);other.access.permission(otherOwner,actor,ProjectAccess.Permission.BUILD,false);
+            manager.workspace(own,actor,a,b);helper.assertTrue(!other.access.allows(actor,ProjectAccess.Permission.BUILD),"Selecting a shared workspace grants no build permission");
+            own.blueprint=ConnectedIntention.create(UUID.randomUUID(),1,own.projectId,manager.worldId,dimension,a,0).blueprint();
+            boolean denied=false;RegionReservations.Fence fence=null;try{fence=manager.acquire(own,actor,ProjectAccess.Permission.BUILD,false);}catch(IllegalStateException expected){denied=expected.getMessage().contains("required permission");}finally{if(fence!=null)manager.reservations.release(manager.scope(own),fence);}
+            helper.assertTrue(denied,"Actual write-footprint admission still requires the neighboring project's current build grant");
+        }finally{manager.projects.remove(other.projectId);}
+        helper.succeed();
+    }
+    @GameTest public void oversizedSavedWorkspaceIsRefusedWithoutDiscardingRecovery(GameTestHelper helper){
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());String dimension=helper.getLevel().dimension().identifier().toString();var project=UUID.randomUUID();var owner=UUID.randomUUID();var session=new EngineeringSession(manager,project,owner,dimension);
+        session.corner1=new BlockPos(28_000_000,100,28_000_000);session.corner2=session.corner1.offset(127,3,127);session.save();
+        var restored=new EngineeringSession(manager,project,owner,dimension);helper.assertTrue(restored.corner2.equals(session.corner2) && restored.delegation==null && restored.testTick<0,"Valid maximum workspace reloads without authority");
+        try{
+            var valid=JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+            try{
+                var invalid=valid.deepCopy();invalid.add("corner2",Blueprint.jsonPos(session.corner1.offset(127,4,127)));LocalFiles.write(session.file,invalid);String before=java.nio.file.Files.readString(session.file);
+                rejectsWorkspace(helper,()->new EngineeringSession(manager,project,owner,dimension),"Oversized saved workspaces are rejected before recovery can execute");
+                helper.assertTrue(java.nio.file.Files.readString(session.file).equals(before),"Malformed saved workspace remains unchanged for recovery");
+            }finally{LocalFiles.write(session.file,valid);}
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        helper.succeed();
+    }
+    private static void rejectsWorkspace(GameTestHelper helper,Runnable action,String message){boolean refused=false;try{action.run();}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,message);}
     @GameTest(structure="engineer:full_adder_lab",maxTicks=4400)
     public void nineNandArithmetic(GameTestHelper helper){
         var design=new FullAdderDesign();for(var cell:design.cells())helper.setBlock(cell.pos(),cell.state());
