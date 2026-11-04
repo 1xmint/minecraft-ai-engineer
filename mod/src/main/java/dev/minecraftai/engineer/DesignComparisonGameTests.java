@@ -84,6 +84,9 @@ public final class DesignComparisonGameTests {
         helper.assertTrue(small.materials().equals(new TreeMap<>(Map.of("minecraft:stone",1,"minecraft:redstone_lamp",1,"minecraft:redstone_torch",1))),"Derived materials count wall torches as torches: "+small);
         var lines=DesignComparison.compare(large,small);
         helper.assertTrue(has(lines,"Recommendation: small — same intended behavior and no larger on any measure above"),"A strictly smaller equal-behavior design is recommended: "+all(lines));
+        helper.assertTrue(has(lines,ComparisonEvidence.DEFINITIONS) && has(lines,"Evidence and limits: the measurements come from the saved plans, not from the built world.")
+                && has(lines,"small has no passed game test of its current revision.") && has(lines,"large has no passed game test of its current revision.")
+                && has(lines,"is not evidence that a design works, is faster or is more reliable"),"A recommendation states what it rests on and what it cannot show: "+all(lines));
         // A 1×1×3 tower (3 blocks, footprint 1) against a 2×1×1 row (2 blocks, footprint 2): each wins one measure.
         var row=generated("d1",1,List.of(stone,stone),null);
         var towerBlocks=List.of(new Blueprint.PlannedBlock(new BlockPos(0,64,0),stone,"build","root"),new Blueprint.PlannedBlock(new BlockPos(0,65,0),stone,"build","root"),new Blueprint.PlannedBlock(new BlockPos(0,66,0),stone,"build","root"));
@@ -127,6 +130,24 @@ public final class DesignComparisonGameTests {
             helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,altered) && DesignComparison.timing(original,altered)==null,"Changing scope field "+field+" refuses current timing");
         }
         var wrongTask=passed(original);wrongTask.basis="0".repeat(64);helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,wrongTask),"Stored task basis must itself match the current component");
+        helper.succeed();
+    }
+
+    @GameTest public void importedGeometryIsNeverLabelledTested(GameTestHelper helper){
+        var placement=new com.google.gson.JsonArray();
+        for(int x=0;x<3;x++){var cell=new JsonObject();var pos=new com.google.gson.JsonArray();pos.add(x);pos.add(0);pos.add(0);cell.add("pos",pos);cell.addProperty("state","minecraft:stone");placement.add(cell);}
+        var imported=Blueprint.parse(SchematicBlueprint.candidate(placement,7,"d".repeat(64),"s".repeat(64),WORLD,DIM,UUID.randomUUID().toString()),WORLD,DIM);
+        // Even a task record claiming a current-scope pass cannot make imported geometry tested or timed.
+        var m=DesignComparison.measure("imported",imported,passed(imported));
+        helper.assertTrue(m.imported() && !m.currentPass() && m.timing()==null && m.status().equals(ComparisonEvidence.IMPORTED_STATUS)
+                && m.behavior().equals(ComparisonEvidence.IMPORTED_BEHAVIOR) && m.behaviorKey()==null && m.blocks()==3 && m.length()==3,"Imported geometry is measured but never tested: "+m);
+        var lines=DesignComparison.compare(m,measure("lamp",catalog("signal-lamp",0,0,1)));
+        helper.assertTrue(has(lines,"imported schematic geometry with no defined behavior") && has(lines,"Recommendation: none — I cannot confirm")
+                && has(lines,"imported is imported geometry and untested.") && has(lines,"lamp has no passed game test of its current revision.")
+                && !has(lines,"passed its game test") && !has(lines,"Timing from passed") && lines.stream().noneMatch(line->line.toLowerCase(Locale.ROOT).contains("verified")),
+                "Comparison never labels imported geometry as tested or verified: "+all(lines));
+        var twin=DesignComparison.compare(m,DesignComparison.measure("copy",imported,null));
+        helper.assertTrue(has(twin,"Measured differences: none") && has(twin,"Recommendation: none — I cannot confirm"),"Identical imports still get no pick: "+all(twin));
         helper.succeed();
     }
 

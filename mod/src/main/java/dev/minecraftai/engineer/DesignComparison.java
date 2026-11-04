@@ -13,7 +13,7 @@ final class DesignComparison {
 
     /** Orientation-independent measurements. Length is the longer horizontal side. */
     record Measure(String label, int blocks, int length, int width, int height, SortedMap<String,Integer> materials,
-                   String behaviorKey, String behavior, String status, String timing) {
+                   String behaviorKey, String behavior, String status, String timing, boolean currentPass, boolean imported) {
         Measure { materials = Collections.unmodifiableSortedMap(new TreeMap<>(materials)); }
         int volume() { return length * width * height; }
         int footprint() { return length * width; }
@@ -30,7 +30,7 @@ final class DesignComparison {
         }
         int dx=maxX-minX+1, dy=maxY-minY+1, dz=maxZ-minZ+1;
         return new Measure(label, b.blocks().size(), Math.max(dx,dz), Math.min(dx,dz), dy, materials(b),
-                behaviorKey(b), behavior(b), status(b, task), timing(b, task));
+                behaviorKey(b), behavior(b), status(b, task), timing(b, task), passedAt(b, task), ComparisonEvidence.imported(b));
     }
 
     static SortedMap<String,Integer> materials(Blueprint b) {
@@ -71,6 +71,7 @@ final class DesignComparison {
     }
 
     private static String behavior(Blueprint b) {
+        if(ComparisonEvidence.imported(b)) return ComparisonEvidence.IMPORTED_BEHAVIOR;
         var p=provenance(b);
         if(p.has("template") && !p.get("template").getAsString().equals("composition"))
             return "catalog " + p.get("template").getAsString() + (delay(b) > 0 ? " with repeater setting " + delay(b) : "");
@@ -80,6 +81,7 @@ final class DesignComparison {
     }
 
     static String status(Blueprint b, ComponentAssignments.Task task) {
+        if(ComparisonEvidence.imported(b)) return ComparisonEvidence.IMPORTED_STATUS;
         if(task == null) return "not built or tested (catalog design)";
         String verified=task.verified == null ? "untested" : task.verified;
         if(verified.startsWith("passed") && passedAt(b, task)) return "passed its game test at revision " + b.revision();
@@ -88,7 +90,7 @@ final class DesignComparison {
         return "untested";
     }
     private static boolean passedAt(Blueprint b, ComponentAssignments.Task task) {
-        return task.verified != null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(b,task);
+        return !ComparisonEvidence.imported(b) && task != null && task.verified != null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(b,task);
     }
 
     /** Timing only from a confirmed buffer behavior whose current revision passed in game. */
@@ -118,6 +120,7 @@ final class DesignComparison {
         var lines=new ArrayList<String>();
         lines.add(describe(a));
         lines.add(describe(b));
+        lines.add(ComparisonEvidence.DEFINITIONS);
         var differences=new ArrayList<String>();
         for(var d : new String[]{
                 delta("Blocks", a.blocks(), b.blocks(), a.label(), b.label()),
@@ -138,6 +141,7 @@ final class DesignComparison {
                 + " a passed game test of its current revision with a recorded timing behavior.");
         lines.add("Reliability: unavailable — one passing test is not a reliability measurement and no repeated-trial record exists.");
         lines.add(recommend(a, b, sameMeasures));
+        lines.add(ComparisonEvidence.basis(a, b));
         lines.add("This comparison changed nothing.");
         return List.copyOf(lines);
     }
