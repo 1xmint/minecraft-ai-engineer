@@ -74,6 +74,7 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         try {
             configAndCleanup();
             processAdapters();
+            VoiceStaleChecks.run();
         } catch (Exception failed) {
             throw new AssertionError("Voice adapter checks failed: " + failed, failed);
         }

@@ -172,6 +172,12 @@ available. Typing still works.`
    `Speech recognition could not start ...` and typing still works.
 10. After normal completion or cancellation, check that this run's temporary
     recording was removed. Leave other running clients' temporary folders alone.
+11. Hold V, speak, release, and switch to another window while `Transcribing`
+    shows. Expect `Voice cancelled. Nothing was sent.` and no chat box when you
+    come back.
+12. Break the speaker path in the config and ask a question. Expect
+    `Spoken replies stopped: the speech program could not start ...`; the reply
+    still shows in chat and typing still works.
 
 Still to be validated by a person: recognition quality and speed on real
 hardware, the Windows and Linux speaker commands above, microphone permission

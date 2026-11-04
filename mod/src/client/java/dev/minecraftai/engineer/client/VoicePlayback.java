@@ -2,6 +2,7 @@ package dev.minecraftai.engineer.client;
 
 import java.util.ArrayDeque;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -15,14 +16,22 @@ final class VoicePlayback {
 
     private final Supplier<VoiceAdapters.Speaker> speakers;
     private final BooleanSupplier idle;
+    private final Consumer<String> failures;
     private final ArrayDeque<String> queue = new ArrayDeque<>();
     private VoiceAdapters.Speaker current;
     private Thread worker;
     private int spoken, generation;
 
-    VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle) {
+    /** failures receives one plain line when the speech program fails on its own (never when stop ended it). */
+    VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle, Consumer<String> failures) {
         this.speakers = speakers;
         this.idle = idle;
+        this.failures = failures;
+    }
+
+    static String failure(Exception failed) {
+        String why = failed instanceof LocalProcess.Failure process ? process.getMessage() : "failed";
+        return "Spoken replies stopped: the speech program " + why + ". Replies still show in chat, and typing still works.";
     }
 
     /** Called with each received system line. Returns true when it was queued to be spoken. */
@@ -54,7 +63,11 @@ final class VoicePlayback {
                 run = generation;
             }
             try { speaker.speak(text); }
-            catch (Exception failed) { synchronized (this) { if (run == generation) queue.clear(); } }
+            catch (Exception failed) {
+                boolean own;
+                synchronized (this) { own = run == generation; if (own) queue.clear(); }
+                if (own) failures.accept(failure(failed));
+            }
             synchronized (this) { current = null; if (run == generation) spoken++; }
         }
     }
