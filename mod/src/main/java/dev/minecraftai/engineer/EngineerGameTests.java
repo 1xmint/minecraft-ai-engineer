@@ -9,6 +9,27 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void workerMenuSnapshotsPreserveActualComponentsAndRejectInventedFields(GameTestHelper helper){
+        var registries=helper.getLevel().registryAccess();var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);
+        log.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("retained native input"));
+        var cursor=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,4);
+        cursor.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("actual carried stack"));
+        var snapshot=new PhysicalMenuSnapshot(java.util.List.of(log,net.minecraft.world.item.ItemStack.EMPTY,net.minecraft.world.item.ItemStack.EMPTY,net.minecraft.world.item.ItemStack.EMPTY),cursor);
+        var encoded=snapshot.encode(registries);helper.assertTrue(encoded.keySet().equals(java.util.Set.of("schemaVersion","inputs","cursor")),"No derived result or authority is stored");
+        var nativeOps=registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);var written=encoded.getList("inputs").orElseThrow();
+        helper.assertTrue(net.minecraft.world.item.ItemStack.matches(log,net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,written.get(0)).getOrThrow()),"Vanilla independently reads the named log at its original position");
+        for(int slot=1;slot<4;slot++)helper.assertTrue(net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,written.get(slot)).getOrThrow().isEmpty(),"Vanilla independently reads each empty grid position");
+        helper.assertTrue(net.minecraft.world.item.ItemStack.matches(cursor,net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,encoded.get("cursor")).getOrThrow()),"Vanilla independently reads all four carried planks and their components");
+        var restored=PhysicalMenuSnapshot.decode(encoded,registries);helper.assertTrue(snapshot.matches(restored),"Native component-aware codec retains each grid position and cursor exactly");
+        log.setCount(2);cursor.setCount(1);restored.inputs().getFirst().setCount(3);restored.cursor().setCount(2);
+        helper.assertTrue(snapshot.matches(restored) && snapshot.inputs().getFirst().getCount()==1 && snapshot.cursor().getCount()==4,"Input aliases and returned stacks cannot alter a snapshot");
+        var extra=encoded.copy();extra.putBoolean("verified",true);reject(helper,()->PhysicalMenuSnapshot.decode(extra,registries),"Authority fields are rejected");
+        var version=encoded.copy();version.putInt("schemaVersion",2);reject(helper,()->PhysicalMenuSnapshot.decode(version,registries),"Unknown versions cannot be assumed compatible");
+        var shortGrid=encoded.copy();shortGrid.getList("inputs").orElseThrow().remove(3);reject(helper,()->PhysicalMenuSnapshot.decode(shortGrid,registries),"Missing grid positions are never assumed empty");
+        var missing=encoded.copy();missing.remove("cursor");reject(helper,()->PhysicalMenuSnapshot.decode(missing,registries),"A missing cursor is never assumed empty");
+        var malformed=encoded.copy();malformed.putString("cursor","not an item");reject(helper,()->PhysicalMenuSnapshot.decode(malformed,registries),"Malformed item data cannot silently become empty");
+        helper.succeed();
+    }
     @GameTest public void nativeInventorySnapshotDecodesAllSlotsWithoutPlayerClones(GameTestHelper helper){
         var registries=helper.getLevel().registryAccess();var nbtOps=registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);var jsonOps=registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
         var id=java.util.UUID.randomUUID();var source=new net.minecraft.nbt.CompoundTag();source.put("UUID",net.minecraft.core.UUIDUtil.CODEC.encodeStart(nbtOps,id).getOrThrow());
