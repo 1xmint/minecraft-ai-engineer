@@ -42,6 +42,12 @@ public final class FullAdderGameTests {
             var cases=validateRecorded(helper,design,samples,starts);report.add("cases",cases);
             helper.assertTrue(design.definition().getAsJsonArray("geometry").size()==design.cells().size() && design.definition().getAsJsonObject("graph").getAsJsonArray("ports").size()==35,"Canonical full-adder definition retains every proven cell and typed pin");
             helper.assertTrue(new FullAdderDesign().graphDigest().equals(design.graphDigest()),"Canonical centered full-adder geometry/digest is deterministic");
+            try(var input=FullAdderDesign.class.getResourceAsStream("/engineer/full-adder-definition.json")){
+                helper.assertTrue(input!=null,"Shared full-adder definition is packaged");
+                try(var reader=new java.io.InputStreamReader(input,java.nio.charset.StandardCharsets.UTF_8)){
+                    helper.assertTrue(JsonParser.parseReader(reader).equals(design.definition()),"Shared full-adder definition exactly matches independently constructed native geometry, graph and digest");
+                }
+            }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
             System.out.println("ENGINEER_FULL_ADDER_DEFINITION "+design.definition());
             System.out.println("Full-adder native observations: "+report);helper.succeed();
         });
