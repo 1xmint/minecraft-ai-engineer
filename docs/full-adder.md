@@ -31,6 +31,8 @@ Recorded observations carry no owner, execution permission or current project
 verification. Current component scope and exact input restoration must be checked
 by the server's trial executor before a project receives a functional pass.
 
-Player-facing preview, conversation, construction and saved-world trial integration
-are still being built. The prototype and its codecs alone do not expose a full-adder
-request to players.
+This branch implements conversation preview ("show me a full adder"), separately
+approved creative construction, native trials and saved-world recovery. These are
+candidate features: the dedicated two-player construction, test, restart and undo
+flow must pass before integration. The prototype's native tests alone do not prove
+that complete player experience.
