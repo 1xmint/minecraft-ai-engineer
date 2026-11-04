@@ -19,6 +19,12 @@ final class PhysicalWorkerStorage {
     static void save(ServerPlayer worker){
         var server=worker.level().getServer();
         if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || worker.isCreative())throw new IllegalStateException("Save requires the current native survival worker");
+        // The native inventory receipt below does not include crafting inputs,
+        // derived results or the carried cursor. Never certify those as saved.
+        if(worker.containerMenu!=worker.inventoryMenu || !worker.inventoryMenu.getCarried().isEmpty())
+            throw new IllegalStateException("Worker has unsettled menu resources; inventory-only saving cannot verify recovery");
+        for(int slot=0;slot<=4;slot++)if(!worker.inventoryMenu.getSlot(slot).getItem().isEmpty())
+            throw new IllegalStateException("Worker has unsettled crafting resources; inventory-only saving cannot verify recovery");
         server.getPlayerList().saveAll();
         // Constructing even an unjoined ServerPlayer rebinds the UUID's cached
         // advancement handler. Decode inventory data alone, with no player clone.
