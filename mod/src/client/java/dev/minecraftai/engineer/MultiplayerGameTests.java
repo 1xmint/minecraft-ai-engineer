@@ -389,6 +389,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 case "eve-text" -> textOnly(context);
                 case "physical-alice" -> physicalOwner(context);
                 case "physical-bob" -> physicalPeer(context);
+                case "full-adder-alice" -> fullAdderOwner(context);
+                case "full-adder-bob" -> fullAdderPeer(context);
                 default -> throw new AssertionError("Unknown multiplayer test role");
             }
             write(role + ".done", "passed");
@@ -399,6 +401,68 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
     }
 
+    private static void fullAdderOwner(ClientGameTestContext context) throws Exception {
+        var config=properties();config.setProperty("level-type","minecraft:flat");config.setProperty("generate-structures","false");String projectId,world;UUID epoch;
+        try(var server=context.worldBuilder().createServer(config)){
+            publishServer(server,1);
+            try(var connection=server.connect()){
+                server.runCommand("op Alice");awaitFile(context,"full-adder-bob.connected");
+                server.runCommand("forceload add 2992 -16 3120 96");server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
+                MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+                projectId=server.computeOnServer(s->session(s,"Alice").projectId.toString());world=server.computeOnServer(s->EngineerMod.managerFor(s).worldId);epoch=server.computeOnServer(s->EngineerMod.managerFor(s).epoch);
+                server.runCommand("tp Alice 3000 180 0");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(3000,180,0)));setupSay(context,"Engineer, mark the first corner here");
+                server.runCommand("tp Alice 3098 183 78");server.waitFor(s->player(s,"Alice").blockPosition().equals(new BlockPos(3098,183,78)));setupSay(context,"Engineer, mark the second corner here");
+                MESSAGES.clear();setupSay(context,"Engineer, show me a full adder");expectChat(context,"Preview ready: Connected one-bit full-adder");
+                server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(cell->s.overworld().hasChunkAt(cell.pos())));
+                server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().size()==3544 && project.blueprint.blocks().stream().allMatch(cell->project.level().getBlockState(cell.pos()).isAir()) && project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Conversation records only a canonical full-adder preview, without construction or pass");});
+                await(context,()->view(context)!=null && view(context).blocks().size()==3544,"Authorized overlay receives the complete full-adder preview");
+                write("full-adder-project",projectId);write("full-adder-preview.done","passed");awaitFile(context,"full-adder-private.done");
+                server.runOnServer(s->commandAs(s,"Alice","engineer project share Bob viewer"));write("full-adder-viewer.ready","ready");awaitFile(context,"full-adder-viewer.done");
+                conversationApprove(context,"Build this full adder.");server.waitFor(s->session(s,"Alice").journal.size()>=20 || session(s,"Alice").state.equals("PAUSED"),60_000);
+                MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");
+                server.runOnServer(s->check(session(s,"Alice").state.equals("PAUSED") && session(s,"Alice").delegation==null && !session(s,"Alice").verified.startsWith("passed:"),"Stopping full-adder construction releases authority without a pass"));
+                conversationApprove(context,"Resume this full adder.");expectChat(context,"Reconciled; resuming the same bounded assignment");
+                server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),360_000);
+                server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("COMPLETED") && project.journal.size()==3544,"Actual delegated full-adder construction completes: "+project.status());
+                    for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input() && !port.name().equals("b:control")){var state=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),port.pos(),player(s,"Alice"));}
+                });write("full-adder-built.done","passed");
+                server.runOnServer(s->commandAs(s,"Alice","engineer project share Bob editor"));write("full-adder-editor.ready","ready");awaitFile(context,"full-adder-editor.started");
+                server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick>=0 && project.trial.pending(),"Shared editor really starts the production three-input trial");commandAs(s,"Alice","engineer project revoke Bob");check(project.delegation==null && project.trial.pending() && !project.verified.startsWith("passed:"),"Revocation preserves recovery facts but no mutation authority");});
+                write("full-adder-revoked.ready","ready");awaitFile(context,"full-adder-revoked.done");
+                server.runOnServer(s->check(session(s,"Alice").trial.pending() && session(s,"Alice").delegation==null,"Revoked editor cannot restore the three retained inputs"));
+                conversationApprove(context,"Resume this full adder.");expectChat(context,"Interrupted test reconciled; inspect before requesting another test");fullAdderOriginals(server);write("full-adder-revocation.done","passed");
+                conversationApprove(context,"Test this full adder.");server.waitFor(s->session(s,"Alice").testTick>=0,30_000);
+                MESSAGES.clear();say(context,"Engineer, hold on");expectChat(context,"Project stopped by an authorized player");fullAdderOriginals(server);write("full-adder-interruption.done","passed");
+                fullAdderRun(context,server);assertPersisted(server);write("full-adder-functional.done","passed");
+                String before=server.computeOnServer(s->session(s,"Alice").trial.evidence().toString());
+                server.runCommand("setblock 2999 180 0 minecraft:stone");conversationApprove(context,"Test this full adder.");expectChat(context,"Test needs a two-block air margin");
+                server.runOnServer(s->check(session(s,"Alice").testTick<0 && session(s,"Alice").delegation==null && session(s,"Alice").trial.evidence().toString().equals(before) && session(s,"Alice").journal.size()==3544,"Interference refuses fresh testing without changing existing observations or owning the foreign block"));
+                server.runCommand("setblock 2999 180 0 minecraft:air");write("full-adder-interference.done","passed");
+            }
+        }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            publishServer(server,2);server.runOnServer(s->check(EngineerMod.managerFor(s).worldId.equals(world) && !EngineerMod.managerFor(s).epoch.equals(epoch),"Full adder restarts the same saved world under a fresh epoch"));
+            send(context,"engineer project use "+projectId);server.waitFor(s->projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("stale:") && project.delegation==null && project.testTick<0 && !project.hasPendingTest() && project.journal.size()==3544,"Restart retains full-adder history, not a live pass, trial or lease");FullAdderEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);});
+            fullAdderOriginals(server);fullAdderRun(context,server);assertPersisted(server);write("full-adder-restarted.done","passed");
+            conversationApprove(context,"Undo this full adder.");expectChat(context,"Undo blocked by later edit");server.runOnServer(s->check(session(s,"Alice").journal.size()==3544 && session(s,"Alice").delegation==null,"Undo preserves the player's original on-controls until explicitly reconciled"));
+            server.runOnServer(s->{var project=session(s,"Alice");for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input() && !port.name().equals("b:control")){var state=project.level().getBlockState(port.pos());((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),port.pos(),player(s,"Alice"));}});context.waitTicks(12);
+            conversationApprove(context,"Undo this full adder.");server.waitFor(s->session(s,"Alice").undoRequested || session(s,"Alice").journal.isEmpty(),30_000);server.waitFor(s->session(s,"Alice").journal.isEmpty() || session(s,"Alice").state.equals("PAUSED"),360_000);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.blueprint.blocks().stream().allMatch(cell->project.level().getBlockState(cell.pos()).isAir()),"Native full-adder undo removes exactly the assistant's construction: "+project.status());});assertPersisted(server);write("full-adder-undo.done","passed");
+        }
+    }
+    private static void fullAdderRun(ClientGameTestContext context,TestDedicatedServerContext server){
+        conversationApprove(context,"Test this full adder.");server.waitFor(s->session(s,"Alice").testTick>=0,30_000);server.waitFor(s->session(s,"Alice").state.equals("COMPLETED") || session(s,"Alice").state.equals("PAUSED"),360_000);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.startsWith("passed:full-adder:16 cases@"),"Production full-adder trial must pass: "+project.status());FullAdderEvidence.validate(project.trial.evidence(),project.blueprint.source().get("graphDigest").getAsString(),true);});fullAdderOriginals(server);
+    }
+    private static void fullAdderOriginals(TestDedicatedServerContext server){server.runOnServer(s->{var project=session(s,"Alice");check(project.testTick<0 && !project.hasPendingTest() && project.delegation==null,"Full-adder recovery/pass releases all input journals and authority");for(var port:EngineeringContracts.contract(project.blueprint).ports())if(port.input())check(project.level().getBlockState(port.pos()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==!port.name().equals("b:control"),"All three original mixed input states restore exactly");});}
+    private static void fullAdderPeer(ClientGameTestContext context) throws Exception {
+        connect(context,1);write("full-adder-bob.connected","ready");awaitFile(context,"full-adder-project");
+        MESSAGES.clear();send(context,"engineer project use "+read("full-adder-project"));expectChat(context,"unavailable or not shared");check(MESSAGES.stream().noneMatch(message->message.contains("Connected one-bit full-adder")),"Private full-adder metadata is not revealed to a connected nonmember");write("full-adder-private.done","passed");
+        awaitFile(context,"full-adder-viewer.ready");send(context,"engineer project use "+read("full-adder-project"));MESSAGES.clear();send(context,"engineer build");expectChat(context,"permission");MESSAGES.clear();send(context,"engineer test");expectChat(context,"permission");write("full-adder-viewer.done","passed");
+        awaitFile(context,"full-adder-editor.ready");MESSAGES.clear();send(context,"engineer test");expectChat(context,"Tick-accurate full-adder truth table running");write("full-adder-editor.started","ready");
+        awaitFile(context,"full-adder-revoked.ready");MESSAGES.clear();send(context,"engineer project use "+read("full-adder-project"));expectChat(context,"unavailable or not shared");send(context,"engineer resume");context.waitTicks(25);check(MESSAGES.stream().noneMatch(message->message.contains("Interrupted test reconciled") || message.contains("Reconciled; resuming")),"Revoked editor receives no restoration or execution acknowledgment");write("full-adder-revoked.done","passed");disconnect(context);
+    }
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
