@@ -325,7 +325,7 @@ public final class MechanismGameTests {
         after.add("blocks",blocks);after.getAsJsonObject("bounds").getAsJsonObject("max").addProperty("x",4);after.getAsJsonObject("resources").addProperty("minecraft:stone",5);after.getAsJsonObject("resources").addProperty("minecraft:repeater",3);after.getAsJsonArray("ports").get(1).getAsJsonObject().getAsJsonObject("pos").addProperty("x",4);
         return new Blueprint[]{Blueprint.parse(before,"test","minecraft:overworld"),Blueprint.parse(after,"test","minecraft:overworld")};
     }
-    private static com.google.gson.JsonObject generatedSource(int rising,int falling) {
+    static com.google.gson.JsonObject generatedSource(int rising,int falling) {
         var source=com.google.gson.JsonParser.parseString("""
             {"schemaVersion":1,"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","projectId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":2,"worldId":"test","dimension":"minecraft:overworld","name":"Generated serial buffer","explanation":"Raw serial wiring; actual timing requires a game test.","anchor":{"x":2,"y":2,"z":2},"rotation":0,
             "blocks":[

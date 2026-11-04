@@ -1,206 +1,141 @@
 # Current state
 
-Updated 2026-11-03. Goal: **complete all milestones**, meaning the entire original
-Phase 1 brief and all six Phase 2 extensions. The goal remains incomplete.
-Requirements: docs/product-brief.md, including its multiplayer-first amendment.
+Updated 2026-11-04. Goal: **complete all milestones**: the full original Phase 1
+brief and all six Phase 2 extensions. The goal is incomplete. Requirements live
+in docs/product-brief.md, including its multiplayer-first amendment.
 Repository: https://github.com/1xmint/minecraft-ai-engineer.
+
+## Outcomes
+
+- E1: durable attributed reasons, preferences, references, retrieval and useful
+  summaries; replacement history, revocation/privacy and restart proof.
+- E2: connected engineering beyond the half-adder: arithmetic, registers/memory,
+  displays/computers, timing, interference and adapting existing structures.
+- E3: useful explanation/teaching, diagnosis/repair and visual guidance grounded
+  in actual intended, observed and scope-valid tested state.
+- E4: the brief's actual signed-in human ten-step acceptance, production-account
+  feasibility, verified release packaging and later-session explanation.
+- P2: offline voice, visible NPC machine construction, genuine survival gathering/
+  tools/crafting, practical schematic reuse, measured optimization and multiple
+  builders. Bounded prototypes are foundations, not completion of these outcomes.
 
 ## Decisions and constraints
 
-- Dedicated Fabric server first, compatible logical-server core for solo play;
-  authenticated connections, server-owned permissions/memory and optional overlays.
-- Ordinary addressed conversation is the player interface. Commands are fallback
-  and test interfaces; command-only proofs do not complete the experience.
-- World observations, intended geometry and functional verification stay distinct.
-  Native tick evidence is required for a functional pass. Imported geometry is untested.
-- One private operator-owned companion on the operator's PC. No paid APIs, separate
-  keys, hosting service, credential sharing or SDK/model calls in the current native
-  execution workstream. Production Mojang login and shared subscription eligibility
-  remain unproven; do not infer them from offline fixtures or archived receipts.
-- Creative direct editing remains separately fenced. Native survival work requires
-  fresh owner delegation, current human/worker connections, revisions, assignments,
-  loaded workspace reservations and event-time native action/pickup tickets. Never
-  supply/replace inventory, overwrite player edits, or restore authority on restart.
-- Tests run on GitHub CI, never Josh's PC. Locally use scoped compile/lint/syntax
-  checks only; one Gradle invocation at a time, --no-daemon --max-workers=1.
-- Protected main, exact green PR heads, no bypass. Merge green work promptly.
-  Keep active candidates stable while live CI runs; observation timeout is not failure.
-- CI-only deterministic fixture quota is 24/minute and 96/hour. Production remains
-  4/minute and 24/hour. Never raise production quota to accommodate CI.
+- Dedicated Fabric server first; compatible logical-server core for solo play.
+  Server-owned permissions, memory and construction; optional authorized overlays.
+  Normal addressed conversation is the player interface; commands are fallback.
+- Intended geometry, observations and functional evidence remain separate. A pass
+  requires actual game ticks and the complete project/blueprint/component scope.
+  Imported geometry and remembered claims carry no authority or verification.
+- One private operator-owned companion on the operator's PC. No separately billed
+  APIs/keys, hosting, credential sharing or model calls in native execution work.
+  Production Mojang login and shared subscription eligibility remain unproven.
+- Native survival requires fresh owner delegation, exact human/worker connections,
+  revisions/assignments, loaded workspace, reservations and event-time tickets.
+  Never supply/replace inventory, creatively compensate or replay old authority.
+- Tests run in GitHub CI. Locally scoped compile/format/syntax only; one Gradle
+  process at a time, --no-daemon --max-workers=1. Protected main, green exact heads,
+  no bypass. Keep candidates stable during live CI; timeout is not terminal.
+- Production quotas remain 4/minute and 24/hour. CI fixtures alone use 24/96.
+- Claude owns memory, explanations, comparison and local voice. Codex owns native
+  construction/survival, larger circuits, multi-builder coordination, integration,
+  release and final acceptance. Check current branches before duplicating work.
 
-## Outcomes still required
+## Landed and published
 
-- E1: durable reasons, preferences, references, retrieval and useful project summaries,
-  with attribution, revocation, replacement history and restart proof. Literal notes
-  and explicit reason/replacement history are implemented; richer retrieval is not done.
-- E2: larger connected engineering beyond current catalog/half-adder slices, including
-  memory/registers/arithmetic/displays/computers, timing, interference and adaptation
-  of existing structures. Geometry is not circuit correctness.
-- E3: broader diagnosis/repair, timing explanations and visual guidance. Existing
-  catalog/mechanical/analog/connected evidence and limited repairs are foundations.
-- E4: actual human ten-step acceptance from the brief: signed-in preview, player builds
-  the first section, AI finishes the rest, interruption/change/resume, real test,
-  game/service restart and later explanation/visual proof. Scripted CI is not this
-  human acceptance. Repackage verified work and prove production account feasibility.
-- Phase 2: offline voice conversation; visible NPC constructing machines; genuine
-  survival gathering/tools/crafting; practical schematic reuse/building; measured
-  design optimization; multiple AI builders. None is broadly complete. Each needs
-  real user-flow and refusal/restart evidence appropriate to its scope.
+- Latest published download remains v0.1.0-alpha.2; it predates recent integrations.
+- Main7acfb33 includes creative tutorials/build/test/repair/undo, permissions and
+  conflict guards, optional overlays, and server-side durable memory.
+- Half-adder PR45/aaed3ef: 436 cells/20 pins, actual forward/reverse truth tables,
+  conversation, interruption/revocation and saved-world retest. Source42deb3c,
+  full CI41577981016 passed. Keep its canonical v1 source and digest unchanged.
+- Schematics integrated PR49/1d1dcb7: Sponge v3 codecs, inspection/comparison,
+  transforms, in-game library and bounded imported creative construction. Source
+  7ba44a3/full41581459104 passed; independent memory/build/restart/undo inspected.
+  Broad real-world mechanisms still unsupported; imports have no pass/ownership.
+- Optional idle Carpet companion PR47/ff4a021, full41682037419 passed.
+- Literal reasons/history PR48/f259fdc, full41688991149 passed; retrieval PR60/
+  7acfb33, exact d99eab5/full41734780134 passed. Independent DB requires exactly
+  six attributed notes including reference6; refused writes leave no rows.
+- Native dirt PR50/a067f25: source5cec203/full41696617329 and focused41696644888.
+  Next-cell placement PR51/9348e41: sourced48d27e/full41704803030 passed.
 
-## Landed on main
+## Now: combined player experience integration (E1/E3/P2)
 
-- Public repo, pinned toolchain/CI, alpha.2 multiplayer preview and optional overlays.
-  Alpha.2 is still the latest published release and predates recent integrations.
-- Creative engineering, tutorials/shared components, bounded construction, permissions,
-  conflicts, tests/repair/undo and durable server-side memory have scripted CI coverage.
-  Human acceptance and arbitrary engineering capability remain unfinished.
-- Connected half-adder: 436 cells, 20 pins, actual forward/reverse truth-table traces,
-  conversation, revocation, interruption, saved-world retest and owned undo. PR45
-  merged aaed3ef; exact source42deb3c CI41577981016 all five checks passed.
-- Schematics: Sponge v3 codec/CLI, analysis, transforms and in-game library. Imported
-  creative construction supports a pinned inert-material set plus five circuit
-  exceptions; many real mechanisms remain unsupported. Files carry no authority/pass.
-  PR49 merged 1d1dcb7; source7ba44a3 CI41581459104 all five checks passed. Actual imported
-  build/restart/undo receipts and final independent SQLite verification inspected.
-- Optional idle visible Carpet companion: PR47 merged ff4a021; source1fdbde7
-  CI41682037419 all five checks passed. Focused earlier actual chat/render/disconnect/
-  saved-world restart proofs exist. No NPC construction was claimed by this merge.
-- Literal reason/replacement memory: PR48 merged f259fdc; source5340e4a
-  CI41688991149 all five checks passed. Independent verifier checks exactly five notes,
-  literal reasons and replacement provenance; refused writes create no rows.
-  Claude's PR46 code was integrated through this own branch, not by editing his branch.
+Phase44 branch phase/44-player-experience combines voice integration28dd18b with
+native integration2313437. Only STATE conflicted; the multiplayer fixture merged
+automatically. No execution authority is widened by explanations or voice.
 
-## Active integration chain
+Outcomes: (1) the same build supports memory/explanation/comparison and native
+construction with current permissions; (2) optional voice yields editable chat,
+never automatic sending; (3) native exact inventory survives same-world restart
+and stop/revocation/conflicts refuse further work. Task: compile the combined
+Java/client code, run full CI, inspect multiplayer/memory/client receipts, and
+merge only the exact green source. Human microphone/speaker acceptance is separate.
 
-- PR50 / phase/33-physical-build: stable per-project worker identity, strict native
-  save/load, separate physical leases, exact native mine/drop/pickup/place tickets,
-  owner chat gather/retain/place and read-only recovery inspection. Source125b298
-  passed full CI41688519989 and focused CI41688532963. Actual mirror/clone isolation,
-  native pickup/save/restart, owner-Survival gather/retained placement, redstone-neighbor
-  refusal and final independent memory checks were inspected. Combining with newly
-  merged memory now requires fresh compile and exact-source CI.
-- PR51 / phase/34-physical-blueprint: next accepted single-root stone/dirt cell uses
-  retained inventory. Entire plan preflight, preceding-cell observations and all-plan
-  read reservations; occupied cells refuse. Sourceae01437 passed full CI41688912887
-  and focused CI41688767809. Actual blueprint cell placement and refusal receipts
-  inspected. Geometry creates no functional pass or creative undo ownership.
-- PR52 / phase/35-physical-blueprint-job: one fresh request alternates native gathering
-  and placement for up to32 dirt cells with existing stone supports. Original source
-  positions exclude all plan cells. Fixed owner/worker connections, blueprint and
-  assignment fences persist across phases; expected geometry advances only after
-  native placement plus verified save. Source8b9e015 focused CI41691988901 passed:
-  actual survival owner, two initial resources, two intended cells, empty supplied
-  inventory, no creative history/pass. Latest2c0b286 adds ordinary-chat stop and native
-  owner-selection revocation coverage; local compile passed, new CI pending.
+Evidence for parents, not yet this combination:
 
-## Native execution limits and recovery
+- PR65 native2313437: full41741571086 all five passed; dedicated multiplayer and
+  independent memory proof inspected. Focused41742617014 was cancelled; retry of
+  the same terminal handle is pending. Parent3bc5158 focused41741356685 passed:
+  inspected oak.done/oak-restarted.done and exact schema2 oak journal (axis=x,
+  one native log, ordered intents, empty before/retained after); strict independent
+  verifier passed. Actual route/build/stop fixtures also passed.
+- PR62 grounded23abc96: full41740052461 all five passed. Scope matcher prevents
+  same-revision/different-blueprint evidence becoming current timing. Missing or
+  stale scopes remain historical. Comparison cleanup restores explicit selection.
+- PR63 voice28dd18b: full41740086114 all five passed. Unique owned temporary audio
+  cleanup only; never scan/delete other clients' files. Trusted local executables,
+  bounded subprocesses/queues, transcript requires Enter, cancellation drops late
+  results. Earlier client screenshots inspected; injected audio is not real mic
+  acceptance. GPT-6-Luna focused privacy/scope reviews found no remaining issue.
 
-- Optional Carpet is pinned 26.3+v260915. No account lookup; worker profiles are private
-  world/dimension/project/owner bindings. Missing/corrupt data or live UUID/name
-  collisions refuse. An uninitialized profile retries the same UUID; existing native
-  data is loaded, never replaced with empty inventory. No grants/tickets persist.
-- Native pickup eligibility means the sole matching item emitted synchronously by
-  the authorized playerDestroy callback. It is not a guarantee against arbitrary
-  other mods spawning inside that callback. Unsupported entities/items are denied.
-- Current executors are dirt-only, short three-wide stone-supported corridors and
-  inert placement neighborhoods. Movement can be stopped on conflict; external
-  physics is not universally contained. General navigation/materials/tools are open.
-- Player data and chunks are separate saves. Clean stop/restart is proven for the
-  bounded slices; arbitrary crash atomicity is not. PICKUP_PREPARED/PLACE_PREPARED
-  may be unresolved. Never recreate items, compensate creatively, retry from matching
-  counts, or treat missing data/drop visibility as proof of emptiness/consumption.
-- Recovery inspection is owner-only, bounded and read-only. Stop cancels actions,
-  verifies current saved inventory and retains an idle binding; failure despawns
-  under default denial. A fresh request is required; interrupted records grant nothing.
+## Native limits and known problems
 
-## Next slices
+- Pinned optional Carpet26.3+v260915. Per-project native identity, exact stored
+  inventories and no restored grants. Verification reads strict detached43-slot
+  native codecs; never construct same-UUID observer ServerPlayers (vanilla rebinds
+  the advancement handler). Full-slot/component and corruption GameTests pass.
+- Bounded flat stone-supported inert navigation, dirt placement/batch construction,
+  one isolated oak log only. No natural trees, arbitrary terrain, tools, crafting,
+  native circuit placement or general survival completion yet.
+- Native pickup is the sole expected item emitted synchronously by authorized
+  destroy, not a universal guarantee against other mods emitting in that callback.
+- Chunk/player data are separate saves. Clean restart is proven for bounded slices;
+  arbitrary crash atomicity is not. Unresolved prepared records never recreate
+  items, compensate creatively or resume. Owner-only recovery inspection is read-only.
 
-1. Integrate memory with PR50; compile, fresh full/focused CI, inspect receipts, merge.
-2. Bring PR51/52 onto integrated parents. Prove ordinary-chat stop, selection/revocation,
-   human edits and restart/uncertain recovery before widening physical execution.
-3. Expand resource handling/navigation and real blueprint mechanisms; then coordinated
-   multiple builders. Do not call the current dirt prototype completion of Phase 2.
-4. Continue E1/E2/E3 and the voice/optimization lanes; don't duplicate Claude's active
-   work without checking branches. Schematics still need broader practical building.
-5. Complete production feasibility and actual human acceptance, then package verified
-   integrations. Keep the full original scope; no goal-complete claim from green CI.
+## Roadmap and parallel work
 
-Detailed historical logs, failed-run investigations and previous plans remain in
-Git history. This file describes current decisions and evidence, not every attempt.
+1. Finish exact combined integration above; update landed evidence after merge.
+2. E2 phase42 full-adder in work/full-adder: crossing3af8e29 passed64 native samples
+   in full41741392528. Fixed nine-NAND prototype07c263a failed real all-pin proof;
+   diagnosticfd0548d showed branch signal exhausted before first repeater. Source
+   225cf57 adds trunk-junction repeaters; focused native CI pending. No full-adder
+   admission/pass exists yet. Keep all35pins/all16rows/consecutive tick assertions.
+3. Native crafting after oak proof: actual menu/recipe actions, exact inventory and
+   cursor accounting, strict tickets, save/restart; never manufacture output items.
+4. Broaden genuine resources/terrain, native machine construction and coordinated
+   multiple builders; continue full E2 larger circuits and E3 repair/adaptation.
+5. Claude continues useful memory/summaries, grounded teaching, comparison and local
+   voice. Integrate proven work without duplicating his active branches.
+6. Complete production feasibility and actual human acceptance, package verified
+   work, then audit the entire original scope before any goal-complete claim.
 
-PR51 integration: sourceae01437 passed all five full checks and focused gameplay.
-This branch now incorporates PR50's memory integration and ordinary owner stop,
-including the separate actual-chat gather-stop scene. Preserve both the blueprint
-placement and gather-stop receipts. New combined source needs compile and CI;
-no previous green head is substituted for this combination.
-Combined PR51 server/client compilation and shell syntax passed. Fresh full and
-focused CI are required for this merge with memory and natural-stop coverage.
+Historical investigations and failed runs remain in Git history/CI artifacts.
 
-PR52 integration: native source2c0b286 focused CI41694607455 passed actual client
-stop and twenty-server-tick world/inventory stability, selection-revoked native
-mine denial, then the two-cell owner-Survival gather/build flow. Those receipts
-were inspected. This branch now includes memory, the parent gather-stop scene and
-both blueprint stop/build scenes. Preserve all four receipt families. New merged
-source needs compilation and exact-source CI; prior proof is not reused as new.
-Combined PR52 Java/client compilation and shell syntax passed after preserving
-both parent gather-stop and child blueprint-stop tests plus the memory cases.
-Fresh full and focused CI are required before integration.
+2026-11-04 integration update: PR65 merged d665570 from exact2313437. Full CI41741571086 all five passed and same-source focused41742617014 attempt2 passed; inspected build-navigation/oak restart receipts and independent ordered oak/native inventory verification. PR52/54/56/59 and docs53 closed as superseded by this merge, not separately merged. Parent native source3bc5158 also passed focused41741356685. Merged main ancestry here; only STATE conflicted, retained this condensed note, and the code tree is unchanged from3060034. Keep PR66's live run41777328584 stable; advance its branch only when that run is terminal. Full-adder225cf57 independently passed native CI41777116255 with3544cells,35pins and128samples; all8vectors occurred forward/reverse with8samples each. Full-adder source/trial integration remains to build.
 
-Combined source a379a6b failed focused CI41700593882 during gather-to-place handoff: placement authority changed. Residual walking motion is the suspected cause, not yet proven. Gathering now keeps its lease and inventory snapshot until three stationary ticks, explicitly clears forward input, and summon clears prior velocity/fall progress. Placement stance and expiry diagnostics are separate; its guards remain strict. Scoped server/client compile and diff checks passed; fresh exact-source gameplay CI is required.
+Combined player-experience source3060034 passed all five checks in CI41777328584. Inspected its independent SQLite memory proof and actual client transcript screenshot: recognized text remains in the editable chat field. This is injected audio, not human microphone acceptance. Current39deef3 differs from3060034 only in STATE and main ancestry; native/voice/teaching code is unchanged. Advance the PR now that its prior run is terminal, then require exact-head checks. Full-adder source13a0b36 separately passed native/companion source parity CI41779430060; the driven dedicated flow c5cf14f is pending on its own feedback branch and is not part of this integration.
 
-Focused CI41704667009 failed before production gather/job execution: the raw native pickup fixture crossed its platform boundary. Its second dirt source was on the last supported row. Added floor margin for native drop motion, aimed initial walking at the tracked drop, and added worker/drop/inventory failure diagnostics. Pickup identity, journal, expiry and rejection checks are unchanged. This fixture correction and the batch handoff still require exact-source CI.
+Claude PR70 source da85fab passed all five checks in CI41778579597 and is integrated locally over1445b24. It drops recognition results when the delivery UI is no longer ready, and reports speech-program failures. Focused integration inspection found one later race: stop/disconnect can occur after the worker queues a failure but before the client thread displays it. Failure notices now carry their playback generation and recheck at actual delivery; a held-delivery regression checks this exact ordering. No server, worker, inventory or world authority changed; per-run audio cleanup remains isolated and manual transcript sending remains required. Real microphone/speaker acceptance is outstanding. Keep live PR66 run41780615883 stable; combined voice changes need client compile/CI before advancing that branch.
 
-PR50 landed as a067f25 from exact source5cec203; full CI41696617329 and focused CI41696644888 passed. PR51 source8563b16 passed full CI41699264227 and focused CI41699293611. This branch now includes PR51's main ancestry alignment and evidence update.
-PR52 source50f9318 passed focused CI41705521330. Inspected actual two-cell completion chat and passed native-inventory-restart, gather-stop, blueprint-stop and blueprint-job receipts. The fixture margin and stationary handoff are gameplay-proven for this bounded scenario. Merging the parent changed only ancestry/STATE; fresh full integration CI remains required.
+Voice integration client compilation passed after the delivery-generation refinement. Added a focused native client feedback workflow so injected voice cancellation/playback and overlays can be proved before advancing PR66's stable live head. This does not replace final full combined CI or human microphone/speaker acceptance.
 
-## Next phase: native navigation (E2 and Phase 2 survival/NPC)
+Integrated Claude summary PR67/edc837c and guidance PR68/3c0b4fd (the latter includes the former) after all five checks passed on each: CI41777570982 and41777858940. The summary uses the existing current-connection/project/grant-fenced knowledge read and separates literal player statements, intended plans, recorded work, exact-scope past tests and unknowns. Guidance is read-only and never starts work or upgrades historical evidence. The voice refinement05f41f3 passed focused native client CI41782787534. These additions are prepared locally while PR66's stable1445b24 full CI41780615883 runs; final combined-source full checks are still required. Comparison PR69/b58cc74 is waiting for CI41781972092 before integration.
 
-Outcomes:
+Prepared comparison PR69/b58cc74 in the combined branch while its dedicated CI41781972092 remains live. This is a local candidate only; combined exact-head full CI is the merge gate. Integration review found summary/guidance shared the generic scope matcher, which could accept fabricated matching imported cache metadata even though imported geometry has no behavior contract. The display-only matcher now rejects imported geometry; an existing native imported-comparison fixture also asserts summary/guidance remain untested. No mutation authority or source format changes. The comparison definitions and recommendations remain read-only; no timing/reliability evidence is invented. Final source still needs compile and full/native checks.
 
-- Owner requests a resource beyond the straight corridor; the visible worker walks around an inert obstacle and hands off to existing exact native gather/place tasks. Proof: actual client chat, recorded route, native drop and saved inventory, no supplied items or teleports.
-- Human edits, blocked steps, route deviation, disconnect, selection/revision/grant changes and stop cancel motion before another action. Proof: real dedicated-server refusals, unchanged protected blocks/inventory, fresh request required.
-- Movement reservations prevent intersecting assignments without granting block mutation authority. Proof: occupancy conflicts and validateWrite refusal for occupancy-only cells.
+Imported-geometry integration also keeps cached pass strings out of lesson evidence and history, and next-step guidance explains the missing behavior contract rather than recommending a functional test that the executor must refuse. The native imported fixture covers all three read-only surfaces. Final combined server/client compile and exact-source CI are the remaining gates; no imported behavior or functional pass is invented.
 
-Decision 2026-11-03: flat loaded-workspace navigation precedes more materials/tools. Keeping straight corridors leaves resource access impractical; expanding materials first multiplies action/drop/restart cases without solving access. Replacing the native actor/framework would discard the proven inventory/ticket boundary. Use bounded cardinal BFS and actual walking, initially flat inert terrain without jumps, doors, hazards or mechanisms. GPT-6-Luna independently challenged the proposal and identified that exclusive body occupancy must be separate from block-write permission.
-
-Tasks: (O3) extend reservation occupancy with no mutation grant and exact conflict checks; (O1) pure bounded route search with captured support/clearance states and explicit edges; (O1/O2) movement executor validates current connection, full route states and swept occupancy each tick, then closes its lease before fresh existing gather/place admission; (O1/O2/O3) real obstacle-route and failure CI flows. Native mine/pickup/place tickets are unchanged. No route or authority is resumed from disk. This phase is planned, not implemented or proven.
-
-Navigation implementation started: distinct exclusive occupancy leases do not populate block writes; conflict checks cover movement against reads, writes and other movement. Added native GameTests for no mutation/deferred-write grant, cross-scope conflicts, revocation and stale fences. Added pure bounded cardinal route search and a hand-worked twelve-step wall-detour/refusal test. Scoped compileJava and diff checks passed; tests have not run yet. GPT-6-Luna focused review found no concrete permission bypass. No runtime walking integration exists yet; next implement captured-state movement and real obstacle chat flow before calling any navigation outcome done.
-
-Navigation runtime candidate: PhysicalMoveTask captures the route floor/body/neighborhood, obtains a distinct movement lease, validates exact states/authority/entities every tick, steers cardinal edges through native input and waits for settling before each handoff. PhysicalResourceTask routes ordinary owner gather requests to a reachable original mining stance, then closes motion authority and constructs the existing gather task afresh. Blueprint batch routing is not widened. Added actual client wall-detour, route-support edit, no native mine ticket, stop/resummon and exact drop/save fixture plus mandatory physical-navigation receipt. Scoped Java/client compile, shell syntax and diff checks passed. Fixed STATE formatting reported by CI. Gameplay and complete CI remain pending.
-
-## Native build navigation (E2 and Phase 2 survival/NPC)
-
-Outcomes: (1) one owner chat request carries real resources around a wall and returns to build two cells; proof is two original sources consumed, both intended cells native placed, empty final inventory and unchanged wall. (2) a future plan-cell edit during travel stops work before mining; retained plan/assignment/owner fences persist through every phase. (3) existing straight gather/build, stop, revocation and restart proofs remain mandatory.
-Implementation: jobs now use the routed resource task and choose a reachable adjacent placement stance. Every movement lease includes all blueprint read cells, while the original fixed job fence validates on movement and native callbacks. Movement closes before fresh mine/place authority. Sources still come from the initial observed list, excluding all blueprint cells. No action authority persists. Added dedicated distant-source wall fixture and plan-edit refusal. Compile/gameplay CI pending. Parent navigation sourcea03ca24 passed full CI41707889847 and focused CI41707920590 with162 native GameTests; proof receipts and actual owner chat inspected. PR51 merged9348e41; PR52 latest ancestry integration pending.
-
-Native build-navigation scoped Java/client compilation, shell syntax and diff checks passed. GPT-6-Luna reviewed the movement-to-gather/place authority and cleanup handoffs and found no concrete authorization, duplication or overwrite issue. Actual distant-resource build gameplay remains unproven until fresh CI runs.
-
-Source05cab55 focused CI41730929747 failed in the existing two-cell job before the new distant-resource scene: movement deviated immediately after gathering. The planner started its first edge at the standing block's center, although native pickup can settle elsewhere inside that block. Added an initial native walking leg from the exact captured body pose to that same cell's center, inside the already reserved neighborhood; cardinal route guards retain the same tolerance. This is a suspected handoff correction until fresh gameplay CI proves it. No teleports or velocity resets are used for walking.
-
-## Native oak gathering (Phase 2 survival)
-
-Outcomes: (1) owner conversation gathers exactly one isolated oak log using native mining/drop/pickup and no supplied inventory; proof checks source, exact retained item and unchanged neighbors. (2) dismissal and explicit resummon retain the native log without restoring action permissions; read-only inspection accepts its new record and the native save matches. (3) requesting dirt at an oak source, unsupported sources, foreign drops, stale authority and preloaded inventories refuse without replacement or compensation; existing dirt proofs remain mandatory.
-Decision: first add an explicit dirt/oak-log source-to-item catalog and strict version2 oak records while preserving version1 dirt records. Crafting is a separate next slice because native inventory-menu clicks/remainders need their own current-connection ticket and transaction proof. Pinned26.3 jar confirms InventoryMenu/RecipeManager native crafting surfaces; GPT-6-Luna challenged the plan and recommended this ordering. Tasks serve outcomes above: bind exact source state and one expected native item, generalize only gather admission/records, add owner-chat/restart/refusal fixture and independent record check, then fresh CI. Terrain remains flat, clear and stone-supported; natural trees/general materials/tools/crafting are still unfinished.
-
-Oak gather implementation in progress: explicit material contract, exact expected native drop, version2 oak journal fields with version1 dirt compatibility, strict inspection dispatch, requested-material chat check and exact original-source-state handoff. Scoped compileJava and diff checks passed. Native oak/refusal/restart fixture and security review remain required before this slice is ready; no gameplay proof is claimed.
-
-Carried parent b677c35 direct-placement behavior into this slice: native placement remains direct at an already reachable stance, and distant cells require routed travel. Parent gameplay CI41732488600 remains active; no result inferred.
-
-Added actual owner oak conversation, requested-material/leaves/foreign-drop refusals, copied native schema2 journal, and a third same-world server startup proving retained oak inventory and no automatic actor/action restoration. Java/client compilation, independent-verifier syntax, shell syntax and diff checks passed before the confirmation string correction. Also corrected the inherited routed-build confirmation assertion exposed by CI41732488600. Native oak gameplay is not yet proven; security review and CI remain required.
-
-Oak native fixture and third same-world restart compile successfully. The independent schema2 journal verifier and shell harness pass syntax checks; formatting/diff checks pass. Requested dirt at oak, adjacent leaves, identical untracked oak entity and preloaded retained inventory are refusal cases. CI remains pending, and the oak branch is not ready for integration.
-
-Parent refinements812ad5c incorporated after actual CI failures: worker-occupied next targets route aside before placement; exact native pickup uses .45 forward while farther than .75 horizontal blocks, then zero input, retaining existing corridor/settling/authority guards. Added deviation pose/source/drop telemetry. Pinned Carpet checksum and javap confirm fractional forward input is preserved. The preceding oak run41733244150 stopped in inherited compact construction before oak tests, so it provides no oak gameplay proof. Claude M2/M3 integration must also correct evidence freshness: revision alone is insufficient; saved pass scope must match blueprint identity and component basis before it is labelled current or used for timing.
-
-Parent sourceebc1802 passed focused CI41737128647: inspected actual compact and distant two-cell completion chat, unchanged-wall/native-source assertions and passed build-navigation, navigation, gather-stop, blueprint-stop and job receipts. Diagnostic run showed a .282 center error let the player's body overlap the placement cell by .082; native final approach now slows, brakes earlier and settles within .15, correcting inside the captured edge. Carried that gameplay-proven movement fix here. Oak material/restart CI still requires a fresh exact-source run.
-
-Oak sourcefe6066e focused CI41737834360 passed prior dirt/navigation/build scenes and reached actual oak pickup, then crashed in native recipe rewards. Pinned javap proved ServerPlayer construction calls PlayerList.getPlayerAdvancements, whose UUID cache rebinds to that new object. Removed unjoined verification/inspection players: strict native Inventory and EntityEquipment codecs now decode into a detached43-slot snapshot, validating UUID, required inventory, duplicates/ranges and codec problems. Actual restore prevalidates the same input before loading the real actor. Added full-slot/component and corrupt-input GameTests plus live advancement-owner assertions around save/read-only inspection. The deliberate unrelated-profile gate fixture resets its vanilla cache binding after its negative test. No advancements are disabled or fabricated. Compile and exact-source CI pending. Memory retrieval PR60 landed7acfb33 with full CI41734780134 and independent six-note database proof.
-
-Aligned the oak branch with its actual routed-build parentebc1802, preserving the strict material decoder and oak fixtures. The only added code is the parent's already-compiled placement-blocker telemetry; advancement verification still uses no player clones. This resolves stacked-PR ancestry so the native codec/corruption GameTests can run in full CI as well as focused gameplay.
-
-Focused oak CI41739947240 reached native oak mining, exact saved-inventory inspection and advancement-owner assertions, then failed before explicit restart selection had completed: sessionFor correctly refused an ambiguous project. Changed only the fixture wait to observe the explicit selection map, as other restart fixtures already do. World/inventory/restart assertions remain unchanged; fresh focused proof required.
-
-## Now: integrate native execution with current main
-
-Outcomes: the owner can use shared project-note retrieval and native gathering/construction in the same verified build; exact resource inventory survives a clean saved-world restart; conflicts/revocation/stop refuse further work without fabricated materials or passes. Phase43 combines PR52/54/56/59 with main7acfb33 (retrieval PR60). Native conflict resolutions retain the descendant's batch/navigation/material/strict inventory decoder implementations; main contributes retrieval classes/tests and the exact six-note independent verifier. Native requireIdle retains every parent authority condition. Local compile and new exact combined-source full/focused CI required; no merge based on older branch results. Source3bc5158 fixes only the restart fixture's selection wait after oak mining/save succeeded; full saved-world oak proof remains pending.
+Final combined server/client compilation passed after summaries, guidance, comparison and voice integration plus imported-evidence safeguards. Prior PR66 head1445b24 passed all five checks in CI41780615883. Advancing that now-terminal branch with the complete candidate; require fresh exact-head full CI before merge. Claude comparison's own CI41781972092 is still pending, so no source-green claim for PR69 is made. Full-adder driven run41782236628 remains live on9054f81 and is independent of this candidate.
