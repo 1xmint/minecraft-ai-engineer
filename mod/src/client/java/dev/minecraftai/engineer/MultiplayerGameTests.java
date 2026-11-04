@@ -840,7 +840,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}return false;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
             check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");gatherRecord.get().inventorySaved();
-            check(worker.inventoryMenu.getSlot(36).getItem().is(net.minecraft.world.item.Items.DIRT) && worker.inventoryMenu.getSlot(1).getItem().isEmpty(),"Real mined item starts in the original native hotbar slot");worker.inventoryMenu.getSlot(1).set(worker.inventoryMenu.getSlot(36).remove(1));menuReceipt(worker,"grid");write("physical-menu-grid-saved.done","passed");
+            check(worker.inventoryMenu.getSlot(36).getItem().is(net.minecraft.world.item.Items.DIRT) && worker.inventoryMenu.getSlot(1).getItem().isEmpty(),"Real mined item starts in the original native hotbar slot");
+            worker=craftingLifetimeProbe(s,worker);menuReceipt(worker,"grid");write("physical-menu-grid-saved.done","passed");
             s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});
     }
 
@@ -848,6 +849,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         PhysicalWorkerStorage.save(worker);
         try{var source=worker.level().getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(worker.getUUID()+".dat");Files.copy(source,directory().resolve("worker-menu-"+phase+".dat"));}
         catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+    }
+    private static ServerPlayer craftingLifetimeProbe(MinecraftServer server,ServerPlayer worker){
+        var path=server.getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(worker.getUUID()+".dat");
+        try{byte[] before=Files.readAllBytes(path);PhysicalCraftGuard.begin(worker);try{
+            PhysicalCraftGuard.click(worker,()->{
+                // Fixture-only movement of the actual mined stack makes a
+                // distinguishable midpoint without supplying replacement items.
+                worker.inventoryMenu.getSlot(1).set(worker.inventoryMenu.getSlot(36).remove(1));
+                boolean refused=false;try{PhysicalWorkerStorage.save(worker);}catch(IllegalStateException expected){refused=true;}check(refused,"A nested inventory save cannot certify a native midpoint");
+                server.getPlayerList().saveAll();try{check(java.util.Arrays.equals(before,Files.readAllBytes(path)),"Native player-data writer defers this worker while its call is mutating");}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+                server.getPlayerList().remove(worker);
+                check(server.getPlayerList().getPlayer(worker.getUUID())==worker,"Direct native removal is deferred while the call is mutating");
+            });
+            check(server.getPlayerList().getPlayer(worker.getUUID())==worker,"Native return alone does not remove an unrecorded outcome");PhysicalWorkerStorage.save(worker);
+        }finally{PhysicalCraftGuard.finish(worker);}
+        check(server.getPlayerList().getPlayer(worker.getUUID())==null && !PhysicalCraftGuard.active(worker),"Only stable verified resources allow deferred native removal");PhysicalActionGate.forget(worker);
+        var restored=inventoryWorker(server,worker.getUUID(),worker.getGameProfile().name(),true);check(PhysicalWorkerMenus.capture(restored).inputs().getFirst().is(net.minecraft.world.item.Items.DIRT) && restored.getInventory().isEmpty(),"Deferred removal saved the real grid stack before an explicit rejoin");
+        server.getPlayerList().remove(worker);check(server.getPlayerList().getPlayer(restored.getUUID())==restored,"Stale native removal cannot detach the new body under the same worker identity");write("physical-craft-lifetime.done","passed");return restored;
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
     }
     private static void interruptedWorkerMenu(MinecraftServer server,UUID id,String name,int step,String phase){
         var expected=server.getPlayerList().loadPlayerData(new net.minecraft.server.players.NameAndId(id,name)).orElseThrow().getCompound(PhysicalWorkerMenus.KEY).orElseThrow().copy();
@@ -1368,7 +1388,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralBefore().source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo retains the true original source again");check(project.structuralBefore().blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))) && project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE),"Second inverse restores original world geometry and preserves adopted player support");var restored=saved(project).getAsJsonObject("restoredLayout");check(restored.get("schemaVersion").getAsInt()==2 && restored.getAsJsonObject("before").equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo saves all distinct physical/accepted/proposed identities");});
         assertPersisted(server);
         // Fresh mirrors describe saved intentions and stale state, not new functional passes.
-        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
+        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project","structural-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
         for(var mirror:mirrors)check(mirror.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Latest boot acknowledges fresh metadata mirrors before persistence verification");
         write("structural-replan-recovery.done","passed");
     }

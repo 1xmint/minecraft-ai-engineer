@@ -37,7 +37,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);return true;}
-        if(gatherRequest || placeRequest || blueprintRequest || jobRequest){var binding=actors.get(project.projectId);if(binding!=null)PhysicalWorkerMenus.requireSettled(binding.actor);}
+        if(gatherRequest || placeRequest || blueprintRequest || jobRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");PhysicalWorkerMenus.requireSettled(binding.actor);}}
         if(jobRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Stop the current physical task first");
@@ -68,7 +68,7 @@ final class PhysicalCompanions {
             gathering.put(project.projectId,new PhysicalResourceTask(manager,project,binding.actor,binding.pack,source));
             project.tell("Your companion is gathering one "+(material==PhysicalMaterial.DIRT?"dirt block":"oak log")+" from the requested location. Say 'stop' to stop.");return true;
         }
-        if(text.equals("dismiss my companion")){dismiss(project.projectId);project.tell("Physical companion dismissed. No new work was delegated.");return true;}
+        if(text.equals("dismiss my companion")){boolean removed=dismiss(project.projectId);project.tell(removed?"Physical companion dismissed. No new work was delegated.":"Companion dismissal is pending until the current native action returns and its resources are saved.");return true;}
         summon(project);project.tell("Your physical companion is here. It is a survival actor, currently idle. Saved resources are retained. Say 'dismiss my companion' to remove it.");return true;
     }
     private static void compatible(){
@@ -124,10 +124,12 @@ final class PhysicalCompanions {
         }
     }
     boolean stop(EngineeringSession project){
-        if(!jobs.containsKey(project.projectId) && !gathering.containsKey(project.projectId) && !placing.containsKey(project.projectId))return false;
+        var current=actors.get(project.projectId);
+        if(!jobs.containsKey(project.projectId) && !gathering.containsKey(project.projectId) && !placing.containsKey(project.projectId) && (current==null || !PhysicalCraftGuard.active(current.actor)))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can stop its physical companion");
         var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Physical actor is unavailable; inspect recovery");
+        if(PhysicalCraftGuard.requestStop(binding.actor)){project.tell("Crafting stop requested. No further crafting clicks are authorized.");return true;}
         var failure=stopActions(binding);
         if(failure!=null){dismiss(project.projectId);throw new IllegalStateException("Companion removed after an action-stop error; inspect recovery",failure);}
         try{PhysicalWorkerStorage.save(binding.actor);}catch(RuntimeException uncertain){dismiss(project.projectId);throw new IllegalStateException("Physical work stopped, but inventory saving could not be verified; inspect recovery",uncertain);}
@@ -143,18 +145,20 @@ final class PhysicalCompanions {
         try{binding.pack.getClass().getMethod("stopAll").invoke(binding.pack);binding.pack.getClass().getMethod("setForward",float.class).invoke(binding.pack,0f);}catch(ReflectiveOperationException stopped){failure=new IllegalStateException("Could not stop physical companion actions",stopped);}
         PhysicalActionGate.cancel(binding.actor);return failure;
     }
-    private void dismiss(UUID project){
-        var binding=actors.get(project);if(binding==null)return;
+    private boolean dismiss(UUID project){
+        var binding=actors.get(project);if(binding==null)return true;
+        if(PhysicalCraftGuard.deferRemoval(binding.actor,()->{var current=actors.get(project);if(current!=null && current.actor==binding.actor)dismiss(project);}))return false;
         var failure=stopActions(binding);
         // Despawn even if the optional action pack failed. Keep default denial
         // registered until the native player is actually absent.
-        try{manager.server.getPlayerList().remove(binding.actor);}finally{
+        try{if(manager.server.getPlayerList().getPlayer(binding.actor.getUUID())==binding.actor)manager.server.getPlayerList().remove(binding.actor);}finally{
             if(manager.server.getPlayerList().getPlayer(binding.actor.getUUID())!=binding.actor){PhysicalActionGate.forget(binding.actor);actors.remove(project);}
         }
         if(failure!=null){
             System.getLogger(PhysicalCompanions.class.getName()).log(System.Logger.Level.WARNING,"Companion removed after an action-stop error; inspect saved resources",failure);
             projectMessage(binding,"Companion removed after an action-stop error. Inspect saved resources before another request.");
         }
+        return manager.server.getPlayerList().getPlayer(binding.actor.getUUID())!=binding.actor;
     }
     private void projectMessage(Binding binding,String text){var owner=manager.server.getPlayerList().getPlayer(binding.owner);if(owner!=null)owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: "+text));}
     void tick(){

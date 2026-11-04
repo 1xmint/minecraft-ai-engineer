@@ -56,7 +56,7 @@ for checkout in "$repo" "$temporary/bob" "$temporary/eve"; do
   (
     cd "$checkout/mod"
     chmod +x gradlew
-    ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava
+    ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava downloadAssets
   )
 done
 
@@ -107,7 +107,7 @@ launch() {
     export MCE_MP_ROLE="$2" MCE_MP_COORD="$3" MCE_CONFIG_DIR="$3/../config-$2" MCE_DISABLE_OVERLAY="$4"
     chmod +x gradlew
     timeout "$6" xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --no-daemon --max-workers=1 \
-      -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$5" -PmceTestRunDir="build/run/mp-$2" runClientGameTest
+      -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$5" -PmceTestRunDir="build/run/mp-$2" runClientGameTest -x downloadAssets
   ' _ "$checkout" "$role" "$coord" "$overlay_disabled" "$username" "$client_timeout" >"$evidence/$role.log" 2>&1 &
   pids+=("$!")
 }

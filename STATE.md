@@ -196,3 +196,16 @@ Prepared PhysicalCraftRecord and PhysicalCraftTask, still unexposed: fixed4nativ
 GPT-6-Luna reviewed task/record ordering and confirmed a material prerequisite before routing: stop/dismiss or another native save can reenter while clicked/onTake is mutating. Add an exact actor click-stack guard, defer managed teardown until native return and saved outcome, and refuse/defer midpoint player-data saves. Also add the owner crafting-recovery inspector and actual native click/award/replay/revocation/exception/restart proof. No player-facing crafting handler calls this task yet; do not enable it before these gates are implemented and proven. Existing gathered task close() already cancels mining/drop phase fields after verified settled handoff, so the menu's strict idle check can follow completed gathering.
 
 Native recipe preflightfb3fe58 passed all five checks41899994245. Geometry player flow41904043755 failed before gameplay due Bob's concurrent Loom asset .lock race, not a test assertion. Undo index99c823a passed native41904669543; CI-only launcher correction80cbc80 now prepares assets serially and skips that task in concurrent launches. Its new player run must prove completion; no deadline/assertion was relaxed.
+
+## Pending native crafting lifetime proof (2026-11-04)
+
+E2/P2 candidate: native crafting defers worker player-data writes during each
+native menu call and delays removal until returned resources are saved and
+verified. Stop cancels further tickets; stale same-UUID removal cannot detach
+a replacement actor. The physical fixture uses its real mined dirt stack to
+exercise nested native save/removal and explicit rejoin. Java/client compile
+and shell syntax passed locally; runtime CI is pending. Crafting remains
+unexposed to player requests. CI launchers prepare shared assets serially.
+The final project mirror fixture now explicitly acknowledges structural-project
+on the current boot; its verifier remains unchanged.
+

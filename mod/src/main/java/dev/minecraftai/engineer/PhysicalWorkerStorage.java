@@ -18,8 +18,14 @@ final class PhysicalWorkerStorage {
         PhysicalWorkerMenus.stage(worker,menu,inventory);
     }
     static void save(ServerPlayer worker){
+        if(worker.isCreative())throw new IllegalStateException("Survival work cannot certify a creative worker");
+        saveResources(worker);
+    }
+    /** Preserve actual stacks after stop/revocation/mode loss, without granting any action. */
+    static void saveResources(ServerPlayer worker){
+        if(PhysicalCraftGuard.deferSave(worker))throw new IllegalStateException("Native click has not returned; do not certify a midpoint save");
         var server=worker.level().getServer();
-        if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || worker.isCreative() || !PhysicalActionGate.exactActor(worker))throw new IllegalStateException("Save requires the current bound native survival worker");
+        if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || !PhysicalActionGate.exactActor(worker))throw new IllegalStateException("Save requires the current bound native worker");
         if(PhysicalWorkerMenus.pending(worker))throw new IllegalStateException("Finish worker hydration before certifying a save");
         PhysicalWorkerMenus.capture(worker);
         server.getPlayerList().saveAll();
