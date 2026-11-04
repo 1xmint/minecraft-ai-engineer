@@ -209,3 +209,14 @@ unexposed to player requests. CI launchers prepare shared assets serially.
 The final project mirror fixture now explicitly acknowledges structural-project
 on the current boot; its verifier remains unchanged.
 
+
+Native lifetime source5f62b4b passed actual physical run41912627609. Inspected
+physical-craft-lifetime.done and independent five-snapshot worker-menu proof:
+the real mined dirt remains exactly once, without a stored result slot.
+
+Next E2/P2 candidate exercises the unexposed task on the actual gathered oak
+log after saved-world recovery: four native clicks, native crafting statistics,
+exact four-plank result, no replayed clicks or repeated task output, followed
+by a fourth saved-world boot without restored authority. Independent NBT and
+hand-written journal frame verification are required. Scoped client compile,
+JavaScript syntax, shell syntax and diff checks passed. Runtime CI pending.
