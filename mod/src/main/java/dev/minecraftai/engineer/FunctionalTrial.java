@@ -514,7 +514,7 @@ final class FunctionalTrial {
     }
     /** Display-only freshness check; retained history never grants execution authority. */
     static boolean matchesCurrentScope(Blueprint blueprint,ComponentAssignments.Task task){
-        if(blueprint==null || task==null || task.lastPassedScope==null)return false;
+        if(blueprint==null || task==null || task.lastPassedScope==null || ImportedBlueprint.describes(blueprint.source()))return false;
         try{
             var scope=validateHistoricalScope(task.lastPassedScope);
             if(!scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())

@@ -138,7 +138,11 @@ public final class DesignComparisonGameTests {
         for(int x=0;x<3;x++){var cell=new JsonObject();var pos=new com.google.gson.JsonArray();pos.add(x);pos.add(0);pos.add(0);cell.add("pos",pos);cell.addProperty("state","minecraft:stone");placement.add(cell);}
         var imported=Blueprint.parse(SchematicBlueprint.candidate(placement,7,"d".repeat(64),"e".repeat(64),WORLD,DIM,UUID.randomUUID().toString()),WORLD,DIM);
         // Even a task record claiming a current-scope pass cannot make imported geometry tested or timed.
-        var m=DesignComparison.measure("imported",imported,passed(imported));
+        var cached=passed(imported);var m=DesignComparison.measure("imported",imported,cached);
+        helper.assertTrue(!FunctionalTrial.matchesCurrentScope(imported,cached),"A matching cached scope cannot supply a missing imported behavior contract");
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var session=new EngineeringSession(manager,UUID.fromString(imported.projectId()),UUID.randomUUID(),DIM);session.blueprint=imported;session.assignments.tasks.put("root",cached);
+        helper.assertTrue(!ProjectGuidance.evidence(session).getFirst().currentPass() && has(ProjectSummary.records(session),"No actual test pass is recorded for its current scope"),"Summary and next-step guidance keep imported geometry untested even with a fabricated matching cache");
+        helper.assertTrue(ProjectGuidance.evidence(session).getFirst().history()==null && !LessonAssistant.evidence(cached,imported).contains("passed") && has(ProjectGuidance.next(session),"no defined behavior contract") && !has(ProjectGuidance.next(session),"component test"),"Imported guidance explains the missing contract instead of recommending an unavailable functional test or repeating a fabricated pass");
         helper.assertTrue(m.imported() && !m.currentPass() && m.timing()==null && m.status().equals(ComparisonEvidence.IMPORTED_STATUS)
                 && m.behavior().equals(ComparisonEvidence.IMPORTED_BEHAVIOR) && m.behaviorKey()==null && m.blocks()==3 && m.length()==3,"Imported geometry is measured but never tested: "+m);
         var lines=DesignComparison.compare(m,measure("lamp",catalog("signal-lamp",0,0,1)));

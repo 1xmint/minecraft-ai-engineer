@@ -20,7 +20,7 @@ final class ProjectGuidance {
             var task=s.assignments.tasks.get(id);
             boolean current=task!=null && task.verified!=null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(s.blueprint,task);
             String history=null;
-            if(!current && task!=null && task.lastPassedScope!=null && task.lastPassedScope.has("blueprintRevision"))
+            if(!current && !ImportedBlueprint.describes(s.blueprint.source()) && task!=null && task.lastPassedScope!=null && task.lastPassedScope.has("blueprintRevision"))
                 history="a pass was recorded at design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong()+"; it does not cover the current design";
             out.add(new Evidence(id,current,LessonAssistant.evidence(task,s.blueprint),history));
         }
@@ -51,6 +51,10 @@ final class ProjectGuidance {
 
     static List<String> next(EngineeringSession s){
         var out=new ArrayList<String>();
+        if(s.blueprint!=null && ImportedBlueprint.describes(s.blueprint.source())){
+            out.add("This is imported geometry with no defined behavior contract. Its approved geometry can be built; functional testing needs a separately defined and supported behavior.");
+            out.add(NOTHING_STARTED);out.add(LessonAssistant.NOT_OBSERVED);return out;
+        }
         if(s.blueprint==null){
             out.add("Suggested next step: tell me what you want to make. No design is loaded in this project yet.");
             out.add(NOTHING_STARTED);return out;

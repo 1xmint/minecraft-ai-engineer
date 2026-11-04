@@ -123,6 +123,7 @@ final class LessonAssistant {
     }
     /** A stored functional result, marked stale when its pass belongs to an older design revision. */
     static String evidence(ComponentAssignments.Task task,Blueprint blueprint) {
+        if(blueprint!=null && ImportedBlueprint.describes(blueprint.source()))return "untested imported geometry: no defined behavior contract";
         if(task==null)return "untested";
         String stale=staleNote(task,blueprint);
         if(stale!=null)return task.verified+", but "+stale;
