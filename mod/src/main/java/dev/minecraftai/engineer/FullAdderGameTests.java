@@ -10,6 +10,15 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual physical prototype proof; this does not admit project execution or saved evidence. */
 public final class FullAdderGameTests {
+    @GameTest public void connectedTestMarginKeepsExactTwoBlockGeometry(GameTestHelper helper){
+        var mutable=new BlockPos.MutableBlockPos(0,0,0);var cells=new ArrayList<Blueprint.PlannedBlock>();cells.add(new Blueprint.PlannedBlock(mutable,Blocks.STONE.defaultBlockState(),"one","root"));cells.add(new Blueprint.PlannedBlock(new BlockPos(1,0,0),Blocks.STONE.defaultBlockState(),"one","root"));
+        var area=new ConnectedTestArea(cells);helper.assertTrue(area.margin().size()==148,"Two adjacent radius-two cubes cover150positions minus2planned cells");
+        for(int x=-2;x<=3;x++)for(int y=-2;y<=2;y++)for(int z=-2;z<=2;z++){var pos=new BlockPos(x,y,z);boolean planned=y==0 && z==0 && (x==0 || x==1);helper.assertTrue(area.margin().contains(pos)!=planned,"Every hand-worked margin coordinate is present exactly outside intended cells");}
+        mutable.set(100,100,100);helper.assertTrue(area.cells().getFirst().pos().equals(BlockPos.ZERO) && !area.matches(cells),"Mutable input positions cannot change cached geometry");
+        boolean frozen=false;try{area.margin().add(BlockPos.ZERO);}catch(UnsupportedOperationException expected){frozen=true;}helper.assertTrue(frozen,"Callers cannot expand cached read geometry");rejects(helper,()->new ConnectedTestArea(List.of(area.cells().getFirst(),area.cells().getFirst())),"Duplicate intent cannot hide a target");
+        var identity=UUID.randomUUID();var source=ConnectedIntention.createFullAdder(identity,1,identity,"test","minecraft:overworld",new BlockPos(0,100,0),0).blueprint();var scopes=new OperationScopes();String operation=UUID.randomUUID().toString();scopes.capture(operation,"root",source,false);
+        helper.assertTrue(scopes.fullAdder(operation),"Test-area admission uses the private captured design kind");source.source().remove("connected");helper.assertTrue(scopes.fullAdder(operation),"Removing current source metadata cannot bypass captured admission");boolean changed=false;try{scopes.connectedBlocks(operation,source);}catch(IllegalStateException expected){changed=true;}helper.assertTrue(changed,"Mutated live source still requires new validated delegation");helper.succeed();
+    }
     @GameTest public void connectedIndexesPreserveOwnershipAndCapturedIntent(GameTestHelper helper){
         String world=UUID.randomUUID().toString(),dimension=helper.getLevel().dimension().identifier().toString();var project=UUID.randomUUID();
         var blueprint=ConnectedIntention.create(UUID.randomUUID(),1,project,world,dimension,new BlockPos(0,100,0),0).blueprint();

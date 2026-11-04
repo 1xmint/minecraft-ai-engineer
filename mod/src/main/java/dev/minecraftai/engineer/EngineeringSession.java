@@ -73,6 +73,7 @@ final class EngineeringSession implements BuildExecutor {
     long nextPlacement;
     private long constructionSaveNanos,constructionTimingStart;
     private int constructionSaveCount;
+    private ConnectedTestArea connectedTestArea;
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -737,6 +738,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     @Override public String status() { return state + ": " + detail + "; assistant recorded changes=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
+        if(testTick<0)connectedTestArea=null;
         if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
@@ -1435,6 +1437,19 @@ final class EngineeringSession implements BuildExecutor {
     void tickTest() { if(shutterTrial.running())shutterTrial.tick();else trial.tick(); }
     void restoreTest() { trial.restore(); }
     void validateTestArea() {
+        if(operationScopes.fullAdder(activeOperation)){
+            // Revalidate current intent against the private captured source on
+            // every call, including if its connected marker was removed.
+            var cells=operationScopes.connectedBlocks(activeOperation,blueprint);
+            validateDeclaredPrerequisites();
+            if(connectedTestArea==null || !connectedTestArea.matches(cells))connectedTestArea=new ConnectedTestArea(cells);
+            for(var cell:connectedTestArea.cells()){validateTarget(cell.pos());if(!Blueprint.matches(cell.state(),level().getBlockState(cell.pos())))throw new IllegalStateException("Complete/correct the blueprint before testing");}
+            for(var pos:connectedTestArea.margin()){
+                if(!level().hasChunkAt(pos))throw new IllegalStateException("Test stopped: isolation margin is unloaded at "+pos.toShortString());
+                if(!level().getBlockState(pos).isAir())throw new IllegalStateException("Test needs a two-block air margin around the floating circuit; occupied at "+pos.toShortString());
+            }
+            return;
+        }
         if(blueprint!=null && ShutterDesign.describes(blueprint.source())){
             var design=ShutterDesign.read(blueprint.source());
             ShutterEnvironment.captureReserved(level(),design,manager.reservations,delegation,controller,access.revision(),server.getTickCount());

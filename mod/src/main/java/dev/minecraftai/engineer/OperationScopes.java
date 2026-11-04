@@ -115,6 +115,10 @@ final class OperationScopes {
         var mapping=operations.get(operation);if(mapping==null)return false;var snapshot=snapshots.get(mapping.snapshot());
         return snapshot.transition()==null && ConnectedIntention.describes(snapshot.parsed().source());
     }
+    boolean fullAdder(String operation){
+        var mapping=operations.get(operation);if(mapping==null)return false;var snapshot=snapshots.get(mapping.snapshot());
+        return snapshot.transition()==null && ConnectedIntention.fullAdder(snapshot.parsed().source());
+    }
     /** Already-validated private intent cells only: no mutable source, world state or authority is returned. */
     List<Blueprint.PlannedBlock> connectedBlocks(String operation,Blueprint current){
         var mapping=operations.get(operation);if(mapping==null || !mapping.component().equals("root") || !connected(operation))throw new IllegalArgumentException("Not a captured root connected operation");
