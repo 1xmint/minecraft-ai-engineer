@@ -31,9 +31,12 @@ public final class PhysicalActionGate {
     private PhysicalActionGate() { }
     static void register(ServerPlayer actor){thread(actor);if(ACTORS.putIfAbsent(actor.getUUID(),new Entry(actor))!=null)throw new IllegalStateException("Actor already bound");}
     static void bindConnection(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry==null || entry.actor!=actor || entry.connection!=null || actor.connection==null)throw new IllegalStateException("Actor connection cannot be rebound");entry.connection=actor.connection;}
-    static void forget(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor)ACTORS.remove(actor.getUUID(),entry);}
+    static void forget(ServerPlayer actor){thread(actor);PhysicalWorkerMenus.forget(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor)ACTORS.remove(actor.getUUID(),entry);}
     public static boolean managed(Player actor){return actor!=null && ACTORS.containsKey(actor.getUUID());}
+    public static boolean exactActor(Player actor){var entry=actor==null?null:ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor;}
+    static boolean exactConnection(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor && actor.connection!=null && !actor.hasDisconnected() && entry.connection==actor.connection;}
     static void arm(ServerPlayer actor,String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead){
+        PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor || entry.ticket!=null || entry.pickup!=null)throw new IllegalStateException("No idle bound actor");
         if(!Set.of("place","mine").contains(operation))throw new IllegalArgumentException("Unsupported action");
@@ -41,6 +44,7 @@ public final class PhysicalActionGate {
         if(operation.equals("place")){entry.pendingPlace=null;entry.observedPlace=null;}
     }
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
+        PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || !actor.getInventory().isEmpty()
             || entry.minedDrop!=drop || entry.minedItem==null || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(entry.minedItem) || drop.getItem().getCount()!=1)
