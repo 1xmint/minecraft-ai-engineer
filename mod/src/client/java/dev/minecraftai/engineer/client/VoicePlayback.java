@@ -22,8 +22,6 @@ final class VoicePlayback {
     private Thread worker;
     private int spoken, generation;
 
-    VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle) { this(speakers, idle, failure -> { }); }
-
     /** failures receives one plain line when the speech program fails on its own (never when stop ended it). */
     VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle, Consumer<String> failures) {
         this.speakers = speakers;
