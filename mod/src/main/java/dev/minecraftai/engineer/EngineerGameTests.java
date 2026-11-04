@@ -9,6 +9,22 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void oakClickProtocolKeepsEveryResourcePositionExact(GameTestHelper helper){
+        var items=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);items.set(3,log);
+        var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);var initial=new PhysicalCraftFrame(items,empty,net.minecraft.world.item.ItemStack.EMPTY,7);
+        var plan=OakCraftingPlan.inspect(helper.getLevel(),log);var sequence=OakCraftingSequence.predict(initial,3,plan);
+        helper.assertTrue(sequence.slot(1)==39 && sequence.slot(2)==1 && sequence.slot(3)==0 && sequence.slot(4)==39,"Only the original hotbar, first grid input and native result slots are selected");
+        helper.assertTrue(sequence.after(1).inventory().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty) && net.minecraft.world.item.ItemStack.matches(sequence.after(1).menu().cursor(),log),"First click moves only the retained log to the cursor");
+        helper.assertTrue(sequence.after(2).menu().cursor().isEmpty() && net.minecraft.world.item.ItemStack.matches(sequence.after(2).menu().inputs().getFirst(),log) && sequence.after(2).preview().is(net.minecraft.world.item.Items.OAK_PLANKS) && sequence.after(2).preview().getCount()==4,"Second click leaves the real log in the grid with a derived four-plank preview");
+        helper.assertTrue(sequence.after(3).menu().inputs().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty) && sequence.after(3).preview().isEmpty() && sequence.after(3).menu().cursor().is(net.minecraft.world.item.Items.OAK_PLANKS) && sequence.after(3).menu().cursor().getCount()==4,"Native result take must leave exactly four carried planks and no input or preview");
+        var finalItems=sequence.after(4).inventory();helper.assertTrue(sequence.after(4).menu().empty() && finalItems.get(3).is(net.minecraft.world.item.Items.OAK_PLANKS) && finalItems.get(3).getCount()==4,"Final click deposits output only into the original source slot");
+        for(int slot=0;slot<finalItems.size();slot++)if(slot!=3)helper.assertTrue(finalItems.get(slot).isEmpty(),"No extra inventory or equipment output");
+        for(int step=1;step<=4;step++)helper.assertTrue(sequence.before(step).selected()==7 && sequence.after(step).selected()==7,"Crafting does not change selected hotbar position");
+        items.get(3).setCount(2);finalItems.get(3).setCount(1);helper.assertTrue(sequence.before(1).inventory().get(3).getCount()==1 && sequence.after(4).inventory().get(3).getCount()==4,"Caller aliases cannot alter the protocol");
+        var named=plan.input();named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("changed"));var changed=new PhysicalCraftFrame(sequence.after(1).inventory(),new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),named),net.minecraft.world.item.ItemStack.EMPTY,7);
+        helper.assertTrue(!sequence.after(1).matches(changed),"Changed item components invalidate a crafting frame");
+        reject(helper,()->sequence.slot(0),"No hidden native crafting steps");reject(helper,()->OakCraftingSequence.predict(initial,9,plan),"Off-hotbar sources refuse");helper.succeed();
+    }
     @GameTest public void oakCraftingPredictionUsesNativeRecipeWithoutConsumingResources(GameTestHelper helper){
         var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);var plan=OakCraftingPlan.inspect(helper.getLevel(),log);
         helper.assertTrue(log.getCount()==1 && net.minecraft.world.item.ItemStack.matches(plan.input(),log) && net.minecraft.world.item.ItemStack.matches(plan.output(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,4)),"Actual native recipe predicts four default planks without consuming the retained log");
