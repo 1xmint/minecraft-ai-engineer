@@ -1,5 +1,7 @@
 package dev.minecraftai.engineer;
 
+import com.google.gson.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
@@ -7,6 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /** Fixed physical nine-NAND prototype. Not an admitted source or a functional pass. */
 final class FullAdderDesign {
+    private static final BlockPos CENTER=new BlockPos(50,0,42);
     enum Physical { LEVER, WIRE, LAMP }
     record Cell(BlockPos pos,BlockState state) { }
     record Pin(String id,Physical physical,BlockPos pos) { }
@@ -16,6 +19,7 @@ final class FullAdderDesign {
     private final Map<String,Integer> rows=new LinkedHashMap<>();
     private final Map<String,Integer> sources=new LinkedHashMap<>();
     private final Map<String,List<Integer>> sinks=new LinkedHashMap<>();
+    private final String graphDigest;
     private static final List<Gate> GATES=List.of(
         new Gate("n1","a","b",14),new Gate("n2","a","n1",24),
         new Gate("n3","b","n1",34),new Gate("xor","n2","n3",44),
@@ -84,6 +88,10 @@ final class FullAdderDesign {
         for(var entry:List.copyOf(cells.entrySet()))if(entry.getValue().is(Blocks.REDSTONE_WIRE))
             cells.put(entry.getKey(),((WireConnectionView)Blocks.REDSTONE_WIRE).engineer$connections(planned,entry.getValue(),entry.getKey()));
         if(cells.size()>4096 || pins.size()!=35)throw new IllegalStateException("Full-adder bounded geometry/pin contract: "+cells.size()+" cells, "+pins.size()+" pins");
+        try{
+            String definition="connected-full-adder-v2|minecraft=26.3|"+canonical(graph())+"|"+canonical(geometry());
+            graphDigest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(definition.getBytes(StandardCharsets.UTF_8)));
+        }catch(java.security.NoSuchAlgorithmException unavailable){throw new IllegalStateException("Missing SHA256",unavailable);}
     }
     private void vertical(int x,int low,int high,boolean south){
         if(high-low<8)throw new IllegalStateException("Full-adder route too short for insulated ramps");
@@ -108,4 +116,35 @@ final class FullAdderDesign {
     List<Cell> cells(){return cells.entrySet().stream().map(e->new Cell(e.getKey(),e.getValue())).sorted(Comparator.comparingInt((Cell c)->c.pos().getY()).thenComparingInt(c->c.pos().getZ()).thenComparingInt(c->c.pos().getX())).toList();}
     List<Pin> pins(){return List.copyOf(pins.values());}
     BlockPos control(String id){var pin=pins.get(id+":control");if(pin==null || pin.physical()!=Physical.LEVER)throw new IllegalArgumentException("Not an external full-adder control");return pin.pos();}
+    String graphDigest(){return graphDigest;}
+    JsonObject definition(){var out=new JsonObject();out.addProperty("schemaVersion",2);out.addProperty("minecraft","26.3");out.addProperty("graphDigest",graphDigest);out.add("graph",graph());out.add("geometry",geometry());return out;}
+    JsonObject graph(){
+        var graph=new JsonObject();graph.addProperty("schemaVersion",2);graph.addProperty("function","full-adder");graph.addProperty("signal","boolean");
+        var nodes=new JsonArray();for(String id:List.of("a","b","cin")){var node=new JsonObject();node.addProperty("id",id);node.addProperty("kind","control");nodes.add(node);}
+        for(var gate:GATES){var node=new JsonObject();node.addProperty("id",gate.id());node.addProperty("kind","nand");var inputs=new JsonArray();inputs.add(gate.a()+":out");inputs.add(gate.b()+":out");node.add("inputs",inputs);nodes.add(node);}
+        for(String id:List.of("sum","carry")){var node=new JsonObject();node.addProperty("id",id+"-light");node.addProperty("kind","receiver");node.addProperty("from",id+":out");nodes.add(node);}graph.add("nodes",nodes);
+        var ports=new JsonArray();for(var pin:pins()){
+            var port=new JsonObject();port.addProperty("id",pin.id());port.addProperty("physical",pin.physical().name().toLowerCase(Locale.ROOT));
+            port.addProperty("role",pin.id().endsWith(":control")?"external_control":pin.id().endsWith(":result")?"result":pin.id().endsWith(":out")?"signal_output":"signal_input");
+            port.addProperty("signal","boolean");port.add("pos",Blueprint.jsonPos(pin.pos().subtract(CENTER)));ports.add(port);
+        }
+        graph.add("ports",ports);graph.addProperty("settleGameTicks",256);graph.addProperty("stableSamples",8);return graph;
+    }
+    JsonArray geometry(){
+        var geometry=new JsonArray();for(var cell:cells()){
+            var relative=cell.pos().subtract(CENTER);if(Math.abs(relative.getX())>64 || Math.abs(relative.getZ())>64 || relative.getY()<0 || relative.getY()>3)throw new IllegalStateException("Full-adder exceeds centered bounded geometry");
+            String stage="connections",component="routing";var pos=cell.pos();var state=cell.state();
+            if(state.is(Blocks.STONE) || state.is(Blocks.GLASS)){stage="foundation";component="support";}
+            else if(pos.getX()>=2 && pos.getX()<=4 && pos.getY()==1){for(String id:List.of("a","b","cin"))if(pos.getZ()==rows.get(id)){stage="controls";component=id;}}
+            else if(state.is(Blocks.REDSTONE_LAMP)){stage="outputs";component=pos.getZ()==rows.get("sum")?"sum-light":"carry-light";}
+            else if(pos.getY()==1 && (pos.getX()==sources.get("sum")+1 && pos.getZ()==rows.get("sum") || pos.getX()==sources.get("carry")+1 && pos.getZ()==rows.get("carry"))){stage="outputs";component=pos.getZ()==rows.get("sum")?"sum-light":"carry-light";}
+            else if(pos.getY()==1)for(var gate:GATES)if(pos.getX()>=gate.x()-1 && pos.getX()<=gate.x()+4 && pos.getZ()>=80 && pos.getZ()<=84){stage="logic";component=gate.id();break;}
+            var value=new JsonObject();value.add("pos",Blueprint.jsonPos(relative));value.addProperty("state",Blueprint.describe(state));value.addProperty("stage",stage);value.addProperty("component",component);geometry.add(value);
+        }return geometry;
+    }
+    private static String canonical(JsonElement value){
+        if(value.isJsonArray())return "["+String.join(",",java.util.stream.StreamSupport.stream(value.getAsJsonArray().spliterator(),false).map(FullAdderDesign::canonical).toList())+"]";
+        if(value.isJsonObject())return "{"+String.join(",",value.getAsJsonObject().keySet().stream().sorted().map(key->new JsonPrimitive(key).toString()+":"+canonical(value.getAsJsonObject().get(key))).toList())+"}";
+        return value.toString();
+    }
 }

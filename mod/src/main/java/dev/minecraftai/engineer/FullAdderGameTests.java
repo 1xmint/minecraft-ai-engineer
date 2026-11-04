@@ -38,9 +38,45 @@ public final class FullAdderGameTests {
             helper.assertTrue(samples.size()==128,"Full adder observes all eight rows forward/reverse, eight consecutive ticks each");
             for(String id:List.of("a","b","cin"))helper.assertTrue(!control(helper,design.control(id)),"Original external controls restored");
             var report=new JsonObject();report.addProperty("schemaVersion",1);report.addProperty("kind","full-adder-physical-prototype");report.addProperty("cells",design.cells().size());report.addProperty("pins",design.pins().size());report.addProperty("settleGameTicks",256);report.addProperty("stableSamples",8);report.add("samples",samples);
+            report.addProperty("graphDigest",design.graphDigest());
+            var cases=validateRecorded(helper,design,samples,starts);report.add("cases",cases);
+            helper.assertTrue(design.definition().getAsJsonArray("geometry").size()==design.cells().size() && design.definition().getAsJsonObject("graph").getAsJsonArray("ports").size()==35,"Canonical full-adder definition retains every proven cell and typed pin");
+            helper.assertTrue(new FullAdderDesign().graphDigest().equals(design.graphDigest()),"Canonical centered full-adder geometry/digest is deterministic");
+            System.out.println("ENGINEER_FULL_ADDER_DEFINITION "+design.definition());
             System.out.println("Full-adder native observations: "+report);helper.succeed();
         });
     }
+    private static JsonArray validateRecorded(GameTestHelper helper,FullAdderDesign design,JsonArray samples,long[] starts){
+        var cases=new JsonArray();for(int index=0;index<16;index++){
+            var trace=new FullAdderTrace(design.graphDigest(),FullAdderEvidence.vector(index),starts[index]);
+            for(int offset=0;offset<8;offset++){var frame=samples.get(index*8+offset).getAsJsonObject();trace.sample(frame.get("gameTick").getAsLong(),frame.getAsJsonObject("ports"));}
+            helper.assertTrue(trace.passed() && FullAdderTrace.read(trace.json(),design.graphDigest(),FullAdderEvidence.vector(index)).json().equals(trace.json()),"Native full-adder observations round-trip under exact graph/vector scope");cases.add(trace.json());
+        }
+        FullAdderEvidence.validate(cases,design.graphDigest(),true);
+        var valid=cases.get(0).getAsJsonObject();
+        for(String fault:List.of("owner","graph","input","gap","clock","pin","type","verdict")){
+            var forged=valid.deepCopy();switch(fault){
+                case "owner"->forged.addProperty("owner","trusted");
+                case "graph"->forged.addProperty("graphDigest","f".repeat(64));
+                case "input"->forged.addProperty("vector",1);
+                case "gap"->forged.getAsJsonArray("samples").remove(3);
+                case "clock"->forged.getAsJsonArray("samples").get(1).getAsJsonObject().addProperty("gameTick",starts[0]+258);
+                case "pin"->forged.getAsJsonArray("samples").get(0).getAsJsonObject().getAsJsonObject("ports").remove("n1:out");
+                case "type"->forged.getAsJsonArray("samples").get(0).getAsJsonObject().getAsJsonObject("ports").addProperty("cin:control",0);
+                case "verdict"->forged.addProperty("verdict","failed");
+            }
+            rejects(helper,()->FullAdderTrace.read(forged,design.graphDigest(),0),"Reject forged/malformed full-adder evidence: "+fault);
+        }
+        var partial=cases.deepCopy();partial.remove(15);rejects(helper,()->FullAdderEvidence.validate(partial,design.graphDigest(),true),"Partial arithmetic suite cannot pass");
+        var overlapping=cases.deepCopy();overlapping.set(8,cases.get(7).deepCopy());rejects(helper,()->FullAdderEvidence.validate(overlapping,design.graphDigest(),true),"Same-vector reverse case cannot reuse the earlier clock window");
+        var trace=new FullAdderTrace(design.graphDigest(),0,starts[0]);var before=trace.json();var malformed=valid.getAsJsonArray("samples").get(0).getAsJsonObject().getAsJsonObject("ports").deepCopy();malformed.addProperty("n1:out",16);
+        rejects(helper,()->trace.sample(starts[0]+256,malformed),"Reject out-of-range native strength");helper.assertTrue(before.equals(trace.json()),"Refused samples change no captured facts");
+        for(int offset=0;offset<8;offset++){var frame=valid.getAsJsonArray("samples").get(offset).getAsJsonObject();var ports=frame.getAsJsonObject("ports").deepCopy();if(offset==0)ports.addProperty("n1:out",0);trace.sample(frame.get("gameTick").getAsLong(),ports);}
+        helper.assertTrue(trace.verdict().equals("failed") && trace.json().getAsJsonObject("firstMismatch").get("pin").getAsString().equals("n1:out"),"A wrong internal pin fails despite otherwise correct receivers");
+        helper.assertTrue(FullAdderTrace.read(trace.json(),design.graphDigest(),0).json().equals(trace.json()),"Failed observations retain their exact first clock/pin diagnosis");
+        return cases;
+    }
+    private static void rejects(GameTestHelper helper,Runnable action,String message){try{action.run();}catch(IllegalArgumentException expected){return;}helper.assertTrue(false,message);}
     private static void diagnose(GameTestHelper helper,FullAdderDesign design,int vector,int elapsed,String failed){
         var report=new JsonObject();report.addProperty("vector",vector);report.addProperty("elapsed",elapsed);report.addProperty("failedPin",failed);
         var ports=new JsonObject();for(var pin:design.pins())ports.add(pin.id(),observe(helper,pin));report.add("ports",ports);
