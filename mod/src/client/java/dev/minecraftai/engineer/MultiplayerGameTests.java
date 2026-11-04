@@ -461,7 +461,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connect(context,1);write("full-adder-bob.connected","ready");awaitFile(context,"full-adder-project");
         MESSAGES.clear();send(context,"engineer project use "+read("full-adder-project"));expectChat(context,"unavailable or not shared");check(MESSAGES.stream().noneMatch(message->message.contains("Connected one-bit full-adder")),"Private full-adder metadata is not revealed to a connected nonmember");write("full-adder-private.done","passed");
         awaitFile(context,"full-adder-viewer.ready");send(context,"engineer project use "+read("full-adder-project"));MESSAGES.clear();send(context,"engineer build");expectChat(context,"permission");MESSAGES.clear();send(context,"engineer test");expectChat(context,"permission");write("full-adder-viewer.done","passed");
-        awaitFile(context,"full-adder-editor.ready");MESSAGES.clear();send(context,"engineer test");expectChat(context,"Tick-accurate full-adder truth table running");write("full-adder-editor.started","ready");
+        // This wait includes all3544 durable writes: CI41891969513 completed
+        // construction in about five minutes, beyond the generic four-minute wait.
+        await(context,()->Files.exists(directory().resolve("full-adder-editor.ready")),"full-adder-editor.ready",480_000);MESSAGES.clear();send(context,"engineer test");expectChat(context,"Tick-accurate full-adder truth table running");write("full-adder-editor.started","ready");
         awaitFile(context,"full-adder-revoked.ready");MESSAGES.clear();send(context,"engineer project use "+read("full-adder-project"));expectChat(context,"unavailable or not shared");send(context,"engineer resume");context.waitTicks(25);check(MESSAGES.stream().noneMatch(message->message.contains("Interrupted test reconciled") || message.contains("Reconciled; resuming")),"Revoked editor receives no restoration or execution acknowledgment");write("full-adder-revoked.done","passed");disconnect(context);
     }
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
@@ -3285,7 +3287,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     private static void awaitFile(ClientGameTestContext context, String name) { await(context, () -> Files.exists(directory().resolve(name)), name); }
     private static void await(ClientGameTestContext context, java.util.function.BooleanSupplier condition, String message) {
-        long deadline = System.currentTimeMillis() + WAIT_MILLIS;
+        await(context,condition,message,WAIT_MILLIS);
+    }
+    private static void await(ClientGameTestContext context, java.util.function.BooleanSupplier condition, String message,long timeoutMillis) {
+        long deadline = System.currentTimeMillis() + timeoutMillis;
         while (!condition.getAsBoolean()) {
             try (var files = Files.list(directory())) {
                 if (files.anyMatch(path -> path.getFileName().toString().endsWith(".failed"))) throw new AssertionError("Another multiplayer client failed while waiting for " + message);
