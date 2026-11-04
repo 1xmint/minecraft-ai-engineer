@@ -39,6 +39,10 @@ public final class PhysicalWorkerMenus {
         PENDING.put(actor,new Pending(actor.getUUID(),menu,inventory.deepCopy()));
     }
     static void finishRestore(ServerPlayer actor){
+        finishRestore(actor,step->{});
+    }
+    /** Fault boundary for native lifecycle proof; never grants an action. */
+    static void finishRestore(ServerPlayer actor,java.util.function.IntConsumer afterStep){
         thread(actor);var saved=PENDING.get(actor);if(saved==null)return;
         if(!PhysicalActionGate.exactConnection(actor) || actor.level().getServer().getPlayerList().getPlayer(actor.getUUID())!=actor
             || !actor.getUUID().equals(saved.identity()) || !PhysicalWorkerStorage.inventory(actor).equals(saved.inventory()) || !capture(actor).empty())
@@ -46,8 +50,9 @@ public final class PhysicalWorkerMenus {
         var connection=actor.connection;var cells=saved.menu().inputs();
         // Each set recalculates the native preview and sends a packet. Never do
         // this on the unjoined player, and never restore the derived result slot.
-        for(int slot=1;slot<=4;slot++)actor.inventoryMenu.getSlot(slot).set(cells.get(slot-1));
+        for(int slot=1;slot<=4;slot++){actor.inventoryMenu.getSlot(slot).set(cells.get(slot-1));afterStep.accept(slot);}
         actor.inventoryMenu.setCarried(saved.menu().cursor());
+        afterStep.accept(5);
         if(actor.connection!=connection || !PhysicalActionGate.exactConnection(actor) || !saved.menu().matches(capture(actor))
             || !PhysicalWorkerStorage.inventory(actor).equals(saved.inventory()))throw new IllegalStateException("Worker hydration did not finish exactly; original snapshot retained");
         PENDING.remove(actor);

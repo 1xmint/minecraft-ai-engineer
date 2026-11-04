@@ -478,7 +478,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(manager.worldId.equals(savedWorld) && !manager.epoch.equals(savedEpoch) && manager.projects.containsKey(UUID.fromString(savedProject)),"Actual restart retains world/project identity and advances the server epoch");
                 check(s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")),"Saved-server restart does not recreate a physical actor");
                 var project=manager.projects.get(UUID.fromString(savedProject));check(project.delegation==null && project.testTick<0 && !project.hasPendingTest(),"Restart restores no actor execution or test authority");});
-            server.runOnServer(s->{var worker=inventoryWorker(s,resourceWorker,resourceName,true);
+            server.runOnServer(s->{malformedWorkerMenuRefusesWithoutRewrite(s,resourceWorker,resourceName);interruptedWorkerMenu(s,resourceWorker,resourceName,1,"grid-fault");var worker=inventoryWorker(s,resourceWorker,resourceName,true);
                 try{
                     var grid=PhysicalWorkerMenus.capture(worker);check(countDirt(worker)==0 && grid.inputs().getFirst().is(net.minecraft.world.item.Items.DIRT) && grid.inputs().getFirst().getCount()==1 && grid.cursor().isEmpty(),"Saved-world restart restores the real mined dirt in its crafting position");
                     var before=PhysicalWorkerMenus.capture(worker);worker.inventoryMenu.clicked(1,0,net.minecraft.world.inventory.ContainerInput.PICKUP,worker);worker.inventoryMenu.removed(worker);
@@ -554,7 +554,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             oakRecovery=physicalOakFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
-            server.runOnServer(s->{var worker=inventoryWorker(s,resourceWorker,resourceName,true);try{
+            server.runOnServer(s->{interruptedWorkerMenu(s,resourceWorker,resourceName,5,"cursor-fault");var worker=inventoryWorker(s,resourceWorker,resourceName,true);try{
                 var menu=PhysicalWorkerMenus.capture(worker);check(worker.getInventory().isEmpty() && menu.inputs().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty) && menu.cursor().is(net.minecraft.world.item.Items.DIRT) && menu.cursor().getCount()==1,"Second saved-world restart restores the exact native carried dirt, without a duplicate grid or inventory stack");
                 check(!PhysicalWorkerMenus.pending(worker),"Successful hydration clears only its restore stage");
                 var carried=worker.inventoryMenu.getCarried();worker.inventoryMenu.setCarried(net.minecraft.world.item.ItemStack.EMPTY);worker.inventoryMenu.getSlot(36).set(carried);
@@ -747,6 +747,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
 
     /** Resource-persistence experiment only; not a production gather delegation. */
     private static ServerPlayer inventoryWorker(MinecraftServer server,UUID id,String name,boolean restore){
+        return inventoryWorker(server,id,name,restore,step->{});
+    }
+    private static ServerPlayer inventoryWorker(MinecraftServer server,UUID id,String name,boolean restore,java.util.function.IntConsumer afterHydrationStep){
         if(server.getPlayerList().getPlayer(id)!=null || server.getPlayerList().getPlayerByName(name)!=null)throw new IllegalStateException("Worker identity collision; never replace an online player");
         ServerPlayer worker=null;
         try{
@@ -757,7 +760,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.getPlayerList().placeNewPlayer(connection,worker,new net.minecraft.server.network.CommonListenerCookie(profile,0,client,false));
             if(restore)PhysicalActionGate.bindConnection(worker);
             worker.gameMode.changeGameModeForPlayer(GameType.SURVIVAL);
-            if(restore)PhysicalWorkerMenus.finishRestore(worker);
+            if(restore)PhysicalWorkerMenus.finishRestore(worker,afterHydrationStep);
             if(server.getPlayerList().isOp(worker.nameAndId()))throw new IllegalStateException("Worker must not be an operator");
             return worker;
         }catch(Exception failed){
@@ -845,6 +848,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         PhysicalWorkerStorage.save(worker);
         try{var source=worker.level().getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(worker.getUUID()+".dat");Files.copy(source,directory().resolve("worker-menu-"+phase+".dat"));}
         catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+    }
+    private static void interruptedWorkerMenu(MinecraftServer server,UUID id,String name,int step,String phase){
+        var expected=server.getPlayerList().loadPlayerData(new net.minecraft.server.players.NameAndId(id,name)).orElseThrow().getCompound(PhysicalWorkerMenus.KEY).orElseThrow().copy();
+        var injected=new java.util.concurrent.atomic.AtomicBoolean();boolean refused=false;try{inventoryWorker(server,id,name,true,current->{if(current==step){var body=server.getPlayerList().getPlayer(id);check(body!=null && PhysicalActionGate.exactActor(body) && PhysicalWorkerMenus.pending(body),"Fault is injected only into an actual joined, default-denied pending restore");check((step==1?body.inventoryMenu.getSlot(1).getItem():body.inventoryMenu.getCarried()).is(net.minecraft.world.item.Items.DIRT),"The real mined stack reached the interrupted native menu step");injected.set(true);throw new IllegalStateException("Injected native hydration interruption at "+step);}});}catch(IllegalStateException failure){refused=true;}
+        check(injected.get() && refused && server.getPlayerList().getPlayer(id)==null,"Interrupted native hydration removes no resource snapshot and starts no worker task");
+        var actual=server.getPlayerList().loadPlayerData(new net.minecraft.server.players.NameAndId(id,name)).orElseThrow();check(expected.equals(actual.getCompound(PhysicalWorkerMenus.KEY).orElseThrow()),"Removal save retains original pending menu after partial hydration");
+        try{Files.copy(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(id+".dat"),directory().resolve("worker-menu-"+phase+".dat"));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        write("physical-menu-"+phase+".done","passed");
+    }
+    private static void malformedWorkerMenuRefusesWithoutRewrite(MinecraftServer server,UUID id,String name){
+        var path=server.getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(id+".dat");
+        try{byte[] valid=Files.readAllBytes(path);try{
+            var corrupt=server.getPlayerList().loadPlayerData(new net.minecraft.server.players.NameAndId(id,name)).orElseThrow();corrupt.getCompound(PhysicalWorkerMenus.KEY).orElseThrow().putInt("schemaVersion",99);net.minecraft.nbt.NbtIo.writeCompressed(corrupt,path);byte[] before=Files.readAllBytes(path);
+            boolean refused=false;try{inventoryWorker(server,id,name,true);}catch(IllegalStateException failure){refused=true;}
+            check(refused && server.getPlayerList().getPlayer(id)==null && java.util.Arrays.equals(before,Files.readAllBytes(path)),"Malformed menu version refuses before join and preserves the original bytes");write("physical-menu-malformed.done","passed");
+        }finally{Files.write(path,valid);}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
     }
 
     private static void owner(ClientGameTestContext context) throws Exception {

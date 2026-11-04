@@ -19,7 +19,8 @@ const dirt = (stack) => {
   assert.deepEqual(stack.components ?? {}, {});
 };
 const records = [];
-for (const phase of ["grid", "cursor", "settled"]) {
+const phases = ["grid", "grid-fault", "cursor", "cursor-fault", "settled"];
+for (const phase of phases) {
   const bytes = await readFile(join(directory, `worker-menu-${phase}.dat`));
   assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
   const { parsed } = await nbt.parse(bytes);
@@ -32,12 +33,12 @@ for (const phase of ["grid", "cursor", "settled"]) {
   ]);
   assert.equal(menu.schemaVersion, 1);
   assert.equal(menu.inputs.length, 4);
-  if (phase === "grid") {
+  if (phase.startsWith("grid")) {
     assert.deepEqual(player.Inventory, []);
     dirt(menu.inputs[0]);
     menu.inputs.slice(1).forEach(empty);
     empty(menu.cursor);
-  } else if (phase === "cursor") {
+  } else if (phase.startsWith("cursor")) {
     assert.deepEqual(player.Inventory, []);
     menu.inputs.forEach(empty);
     dirt(menu.cursor);
@@ -51,8 +52,7 @@ for (const phase of ["grid", "cursor", "settled"]) {
   }
   records.push(player);
 }
-assert.deepEqual(records[0].UUID, records[1].UUID);
-assert.deepEqual(records[0].UUID, records[2].UUID);
+for (const player of records) assert.deepEqual(records[0].UUID, player.UUID);
 for (const player of records)
   Object.values(player.equipment ?? {}).forEach(empty);
 assert.equal(records[0].UUID.length, 4);
@@ -69,7 +69,7 @@ console.log(
   JSON.stringify({
     schemaVersion: 1,
     kind: "native-worker-menu-recovery",
-    phases: ["grid", "cursor", "settled"],
+    phases,
     retainedNativeDirt: 1,
     resultStored: false,
   }),
