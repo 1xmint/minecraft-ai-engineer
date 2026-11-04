@@ -9,6 +9,14 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void oakCraftingPredictionUsesNativeRecipeWithoutConsumingResources(GameTestHelper helper){
+        var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);var plan=OakCraftingPlan.inspect(helper.getLevel(),log);
+        helper.assertTrue(log.getCount()==1 && net.minecraft.world.item.ItemStack.matches(plan.input(),log) && net.minecraft.world.item.ItemStack.matches(plan.output(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,4)),"Actual native recipe predicts four default planks without consuming the retained log");
+        plan.input().setCount(2);plan.output().setCount(1);helper.assertTrue(plan.input().getCount()==1 && plan.output().getCount()==4,"Predictions are detached item data, not mutable resource sources");
+        reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT)),"A different resource cannot substitute for the retained log");
+        reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG,2)),"The first crafting contract consumes only one explicitly retained log");
+        var named=log.copy();named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("keep this"));reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),named),"Named/custom resources require separate explicit handling");helper.succeed();
+    }
     @GameTest public void workerMenuSnapshotsPreserveActualComponentsAndRejectInventedFields(GameTestHelper helper){
         var registries=helper.getLevel().registryAccess();var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);
         log.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("retained native input"));
