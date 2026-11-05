@@ -72,10 +72,10 @@ final class VoicePlayback {
                 run = generation;
             }
             try { speaker.speak(text); }
-            catch (Exception failed) {
+            catch (Exception error) {
                 boolean own;
                 synchronized (this) { own = run == generation; if (own) { queue.clear(); failed = true; } }
-                if (own) failures.accept(new FailureNotice(failure(failed),()->{synchronized(this){return run==generation;}}));
+                if (own) failures.accept(new FailureNotice(failure(error),()->{synchronized(this){return run==generation;}}));
             }
             synchronized (this) { current = null; if (run == generation) spoken++; }
         }
