@@ -256,3 +256,15 @@ for clarity (the physical lease already enforced it). The real-client fixture
 adds owner chat, denied editor, repeated request refusal, native statistic and
 saved-world output checks. Java/client compile and JS/shell checks passed.
 Do not merge until interruption, conversation and final combined CI pass.
+
+Native interruption source16c0406 passed focused41940683369. Inspected actual
+interruption receipt and independent8snapshot NBT/journal proof for all4click
+boundaries and the fifth saved-world boot: no compensation or automatic retry.
+
+Aligned this native crafting candidate with mainb48f932. Main's PR72 was a
+squash of the same menu foundation, so Git reported overlapping conflicts;
+resolved them to the candidate implementations after inspecting the two-tree
+diff. Code/scripts match2ee1e52 exactly after reconciliation; no main behavior
+was dropped. Full final-head CI and conversation proof41941120901 remain gates.
+Closed superseded drafts44/46/57/58/61/62/63 after confirming their work is
+in merged integrations49/48/66. The goal and broad remaining scope are unchanged.
