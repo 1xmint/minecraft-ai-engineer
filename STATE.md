@@ -168,3 +168,16 @@ is made yet. PR84's exact request-count correction2f282e1 is also under fresh CI
 
 Memory journal development now includes the preview-dispatch fix78f1a0d and
 its native regression test; both independent test additions were preserved.
+
+2026-11-05 evidence update: exact66ac346/native42051396860 passed all204 required
+tests. Inspected toggle-memory-native-replay.json: eight actual saved journals,
+32 prepared intents,32 native observations and eight restored original pairs;
+functionalPass=false and reloadedExecution=false. This supersedes the pending
+durable-journal proof above. It does not prove a production action driver,
+stateful sampler or recovery. Those remain unfinished.
+
+PR84 merged as3e48776 after exact2f282e1/full41963770230 passed all five checks.
+Inspected actual chat reports two passed trials for the current revision; strict
+default-flow counters passed. PR85 preview/build candidatee7a6c89 is running
+full42051307049: four checks passed, dedicated multiplayer remains live. Preserve
+that head until terminal. No saved-world memory-build claim is made yet.

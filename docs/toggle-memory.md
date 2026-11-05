@@ -95,5 +95,8 @@ The namespace is limited to64files/4MiB per project,64KiB per file and9events;
 old logs require explicit archiving, never automatic deletion. Native tests write
 and reload the actual files around all32real lever edges and exercise stopped,
 forged, externally changed and full-directory refusals. Java compilation and
-focused review passed; this new durable proof still needs CI. No production
-actuator or recovery handler uses these records yet.
+focused review passed. Native CI42051396860 passed on66ac346, with all204 required
+tests passing. Its independently replayed artifact contains eight actual journals,
+32 PREPARED records,32 native observations and eight returns to the initial pair.
+Every reloaded journal remains unable to execute; no functional pass is claimed.
+No production actuator or recovery handler uses these records yet.
