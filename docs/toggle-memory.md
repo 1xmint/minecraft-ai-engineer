@@ -66,3 +66,18 @@ connected viewer denied construction, adoption of an already-lit player bulb, se
 assistant-owned cells, test refusal and actual saved-world reload. Its two receipts
 are mandatory in the default CI launcher. These flows are written; their run is
 pending and is not replaced by the earlier native physical feasibility proof.
+
+Stateful transition record development (M2): MemoryInputTransition describes one
+changed input with exact coupled lever/bulb before and expected-after states.
+It rejects unsettled input/bulb power, wrong static geometry, changed scope,
+changed source digest, extra fields and fabricated expected outcomes. Its reader
+rebuilds the entire record. Frames are immutable; returned JSON is detached.
+The record has no actor, permission, live ticket, world mutation or replay API.
+
+The native probe now records immediate observed states after32real lever edges,
+not only later settled output. A separate JavaScript replay checks those frames
+and source digests from hand-worked phase/orientation expectations. Local Java
+compilation and script syntax/format passed; focused GPT-6-Luna review found no
+concrete issue. This new proof is pending CI. It does not implement persistence,
+write-ahead stages, one-use event authority or recovery; those still belong to
+the separate stateful trial before automated testing can be enabled.

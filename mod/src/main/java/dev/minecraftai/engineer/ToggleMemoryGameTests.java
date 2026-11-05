@@ -30,13 +30,22 @@ public final class ToggleMemoryGameTests {
         var intention=ToggleMemoryIntention.create(identity,1,identity,"test","minecraft:overworld",at(new BlockPos(4,2,4),rotation),angle);
         var blueprint=intention.blueprint();
         for(var cell:blueprint.blocks())h.setBlock(cell.pos(),cell.state().is(memory.getBlock())?cell.state().setValue(BlockStateProperties.LIT,initial):cell.state());
-        var samples=new JsonArray();long[] previous={-1};
+        var samples=new JsonArray();var edges=new JsonArray();long[] previous={-1};
         // The same unpowered input appears with two different stored outputs. Holding
         // a high input or returning it low must never produce a second toggle.
         for(int phase=0;phase<6;phase++){
             int step=phase;boolean input=phase==1 || phase==3;boolean bit=phase==1 || phase==2?!initial:initial;
             int base=8+phase*24;
-            if(phase>=1 && phase<=4)h.runAtTickTime(base,()->h.pullLever(lever));
+            if(phase>=1 && phase<=4)h.runAtTickTime(base,()->{
+                var before=new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb));
+                var edge=MemoryInputTransition.predict(blueprint,before,input);
+                h.pullLever(lever);
+                var actual=new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb));
+                h.assertTrue(edge.after().matches(actual) && !edge.before().matches(actual),"A real native lever edge immediately produces the exact coupled lever/bulb frame, never just input restoration");
+                var restored=MemoryInputTransition.read(edge.json(),blueprint);
+                h.assertTrue(restored.after().matches(actual),"Reloaded transition data agrees with the actual edge but grants no execution");
+                var row=new JsonObject();row.addProperty("phase",step);row.addProperty("gameTick",h.getLevel().getGameTime());row.add("transition",edge.json());row.add("observedAfter",actual.json());edges.add(row);
+            });
             for(int elapsed=8;elapsed<24;elapsed++){
                 int within=elapsed;
                 h.runAtTickTime(base+elapsed,()->{
@@ -54,9 +63,22 @@ public final class ToggleMemoryGameTests {
         }
         h.runAtTickTime(154,()->{
             h.assertTrue(samples.size()==96 && !h.getBlockState(lever).getValue(BlockStateProperties.POWERED) && h.getBlockState(bulb).getValue(BlockStateProperties.LIT)==initial,"Two native pulses restore the original stored bit and original unpowered input");
-            var record=new JsonObject();record.addProperty("kind","toggle-memory-native-feasibility");record.addProperty("rotation",rotation.name());record.addProperty("initial",initial);record.add("samples",samples);
+            var record=new JsonObject();record.addProperty("kind","toggle-memory-native-feasibility");record.addProperty("rotation",rotation.name());record.addProperty("initial",initial);record.add("samples",samples);record.add("edges",edges);
             System.out.println("ENGINEER_TOGGLE_MEMORY_NATIVE "+record);h.succeed();
         });
+    }
+    @GameTest public void memoryEdgeRecordsRejectRelabelingClaimsAndUnsettledFrames(GameTestHelper h){
+        var id=java.util.UUID.fromString("d0c177a4-75a5-436c-9440-554ad92f9d62");var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().state();var bulb=Blueprint.state("minecraft:waxed_copper_bulb[lit=true,powered=false]");
+        var rising=MemoryInputTransition.predict(blueprint,new MemoryInputTransition.Frame(lever,bulb),true);
+        h.assertTrue(!rising.after().bulb().getValue(BlockStateProperties.LIT),"Rising toggles the actual initial bit rather than assuming off");
+        var falling=MemoryInputTransition.predict(blueprint,rising.after(),false);h.assertTrue(!falling.after().bulb().getValue(BlockStateProperties.LIT),"Falling input preserves the changed bit; it cannot substitute for stored-state restoration");
+        for(String field:java.util.List.of("owner","permissions","verified","sourceDigest","projectId","blueprintId","revision","lever","bulb","expectedAfter")){
+            var bad=rising.json();bad.addProperty(field,"forged");boolean refused=false;try{MemoryInputTransition.read(bad,blueprint);}catch(RuntimeException expected){refused=true;}h.assertTrue(refused,"Transition cannot import a claim or changed identity/frame: "+field);
+        }
+        boolean refused=false;try{MemoryInputTransition.predict(blueprint,new MemoryInputTransition.Frame(lever,bulb.setValue(BlockStateProperties.POWERED,true)),true);}catch(RuntimeException expected){refused=true;}h.assertTrue(refused,"An unsettled or externally changed lever/bulb pair cannot prepare an edge");
+        var copy=rising.json();copy.getAsJsonObject("expectedAfter").addProperty("bulb","minecraft:air");h.assertTrue(MemoryInputTransition.read(rising.json(),blueprint).after().equals(rising.after()),"Returned JSON is detached from the pinned transition");
+        h.succeed();
     }
     @GameTest public void admittedMemoryCannotUseGenericTestOrRecovery(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var owner=java.util.UUID.randomUUID();

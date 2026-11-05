@@ -202,3 +202,13 @@ Scoped Java/client and TS compilation, script syntax and formatting passed.
 Native refusal/entity-boundary tests and default dedicated owner-chat/viewer-denial/
 existing-lit-bit/build/refused-test/restart proofs are written, with mandatory
 receipts; new exact-source CI is pending. No stateful automated test is implemented.
+
+M2 typed edge data is implemented separately on work/memory-transition-record.
+MemoryInputTransition pins the canonical source/identity and exact lever+bulb
+before/after pair, models rising-only bit changes and rejects unsettled frames,
+changed scope/expected outcome or extra claims. It contains no execution API or
+restored authority. Native probes compare32actual immediate lever edges with
+those pairs; independent JS replay checks observed states/digests. Scoped Java
+compile and script checks passed; GPT-6-Luna review found no concrete issue.
+New native proof is pending. Durable stages, fresh one-use action authority and
+safe interrupted restoration remain unfinished; memory tests stay disabled.

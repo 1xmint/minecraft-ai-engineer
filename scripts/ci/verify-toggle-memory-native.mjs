@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const marker = "ENGINEER_TOGGLE_MEMORY_NATIVE ";
@@ -79,5 +80,90 @@ console.log(
     verification: expected.verification,
     admission: "preview-build-only",
     automatedTesting: false,
+  }),
+);
+
+// Independently hand-work the coupled state change immediately after each native
+// edge. These are observed native states, not a Java encoder/decoder round trip.
+const orientations = {
+  NONE: {
+    angle: 0,
+    facing: "north",
+    bulb: { x: 12, y: 2, z: 12 },
+    lever: { x: 11, y: 2, z: 12 },
+  },
+  CLOCKWISE_90: {
+    angle: 90,
+    facing: "east",
+    bulb: { x: 4, y: 2, z: 12 },
+    lever: { x: 4, y: 2, z: 11 },
+  },
+  CLOCKWISE_180: {
+    angle: 180,
+    facing: "south",
+    bulb: { x: 4, y: 2, z: 4 },
+    lever: { x: 5, y: 2, z: 4 },
+  },
+  COUNTERCLOCKWISE_90: {
+    angle: 270,
+    facing: "west",
+    bulb: { x: 12, y: 2, z: 4 },
+    lever: { x: 12, y: 2, z: 5 },
+  },
+};
+for (const record of records) {
+  const orientation = orientations[record.rotation];
+  const intended = createToggleMemoryIntention({
+    ...context,
+    id: identity,
+    revision: 1,
+    anchor: orientation.bulb,
+    rotation: orientation.angle,
+  });
+  const sourceDigest = createHash("sha256")
+    .update(JSON.stringify(intended))
+    .digest("hex");
+  assert.equal(record.edges.length, 4);
+  let input = false,
+    bit = record.initial;
+  const frame = (on, stored) => ({
+    lever: `minecraft:lever[face=floor,facing=${orientation.facing},powered=${on}]`,
+    bulb: `minecraft:waxed_copper_bulb[lit=${stored},powered=${on}]`,
+  });
+  const origin = record.samples[0].gameTick - 16;
+  record.edges.forEach((row, index) => {
+    const phase = index + 1,
+      requested = phase === 1 || phase === 3;
+    assert.equal(row.phase, phase);
+    assert.equal(row.gameTick, origin + 8 + phase * 24);
+    const afterBit = requested ? !bit : bit;
+    const before = frame(input, bit),
+      expectedAfter = frame(requested, afterBit);
+    assert.deepEqual(row.transition, {
+      schemaVersion: 1,
+      kind: "memory-input-transition",
+      ...context,
+      blueprintId: identity,
+      revision: 1,
+      sourceDigest,
+      lever: orientation.lever,
+      bulb: orientation.bulb,
+      before,
+      requestedInput: requested,
+      expectedAfter,
+    });
+    assert.deepEqual(row.observedAfter, expectedAfter);
+    input = requested;
+    bit = afterBit;
+  });
+  assert.equal(input, false);
+  assert.equal(bit, record.initial);
+}
+console.log(
+  JSON.stringify({
+    kind: "memory-input-transition-native-replay",
+    nativeEdges: 32,
+    restoresInitialPair: true,
+    executionAuthority: false,
   }),
 );
