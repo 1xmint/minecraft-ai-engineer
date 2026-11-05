@@ -6,7 +6,11 @@ const directory = process.argv[2];
 const files = readdirSync(directory).filter((name) => name.endsWith(".json"));
 assert.equal(files.length, 1, "Exactly one successful fixture transaction");
 const record = JSON.parse(readFileSync(join(directory, files[0]), "utf8"));
-assert.equal(record.schemaVersion, 1);
+assert.equal(record.schemaVersion, 3);
+assert.equal(record.material, "dirt");
+assert.equal(record.sourceState, "minecraft:dirt");
+assert.equal(record.expectedItem, "minecraft:dirt");
+assert.equal(record.expectedCount, 1);
 assert.equal(record.stage, "INVENTORY_SAVED");
 assert.deepEqual(record.events, [
   "NEW",

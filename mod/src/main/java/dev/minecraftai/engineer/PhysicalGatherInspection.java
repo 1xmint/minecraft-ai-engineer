@@ -51,11 +51,11 @@ final class PhysicalGatherInspection {
         String stage=value.get("stage").getAsString();int index=STAGES.indexOf(stage);
         var keys=new java.util.HashSet<>(Set.of("schemaVersion","world","project","worker","dimension","source","inventoryBefore","stage","events"));
         int version=value.get("schemaVersion").getAsBigDecimal().intValueExact();
-        if(version==2){
+        if(version==2 || version==3){
             keys.addAll(Set.of("material","sourceState","expectedItem","expectedCount"));
         }
         if(index>=2)keys.add("drop");if(index==4)keys.add("inventorySaved");
-        if(index<0 || !value.keySet().equals(keys) || version!=1 && version!=2
+        if(index<0 || !value.keySet().equals(keys) || version!=1 && version!=2 && version!=3
             || !value.get("world").getAsString().equals(manager.worldId) || !value.get("project").getAsString().equals(project.projectId.toString())
             || !value.get("worker").getAsString().equals(worker.toString()) || !value.get("dimension").getAsString().equals(project.dimension))
             throw new IllegalStateException("Gather record scope or schema changed");
@@ -64,10 +64,34 @@ final class PhysicalGatherInspection {
             if(material!=PhysicalMaterial.OAK_LOG || !value.get("expectedItem").getAsString().equals(material.itemId) || value.get("expectedCount").getAsBigDecimal().intValueExact()!=1
                 || !Blueprint.state(value.get("sourceState").getAsString()).is(material.block))throw new IllegalStateException("Unknown oak gather contract");
         }
+        if(version==3){
+            var material=PhysicalMaterial.named(value.get("material").getAsString());
+            if(!value.get("expectedItem").getAsString().equals(material.itemId) || value.get("expectedCount").getAsBigDecimal().intValueExact()!=1
+                || !Blueprint.state(value.get("sourceState").getAsString()).is(material.block))throw new IllegalStateException("Unknown gather contract");
+            if(value.has("inventorySaved")){
+                var before=value.getAsJsonArray("inventoryBefore");var after=value.getAsJsonArray("inventorySaved");int changed=0;
+                String item=material.itemId;
+                for(int i=0;i<Math.min(before.size(),after.size());i++){
+                    if(before.get(i).equals(after.get(i)))continue;
+                    changed++;
+                    // Mirror PhysicalGatherInventory.gainedExactlyOne: one plain unit of the expected item, nothing else.
+                    int had=plainCount(before.get(i),item,true),has=plainCount(after.get(i),item,false);
+                    if(had<0 || has!=had+1)throw new IllegalStateException("Completed gather record changed a slot other than by one plain "+item);
+                }
+                if(changed!=1)throw new IllegalStateException("Completed gather record does not show exactly one changed slot");
+            }
+        }
         var events=value.getAsJsonArray("events");if(events.size()!=index+1)throw new IllegalStateException("Invalid gather event history");
         for(int i=0;i<events.size();i++)if(!events.get(i).getAsString().equals(STAGES.get(i)))throw new IllegalStateException("Invalid gather stage order");
         if(!value.getAsJsonObject("source").keySet().equals(Set.of("x","y","z")) || value.getAsJsonArray("inventoryBefore").size()>128)throw new IllegalStateException("Invalid gather snapshots");
         if(value.has("inventorySaved") && value.getAsJsonArray("inventorySaved").size()!=value.getAsJsonArray("inventoryBefore").size())throw new IllegalStateException("Inventory snapshot length changed");
         if(value.has("drop")){String drop=value.get("drop").getAsString();if(!UUID.fromString(drop).toString().equals(drop))throw new IllegalStateException("Invalid drop identity");}
+    }
+    /** Count of a plain stack of item, 0 for an empty slot (when allowed), or -1 for anything else. */
+    private static int plainCount(com.google.gson.JsonElement slot,String item,boolean emptyAllowed){
+        if(!slot.isJsonObject())return -1;var stack=slot.getAsJsonObject();
+        if(!stack.has("id"))return emptyAllowed && stack.keySet().isEmpty()?0:-1;
+        if(!Set.of("id","count").containsAll(stack.keySet()) || !stack.get("id").getAsString().equals(item))return -1;
+        return stack.has("count")?stack.get("count").getAsInt():1;
     }
 }

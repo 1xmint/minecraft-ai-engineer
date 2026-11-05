@@ -26,7 +26,7 @@ assert.deepEqual(
     "inventorySaved",
   ].sort(),
 );
-assert.equal(record.schemaVersion, 2);
+assert.equal(record.schemaVersion, 3);
 assert.equal(record.material, "oak-log");
 assert.equal(record.sourceState, "minecraft:oak_log[axis=x]");
 assert.equal(record.expectedItem, "minecraft:oak_log");

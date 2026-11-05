@@ -42,11 +42,12 @@ launch() {
 launch "$repo" physical-alice Alice
 launch "$temporary/bob" physical-bob Bob
 for pid in "${pids[@]}"; do wait "$pid"; done
-for marker in physical-plank-placement.done physical-placement-gate.done physical-craft-recovery.done physical-craft-conversation.done physical-craft-interruptions.done physical-craft-inspection.done physical-craft.done physical-craft-restarted.done physical-craft-lifetime.done physical-menu-malformed.done physical-menu-grid-fault.done physical-menu-cursor-fault.done physical-menu-grid-saved.done physical-menu-grid-restarted.done physical-menu-cursor-restarted.done physical-oak.done physical-oak-restarted.done physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done; do
+for marker in physical-plank-placement.done physical-placement-gate.done physical-craft-recovery.done physical-craft-conversation.done physical-craft-interruptions.done physical-craft-inspection.done physical-craft.done physical-craft-restarted.done physical-craft-lifetime.done physical-menu-malformed.done physical-menu-grid-fault.done physical-menu-cursor-fault.done physical-menu-grid-saved.done physical-menu-grid-restarted.done physical-menu-cursor-restarted.done physical-oak.done physical-accumulate.done physical-oak-restarted.done physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done; do
   [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing native receipt: $marker" >&2; exit 1; }
 done
 node scripts/ci/verify-physical-gather.mjs "$coord/gather-records"
 node scripts/ci/verify-physical-oak.mjs "$coord/oak-gather-records"
+node scripts/ci/verify-physical-accumulate.mjs "$coord/accumulate-gather-records"
 node scripts/ci/verify-native-crafting.mjs "$coord" | tee "$evidence/native-crafting-proof.json"
 node scripts/ci/verify-worker-menu.mjs "$coord" | tee "$evidence/worker-menu-proof.json"
 echo 'Physical worker recovery proof passed: native mining/pickup, saved inventory reload under denial, plus companion chat and same-world reboot.'

@@ -21,7 +21,7 @@ public final class PhysicalActionGate {
         MenuRun(UUID operation,PhysicalMenuProtocol sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=actor.inventoryMenu;this.authority=authority;}
     }
     private record Ticket(String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead) { }
-    private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
+    private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,List<ItemStack> baseline,long expires,Runnable authority,Runnable writeAhead) { }
     private static final class Entry {
         final ServerPlayer actor;
         Object connection;
@@ -61,10 +61,12 @@ public final class PhysicalActionGate {
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
-        if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null || !actor.getInventory().isEmpty()
-            || entry.minedDrop!=drop || entry.minedItem==null || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(entry.minedItem) || drop.getItem().getCount()!=1)
-            throw new IllegalStateException("Pickup requires the exact expected native resource drop and an empty bound inventory");
-        entry.pickup=new Pickup(drop,drop.getItem().copy(),expires,authority,writeAhead);
+        if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null
+            || entry.minedDrop!=drop || entry.minedItem==null || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(entry.minedItem) || drop.getItem().getCount()!=1
+            || !PhysicalGatherInventory.hasRoom(actor,entry.minedItem))
+            throw new IllegalStateException("Pickup requires the exact expected native resource drop and room in the bound inventory");
+        // The pickup may only add this drop to the exact inventory held when it was armed.
+        entry.pickup=new Pickup(drop,drop.getItem().copy(),PhysicalGatherInventory.snapshot(actor),expires,authority,writeAhead);
     }
     static boolean eligibleDrop(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
@@ -137,7 +139,7 @@ public final class PhysicalActionGate {
             if(!(player instanceof ServerPlayer actor) || entry.actor!=actor || entry.connection!=actor.connection || actor.hasDisconnected())throw new IllegalStateException("Worker connection changed");
             thread(actor);
             if(ticket==null || ticket.drop!=drop || !drop.isAlive() || drop.level()!=actor.level()
-                || actor.level().getServer().getTickCount()>=ticket.expires || !actor.getInventory().isEmpty()
+                || actor.level().getServer().getTickCount()>=ticket.expires || !PhysicalGatherInventory.unchanged(ticket.baseline,actor)
                 || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL
                 || !ItemStack.matches(ticket.stack,drop.getItem()))throw new IllegalStateException("No exact current pickup ticket");
             if(drop.hasPickUpDelay())return false;

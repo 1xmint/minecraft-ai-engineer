@@ -625,6 +625,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             physicalBlueprintJobFlow(context,server);
             physicalBuildNavigationFlow(context,server);
             oakRecovery=physicalOakFlow(context,server);
+            physicalAccumulateFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
             server.runOnServer(s->{interruptedWorkerMenu(s,resourceWorker,resourceName,5,"cursor-fault");var worker=inventoryWorker(s,resourceWorker,resourceName,true);try{
@@ -638,8 +639,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(oakRecovery.worker());check(body!=null && PhysicalWorkerStorage.inventory(body).equals(oakRecovery.inventory()) && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1,"Actual world restart preserves the exact oak inventory under the same native identity");check(s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native mined source remains absent after saved-world restart");check(!body.gameMode.destroyBlock(new BlockPos(2631,101,6)),"Restored oak inventory grants no native mining authority");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"inventory saving was verified at completion");expectChat(context,"saved inventory matches the recorded snapshot");
+            MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 6");expectChat(context,"Requested resource does not match");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A refused request after restart leaves the restored resources and source unchanged"));
+            server.runCommand("tp Alice 2631.5 101 5.5");
             MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
-            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"Preloaded oak inventory refuses a second gather without clearing or replacing resources"));
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A player standing in the path refuses a second gather without changing the restored resources"));
+            server.runCommand("tp Alice 2634.5 101 8 180 0");
             server.runOnServer(s->nativeOakCraftingProof(s,oakRecovery.worker()));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak-restarted.done","passed");
         }
@@ -834,6 +839,45 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         menuReceipt(worker,"crafted");
         try(var records=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){for(var record:records)Files.copy(record,directory().resolve(record.getFileName()));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
         write("physical-craft.done","passed");
+    }
+    /** M1a: a companion that already holds a resource gathers another, gaining exactly one item in one slot. */
+    private static void physicalAccumulateFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2724 -16 2756 32");server.runCommand("fill 2730 100 0 2735 100 9 minecraft:stone");server.runCommand("setblock 2731 101 4 minecraft:dirt");server.runCommand("setblock 2731 101 6 minecraft:oak_log");server.runCommand("tp Alice 2734.5 101 8 180 0");
+        send(context,"engineer select1 2730 100 0");send(context,"engineer select2 2734 102 7");server.waitFor(s->new BlockPos(2734,102,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Accumulating worker begins without supplied materials or tools"));
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2731 101 4");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory",60_000);
+        server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.DIRT)==1,"First gather keeps one native dirt block"));
+        // No room: fill every empty main slot with full dirt stacks, so the held item stays a plain resource.
+        var filled=new java.util.ArrayList<Integer>();
+        server.runOnServer(s->{var inventory=s.getPlayerList().getPlayer(worker).getInventory();for(int slot=0;slot<36;slot++)if(inventory.getItem(slot).isEmpty()){inventory.setItem(slot,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT,64));filled.add(slot);}});
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2731 101 6");expectChat(context,"no free inventory space");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var inventory=body.getInventory();check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==0 && s.overworld().getBlockState(new BlockPos(2731,101,6)).is(Blocks.OAK_LOG),"A full inventory refuses the gather and leaves the log in place");for(int slot:filled)inventory.setItem(slot,net.minecraft.world.item.ItemStack.EMPTY);check(countItem(body,net.minecraft.world.item.Items.DIRT)==1,"Fixture removes only its own filler stacks");});
+        // Tool in hand: hand mining only, so a held pickaxe is refused rather than worn without a record.
+        var held=new java.util.concurrent.atomic.AtomicReference<net.minecraft.world.item.ItemStack>();var heldSlot=new java.util.concurrent.atomic.AtomicInteger(-1);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var inventory=body.getInventory();var original=body.getMainHandItem();
+            for(int slot=0;slot<36 && heldSlot.get()<0;slot++){if(inventory.getItem(slot)!=original)continue;inventory.setItem(slot,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WOODEN_PICKAXE));if(body.getMainHandItem().is(net.minecraft.world.item.Items.WOODEN_PICKAXE)){heldSlot.set(slot);held.set(original);}else inventory.setItem(slot,original);}
+            check(heldSlot.get()>=0,"Fixture finds the native main-hand slot");});
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2731 101 6");expectChat(context,"tool mining is not supported");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(s.overworld().getBlockState(new BlockPos(2731,101,6)).is(Blocks.OAK_LOG) && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==0,"A held tool refuses the gather without mining");body.getInventory().setItem(heldSlot.get(),held.get());check(countItem(body,net.minecraft.world.item.Items.DIRT)==1 && countItem(body,net.minecraft.world.item.Items.WOODEN_PICKAXE)==0,"Fixture restores the exact held stack");});
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2731 101 6");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
+            int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;
+            check(countItem(body,net.minecraft.world.item.Items.DIRT)==1 && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==2 && s.overworld().getBlockState(new BlockPos(2731,101,6)).isAir(),"Second gather adds one oak log beside the kept dirt");
+            try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==2,"Only the two completed gathers wrote journals; refusals wrote none");var out=directory().resolve("accumulate-gather-records");Files.createDirectories(out);
+                for(var record:records){var material=com.google.gson.JsonParser.parseString(Files.readString(record)).getAsJsonObject().get("material").getAsString();Files.copy(record,out.resolve(material.equals("dirt")?"1-dirt.json":"2-oak.json"));}}
+            catch(java.io.IOException failed){throw new IllegalStateException(failed);}
+        });
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");
+        // Merge: a second dirt joins the existing plain dirt stack instead of taking a new slot.
+        server.runCommand("setblock 2731 101 2 minecraft:dirt");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2731 101 2");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory",60_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;
+            check(countItem(body,net.minecraft.world.item.Items.DIRT)==2 && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==2 && s.overworld().getBlockState(new BlockPos(2731,101,2)).isAir(),"Third gather merges one dirt into the existing stack");});
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-accumulate.done","passed");
     }
     private record OakRecovery(String project,UUID worker,com.google.gson.JsonArray inventory,String world,UUID epoch) { }
     private static OakRecovery physicalOakFlow(ClientGameTestContext context,TestDedicatedServerContext server){
