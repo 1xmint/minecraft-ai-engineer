@@ -59,5 +59,5 @@ final class EngineerConversation {
         }catch(IllegalArgumentException | IllegalStateException invalid){reply(player,invalid.getMessage()==null?"I could not handle that request. Please ask again.":invalid.getMessage());}
         finally{if(session!=null)session.commandActor=previous;}
     }
-    private static void reply(ServerPlayer player,String message){player.sendSystemMessage(Component.literal("Engineer: "+message.substring(0,Math.min(800,message.length()))));}
+    private static void reply(ServerPlayer player,String message){SpokenReplies.tell(player,message.substring(0,Math.min(800,message.length())));}
 }
