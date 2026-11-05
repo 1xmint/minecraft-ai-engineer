@@ -171,13 +171,14 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
 fi
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
-  for marker in toggle-memory-build.done toggle-memory-restarted.done toggle-memory-driver.done toggle-memory-timed.done toggle-memory-recovery.done toggle-memory-recovery-reconnect.done toggle-memory-conversation-recovery.done; do
+  for marker in toggle-memory-build.done toggle-memory-restarted.done toggle-memory-driver.done toggle-memory-timed.done toggle-memory-recovery.done toggle-memory-recovery-reconnect.done toggle-memory-conversation-recovery.done toggle-memory-functional.done; do
     [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing memory construction proof: $marker" >&2; exit 1; }
   done
   cp "$coord/toggle-memory-driver-record.json" "$evidence/"
   cp "$coord/toggle-memory-recovery-record.json" "$evidence/"
   cp "$coord/toggle-memory-recovery-reconnect-record.json" "$evidence/"
   cp "$coord/toggle-memory-conversation-recovery-record.json" "$evidence/"
+  cp "$coord/toggle-memory-functional-record.json" "$evidence/"
   cp "$coord/toggle-memory-timed-record.json" "$evidence/"
   node "$repo/scripts/ci/verify-memory-timed.mjs" "$coord/toggle-memory-timed-record.json" >"$evidence/toggle-memory-timed-replay.json"
   export_file="$temporary/config-alice/schematics/exports/ci-gate.schem"

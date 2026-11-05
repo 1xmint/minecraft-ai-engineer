@@ -334,8 +334,8 @@ public final class ToggleMemoryGameTests {
         var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
         var session=new EngineeringSession(manager,id,owner,"minecraft:overworld");session.blueprint=blueprint;session.commandActor=owner;
         ComponentTree.validate(Blueprint.parse(blueprint.source(),manager.worldId,"minecraft:overworld"));
-        boolean refused=false;try{session.test();}catch(IllegalStateException expected){refused=expected.getMessage().contains("Automated stateful memory testing");}
-        h.assertTrue(refused && session.delegation==null && !session.trial.pending(),"An admitted memory preview cannot claim generic test authority");
+        boolean refused=false;try{session.test();}catch(IllegalStateException expected){refused=true;}
+        h.assertTrue(refused && session.memoryFunctionalRun==null && session.memoryInputDriver==null && session.delegation==null && !session.trial.pending(),"An admitted preview without a selected live controller cannot acquire native or generic test authority");
         refused=false;try{session.trial.start();}catch(IllegalStateException expected){refused=expected.getMessage().contains("Automated stateful memory testing");}h.assertTrue(refused && session.delegation==null,"Direct generic trial entry also refuses before claiming authority");
         var empty=new JsonObject();empty.add("functionalEvidence",new JsonArray());empty.add("testInputs",new JsonArray());session.trial.load(empty);
         for(String field:java.util.List.of("testOriginal","testLast","functionalScope","shutterOriginalInput","functionalEvidence","testInputs")){
@@ -343,7 +343,7 @@ public final class ToggleMemoryGameTests {
             refused=false;try{session.trial.load(forged);}catch(RuntimeException expected){refused=true;}
             h.assertTrue(refused && !session.trial.pending() && session.delegation==null,"A memory source cannot restore a generic test journal or claim: "+field);
         }
-        h.assertTrue(ProjectGuidance.next(session).stream().noneMatch(line->line.contains("/engineer component test")) && LessonAssistant.evidence(null,blueprint).contains("untested memory"),"Memory advice does not suggest unavailable automated testing or invent a pass");
+        h.assertTrue(ProjectGuidance.next(session).stream().anyMatch(line->line.contains("96 live tick observations")) && LessonAssistant.evidence(null,blueprint).equals("untested"),"Memory advice explains the native live test contract without inventing a pass");
         var comparator=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.COMPARATOR)).findFirst().orElseThrow();
         h.assertTrue(AnalogSafety.journalAfter(blueprint,comparator.pos(),Blocks.AIR.defaultBlockState(),comparator.state()),"Exact air-to-canonical-comparator ownership is supported");
         h.assertTrue(!AnalogSafety.journalAfter(blueprint,comparator.pos(),Blocks.CHEST.defaultBlockState(),comparator.state()) && !AnalogSafety.canonicalAfter(blueprint,comparator.pos().above(),comparator.state()),"Memory cannot import entity data or authorize another comparator cell");

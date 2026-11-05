@@ -80,6 +80,7 @@ final class EngineeringSession implements BuildExecutor {
     MemoryInputDriver memoryInputDriver;
     MemoryRecoveryDriver memoryRecoveryDriver;
     MemoryRecoveryRun memoryRecoveryRun;
+    MemoryFunctionalRun memoryFunctionalRun;
     MemoryPendingInput pendingMemoryInput;
     MemoryRecoveryCheckpoint pendingMemoryRecovery;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -770,13 +771,14 @@ final class EngineeringSession implements BuildExecutor {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        try{if(memoryRecoveryRun!=null)memoryRecoveryRun.stop();if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        try{if(memoryFunctionalRun!=null)memoryFunctionalRun.stop();if(memoryRecoveryRun!=null)memoryRecoveryRun.stop();if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
         finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
     @Override public String status() { return state + ": " + detail + "; assistant recorded changes=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
         if(testTick<0)connectedTestArea=null;
+        if(memoryFunctionalRun!=null){memoryFunctionalRun.tick();tickTutorials();return;}
         if(memoryRecoveryRun!=null){memoryRecoveryRun.tick();tickTutorials();return;}
         if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
@@ -1492,7 +1494,12 @@ final class EngineeringSession implements BuildExecutor {
     }
     boolean hasPendingTest() { return trial.pending(); }
     void test() {
-        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())){access.require(actor(),ProjectAccess.Permission.BUILD);throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);}
+        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())){
+            access.require(actor(),ProjectAccess.Permission.BUILD);
+            memoryFunctionalRun=MemoryFunctionalRun.open(this);verified="untested";
+            state="VERIFYING";detail="Testing memory with 96 live tick observations; the original input and stored bit must be restored before a pass.";
+            tell(detail);return;
+        }
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before testing world state");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source())){shutterTrial.start();return;}
         trial.start();

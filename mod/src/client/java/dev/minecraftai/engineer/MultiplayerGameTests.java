@@ -3148,13 +3148,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, explain this part");expectChat(context,"One-bit toggle memory");
         conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");var blueprint=project.blueprint;check(blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))) && project.level().getBlockState(blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Actual native construction keeps the player's existing stored bit and completes only matching geometry");check(project.journal.size()==7 && project.verified.equals("untested") && project.delegation==null,"Only seven missing cells are assistant-owned; memory remains untested");write("toggle-memory-project",project.projectId.toString());});
-        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Automated stateful memory testing is not available yet");
-        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"Automated stateful memory testing is not available yet");
-        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
+        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"96 live tick observations");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Read-only memory advice preserves the stored bit and creates no execution authority");});
         write("toggle-memory-build.done","passed");
         toggleMemoryDriverProof(server);
         toggleMemoryConversationRecovery(context,server);
         toggleMemoryTimedProof(server);
+        toggleMemoryFunctionalProof(context,server);
     }
     private static void toggleMemoryConversationRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         var pending=new java.util.concurrent.atomic.AtomicReference<MemoryPendingInput>();
@@ -3187,6 +3187,23 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var evidence=new JsonObject();evidence.add("pendingRoot",root.json());evidence.add("receipt",receipts.get(0));evidence.add("actual",actual.json());
             write("toggle-memory-conversation-recovery-record.json",evidence.toString());
             write("toggle-memory-conversation-recovery.done","passed");
+        });
+    }
+    private static void toggleMemoryFunctionalProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var original=server.computeOnServer(s->{var project=session(s,"Alice");var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();return new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));});
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Testing memory with 96 live tick observations");expectChat(context,"Memory test passed: 96 live tick samples");
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:toggle-memory:"));
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            check(original.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor())))
+                    && project.memoryFunctionalRun==null && project.memoryInputDriver==null && project.pendingMemoryInput==null && project.delegation==null,"A real approved chat test restores the original pair and relinquishes input authority before granting a current pass");
+            String id=project.verified.substring(project.verified.lastIndexOf(':')+1);JsonObject record;
+            try{record=JsonParser.parseString(Files.readString(project.manager.directory.resolve(project.projectId+".memory-trial-"+id+".json"))).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            var trace=record.getAsJsonObject("trace");check(record.get("outcome").getAsString().equals("passed") && trace.getAsJsonObject("observations").get("sampleCount").getAsInt()==96
+                    && trace.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && trace.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"The player-visible pass has durable native samples and all four observed edges with a restoration receipt");
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(loaded.verified.startsWith("stale:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"Loading past functional evidence never recreates execution authority or a fresh current pass");
+            write("toggle-memory-functional-record.json",record.toString());write("toggle-memory-functional.done","passed");
         });
     }
     private static void toggleMemoryTimedProof(TestDedicatedServerContext server) throws Exception {
@@ -3297,7 +3314,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
             var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
             manager.selections.put(alice,project.projectId);project.controller=alice;
-            var input=MemoryInputDriver.open(project,alice);input.pulse();input.stop();
+            project.test();
+        });
+        server.waitFor(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.memoryInputDriver!=null && project.memoryInputDriver.observedPulses()==1;});
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            project.pause("CI explicitly interrupts the functional test after its first native edge");
             var recovery=MemoryRecoveryDriver.open(project,alice);
             check(DISCONNECTED_MEMORY_RECOVERY.compareAndSet(null,recovery),"Only one recovery reconnect fixture may be active");
             write("toggle-memory-recovery-connection",manager.connectionId(player(s,"Alice")));
