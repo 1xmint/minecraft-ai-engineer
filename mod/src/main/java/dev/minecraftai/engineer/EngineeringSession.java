@@ -76,6 +76,7 @@ final class EngineeringSession implements BuildExecutor {
     private ConnectedTestArea connectedTestArea;
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
+    MemoryInputDriver memoryInputDriver;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
     final ShutterTrial shutterTrial = new ShutterTrial(this);
     ShutterJournal shutterMotion;
@@ -150,6 +151,7 @@ final class EngineeringSession implements BuildExecutor {
     private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,REPAIR,UNDO }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
+        if(memoryInputDriver!=null)throw new IllegalStateException("A native memory input transaction is active; finish its observed edge before new project work");
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
         boolean handoff=purpose==MechanicalPurpose.HANDOFF && shutterOwned && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running() && !shutterTrial.running() && !pendingPlacement && !undoRequested;

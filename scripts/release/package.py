@@ -66,6 +66,7 @@ def build(root, output, jar=None):
         "mod-guide.md", "companion-guide.md", "comparators.md", "acceptance-guide.md",
         "protocol.md", "connected-circuits.md", "full-adder.md", "physical-companion.md",
         "schematics.md", "schematic-analysis.md", "schematic-transforms.md", "schematic-building.md",
+        "toggle-memory.md",
     ]:
         files[f"docs/{name}"] = read(f"docs/{name}")
     images = subprocess.check_output(

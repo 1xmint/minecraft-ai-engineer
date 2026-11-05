@@ -130,13 +130,109 @@ no broad allowance or production quota changed. Fresh full CI is required; the
 failed run remains failed. The harness does not export its SQLite database, so
 its exact counter error/client log and next strict verifier run are the evidence.
 
-PR84 merged3e48776 after exact2f282e1 passed all5checks41963770230. Its dedicated
-artifact was inspected, including normal-chat2passed/0failed/0interrupted for two
-separate current-revision attempts and the strict request audit.
-M1 source78f1a0d/full41965025674 reached and passed memory preview, teaching,
-7-cell construction preserving the existing lit bulb, denied viewer build and
-automated-test refusal. It later failed because Bob's final scenario wait was
-still4minutes while Alice continued the added memory/schematic flow. Only that
-end wait is extended to10minutes; other default waits remain4minutes and shell/
-job bounds remain35m/45m. Saved-world memory reload still needs fresh proof.
-This candidate reconciles current main and retains corrected repeated-trial proof.
+Memory development outside main:
+
+- M1 PR85 source0616ac1 passed native41962162480:201tests, canonical8-cell
+  source parity,768actual samples and generic test/load refusal. Actual player
+  construction/restart CI41962164694 remains live. The source admits only
+  preview/teaching/creative build, with loaded2-block isolation and exact
+  comparator entity ownership; existing bits are preserved and no test runs.
+- M2 edge model2f3498d passed native41963300184. Inspected independent replay:
+  32real native lever edges, exact paired lever/bulb states, source digests and
+  return to the initial pair. MemoryInputTransition carries no permission,
+  ticket, mutation or replay API. Generic stateful testing remains disabled.
+- Current work/memory-input-journal aligns these changes with PR84's corrected
+  default-flow proof and guide packaging. Only STATE conflicted; runtime files
+  merged automatically. Next: bounded durable NEW/PREPARED/OBSERVED stages,
+  interruption/uncertainty and original-state restoration receipts. Save intent
+  before each native edge, accept observation only once, and keep reloaded logs
+  permanently unable to execute. RESTORED must never mean functional pass.
+  Recovery requires a separate fresh authority/journal, never pulse replay.
+- Data-and-clock registers, broader memory modules and all remaining E2/E3/P2
+  requirements remain unfinished. No new release or human acceptance is claimed.
+
+Durable M2 data log implemented on work/memory-input-journal: exclusive per-project
+files, exact PREPARED/OBSERVED sequencing, terminal interruption/uncertainty and
+original-pair RESTORED receipt (never functional pass). Reads replay exact event
+semantics then freeze permanently; no old log can resume a pulse. Save failure
+freezes the writer; byte changes refuse overwrite. Caps64files/4MiB per project,
+64KiB/file and9events, without automatic deletion. Scoped Java compilation passed.
+GPT-6-Luna found sequencing/failure behavior sound and flagged aggregate storage;
+that cap is now added. Native files-around32edges, frozen-load, external-tamper
+and full-directory proofs are written; fresh native CI is pending. A production
+fresh-authority action gate, stateful sampler and recovery remain unfinished.
+M1 source0616ac1/full41962164694 failed at normal preview dispatch. Separate
+fix78f1a0d adds exact canonical reviseProposal admission before catalog fallback;
+its native41965016972 passed, while fresh full CI is live. No player-build claim
+is made yet. PR84's exact request-count correction2f282e1 is also under fresh CI.
+
+Memory journal development now includes the preview-dispatch fix78f1a0d and
+its native regression test; both independent test additions were preserved.
+
+2026-11-05 evidence update: exact66ac346/native42051396860 passed all204 required
+tests. Inspected toggle-memory-native-replay.json: eight actual saved journals,
+32 prepared intents,32 native observations and eight restored original pairs;
+functionalPass=false and reloadedExecution=false. This supersedes the pending
+durable-journal proof above. It does not prove a production action driver,
+stateful sampler or recovery. Those remain unfinished.
+
+PR84 merged as3e48776 after exact2f282e1/full41963770230 passed all five checks.
+Inspected actual chat reports two passed trials for the current revision; strict
+default-flow counters passed. PR85 preview/build candidatee7a6c89 is running
+full42051307049: four checks passed, dedicated multiplayer remains live. Preserve
+that head until terminal. No saved-world memory-build claim is made yet.
+
+Internal MemoryInputDriver now owns fresh BUILD test authority, per-edge source/
+selection/connection/assignment/reservation checks and durable intent-before-pull.
+It records actual native results before stopping on failure, never restores by
+pulsing and releases only its captured lease. No command or conversation routes
+to it. GPT-6-Luna implemented it; parent review corrected cached observations,
+UUID comparison and cleanup identity. Scoped compileJava passed, including a new
+disconnected-owner refusal test. Native CI and connected-player execution proof
+remain pending; the sampler, recovery and functional pass remain unfinished.
+
+2026-11-05: exact5a69c70/native42054794918 passed all205 required tests. Inspected
+artifact retains768 settled observations and eight durable journal replays; the
+new disconnected-owner driver refusal test is included. This native suite does
+not execute the driver with a connected player. Separate work/memory-driver-player-
+proof aligns PR85 candidatee7a6c89 (including its bounded final Bob wait) and adds
+actual connected Alice four-edge execution, exclusive-driver refusal, frozen log
+reload, selection-loss cancellation and connected Bob BUILD-revocation refusal.
+The actual on-disk journal is exported and its completion marker is mandatory.
+Scoped compileClientJava and shell syntax passed. Full CI remains required;
+there is no new functional pass, production route, sampler or recovery.
+
+PR85 merged566a2f7 after exacte7a6c89/full42051307049 passed all five checks.
+Inspected actual Alice memory preview/teaching/build/refusal chat, independent
+memory-proof.json and successful dedicated launcher completion. Its mandatory
+memory build/restart receipts enforce the persisted eight-cell geometry, lit
+player bulb, seven assistant-owned cells, untested status and no test authority.
+This supersedes earlier pending M1 proof. PR86 exact0edcb02/full42055427604 is
+still live; keep that source stable until terminal before retargeting to main.
+
+Read-only MemoryStateSampler development is separate from driver authority:
+96 exact-tick actual observations over six phases, terminal failure on gaps,
+duplicates or conflicts, original pair observation and bounded detached evidence.
+The native fixture preserves its independent original trace and emits a second
+sampler trace; JavaScript hand-works all values and compares both traces plus
+canonical source. It does not grant pass, mutate blocks or resume old authority.
+Scoped compileJava passed for the sampler and duplicate-tick refusal fixture;
+script syntax/format checks passed. Native CI remains required for this slice.
+
+Sampler source877b906/native42057336040 passed all206 required tests. Inspected
+independent replay: eight sampler records and768 settled samples match the
+original separately recorded native trace and canonical source, both initial
+bits/all four rotations. Duplicate-tick refusal is included. No functional pass
+or connected timed execution is claimed. Next internal MemoryTimedTrial joins
+fresh driver authority to the96 exact-tick observations and durable RESTORED
+record; normal test routing and separate fresh interruption recovery stay pending.
+
+Internal MemoryTimedTrial now joins fresh driver authority and the read-only
+sampler: inspect every native tick, no catch-up, edges24/48/72/96,96 samples and
+completion143 only after durable RESTORED write/readback and fresh authority.
+The connected fixture uses a test-only native server-tick listener, exports the
+combined journal/observations and requires an independent JavaScript replay.
+No production route or functional pass is enabled. GPT-6-Luna implemented the
+controller/driver changes; parent review corrected first-callback timing and
+off-thread stop behavior. Java/client compile and script syntax/format passed.
+Full connected-player CI remains required; interruption recovery is unfinished.

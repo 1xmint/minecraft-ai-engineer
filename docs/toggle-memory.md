@@ -66,3 +66,79 @@ connected viewer denied construction, adoption of an already-lit player bulb, se
 assistant-owned cells, test refusal and actual saved-world reload. Its two receipts
 are mandatory in the default CI launcher. These flows are written; their run is
 pending and is not replaced by the earlier native physical feasibility proof.
+
+Stateful transition record development (M2): MemoryInputTransition describes one
+changed input with exact coupled lever/bulb before and expected-after states.
+It rejects unsettled input/bulb power, wrong static geometry, changed scope,
+changed source digest, extra fields and fabricated expected outcomes. Its reader
+rebuilds the entire record. Frames are immutable; returned JSON is detached.
+The record has no actor, permission, live ticket, world mutation or replay API.
+
+The native probe now records immediate observed states after32real lever edges,
+not only later settled output. A separate JavaScript replay checks those frames
+and source digests from hand-worked phase/orientation expectations. Local Java
+compilation and script syntax/format passed; focused GPT-6-Luna review found no
+concrete issue. This new proof is pending CI. It does not implement persistence,
+write-ahead stages, one-use event authority or recovery; those still belong to
+the separate stateful trial before automated testing can be enabled.
+
+Durable input journal development: the recording process exclusively creates a
+per-project file, saves PREPARED before returning an edge description, then saves
+OBSERVED only for the exact native paired result. Stop before an observation is
+UNCERTAIN; a completed four-edge sequence may record RESTORED only when the
+original pair is observed again. RESTORED is not a functional pass.
+
+Every load reconstructs the complete bounded event sequence and returns a frozen
+reader. Loaded logs cannot prepare, observe, stop or resume execution. Failed
+saves freeze the writer, and externally changed bytes are never overwritten.
+The namespace is limited to64files/4MiB per project,64KiB per file and9events;
+old logs require explicit archiving, never automatic deletion. Native tests write
+and reload the actual files around all32real lever edges and exercise stopped,
+forged, externally changed and full-directory refusals. Java compilation and
+focused review passed. Native CI42051396860 passed on66ac346, with all204 required
+tests passing. Its independently replayed artifact contains eight actual journals,
+32 PREPARED records,32 native observations and eight returns to the initial pair.
+Every reloaded journal remains unable to execute; no functional pass is claimed.
+No production actuator or recovery handler uses these records yet.
+
+The internal MemoryInputDriver is the next execution boundary. It accepts no saved
+record as authority: opening requires a fresh connected creative controller, current
+selection, BUILD grant and test reservation. Each native lever edge rechecks the
+source, assignment, connection, both reserved write cells and loaded isolation,
+persists PREPARED, then repeats those checks and the exact paired before-state.
+It records the actual pair after the native call and stops on failure or lost
+authority. Stop never emits a restoration pulse. Cleanup releases only its own
+reservation. No command or conversation starts this driver yet; it supplies no
+settled sampler, functional pass or recovery. Connected-player proof is pending.
+
+The dedicated-player fixture now exercises four native edges with connected Alice,
+rejects a competing driver, reloads the recorded file without execution authority,
+and checks cancellation before an edge after selection loss or Bob's BUILD grant
+revocation. It exports the read-back journal. This fixture is written and compiles;
+its runtime proof is pending. Native CI42054794918 passed all205 required tests,
+including disconnected-owner refusal, but does not replace connected-player proof.
+
+Read-only sampling development binds a canonical absolute blueprint to one native
+server level and its current game tick. It reads 16 consecutive settled samples
+in each of six 24-tick phases:96 samples total. Every sample checks loaded
+geometry, paired lever/bulb state, comparator power and output strength. Gaps,
+duplicates, conflicting state or changed source make the sampler terminal. Its
+initial and final pairs are actual observations. The native fixture still uses
+its own lever actions; this sampler is not yet joined to the fresh-authority
+driver. Independent JavaScript replay checks the emitted trace against canonical
+TypeScript geometry, hand-worked expected states and the original native trace.
+No sampled trace grants a functional pass by itself. Runtime proof is pending.
+
+Native CI42057336040 on877b906 passed all206 required tests. The inspected
+independent replay matched eight sampler traces/768 settled observations to the
+separate original native traces and canonical source. This proves the read-only
+sampler and duplicate-tick refusal; connected timed driver execution is pending.
+
+Internal timed integration now inspects fresh authority and the exact paired state
+each native server tick, acts at ticks24/48/72/96 and samples through tick143.
+Skipped ticks stop the run without catch-up. It exposes combined observations
+only after the original pair is observed and RESTORED is saved, read back and
+authority is checked again. The dedicated fixture drives it with a test-only
+native tick listener and independently replays its exported data. Compilation
+passed; this connected timed proof still needs CI. Normal testing, verification
+promotion and fresh interruption recovery remain unavailable.

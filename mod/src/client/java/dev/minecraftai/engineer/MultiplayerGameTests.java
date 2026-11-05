@@ -3150,6 +3150,69 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"Automated stateful memory testing is not available yet");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
         write("toggle-memory-build.done","passed");
+        toggleMemoryDriverProof(server);
+        toggleMemoryTimedProof(server);
+    }
+    private static void toggleMemoryTimedProof(TestDedicatedServerContext server) throws Exception {
+        var active=new java.util.concurrent.atomic.AtomicReference<MemoryTimedTrial>();
+        var result=new java.util.concurrent.atomic.AtomicReference<com.google.gson.JsonObject>();
+        var failure=new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        try{
+            server.runOnServer(s->{
+                var project=session(s,"Alice");
+                net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(current->{
+                    if(current!=s)return;var trial=active.get();if(trial==null)return;
+                    try{
+                        var state=trial.tick();
+                        if(state==MemoryTimedTrial.State.COMPLETE){result.set(trial.data());active.set(null);}
+                        else if(state==MemoryTimedTrial.State.INTERRUPTED){failure.set(new IllegalStateException("Connected memory trial interrupted"));active.set(null);}
+                    }catch(Throwable problem){failure.set(problem);active.set(null);try{trial.stop();}catch(Throwable cleanup){problem.addSuppressed(cleanup);}}
+                });
+                active.set(MemoryTimedTrial.open(project,project.owner));
+            });
+            server.waitFor(s->result.get()!=null || failure.get()!=null);
+            check(failure.get()==null,"The connected memory trial completes on native server ticks: "+failure.get());
+            server.runOnServer(s->{
+                var project=session(s,"Alice");var data=result.get();
+                check(data.get("controller").getAsString().equals(project.owner.toString()) && data.getAsJsonObject("observations").getAsJsonObject("intention").equals(project.blueprint.source()),"Timed evidence belongs to the current connected owner and exact selected blueprint");
+                check(data.getAsJsonObject("observations").get("sampleCount").getAsInt()==96 && data.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && data.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"Connected timed execution retains96 actual samples and a persisted original-pair receipt");
+                check(project.verified.equals("untested") && project.delegation==null && project.memoryInputDriver==null && !project.hasPendingTest(),"Internal timed evidence grants no generic functional pass or saved authority");
+                write("toggle-memory-timed-record.json",data.toString());write("toggle-memory-timed.done","passed");
+            });
+        }finally{server.runOnServer(s->{var trial=active.getAndSet(null);if(trial!=null)trial.stop();});}
+    }
+    private static void toggleMemoryDriverProof(TestDedicatedServerContext server) throws Exception {
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var alice=project.owner;var bob=player(s,"Bob").getUUID();
+            var blueprint=project.blueprint;
+            var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var bulb=blueprint.anchor();
+            var initial=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb));
+            var driver=MemoryInputDriver.open(project,alice);boolean refused=false;
+            try{MemoryInputDriver.open(project,alice);}catch(IllegalStateException expected){refused=true;}
+            check(refused && project.memoryInputDriver==driver,"A second memory driver cannot replace the first driver's live authority");
+            boolean[] inputs={true,false,true,false};boolean[] bits={false,false,true,true};
+            for(int index=0;index<4;index++){
+                var observed=driver.pulse();
+                check(observed.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==inputs[index] && observed.bulb().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==inputs[index] && observed.bulb().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT)==bits[index],"The connected owner's native lever edge matches the hand-worked paired state");
+            }
+            driver.stop();var record=MemoryInputJournal.read(driver.recordFile(),blueprint);
+            check(initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))) && record.stage().equals("INTERRUPTED") && record.json().getAsJsonArray("events").size()==9,"Four native edges retain durable observations and return the actual pair; stopping grants no functional pass");
+            refused=false;try{record.prepare(initial,project.level().getGameTime());}catch(IllegalStateException expected){refused=true;}
+            check(refused && project.delegation==null && project.memoryInputDriver==null && project.verified.equals("untested"),"Reloaded driver data cannot reacquire authority or verification");
+            write("toggle-memory-driver-record.json",record.json().toString());
+            var selected=MemoryInputDriver.open(project,alice);project.manager.selections.remove(alice);refused=false;
+            try{selected.pulse();}catch(IllegalStateException expected){refused=true;}
+            project.manager.selections.put(alice,project.projectId);
+            check(refused && selected.recordStage().equals("INTERRUPTED") && selected.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"Losing selection cancels before any native edge, preserving the actual pair");
+            project.access.member(alice,bob,ProjectAccess.Role.EDITOR);project.controller=bob;project.commandActor=bob;
+            try{
+                var revoked=MemoryInputDriver.open(project,bob);project.access.permission(alice,bob,ProjectAccess.Permission.BUILD,false);refused=false;
+                try{revoked.pulse();}catch(IllegalStateException expected){refused=true;}
+                check(refused && revoked.recordStage().equals("INTERRUPTED") && revoked.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"A connected editor's revoked BUILD grant cancels before another lever edge");
+            }finally{project.commandActor=null;project.controller=alice;project.access.member(alice,bob,ProjectAccess.Role.VIEWER);}
+            project.save();write("toggle-memory-driver.done","passed");
+        });
     }
     private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
