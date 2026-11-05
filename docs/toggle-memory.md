@@ -142,3 +142,26 @@ authority is checked again. The dedicated fixture drives it with a test-only
 native tick listener and independently replays its exported data. Compilation
 passed; this connected timed proof still needs CI. Normal testing, verification
 promotion and fresh interruption recovery remain unavailable.
+
+Recovery development requires a durable current-operation pointer in the project
+checkpoint. Journal validity alone does not establish which unfinished trial is
+current. The pointer binds the journal's immutable birth identity, canonical
+source, initial pair and component assignment; it contains no live connection,
+reservation or execution authority. It must be saved and read back before any
+native edge. Restart leaves it inert and blocking. The mutable journal is not
+bound to an obsolete NEW-file byte hash; future fresh recovery must bind the
+actual frozen journal bytes separately.
+
+Clearing requires verified original-state restoration, durable journal readback
+and a saved/read-back project checkpoint before release. A run with no prepared
+edge may be cancelled only after proving its exact original pair is unchanged.
+Orphan NEW logs created before pointer persistence stay inert and are never
+automatically selected or deleted. Recovery actions themselves remain unfinished.
+
+Pointer CI42062006966 on d675c17 passed all207 required native tests, including
+restart without authority and forged-pointer refusals. Read-only recovery-plan
+development follows only that current pointer, checks the actual pair against
+the last recorded state (or a prepared edge's exact before/after alternatives),
+and refuses unexplained changes. It describes at most three fresh edges toward
+the original pair. A plan is data, not permission or a replay instruction; new
+recovery authority, durable recovery progress and actual execution remain pending.

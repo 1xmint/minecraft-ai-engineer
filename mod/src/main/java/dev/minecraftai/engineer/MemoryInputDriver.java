@@ -1,6 +1,7 @@
 package dev.minecraftai.engineer;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -22,21 +23,22 @@ final class MemoryInputDriver {
     private final com.google.gson.JsonObject source;
     private final BlockPos lever,bulb;
     private final MemoryInputJournal journal;
+    private final MemoryPendingInput pending;
     private final MemoryInputTransition.Frame initialFrame;
     private MemoryInputTransition.Frame lastObserved;
-    private boolean inPulse,closed,stopRequested;
+    private boolean inPulse,closed,stopRequested,nativeAttempted;
     private int pulses;
 
     private MemoryInputDriver(EngineeringSession session,UUID controller,ServerPlayer player,
             ServerLevel level,RegionReservations.Fence fence,MemoryInputJournal journal,
-            ToggleMemoryIntention intention,MemoryInputTransition.Frame initialFrame) {
+            ToggleMemoryIntention intention,MemoryInputTransition.Frame initialFrame,MemoryPendingInput pending) {
         this.session=session;this.controller=controller;this.player=player;this.connection=player.connection;
         this.level=level;this.fence=fence;this.projectRevision=session.revision();
         this.authorizationRevision=session.access.revision();this.component=session.activeComponent;
         this.basis=session.assignments.task(session.blueprint,component).basis;
         this.generation=session.assignments.task(session.blueprint,component).generation;
         this.source=session.blueprint.source().deepCopy();this.journal=journal;
-        this.initialFrame=initialFrame;this.lastObserved=initialFrame;
+        this.initialFrame=initialFrame;this.lastObserved=initialFrame;this.pending=pending;
         var design=intention.blueprint();
         this.lever=design.blocks().stream().filter(block->block.state().is(net.minecraft.world.level.block.Blocks.LEVER)).findFirst().orElseThrow().pos().immutable();
         this.bulb=design.blocks().stream().filter(block->block.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos().immutable();
@@ -46,6 +48,7 @@ final class MemoryInputDriver {
     static MemoryInputDriver open(EngineeringSession session,UUID controller) {
         Objects.requireNonNull(session);Objects.requireNonNull(controller);
         if(!session.server.isSameThread())throw new IllegalStateException("Memory input authority belongs to the server thread");
+        if(session.pendingMemoryInput!=null)throw new IllegalStateException("A pending memory input transaction needs explicit recovery before another run");
         if(session.memoryInputDriver!=null || session.delegation!=null)throw new IllegalStateException("Stop existing project work before opening a fresh memory input run");
         if(!controller.equals(session.controller) || !session.projectId.equals(session.manager.selections.get(controller)))
             throw new IllegalStateException("The current controller must have this project selected");
@@ -68,14 +71,20 @@ final class MemoryInputDriver {
             if(frame.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))
                 throw new IllegalStateException("Memory input sampling requires the canonical unpowered starting control");
             journal=MemoryInputJournal.create(session.manager.directory,session.blueprint,frame,level.getGameTime());
-            driver=new MemoryInputDriver(session,controller,player,level,session.delegation,journal,intention,frame);
+            UUID journalId=UUID.fromString(journal.json().get("id").getAsString());
+            var pending=MemoryPendingInput.create(session,controller,journalId,frame,level.getGameTime());
+            driver=new MemoryInputDriver(session,controller,player,level,session.delegation,journal,intention,frame,pending);
             session.memoryInputDriver=driver;
+            session.persistPendingMemoryInput(pending);
             driver.validateAuthority();
             return driver;
         } catch(RuntimeException | Error failure) {
-            if(journal!=null)try{journal.interrupt(capture(session.level(),intention),session.level().getGameTime());}catch(RuntimeException cleanup){failure.addSuppressed(cleanup);}
-            if(driver!=null && session.memoryInputDriver==driver)driver.releaseIdentity();
-            else if(session.delegation==claimedFence)session.manager.release(session);
+            if(driver!=null && session.memoryInputDriver==driver) {
+                try{driver.stop();}catch(RuntimeException | Error cleanup){failure.addSuppressed(cleanup);}
+            } else {
+                if(journal!=null)try{journal.interrupt(capture(session.level(),intention),session.level().getGameTime());}catch(RuntimeException cleanup){failure.addSuppressed(cleanup);}
+                if(session.delegation==claimedFence)session.manager.release(session);
+            }
             throw failure;
         }
     }
@@ -91,9 +100,11 @@ final class MemoryInputDriver {
         try {
             validateAuthority();before=capture(level,lever,bulb);
             if(!lastObserved.matches(before))throw new IllegalStateException("Memory pair changed since the last native observation");
+            session.requirePersistedPendingMemoryInput(pending);
             var edge=journal.prepare(before,level.getGameTime());
             try {
                 validateAuthority();
+                session.requirePersistedPendingMemoryInput(pending);
                 if(!before.matches(capture(level,lever,bulb)))throw new IllegalStateException("Memory changed after the durable edge intent; preserve the observed state");
             } catch(RuntimeException | Error denied) {
                 try { journal.interrupt(capture(level,lever,bulb),level.getGameTime()); }
@@ -101,6 +112,7 @@ final class MemoryInputDriver {
                 releaseIdentity();throw denied;
             }
             Throwable nativeFailure=null;
+            nativeAttempted=true;
             try { ((LeverBlock)before.lever().getBlock()).pull(before.lever(),level,lever,player); }
             catch(RuntimeException | Error failure) { nativeFailure=failure; }
             MemoryInputTransition.Frame actual;
@@ -132,10 +144,24 @@ final class MemoryInputDriver {
         requireServerThread();
         if(closed)return;
         if(inPulse){stopRequested=true;return;}
+        finishStop();
+    }
+
+    private void finishStop() {
         RuntimeException failure=null;
-        try { journal.interrupt(capture(level,lever,bulb),level.getGameTime()); }
-        catch(RuntimeException problem) { failure=problem; }
-        finally { releaseIdentity(); }
+        MemoryInputTransition.Frame actual=null;
+        try {
+            try { actual=capture(level,lever,bulb); }
+            catch(RuntimeException problem) { failure=problem; }
+            if(actual!=null && journalCanInterrupt())try { journal.interrupt(actual,level.getGameTime()); }
+            catch(RuntimeException problem) { if(failure==null)failure=problem;else failure.addSuppressed(problem); }
+            if(actual!=null && !nativeAttempted && initialFrame.matches(actual)) {
+                try { if(canClearZeroEdgePointer(actual))session.clearPendingMemoryInput(pending); }
+                catch(RuntimeException | Error problem) { if(failure==null)failure=problem instanceof RuntimeException runtime?runtime:new IllegalStateException("Could not clear zero-edge memory scope",problem);else failure.addSuppressed(problem); }
+            }
+        } finally {
+            releaseIdentity();
+        }
         if(failure!=null)throw failure;
     }
 
@@ -161,12 +187,16 @@ final class MemoryInputDriver {
             var actual=inspect();
             if(pulses!=4 || !initialFrame.matches(actual) || !lastObserved.matches(actual))
                 throw new IllegalStateException("Four observed native edges and the exact original pair are required before finishing");
+            session.requirePersistedPendingMemoryInput(pending);
             journal.restored(actual,level.getGameTime());
             var persisted=MemoryInputJournal.read(journal.file(),session.blueprint);
             if(!persisted.stage().equals("RESTORED") || !persisted.json().equals(journal.json()))
                 throw new IllegalStateException("Durable restored memory input history did not verify after save");
+            session.requirePersistedPendingMemoryInput(pending);
             var finalFrame=inspect();
             if(!initialFrame.matches(finalFrame))throw new IllegalStateException("Original paired state changed during restored-journal verification");
+            if(session.pendingMemoryInput==null || !session.pendingMemoryInput.same(pending))throw new IllegalStateException("Current pending memory pointer differs from this native run");
+            session.clearPendingMemoryInput(pending);
             var result=persisted.json();releaseIdentity();return result;
         } catch(RuntimeException | Error failure) {
             if(!closed) {
@@ -187,11 +217,13 @@ final class MemoryInputDriver {
     synchronized MemoryInputTransition.Frame initialFrame(){return initialFrame;}
     synchronized int observedPulses(){return pulses;}
     synchronized boolean closed(){return closed;}
+    synchronized MemoryPendingInput pending(){return pending;}
 
     private void validateAuthority() {
         requireServerThread();
         if(session.memoryInputDriver!=this || closed || session.manager.selections.get(controller)==null
                 || !session.projectId.equals(session.manager.selections.get(controller)))throw new IllegalStateException("Project selection or driver identity changed");
+        if(session.pendingMemoryInput==null || !session.pendingMemoryInput.same(pending))throw new IllegalStateException("Current pending memory pointer differs from this native run");
         if(!controller.equals(session.controller) || session.delegation!=fence || session.delegationConnection!=connection
                 || session.revision()!=projectRevision || session.access.revision()!=authorizationRevision
                 || !session.activeComponent.equals(component) || session.assignments.task(session.blueprint,component).generation!=generation
@@ -213,9 +245,8 @@ final class MemoryInputDriver {
     }
 
     private void freezeOnFailure(Throwable original,MemoryInputTransition.Frame before) {
-        try { journal.interrupt(capture(level,lever,bulb),level.getGameTime()); }
-        catch(RuntimeException | Error failure) { original.addSuppressed(failure); }
-        releaseIdentity();
+        try { finishStop(); }
+        catch(RuntimeException | Error failure) { original.addSuppressed(failure);if(!closed)releaseIdentity(); }
     }
     private void freezeAfterObserved(MemoryInputTransition.Frame actual,Throwable original) {
         try { journal.interrupt(actual,level.getGameTime()); }
@@ -227,6 +258,22 @@ final class MemoryInputDriver {
         closed=true;
         if(session.memoryInputDriver==this)session.memoryInputDriver=null;
         if(session.delegation==fence)session.manager.release(session);
+    }
+    private boolean journalCanInterrupt(){return !Set.of("INTERRUPTED","UNCERTAIN","RESTORED").contains(journal.stage());}
+    private boolean canClearZeroEdgePointer(MemoryInputTransition.Frame actual) {
+        if(nativeAttempted || !initialFrame.matches(actual) || session.pendingMemoryInput==null || !session.pendingMemoryInput.same(pending))return false;
+        session.requirePersistedPendingMemoryInput(pending);
+        var persisted=MemoryInputJournal.read(journal.file(),session.blueprint);var stored=persisted.json();
+        var persistedInitial=stored.getAsJsonObject("initial");
+        if(!persistedInitial.equals(actual.json()) || !stored.get("id").getAsString().equals(pending.journalId().toString())
+                || stored.get("startedTick").getAsLong()!=pending.startedTick())return false;
+        if(hasPrepared(journal.json()) || hasPrepared(stored))return false;
+        return Set.of("NEW","INTERRUPTED").contains(persisted.stage());
+    }
+    private static boolean hasPrepared(com.google.gson.JsonObject record) {
+        var events=record.getAsJsonArray("events");
+        for(var event:events)if("PREPARED".equals(event.getAsJsonObject().get("stage").getAsString()))return true;
+        return false;
     }
     private static MemoryInputTransition.Frame capture(ServerLevel level,ToggleMemoryIntention intention) {
         var design=intention.blueprint();

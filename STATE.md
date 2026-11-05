@@ -236,3 +236,40 @@ No production route or functional pass is enabled. GPT-6-Luna implemented the
 controller/driver changes; parent review corrected first-callback timing and
 off-thread stop behavior. Java/client compile and script syntax/format passed.
 Full connected-player CI remains required; interruption recovery is unfinished.
+
+PR86 exact0edcb02/full42055427604 passed all five checks. Inspected exported
+on-disk journal: four PREPARED/OBSERVED native edges at tick16104, original
+lit/off pair retained and terminal INTERRUPTED, no pass. This proves action/
+paired logging, not timing. PR86 is ready; PR87 includes its source and is the
+intended combined integration candidate. Exact8f4751a/full42058802843 remains
+live, with four checks passed and dedicated multiplayer running.
+
+Recovery branch work/memory-recovery-assessment implements a durable CURRENT
+unfinished-run birth pointer before any edge, inert/blocking on load. An old
+valid journal alone must not authorize restoring a stale bit. Clear-before-
+release requires persisted original-pair proof or strictly proven zero edges.
+No recovery pulse or normal memory-test route is enabled. Pointer implementation
+and restart/forgery tests are written. Scoped Java/client compilation passed;
+native and connected-player CI remain required for this new pointer slice.
+
+Pointer sourced675c17/native42062006966 passed all207 required tests. Inspected
+artifact retains32 native edges/eight durable journals and eight independent
+sampler traces/768 observations. New checkpoint restart/forged-capability and
+recomputed-initial-target digest refusals are included. This does not prove
+connected pointer execution or recovery actions. Separate work/memory-recovery-
+plan now adds read-only assessment of only the CURRENT pointer's journal and
+actual pair; unexplained edits refuse. Independent replay is written for32
+rotation/initial/current-state cases. No recovery lease, pulse or pass is granted.
+
+PR87 merged21f6473 after exact8f4751a/full42058802843 passed all five checks.
+Inspected combined on-disk data and independent replay: actual connected Alice,
+start16076/final16219 (elapsed143),96 observations, four native edges, RESTORED
+and exact original lit/off pair. functionalPass=false. Superseded PR86 closed
+after verifying its head is an ancestor of the tested integration source.
+
+Read-only recovery plan now compiles with32 native current-state cases plus
+PREPARED ambiguity, unexplained edit/unsettled-pair refusal and retained RESTORED
+pointer zero-movement coverage. Scope is the current pointer only; proposed
+edges are freshly derived from actual state and cannot execute. Native CI and
+connected pointer execution remain required. A durable latest-recovery record,
+fresh action driver and normal memory-test routing are still unfinished.

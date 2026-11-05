@@ -3165,7 +3165,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     try{
                         var state=trial.tick();
                         if(state==MemoryTimedTrial.State.COMPLETE){result.set(trial.data());active.set(null);}
-                        else if(state==MemoryTimedTrial.State.INTERRUPTED){failure.set(new IllegalStateException("Connected memory trial interrupted"));active.set(null);}
+                        else if(state==MemoryTimedTrial.State.INTERRUPTED){failure.set(new IllegalStateException("Connected memory trial interrupted: "+trial.detail()));active.set(null);}
                     }catch(Throwable problem){failure.set(problem);active.set(null);try{trial.stop();}catch(Throwable cleanup){problem.addSuppressed(cleanup);}}
                 });
                 active.set(MemoryTimedTrial.open(project,project.owner));
@@ -3176,7 +3176,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 var project=session(s,"Alice");var data=result.get();
                 check(data.get("controller").getAsString().equals(project.owner.toString()) && data.getAsJsonObject("observations").getAsJsonObject("intention").equals(project.blueprint.source()),"Timed evidence belongs to the current connected owner and exact selected blueprint");
                 check(data.getAsJsonObject("observations").get("sampleCount").getAsInt()==96 && data.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && data.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"Connected timed execution retains96 actual samples and a persisted original-pair receipt");
-                check(project.verified.equals("untested") && project.delegation==null && project.memoryInputDriver==null && !project.hasPendingTest(),"Internal timed evidence grants no generic functional pass or saved authority");
+                check(project.verified.equals("untested") && project.delegation==null && project.memoryInputDriver==null && project.pendingMemoryInput==null && !project.hasPendingTest(),"Internal timed evidence grants no generic functional pass or saved authority, and durably clears the completed pending scope");
                 write("toggle-memory-timed-record.json",data.toString());write("toggle-memory-timed.done","passed");
             });
         }finally{server.runOnServer(s->{var trial=active.getAndSet(null);if(trial!=null)trial.stop();});}
@@ -3189,6 +3189,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var bulb=blueprint.anchor();
             var initial=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb));
             var driver=MemoryInputDriver.open(project,alice);boolean refused=false;
+            check(project.pendingMemoryInput!=null && project.pendingMemoryInput.journalId().toString().equals(driver.recordSnapshot().get("id").getAsString()),"Fresh driver publishes only after its exact current journal scope is persisted");
             try{MemoryInputDriver.open(project,alice);}catch(IllegalStateException expected){refused=true;}
             check(refused && project.memoryInputDriver==driver,"A second memory driver cannot replace the first driver's live authority");
             boolean[] inputs={true,false,true,false};boolean[] bits={false,false,true,true};
@@ -3196,20 +3197,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 var observed=driver.pulse();
                 check(observed.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==inputs[index] && observed.bulb().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)==inputs[index] && observed.bulb().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT)==bits[index],"The connected owner's native lever edge matches the hand-worked paired state");
             }
-            driver.stop();var record=MemoryInputJournal.read(driver.recordFile(),blueprint);
-            check(initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))) && record.stage().equals("INTERRUPTED") && record.json().getAsJsonArray("events").size()==9,"Four native edges retain durable observations and return the actual pair; stopping grants no functional pass");
+            driver.finishRestored();var record=MemoryInputJournal.read(driver.recordFile(),blueprint);
+            check(initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))) && record.stage().equals("RESTORED") && record.json().getAsJsonArray("events").size()==9,"Four native edges retain durable observations and return the actual pair; its restoration receipt grants no functional pass");
             refused=false;try{record.prepare(initial,project.level().getGameTime());}catch(IllegalStateException expected){refused=true;}
-            check(refused && project.delegation==null && project.memoryInputDriver==null && project.verified.equals("untested"),"Reloaded driver data cannot reacquire authority or verification");
+            check(refused && project.delegation==null && project.memoryInputDriver==null && project.pendingMemoryInput==null && project.verified.equals("untested"),"Reloaded driver data cannot reacquire authority or verification; the restored operation is cleared before release");
             write("toggle-memory-driver-record.json",record.json().toString());
             var selected=MemoryInputDriver.open(project,alice);project.manager.selections.remove(alice);refused=false;
             try{selected.pulse();}catch(IllegalStateException expected){refused=true;}
             project.manager.selections.put(alice,project.projectId);
-            check(refused && selected.recordStage().equals("INTERRUPTED") && selected.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"Losing selection cancels before any native edge, preserving the actual pair");
+            check(refused && selected.recordStage().equals("INTERRUPTED") && selected.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && project.pendingMemoryInput==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"Losing selection cancels before any native edge, preserving the actual pair and clearing only the proven no-edge operation");
             project.access.member(alice,bob,ProjectAccess.Role.EDITOR);project.controller=bob;project.commandActor=bob;
             try{
                 var revoked=MemoryInputDriver.open(project,bob);project.access.permission(alice,bob,ProjectAccess.Permission.BUILD,false);refused=false;
                 try{revoked.pulse();}catch(IllegalStateException expected){refused=true;}
-                check(refused && revoked.recordStage().equals("INTERRUPTED") && revoked.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"A connected editor's revoked BUILD grant cancels before another lever edge");
+                check(refused && revoked.recordStage().equals("INTERRUPTED") && revoked.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && project.pendingMemoryInput==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"A connected editor's revoked BUILD grant cancels before another lever edge and clears only the proven no-edge operation");
             }finally{project.commandActor=null;project.controller=alice;project.access.member(alice,bob,ProjectAccess.Role.VIEWER);}
             project.save();write("toggle-memory-driver.done","passed");
         });
