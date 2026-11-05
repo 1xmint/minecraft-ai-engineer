@@ -36,6 +36,7 @@ import java.util.List;
  * CI deliberately uses offline identities and does not prove production login.
  */
 public final class MultiplayerGameTests implements FabricClientGameTest {
+    private static final java.util.concurrent.atomic.AtomicReference<MemoryRecoveryDriver> DISCONNECTED_MEMORY_RECOVERY=new java.util.concurrent.atomic.AtomicReference<>();
     /** Synthetic accepted intention/physical fixture; no model call or player construction is claimed. */
     private static void prepareShutterRecovery(TestDedicatedServerContext server){
         server.runCommand("forceload add 318 -2 325 2");
@@ -1458,11 +1459,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
-            if(!LIVE_ACCEPTANCE)prepareConversationDisconnect(context,server);
+            if(!LIVE_ACCEPTANCE){prepareConversationDisconnect(context,server);prepareMemoryRecoveryDisconnect(server);}
           }
           if(!LIVE_ACCEPTANCE){
             server.waitFor(s->s.getPlayerList().getPlayerCount()==0);
             try(TestDedicatedServerConnection reconnected=server.connect()){
+                recoverMemoryRecoveryReconnect(server);
                 recoverConversationReconnect(context,server);
                 prepareConversationRestart(context,server);
             }
@@ -3255,6 +3257,36 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(clean.pendingMemoryInput==null && clean.pendingMemoryRecovery==null && clean.delegation==null && clean.verified.equals("untested"),"Restored recovery clears both saved pointers without a functional-pass claim");
         var proof=new com.google.gson.JsonObject();proof.add("origin",origin);proof.add("first",firstRecord);proof.add("second",restored);proof.add("revoked",revokedRecord);proof.add("selectionLost",selected.recordSnapshot());proof.add("final",finalRecord);
         write("toggle-memory-recovery-record.json",proof.toString());write("toggle-memory-recovery.done","passed");
+    }
+    private static void prepareMemoryRecoveryDisconnect(TestDedicatedServerContext server) {
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
+            var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            manager.selections.put(alice,project.projectId);project.controller=alice;
+            var input=MemoryInputDriver.open(project,alice);input.pulse();input.stop();
+            var recovery=MemoryRecoveryDriver.open(project,alice);
+            check(DISCONNECTED_MEMORY_RECOVERY.compareAndSet(null,recovery),"Only one recovery reconnect fixture may be active");
+            write("toggle-memory-recovery-connection",manager.connectionId(player(s,"Alice")));
+        });
+    }
+    private static void recoverMemoryRecoveryReconnect(TestDedicatedServerContext server) {
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
+            var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            manager.selections.put(alice,project.projectId);project.controller=alice;
+            var old=DISCONNECTED_MEMORY_RECOVERY.getAndSet(null);check(old!=null,"The old live recovery is retained only by this test, never loaded as authority");
+            boolean refused=false;try{old.pulse();}catch(IllegalStateException expected){refused=true;}
+            var record=old.recordSnapshot();var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(refused && old.closed() && project.delegation==null && project.memoryRecoveryDriver==null && project.pendingMemoryRecovery!=null
+                    && record.get("stage").getAsString().equals("INTERRUPTED") && record.getAsJsonArray("events").size()==1
+                    && actual.json().equals(record.getAsJsonObject("initial"))
+                    && !manager.connectionId(player(s,"Alice")).equals(read("toggle-memory-recovery-connection")),"A genuine same-UUID reconnect cannot reuse the old recovery lease, pulse the pair or clear its checkpoint");
+            var fresh=MemoryRecoveryDriver.open(project,alice);for(int edge=0;edge<3;edge++)fresh.pulse();var completed=fresh.finishRestored();
+            check(project.pendingMemoryInput==null && project.pendingMemoryRecovery==null && project.delegation==null && project.verified.equals("untested"),"Only freshly authorized recovery after reconnect clears the pending scope, without a pass");
+            var proof=new JsonObject();proof.add("oldConnection",record);proof.add("freshConnection",completed);
+            write("toggle-memory-recovery-reconnect-record.json",proof.toString());write("toggle-memory-recovery-reconnect.done","passed");
+        });
     }
     private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
