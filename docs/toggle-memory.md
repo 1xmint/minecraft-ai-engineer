@@ -22,3 +22,10 @@ No production behavior/evidence contract, planner intent, automatic world work o
 functional pass is added by these disposable native tests. General registers,
 stateful test restoration, saved-world acceptance and larger computers remain
 unfinished. All game tests run in GitHub CI, never locally.
+
+Native proof: source1be52d3 passed CI41958383492. The artifact's independent
+replay reports four rotations, two initial states, six phases and768settled
+samples; the native suite passed all199required tests. Both original input and
+stored bit are restored after two pulses. The first fixture attempt lacked its
+air palette; the next exposed a reversed comparator. Both were corrected and
+remain recorded failures. This proves the physical foundation only.
