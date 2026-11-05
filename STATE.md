@@ -209,7 +209,6 @@ unexposed to player requests. CI launchers prepare shared assets serially.
 The final project mirror fixture now explicitly acknowledges structural-project
 on the current boot; its verifier remains unchanged.
 
-
 Native lifetime source5f62b4b passed actual physical run41912627609. Inspected
 physical-craft-lifetime.done and independent five-snapshot worker-menu proof:
 the real mined dirt remains exactly once, without a stored result slot.
@@ -283,3 +282,12 @@ as empty. Other inventories/components refuse. Hand-worked native tests cover
 all4interrupted frames and rejected resource shapes; scoped Java compile passed.
 Execution tickets, durable recovery acknowledgment and actual native/restart proof
 remain required before recovery is offered to players. PR73 stays unchanged.
+
+Prepared sealed native menu protocol admission for recovery on a separate
+branch. Only the private-constructor crafting and recovery sequences can use
+the existing exact-frame one-call gate. Crafting retains current native recipe
+validation; resource-only recovery never takes result0 and remains available
+if a recipe changes. Gate start rejects0click no-ops and more than4steps; finish
+checks the sequence's exact terminal frame. No task/router invokes recovery yet.
+Scoped Java compile passed. GPT-6-Luna found no concrete resource/authority flaw.
+Actual recovery execution, durable acknowledgment and native restart proof remain.

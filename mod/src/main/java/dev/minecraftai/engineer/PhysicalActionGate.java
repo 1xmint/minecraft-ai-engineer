@@ -16,9 +16,9 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class PhysicalActionGate {
     private record MenuTicket(int step,int slot,long expires,Runnable writeAhead) { }
     private static final class MenuRun {
-        final UUID operation;final OakCraftingSequence sequence;final Object connection;final net.minecraft.world.inventory.AbstractContainerMenu menu;final Runnable authority;
+        final UUID operation;final PhysicalMenuProtocol sequence;final Object connection;final net.minecraft.world.inventory.AbstractContainerMenu menu;final Runnable authority;
         int next=1;boolean inFlight;MenuTicket ticket;
-        MenuRun(UUID operation,OakCraftingSequence sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=actor.inventoryMenu;this.authority=authority;}
+        MenuRun(UUID operation,PhysicalMenuProtocol sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=actor.inventoryMenu;this.authority=authority;}
     }
     private record Ticket(String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead) { }
     private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
@@ -70,8 +70,9 @@ public final class PhysicalActionGate {
             || !actor.isAlive() || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || PhysicalWorkerMenus.pending(actor))throw new IllegalStateException("No current survival worker menu connection");
         return entry;
     }
-    static void beginMenu(ServerPlayer actor,UUID operation,OakCraftingSequence sequence,Runnable authority){
-        var entry=menuActor(actor);PhysicalWorkerMenus.requireSettled(actor);java.util.Objects.requireNonNull(operation);java.util.Objects.requireNonNull(authority);
+    static void beginMenu(ServerPlayer actor,UUID operation,PhysicalMenuProtocol sequence,Runnable authority){
+        var entry=menuActor(actor);java.util.Objects.requireNonNull(sequence);if(sequence.needsSettledStart())PhysicalWorkerMenus.requireSettled(actor);java.util.Objects.requireNonNull(operation);java.util.Objects.requireNonNull(authority);
+        if(sequence.clicks()<1 || sequence.clicks()>4)throw new IllegalStateException("Menu protocol has no bounded native actions");
         if(!menuIdle(entry))throw new IllegalStateException("Worker already has an action or resource phase");
         authority.run();
         if(menuActor(actor)!=entry || !menuIdle(entry) || !sequence.before(1).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Worker changed before crafting admission");
@@ -89,7 +90,7 @@ public final class PhysicalActionGate {
             || !run.sequence.before(step).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Native crafting resource frame changed");
         // Recipes may reload independently of inventory. Recheck current native
         // behavior using a prediction copy, never by inserting assembled output.
-        OakCraftingPlan.inspect(actor.level(),run.sequence.before(1).inventory().get(run.sequence.slot(1)-36));
+        run.sequence.validateNative(actor);
         run.authority.run();
         if(entry.menuRun!=run || !exactConnection(actor) || actor.connection!=run.connection || !run.sequence.before(step).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Crafting authority changed during validation");
     }
@@ -117,8 +118,8 @@ public final class PhysicalActionGate {
     }
     static void finishMenu(ServerPlayer actor,UUID operation){
         thread(actor);var entry=ACTORS.get(actor.getUUID());var run=entry==null?null:entry.menuRun;
-        if(entry==null || entry.actor!=actor || run==null || !run.operation.equals(operation) || run.next!=5 || run.inFlight || run.ticket!=null
-            || actor.connection!=run.connection || actor.inventoryMenu!=run.menu || !run.sequence.after(4).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Crafting sequence is incomplete or its final resource frame changed");
+        if(entry==null || entry.actor!=actor || run==null || !run.operation.equals(operation) || run.next!=run.sequence.clicks()+1 || run.inFlight || run.ticket!=null
+            || actor.connection!=run.connection || actor.inventoryMenu!=run.menu || !run.sequence.after(run.sequence.clicks()).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Crafting sequence is incomplete or its final resource frame changed");
         entry.menuRun=null;
     }
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){

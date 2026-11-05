@@ -5,7 +5,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /** Resource-movement predictions only. Never takes a result or inserts a stack. */
-final class OakCraftRecoveryPlan {
+final class OakCraftRecoveryPlan implements PhysicalMenuProtocol {
     private final List<PhysicalCraftFrame> frames;
     private final List<Integer> slots;
     private OakCraftRecoveryPlan(List<PhysicalCraftFrame> frames,List<Integer> slots){this.frames=List.copyOf(frames);this.slots=List.copyOf(slots);}
@@ -33,10 +33,16 @@ final class OakCraftRecoveryPlan {
         var returned=new ArrayList<>(inventory);returned.set(source,input);
         return new OakCraftRecoveryPlan(List.of(current,carried,new PhysicalCraftFrame(returned,empty,ItemStack.EMPTY,current.selected())),List.of(1,36+source));
     }
-    int clicks(){return slots.size();}
-    int slot(int step){requireStep(step);return slots.get(step-1);}
-    PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
-    PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    public int clicks(){return slots.size();}
+    public int slot(int step){requireStep(step);return slots.get(step-1);}
+    public PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
+    public PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    public boolean needsSettledStart(){return false;}
+    public void validateNative(net.minecraft.server.level.ServerPlayer actor){
+        // Resource movement must remain available if the recipe was removed or
+        // changed. This protocol never takes its derived result.
+        for(int slot:slots)if(slot!=1 && (slot<36 || slot>44))throw new IllegalStateException("Recovery cannot take a result or unrelated slot");
+    }
     PhysicalCraftFrame settled(){return frames.getLast();}
     private void requireStep(int step){if(step<1 || step>slots.size())throw new IllegalArgumentException("Unsupported resource recovery step");}
 }
