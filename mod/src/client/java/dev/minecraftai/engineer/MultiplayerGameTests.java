@@ -3207,6 +3207,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                     && ProjectGuidance.evidence(project).getFirst().currentPass()
                     && ProjectSummary.records(project).stream().anyMatch(line->line.contains("every component has an actual recorded pass"))
                     && !LessonAssistant.evidence(project.assignments.task(project.blueprint,"root"),project.blueprint).contains("current design is untested"),"Status, summary and lesson agree on the exact freshly tested memory scope");
+            write("toggle-memory-functional-record.json",record.toString()); // Retain the trace even if the following reload assertion fails.
             var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
             check(!MemoryFunctionalEvidence.current(loaded.blueprint,loaded.assignments.task(loaded.blueprint,"root")),"Loading the durable record cannot recreate the ephemeral current-pass binding");
             check(loaded.verified.startsWith("stale:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"Loading past functional evidence never recreates execution authority or a fresh current pass");

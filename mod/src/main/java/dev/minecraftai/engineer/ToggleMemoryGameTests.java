@@ -39,6 +39,23 @@ public final class ToggleMemoryGameTests {
         held.assign(java.util.UUID.randomUUID(),"player");session.save();
         h.assertTrue(session.verified.startsWith("stale:") && held.verified.startsWith("stale:")
                 && !ProjectGuidance.evidence(session).getFirst().currentPass(),"Saving a reassigned memory scope labels both raw status and guidance stale rather than repeating the old pass text");
+        var reloaded=new EngineeringSession(manager,id,id,"minecraft:overworld");
+        h.assertTrue(reloaded.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && reloaded.memoryFunctionalRun==null
+                && !MemoryFunctionalEvidence.current(blueprint,reloaded.assignments.task(blueprint,"root")),"A saved native stale label reloads only as non-current status, never a generic trial or live pass");
+        JsonObject nativeDocument;
+        try{nativeDocument=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        nativeDocument.addProperty("verified",task.verified);
+        var savedNative=new EngineeringSession(manager,id,id,"minecraft:overworld",nativeDocument);
+        h.assertTrue(savedNative.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && savedNative.delegation==null,"A saved native pass-looking label is quarantined on load, not promoted to current evidence");
+        try {
+            var forged=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+            var scope=new JsonObject();scope.addProperty("forged",true);forged.add("functionalScope",scope);boolean refused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
+            h.assertTrue(refused,"Recognizing a native status must not bypass rejection of a generic functional scope");
+            forged.remove("functionalScope");forged.addProperty("verified","passed:signal-lamp:forged");refused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
+            h.assertTrue(refused,"A foreign generic pass label remains rejected for memory");
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
         var rotated=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),90).blueprint();
         h.assertTrue(!MemoryFunctionalEvidence.current(rotated,task),"A different canonical source cannot reuse the pass binding");
         task.assign(java.util.UUID.randomUUID(),"assistant");h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,task),"A new assignment generation invalidates the old binding even with the same geometry and pass text");h.succeed();

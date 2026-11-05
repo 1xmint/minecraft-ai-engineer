@@ -1603,7 +1603,7 @@ final class EngineeringSession implements BuildExecutor {
             assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;
             if(ToggleMemoryIntention.describes(blueprint.source()) && verified.startsWith("passed:toggle-memory:")
                     && !MemoryFunctionalEvidence.current(blueprint,task)) {
-                verified="stale: memory source or assignment changed; a fresh test is required";task.verified=verified;
+                verified=MemoryFunctionalEvidence.INVALIDATED_STATUS;task.verified=verified;
             }
         }
         if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
@@ -1803,7 +1803,12 @@ final class EngineeringSession implements BuildExecutor {
                 // baseline never authorizes a new diagnosis or repair operation.
                 activeOperation="legacy";operationKind="BUILD";originDiagnosis=null;undoOperation=undoRequested?"legacy":null;repairTargets.clear();
             }
-            trial.load(json);
+            if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())
+                    && MemoryFunctionalEvidence.nativeStatus(json.get("verified").getAsString())) {
+                // A saved native status is not a generic trial claim. Quarantine its
+                // label while the generic loader still rejects every input/evidence field.
+                verified="untested";trial.load(json);verified=MemoryFunctionalEvidence.HISTORICAL_STATUS;
+            } else trial.load(json);
             for(JsonElement e:json.getAsJsonArray("journal")){
                 JsonObject x=e.getAsJsonObject();String operation=grouped?operationGroup(x.get("operation").getAsString()):"legacy";
                 boolean scoped=journalVersion>=3;

@@ -5,6 +5,12 @@ import java.util.UUID;
 
 /** Live pass binding only; no JSON loader. Durable traces remain history after restart. */
 final class MemoryFunctionalEvidence {
+    static final String HISTORICAL_STATUS="stale: saved memory status is not current evidence; request a fresh native test";
+    static final String INVALIDATED_STATUS="stale: memory source or assignment changed; a fresh test is required";
+    static boolean nativeStatus(String status) {
+        return HISTORICAL_STATUS.equals(status) || INVALIDATED_STATUS.equals(status)
+                || status.matches("passed:toggle-memory:revision-[1-9][0-9]{0,9}:96-live-samples:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    }
     private final JsonObject source;
     private final String id,basis;
     private final long generation;
