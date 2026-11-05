@@ -204,3 +204,25 @@ the exact three undo requests. Read-only verification of the downloaded CI
 artifact passes; scoped TypeScript dependency compilation and script syntax
 checks passed. No local game/test execution. Fresh final integration CI remains
 required; source gameplay success does not make the original CI run green.
+
+## Final full-adder and native crafting integration candidate
+
+Full-adder source6204521 passed actual player CI41943360761 end to end. Inspected
+independent closed-database proof:3544cells,35pins, two complete16case suites
+in distinct epochs with fresh clocks, exact conversation including3undos, and
+zero remaining owned changes after bounded undo. All real client receipts pass.
+
+This candidate merges stable native crafting c3ac69f (PR73) with that full-adder
+source. Only STATE conflicted; Java/client fixture merged automatically. Native
+crafting parent81db7ed passed Fabric/client/Windows/dedicated41941499358; only
+STATE formatting failed. c3ac69f is a one-blank-line correction, awaiting full 41945504555. Native conversation2ee1e52/41941120901 and interrupted16c0406/
+41940683369 passed with independent NBT and saved-world proof. No recovery
+execution or acknowledgment extension is included here; those remain separate.
+
+Require combined Java/client compile, final full CI and a fresh combined full-
+adder player flow before merging. Main remainsb48f932 until PR73 lands. Native
+recovery dff7f30 passed41943972746 and acknowledgment b1312e6 passed41945127313
+in separate work; recovery conversation65b8f1e/41946354513 is live. Claude now
+owns the next memory/guidance/comparison/voice experience milestones; Codex owns
+execution, larger circuits, builders, integration, release and final acceptance.
+The original full scope remains incomplete.

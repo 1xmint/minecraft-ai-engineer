@@ -9,6 +9,12 @@ import java.util.UUID;
 /** Private project identity only: contains no permissions or resumable actions. */
 record PhysicalWorkerIdentity(UUID id, boolean restore) {
     static PhysicalWorkerIdentity open(ProjectManager manager, EngineeringSession project) {
+        return read(manager,project,true);
+    }
+    static PhysicalWorkerIdentity existing(ProjectManager manager,EngineeringSession project){
+        return read(manager,project,false);
+    }
+    private static PhysicalWorkerIdentity read(ProjectManager manager,EngineeringSession project,boolean create){
         var path=manager.directory.resolve(project.projectId+".physical-worker.json");
         try {
             if(Files.exists(path)) {
@@ -26,6 +32,7 @@ record PhysicalWorkerIdentity(UUID id, boolean restore) {
                 if(!initialized.isJsonPrimitive() || !initialized.getAsJsonPrimitive().isBoolean())throw new IllegalStateException("Invalid worker initialization marker");
                 return new PhysicalWorkerIdentity(id,initialized.getAsBoolean());
             }
+            if(!create)throw new IllegalStateException("Worker identity is missing; inspection creates no replacement");
             var id=UUID.randomUUID();var value=new JsonObject();
             value.addProperty("world",manager.worldId);value.addProperty("dimension",project.dimension);
             value.addProperty("project",project.projectId.toString());value.addProperty("owner",project.owner.toString());

@@ -13,22 +13,26 @@ final class PhysicalWorkerStorage {
         var identity=worker.getUUID();
         var tag=server.getPlayerList().loadPlayerData(worker.nameAndId()).orElseThrow(()->new IllegalStateException("No saved worker data; resources require explicit recovery"));
         var problems=new ProblemReporter.Collector();var input=TagValueInput.create(problems,server.registryAccess(),tag);
-        decodeInventory(server.registryAccess(),identity,input,problems);worker.load(input);
+        var inventory=decodeInventory(server.registryAccess(),identity,input,problems);var menu=PhysicalWorkerMenus.read(tag,worker,false);worker.load(input);
         if(!problems.isEmpty() || !worker.getUUID().equals(identity))throw new IllegalStateException("Worker data did not restore cleanly with its bound identity");
+        PhysicalWorkerMenus.stage(worker,menu,inventory);
     }
     static void save(ServerPlayer worker){
+        if(worker.isCreative())throw new IllegalStateException("Survival work cannot certify a creative worker");
+        saveResources(worker);
+    }
+    /** Preserve actual stacks after stop/revocation/mode loss, without granting any action. */
+    static void saveResources(ServerPlayer worker){
+        if(PhysicalCraftGuard.deferSave(worker))throw new IllegalStateException("Native click has not returned; do not certify a midpoint save");
         var server=worker.level().getServer();
-        if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || worker.isCreative())throw new IllegalStateException("Save requires the current native survival worker");
-        // The native inventory receipt below does not include crafting inputs,
-        // derived results or the carried cursor. Never certify those as saved.
-        if(worker.containerMenu!=worker.inventoryMenu || !worker.inventoryMenu.getCarried().isEmpty())
-            throw new IllegalStateException("Worker has unsettled menu resources; inventory-only saving cannot verify recovery");
-        for(int slot=0;slot<=4;slot++)if(!worker.inventoryMenu.getSlot(slot).getItem().isEmpty())
-            throw new IllegalStateException("Worker has unsettled crafting resources; inventory-only saving cannot verify recovery");
+        if(!server.isSameThread() || server.getPlayerList().getPlayer(worker.getUUID())!=worker || !PhysicalActionGate.exactActor(worker))throw new IllegalStateException("Save requires the current bound native worker");
+        if(PhysicalWorkerMenus.pending(worker))throw new IllegalStateException("Finish worker hydration before certifying a save");
+        PhysicalWorkerMenus.capture(worker);
         server.getPlayerList().saveAll();
         // Constructing even an unjoined ServerPlayer rebinds the UUID's cached
         // advancement handler. Decode inventory data alone, with no player clone.
         if(!savedInventory(worker,worker.nameAndId()).equals(inventory(worker)))throw new IllegalStateException("Saved worker inventory differs; stop for explicit recovery");
+        PhysicalWorkerMenus.verifySaved(worker);
     }
     static com.google.gson.JsonArray savedInventory(ServerPlayer reader,net.minecraft.server.players.NameAndId identity){
         var server=reader.level().getServer();

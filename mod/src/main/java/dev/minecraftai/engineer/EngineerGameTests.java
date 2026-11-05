@@ -9,6 +9,51 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void oakClickProtocolKeepsEveryResourcePositionExact(GameTestHelper helper){
+        var items=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);items.set(3,log);
+        var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);var initial=new PhysicalCraftFrame(items,empty,net.minecraft.world.item.ItemStack.EMPTY,7);
+        var plan=OakCraftingPlan.inspect(helper.getLevel(),log);var sequence=OakCraftingSequence.predict(initial,3,plan);
+        helper.assertTrue(sequence.slot(1)==39 && sequence.slot(2)==1 && sequence.slot(3)==0 && sequence.slot(4)==39,"Only the original hotbar, first grid input and native result slots are selected");
+        helper.assertTrue(sequence.after(1).inventory().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty) && net.minecraft.world.item.ItemStack.matches(sequence.after(1).menu().cursor(),log),"First click moves only the retained log to the cursor");
+        helper.assertTrue(sequence.after(2).menu().cursor().isEmpty() && net.minecraft.world.item.ItemStack.matches(sequence.after(2).menu().inputs().getFirst(),log) && sequence.after(2).preview().is(net.minecraft.world.item.Items.OAK_PLANKS) && sequence.after(2).preview().getCount()==4,"Second click leaves the real log in the grid with a derived four-plank preview");
+        helper.assertTrue(sequence.after(3).menu().inputs().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty) && sequence.after(3).preview().isEmpty() && sequence.after(3).menu().cursor().is(net.minecraft.world.item.Items.OAK_PLANKS) && sequence.after(3).menu().cursor().getCount()==4,"Native result take must leave exactly four carried planks and no input or preview");
+        var finalItems=sequence.after(4).inventory();helper.assertTrue(sequence.after(4).menu().empty() && finalItems.get(3).is(net.minecraft.world.item.Items.OAK_PLANKS) && finalItems.get(3).getCount()==4,"Final click deposits output only into the original source slot");
+        for(int slot=0;slot<finalItems.size();slot++)if(slot!=3)helper.assertTrue(finalItems.get(slot).isEmpty(),"No extra inventory or equipment output");
+        for(int step=1;step<=4;step++)helper.assertTrue(sequence.before(step).selected()==7 && sequence.after(step).selected()==7,"Crafting does not change selected hotbar position");
+        items.get(3).setCount(2);finalItems.get(3).setCount(1);helper.assertTrue(sequence.before(1).inventory().get(3).getCount()==1 && sequence.after(4).inventory().get(3).getCount()==4,"Caller aliases cannot alter the protocol");
+        var named=plan.input();named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("changed"));var changed=new PhysicalCraftFrame(sequence.after(1).inventory(),new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),named),net.minecraft.world.item.ItemStack.EMPTY,7);
+        helper.assertTrue(!sequence.after(1).matches(changed),"Changed item components invalidate a crafting frame");
+        reject(helper,()->sequence.slot(0),"No hidden native crafting steps");reject(helper,()->OakCraftingSequence.predict(initial,9,plan),"Off-hotbar sources refuse");helper.succeed();
+    }
+    @GameTest public void oakCraftingPredictionUsesNativeRecipeWithoutConsumingResources(GameTestHelper helper){
+        var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);var plan=OakCraftingPlan.inspect(helper.getLevel(),log);
+        helper.assertTrue(log.getCount()==1 && net.minecraft.world.item.ItemStack.matches(plan.input(),log) && net.minecraft.world.item.ItemStack.matches(plan.output(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,4)),"Actual native recipe predicts four default planks without consuming the retained log");
+        plan.input().setCount(2);plan.output().setCount(1);helper.assertTrue(plan.input().getCount()==1 && plan.output().getCount()==4,"Predictions are detached item data, not mutable resource sources");
+        reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT)),"A different resource cannot substitute for the retained log");
+        reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG,2)),"The first crafting contract consumes only one explicitly retained log");
+        var named=log.copy();named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("keep this"));reject(helper,()->OakCraftingPlan.inspect(helper.getLevel(),named),"Named/custom resources require separate explicit handling");helper.succeed();
+    }
+    @GameTest public void workerMenuSnapshotsPreserveActualComponentsAndRejectInventedFields(GameTestHelper helper){
+        var registries=helper.getLevel().registryAccess();var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);
+        log.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("retained native input"));
+        var cursor=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,4);
+        cursor.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("actual carried stack"));
+        var snapshot=new PhysicalMenuSnapshot(java.util.List.of(log,net.minecraft.world.item.ItemStack.EMPTY,net.minecraft.world.item.ItemStack.EMPTY,net.minecraft.world.item.ItemStack.EMPTY),cursor);
+        var encoded=snapshot.encode(registries);helper.assertTrue(encoded.keySet().equals(java.util.Set.of("schemaVersion","inputs","cursor")),"No derived result or authority is stored");
+        var nativeOps=registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);var written=encoded.getList("inputs").orElseThrow();
+        helper.assertTrue(net.minecraft.world.item.ItemStack.matches(log,net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,written.get(0)).getOrThrow()),"Vanilla independently reads the named log at its original position");
+        for(int slot=1;slot<4;slot++)helper.assertTrue(net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,written.get(slot)).getOrThrow().isEmpty(),"Vanilla independently reads each empty grid position");
+        helper.assertTrue(net.minecraft.world.item.ItemStack.matches(cursor,net.minecraft.world.item.ItemStack.OPTIONAL_CODEC.parse(nativeOps,encoded.get("cursor")).getOrThrow()),"Vanilla independently reads all four carried planks and their components");
+        var restored=PhysicalMenuSnapshot.decode(encoded,registries);helper.assertTrue(snapshot.matches(restored),"Native component-aware codec retains each grid position and cursor exactly");
+        log.setCount(2);cursor.setCount(1);restored.inputs().getFirst().setCount(3);restored.cursor().setCount(2);
+        helper.assertTrue(snapshot.matches(restored) && snapshot.inputs().getFirst().getCount()==1 && snapshot.cursor().getCount()==4,"Input aliases and returned stacks cannot alter a snapshot");
+        var extra=encoded.copy();extra.putBoolean("verified",true);reject(helper,()->PhysicalMenuSnapshot.decode(extra,registries),"Authority fields are rejected");
+        var version=encoded.copy();version.putInt("schemaVersion",2);reject(helper,()->PhysicalMenuSnapshot.decode(version,registries),"Unknown versions cannot be assumed compatible");
+        var shortGrid=encoded.copy();shortGrid.getList("inputs").orElseThrow().remove(3);reject(helper,()->PhysicalMenuSnapshot.decode(shortGrid,registries),"Missing grid positions are never assumed empty");
+        var missing=encoded.copy();missing.remove("cursor");reject(helper,()->PhysicalMenuSnapshot.decode(missing,registries),"A missing cursor is never assumed empty");
+        var malformed=encoded.copy();malformed.putString("cursor","not an item");reject(helper,()->PhysicalMenuSnapshot.decode(malformed,registries),"Malformed item data cannot silently become empty");
+        helper.succeed();
+    }
     @GameTest public void nativeInventorySnapshotDecodesAllSlotsWithoutPlayerClones(GameTestHelper helper){
         var registries=helper.getLevel().registryAccess();var nbtOps=registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);var jsonOps=registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
         var id=java.util.UUID.randomUUID();var source=new net.minecraft.nbt.CompoundTag();source.put("UUID",net.minecraft.core.UUIDUtil.CODEC.encodeStart(nbtOps,id).getOrThrow());
