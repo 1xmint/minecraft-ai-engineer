@@ -61,6 +61,21 @@ final class PhysicalCraftRecord {
             }
         }catch(java.io.IOException failure){throw new IllegalStateException("Crafting history could not be inspected; no new crafting started",failure);}
     }
+    static Path unresolvedForRecovery(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
+        if(!manager.server.isSameThread() || !project.owner.equals(project.actor()) || !project.projectId.equals(manager.selections.get(project.owner)))throw new IllegalStateException("Only the current project owner may select crafting recovery");
+        project.access.require(project.actor(),ProjectAccess.Permission.BUILD);project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
+        Path unresolved=null;int count=0;
+        try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
+            for(var file:files){
+                if(++count>1024 || !Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS) || Files.size(file)>131072)throw new IllegalStateException("Crafting history needs operator inspection");
+                byte[] bytes=Files.readAllBytes(file);if(bytes.length>131072)throw new IllegalStateException("Crafting history is oversized");
+                var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();var history=validateHistory(record,manager,project,worker,OakCraftingPlan.recordedContract(),file.getFileName().toString());
+                if(record.get("stage").getAsString().equals("COMPLETE") || PhysicalCraftRecoveryHistory.acknowledged(manager,project,worker,bytes,record,history))continue;
+                if(unresolved!=null)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");unresolved=file;
+            }
+            return unresolved;
+        }catch(java.io.IOException failure){throw new IllegalStateException("Crafting recovery could not be selected; no items moved",failure);}
+    }
     static int number(JsonObject value,String field){var item=value.get(field);if(item==null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isNumber())throw new IllegalStateException("Malformed crafting record");return item.getAsBigDecimal().intValueExact();}
     record History(OakCraftingSequence sequence,List<Integer> possibleResources) { }
     static History validateHistory(JsonObject record,ProjectManager manager,EngineeringSession project,ServerPlayer worker,OakCraftingPlan plan,String name){

@@ -12,6 +12,9 @@ final class PhysicalCraftRecoveryHistory {
     private static final Set<String> KEYS=Set.of("schemaVersion","kind","world","dimension","project","owner","worker","operation","projectRevision","authorizationRevision","craftOperation","craftSha256","sourceHotbar","clicks","stage","step","initial","expectedFinal","steps","events","savedFinal");
     private PhysicalCraftRecoveryHistory() { }
     static void requireAcknowledged(ProjectManager manager,EngineeringSession project,ServerPlayer worker,byte[] original,JsonObject craft,PhysicalCraftRecord.History history){
+        if(!acknowledged(manager,project,worker,original,craft,history))throw new IllegalStateException("Crafting has an unfinished record; explicit resource recovery is required");
+    }
+    static boolean acknowledged(ProjectManager manager,EngineeringSession project,ServerPlayer worker,byte[] original,JsonObject craft,PhysicalCraftRecord.History history){
         boolean completed=false;int count=0;
         try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".resource-recovery-*.json")){
             String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(original));
@@ -32,18 +35,11 @@ final class PhysicalCraftRecoveryHistory {
                 validateComplete(value,craft,history,worker);completed=true;
             }
         }catch(java.io.IOException | java.security.NoSuchAlgorithmException failure){throw new IllegalStateException("Recovery acknowledgments could not be inspected",failure);}
-        if(!completed)throw new IllegalStateException("Crafting has an unfinished record; explicit resource recovery is required");
+        return completed;
     }
     private static void validateComplete(JsonObject value,JsonObject craft,PhysicalCraftRecord.History history,ServerPlayer worker){
         if(!value.keySet().equals(KEYS) || PhysicalCraftRecord.number(value,"sourceHotbar")!=PhysicalCraftRecord.number(craft,"sourceHotbar"))throw new IllegalStateException("Recovery acknowledgment fields differ");
-        var initial=value.getAsJsonObject("initial");boolean compatible=false;
-        for(int index=0;index<=4;index++){
-            var frame=index==0?history.sequence().before(1):history.sequence().after(index);
-            if(initial.equals(PhysicalCraftRecord.resources(frame,worker))){
-                for(int original:history.possibleResources())if((original<3)==(index<3))compatible=true;
-            }
-        }
-        if(!compatible)throw new IllegalStateException("Recovery acknowledgment changes the original resource type or amount");
+        var initial=value.getAsJsonObject("initial");requireCompatible(initial,history,worker);
         var frame=decode(initial,worker);var plan=OakCraftRecoveryPlan.inspect(frame,PhysicalCraftRecord.number(craft,"sourceHotbar"));
         if(!initial.equals(PhysicalCraftRecord.resources(frame,worker)) || PhysicalCraftRecord.number(value,"clicks")!=plan.clicks() || PhysicalCraftRecord.number(value,"step")!=plan.clicks()
             || !value.get("expectedFinal").equals(PhysicalCraftRecord.resources(plan.settled(),worker)) || !value.get("savedFinal").equals(value.get("expectedFinal")))throw new IllegalStateException("Recovery acknowledgment has no exact saved final frame");
@@ -56,6 +52,16 @@ final class PhysicalCraftRecoveryHistory {
             events.add("PREPARED:"+step);events.add("OBSERVED:"+step);
         }
         events.add("COMPLETE");if(!events.equals(value.get("events")))throw new IllegalStateException("Recovery acknowledgment event order differs");
+    }
+    static void requireCompatible(JsonObject initial,PhysicalCraftRecord.History history,ServerPlayer worker){
+        boolean compatible=false;
+        for(int index=0;index<=4;index++){
+            var frame=index==0?history.sequence().before(1):history.sequence().after(index);
+            if(initial.equals(PhysicalCraftRecord.resources(frame,worker))){
+                for(int original:history.possibleResources())if((original<3)==(index<3))compatible=true;
+            }
+        }
+        if(!compatible)throw new IllegalStateException("Recovery acknowledgment changes the original resource type or amount");
     }
     private static PhysicalCraftFrame decode(JsonObject value,ServerPlayer reader){
         if(!value.keySet().equals(Set.of("inventory","menu","selected")))throw new IllegalStateException("Recovery resource fields differ");

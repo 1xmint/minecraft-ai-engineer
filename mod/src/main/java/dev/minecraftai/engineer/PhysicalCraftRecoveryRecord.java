@@ -31,7 +31,8 @@ final class PhysicalCraftRecoveryRecord {
                 || !history.get("world").getAsString().equals(manager.worldId) || !history.get("dimension").getAsString().equals(project.dimension)
                 || !history.get("project").getAsString().equals(project.projectId.toString()) || !history.get("owner").getAsString().equals(project.owner.toString())
                 || !history.get("worker").getAsString().equals(worker.getUUID().toString()) || !Set.of("NEW","PREPARED","OBSERVED","UNCERTAIN").contains(history.get("stage").getAsString()))throw new IllegalStateException("Original crafting scope or stage differs");
-            var frame=PhysicalCraftFrame.capture(worker);plan=OakCraftRecoveryPlan.inspect(frame,history.get("sourceHotbar").getAsBigDecimal().intValueExact());
+            var validated=PhysicalCraftRecord.validateHistory(history,manager,project,worker,OakCraftingPlan.recordedContract(),original.getFileName().toString());
+            var frame=PhysicalCraftFrame.capture(worker);PhysicalCraftRecoveryHistory.requireCompatible(PhysicalCraftRecord.resources(frame,worker),validated,worker);plan=OakCraftRecoveryPlan.inspect(frame,history.get("sourceHotbar").getAsBigDecimal().intValueExact());
             PhysicalWorkerStorage.saveResources(worker);
             authority.run();if(!frame.matches(PhysicalCraftFrame.capture(worker)))throw new IllegalStateException("Recovery baseline changed while saving");
             var value=new JsonObject();value.addProperty("schemaVersion",1);value.addProperty("kind","native-oak-resource-recovery-v1");value.addProperty("world",manager.worldId);value.addProperty("dimension",project.dimension);

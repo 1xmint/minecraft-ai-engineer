@@ -337,3 +337,20 @@ fixture refinements; actual native CI remains required. Fixture covers8forgeries
 for each recovered case, valid partial intent and cleanup-uncertainty histories,
 saved-world acknowledgment reload, and explicit fresh conversational crafting
 of recovered logs without duplicating already-crafted planks.
+
+Prepared owner recovery conversation with unique strict history selection and
+no-op for already acknowledged history. The fixed recorded recipe contract is
+used only to interpret past data; native crafting still checks the live recipe
+at every click. Resource recovery remains possible when a recipe is changed.
+The recovery recorder also revalidates full original history and current
+material compatibility before planning any move. Focused review found no
+concrete authority/resource route gap; Java/client compile passed. Actual chat
+fixture covers4resource shapes, denied editor, ambiguous two-record refusal,
+repeat no-op without another journal, native stats/history preservation, and
+the existing6boot NBT/acknowledgment proof. Runtime CI pending.
+
+PR73 source81db7ed full41941499358 finished: dedicated memory, Fabric, client
+and Windows all passed; Companion failed only STATE formatting. Inspected
+dedicated memory-proof.json. Applied formatting-onlyc3ac69f (one blank-line
+deletion) to its phase branch after the run was terminal. PR CI41945504555
+is live on that exact unchanged-code head. Do not duplicate or restart it.
