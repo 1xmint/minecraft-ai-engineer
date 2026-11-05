@@ -58,6 +58,13 @@ public final class ToggleMemoryGameTests {
             System.out.println("ENGINEER_TOGGLE_MEMORY_NATIVE "+record);h.succeed();
         });
     }
+    @GameTest(structure="engineer:toggle_memory_lab") public void memoryPreviewRevisionUsesCanonicalAdmissionBeforeCatalog(GameTestHelper h){
+        var id=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var anchor=h.absolutePos(new BlockPos(8,2,8));
+        var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",anchor,0).blueprint();var session=new EngineeringSession(manager,id,owner,"minecraft:overworld");session.blueprint=blueprint;session.commandActor=owner;session.corner1=anchor.offset(-1,-1,0);session.corner2=anchor.offset(2,0,0);
+        h.setBlock(new BlockPos(8,2,8),Blueprint.state("minecraft:waxed_copper_bulb[lit=true,powered=false]"));
+        boolean refused=false;try{session.reviseProposal(blueprint);}catch(IllegalArgumentException expected){refused=expected.getMessage().startsWith("Built memory designs");}
+        h.assertTrue(refused && session.blueprint==blueprint && session.journal.isEmpty() && session.delegation==null,"Memory preview routes through exact canonical admission and preserves an existing built design, never through the ordinary catalog fallback");h.succeed();
+    }
     @GameTest public void admittedMemoryCannotUseGenericTestOrRecovery(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var owner=java.util.UUID.randomUUID();
         var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();

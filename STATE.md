@@ -202,3 +202,12 @@ Scoped Java/client and TS compilation, script syntax and formatting passed.
 Native refusal/entity-boundary tests and default dedicated owner-chat/viewer-denial/
 existing-lit-bit/build/refused-test/restart proofs are written, with mandatory
 receipts; new exact-source CI is pending. No stateful automated test is implemented.
+
+M1 source0616ac1/full41962164694 failed at the actual preview request: the
+reviseProposal dispatcher still fell through to ordinary MechanismCatalog.
+Added exact canonical memory admission before that fallback, retaining refusal
+to replace built memory. A native regression test verifies the dispatch and
+built-bit preservation. Default CI's client budget is now35m/harness36m/job45m:
+the new memory preview begins near minute22, before its build/test-refusal/reload
+proof. Live-account acceptance retains its separate29m budget. All are bounded;
+no production quota or permission changed. New exact-source CI is required.

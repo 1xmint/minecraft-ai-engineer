@@ -1024,6 +1024,11 @@ final class EngineeringSession implements BuildExecutor {
             if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
             accept(candidate);return true;
         }
+        if(ToggleMemoryIntention.describes(candidate.source())) {
+            ToggleMemoryIntention.validated(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built memory designs cannot be replaced by another preview; reconcile their existing work first");
+            accept(candidate);return true;
+        }
         if(AnalogIntention.describes(candidate.source())) {
             AnalogIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built analog designs cannot be replaced by another preview; reconcile their existing work first");
