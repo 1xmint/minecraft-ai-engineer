@@ -165,3 +165,6 @@ M1 source0616ac1/full41962164694 failed at normal preview dispatch. Separate
 fix78f1a0d adds exact canonical reviseProposal admission before catalog fallback;
 its native41965016972 passed, while fresh full CI is live. No player-build claim
 is made yet. PR84's exact request-count correction2f282e1 is also under fresh CI.
+
+Memory journal development now includes the preview-dispatch fix78f1a0d and
+its native regression test; both independent test additions were preserved.
