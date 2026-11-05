@@ -175,3 +175,9 @@ its own64-file/4MiB per-project namespace,64KiB/file and9-event caps. Failed sav
 freeze recording; externally changed bytes are never overwritten. Readers remain
 permanently unable to resume actions. Native runtime proof is pending. A current
 recovery checkpoint and fresh action driver are still needed before use in play.
+
+Recorder source3427a80/native42068459471 passed211 required tests. The inspected
+independent replay checked32saved recovery logs,48actual native fixture edges
+and32original-pair restorations. Loaded logs cannot execute; no functional pass
+is granted. This does not prove a connected recovery controller or safe resume
+after an interruption of recovery itself.

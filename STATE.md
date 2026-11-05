@@ -287,3 +287,9 @@ around real recovery lever edges; independent replay checks32 logs/48 proposed
 native recovery edges. Scoped Java compilation and script syntax/format passed;
 native CI remains required. This recorder grants no recovery authority: latest-
 recovery checkpoint binding, fresh execution and normal routing are unfinished.
+
+Exact3427a80/native42068459471 passed all211 required tests. Inspected replay:
+32 actual recovery journals,48 native fixture recovery edges and32 restored
+original pairs; loadedExecution=false and functionalPass=false. Original input
+histories remain unchanged. This proves the recorder around fixture actions,
+not a connected fresh-authority recovery driver or interrupted-recovery resume.
