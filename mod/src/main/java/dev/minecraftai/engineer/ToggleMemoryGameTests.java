@@ -49,9 +49,13 @@ public final class ToggleMemoryGameTests {
         h.assertTrue(savedNative.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && savedNative.delegation==null,"A saved native pass-looking label is quarantined on load, not promoted to current evidence");
         try {
             var forged=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
-            var scope=new JsonObject();scope.addProperty("forged",true);forged.add("functionalScope",scope);boolean refused=false;
-            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
-            h.assertTrue(refused,"Recognizing a native status must not bypass rejection of a generic functional scope");
+            var scope=new JsonObject();scope.addProperty("projectId",id.toString());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",blueprint.revision());scope.addProperty("component","root");scope.addProperty("basis",held.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);
+            h.assertTrue(FunctionalTrial.validateHistoricalScope(scope).equals(scope),"The rejection fixture contains a structurally valid current-project generic scope");
+            forged.add("functionalScope",scope);boolean refused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){
+                for(Throwable cause=expected;cause!=null;cause=cause.getCause())if(cause.getMessage()!=null && cause.getMessage().startsWith("Memory cannot restore a generic functional claim"))refused=true;
+            }
+            h.assertTrue(refused,"Native status quarantine still reaches the explicit memory guard for a valid generic scope, not merely schema validation");
             forged.remove("functionalScope");forged.addProperty("verified","passed:signal-lamp:forged");refused=false;
             try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
             h.assertTrue(refused,"A foreign generic pass label remains rejected for memory");
