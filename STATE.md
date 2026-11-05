@@ -118,3 +118,9 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
    verified release, then audit every original requirement before goal completion.
 
 Historical investigations and failed runs remain in Git history and CI artifacts.
+
+Release preparation: work/release-feature-guides includes the existing public
+connected/full-adder, physical companion and schematic guides in the fixed
+runtime packaging allowlist. Previously those feature guides were omitted from
+the extracted download. Python syntax compilation passed; packaging/extracted
+runtime verification remains CI-only. No release has been published yet.
