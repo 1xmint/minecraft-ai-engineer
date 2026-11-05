@@ -1,305 +1,130 @@
 # Current state
 
 Updated 2026-11-05 UTC. Goal: **complete all milestones**: the original Phase 1
-brief and all six Phase 2 extensions. The goal is incomplete. Requirements are
-in docs/product-brief.md, including its multiplayer-first amendment.
-Repository: https://github.com/1xmint/minecraft-ai-engineer.
+brief and all six Phase 2 extensions. **Incomplete.** Requirements remain in
+docs/product-brief.md and its multiplayer-first amendment. Repository:
+https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Outcomes still governing completion
 
-- E1: durable attributed reasons, preferences, references, retrieval and useful
-  summaries; replacement history, privacy/revocation and restart proof.
-- E2: engineering beyond fixed small circuits: arithmetic, registers/memory,
+- E1: durable attributed reasons, preferences and references; relevant retrieval,
+  replacement history, privacy/revocation, restart and useful later-session use.
+- E2: engineering beyond fixed circuits: arithmetic, registers/memory,
   displays/computers, timing, interference and adapting existing structures.
-- E3: explanation/teaching, diagnosis/repair and visual guidance grounded in
-  intended geometry, actual observations and scope-valid functional tests.
-- E4: actual signed-in human ten-step acceptance, production-account feasibility,
-  verified release packaging and a useful later-session explanation.
-- P2: offline voice, visible NPC machine construction, genuine survival resources/
-  tools/crafting, practical schematic reuse, measured optimization and multiple
-  builders. Bounded foundations do not complete these outcomes.
+- E3: teaching, diagnosis, repair and visual guidance grounded in actual state
+  and scope-valid functional evidence.
+- E4: signed-in human ten-step acceptance, production-account/provider
+  feasibility, verified paired releases and useful later-session explanation.
+- P2: offline voice, visible NPC machine construction, genuine survival
+  resources/tools/crafting, practical schematic reuse, measured optimization
+  and multiple builders. Bounded foundations do not complete these outcomes.
 
 ## Decisions and constraints
 
-- Dedicated Fabric server first, with compatible logical-server core for solo
-  play. The server owns memory, permissions, reservations and execution.
-  Normal addressed conversation is the player interface; commands are fallback.
-- World state is authoritative. Intended, observed and verified state stay
-  separate. Imported geometry and remembered claims grant no functional pass.
-- One private operator-owned companion on the operator's PC. No separately billed
-  APIs/keys, hosting or credential sharing. Native execution uses no model calls.
-  Production Mojang login and shared subscription eligibility remain unproven;
-  operator approval is not evidence of provider permission.
-- Native survival needs fresh owner delegation, exact owner/worker connections,
-  revisions/assignments, loaded workspace, reservations and event-time tickets.
-  Never supply/replace inventory, compensate materials or replay old authority.
-- Tests run in GitHub CI. Locally only scoped compile/format/syntax checks; one
-  Gradle process at a time, --no-daemon --max-workers=1. No local game/test runs.
-  Keep live CI heads stable; observation timeout is not terminal. Protected main,
-  exact green heads and no check bypass. Merge green PRs without another approval.
-- Production model quotas stay4/minute and24/hour; only CI fixtures use24/96.
-- Claude owns memory, guidance, comparisons, voice and their isolated acceptance
-  flows. Codex owns execution, larger circuits, builders, integration and release.
-  Both read AGENTS.md and this file. No additional handoff/summary files.
+- Dedicated Fabric server first, compatible logical-server core for solo play.
+  Natural addressed conversation is the interface; commands are fallback.
+- Server-owned identity, permissions, memory scope, reservations and execution.
+  Intended geometry, observed state and verified behavior remain separate.
+  Imports and remembered claims cannot grant ownership, authority or a pass.
+- Creative edits require fresh grants/connections/assignments, loaded delegated
+  regions and conflict checks. Native survival additionally needs real retained
+  inventory and event-time tickets; never supply or compensate materials.
+- One private operator-owned companion beside the server, initially on Josh's
+  PC. No separately billed APIs/keys, public hosting or credential sharing.
+  Shared-subscription eligibility and production Mojang login remain unproven;
+  model requests remain operator-owned. Approval is not provider permission.
+- Tests/game runs only on GitHub CI. Locally scoped compile/format/syntax only;
+  one Gradle process, --no-daemon --max-workers=1. Keep live CI heads stable;
+  observation timeout is not terminal. Protected main, exact green heads and
+  no check bypass. Merge green PRs without another approval.
+- Production quotas remain4/minute and24/hour; CI fixtures alone use24/96.
+- Claude owns memory/guidance/comparison/voice experience and isolated acceptance.
+  Codex owns execution, circuits, resources/builders, integration and release.
+  Project memory stays in AGENTS.md and STATE.md; no other handoff files.
 
-## Landed and published
+## Landed on main
 
-- Latest published download remains v0.1.0-alpha.2; it predates recent work.
-- Dedicated creative preview/build/test/repair/undo, permissions/conflicts,
-  optional overlays, component assignments and durable project notes are on main.
-- Half-adder PR45/aaed3ef:436cells,20pins, native forward/reverse truth tables,
-  conversation, revocation/interruption and saved-world retest. Keep canonical
-  half-adder v1 and its digest unchanged.
-- Schematics PR49/1d1dcb7: bounded Sponge v3 codecs, inspection/comparison,
-  rotate/mirror, library and imported creative construction. Source7ba44a3/full
-  41581459104 passed; independent build/restart/undo proof inspected. Imports
-  remain untested geometry. Broad real-world mechanisms remain unsupported.
-- Notes PR48/f259fdc and retrieval PR60/7acfb33 preserve literal reasons,
-  references and replacement history, with SQLite/revocation/restart proof.
-- Player experience PR66/314c7b9 integrates Claude67/68/69/70: attributed summaries,
-  grounded guidance, read-only comparisons and optional editable unsent voice
-  drafts. Exactd0388f5/full41784327466 passed. Real microphone/speaker acceptance
-  remains pending. Timing/reliability cannot be inferred from configured delay.
-- Native dirt, bounded flat navigation, isolated oak gathering and limited dirt
-  construction are on main through PR50/51/65. Optional pinned Carpet provides
-  the survival actor. Inventory recovery uses strict native43-slot codecs, no
-  observer player clones, staged connection-safe grid/cursor hydration and no
-  saved result preview. PR72/b48f932 passed full41898933908 and fault/restart proof.
-- Native oak crafting PR73 merged d76e832. Exactc3ac69f passed all5checks41945504555;
-  its dedicated memory/restart proof was inspected. Actual native conversation
-  2ee1e52/41941120901 and interruption16c0406/41940683369 passed independent NBT
-  proof: one actually gathered log becomes4planks through4native clicks, native
-  statistics, no replay, exact resources across restart. It is one fixed recipe,
-  not general survival crafting. Incomplete work requires explicit recovery.
+Main is cea719d (PR93). Latest published download remains **v0.1.0-alpha.2**;
+it predates the later engineering features. No alpha.3 is published yet.
 
-## Landed integration and active proofs
+- Creative preview/build/test/repair/undo, per-player project access/conflicts,
+  optional overlays, component assignments and durable attributed project notes.
+- Sponge v3 codecs, inspection/comparison, rotate/mirror, library and imported
+  creative construction. Imports remain untested geometry. Prior actual
+  build/restart/undo proof41581459104 was inspected; default CI retains the flow.
+- Half/full-adder construction and native truth tables, bounded undo, actual
+  buffer transition records and repeat-attempt accounting. Full-adder combined
+  player proof41957262960:3544cells/35pins, two epochs, fresh restart clocks and
+  zero remaining changes after undo. Configured waits are not measured latency.
+- Visible native actor; bounded flat dirt/oak work, fixed one-log/four-plank
+  native crafting and retained-plank placement. Combined physical41957260041
+  and plank41955934297 evidence inspected: real materials and saved-world
+  remainders. These are not general terrain/tools/crafting or machine builders.
+- Durable literal notes/reasons/replacement history, read-only guidance and
+  evidence consumers, optional editable unsent voice drafts. Human audio is
+  unproven. Repeated counts are not a demonstrated reliability rate.
 
-- PR82 merged066923a after exact3a6523e passed all5checks41957252832. Dedicated
-  memory/restart proof was inspected. Source PR64,75,76,77,78,80,81 are superseded
-  and closed, with their exact heads included in the tested integration.
-- Main now includes full-adder construction/native truth tables, bounded undo,
-  real crafted-plank placement, current-note retrieval, grounded build guidance,
-  comparison units/validated trial consumers, persisted buffer observations and
-  one-notice voice failures. These bounded features do not complete E1–E4/P2.
-- Combined actual full-adder41957262960 passed:3544cells/35pins, two test epochs,
-  fresh clocks after restart and zero remaining changes after complete undo.
-  Combined physical41957260041 passed: actual gathered/crafted resources,
-  four native plank placements, NBT remainders3/2/1/0 and saved-world restart.
-  Both independent artifacts were inspected.
-- Proof correction: the new trial-history/repeat assertions were accidentally
-  in optional liveStructuralFlow. Green normal CI did NOT execute them. This
-  branch moves them into default conversationDesignFlow; it must show actual
-  persisted12/16-tick observations and two-request chat counts before that proof
-  is claimed complete. No runtime-feature behavior changes in this correction.
-- This branch also includes PR83's fixed public-guide packaging allowlist.
-  Python syntax and scoped Java/client compilation passed; full CI/extracted
-  runtime and corrected dedicated proof are pending. Latest download is alpha.2.
-- Toggle-memory work remains outside main on work/toggle-memory-contract.
-  Native1be52d3/41958383492 and canonicalcef919e/41959507805 passed inspected
-  source parity and768actual settled observations across both bits/four rotations.
-  No production admission or stateful test authority exists. Typed restoration,
-  normal-chat build/test and data-and-clock registers remain unfinished.
-- Claude's isolated acceptance PR79 remains separate; inspect its latest evidence
-  before integration. Real microphone/speaker and production account acceptance
-  remain unproven. No timing/reliability rate is inferred from these test counts.
+Memory-circuit foundation on main:
 
-## Next Codex slices
+- Canonical eight-cell toggle memory, all rotations/both initial bits. Preview,
+  teaching and creative construction preserve player bits and ownership.
+  PR85 exacte7a6c89/full42051307049 passed all five checks; artifact inspected.
+- Native paired-edge data, bounded write-ahead input journals, read-only
+  96-sample stateful sampler and internal fresh-authority timed controller.
+  PR87 exact8f4751a/full42058802843 passed all five checks. Inspected actual
+  connected Alice:96samples/four edges over143ticks, exact original pair and
+  durable RESTORED. functionalPass=false. Superseded PR86 is closed.
+- A durable CURRENT unfinished-run pointer blocks new work, survives load
+  without a lease and clears only after restored/no-edge proof. Read-only
+  recovery plans follow that pointer, reject unexplained edits and derive at
+  most three new edges. PR93 exactaf9e115/full42064271802 passed all five checks;
+  timed/pointer/restart artifact inspected. Native42064151962 passed209tests
+  and32 independent plan cases. **No recovery action or normal memory-test
+  route is enabled; generic stateful testing still explicitly refuses.**
 
-1. Finish corrected repeated-trial proof and release-guide packaging, then
-   publish a verified alpha.3. Preserve proven guards and v1 formats.
-2. Complete native crafted-plank placement: consume1real item per world block,
-   retain every remainder, reject detached/wrong-hand stacks and stale authority,
-   then prove actual player chat and saved-world recovery in CI.
-3. Broaden genuine resources, tools, crafting, terrain and NPC machine building;
-   coordinate multiple builders with conflict-safe ownership and reservations.
-4. Continue E2 registers/memory, displays/computers and existing-structure
-   adaptation; implement actual timing/repeated-trial producers before claiming
-   measured optimization. Claude owns evidence consumers and read-only advice.
-5. Complete provider/account feasibility and actual human acceptance, package a
-   verified release, then audit every original requirement before goal completion.
+## Active work, not yet integrated
 
-Historical investigations and failed runs remain in Git history and CI artifacts.
+Player experience, branch phase/57-player-experience-integration:
 
-PR84 source2a38b22/full41960595421 failed only at the final exact inference
-counter (18observed versus17expected). All game receipts completed; Alice's
-actual chat at03:34:22 reports2passed/0failed/0interrupted of2attempts for the
-current revision. Its scoped action log is exactly design,design,build,test,test,
-design,design,test,undo,test,undo: one additional explicitly requested test.
-Updated the verifier to require exactly18starts and that exact11-action sequence;
-no broad allowance or production quota changed. Fresh full CI is required; the
-failed run remains failed. The harness does not export its SQLite database, so
-its exact counter error/client log and next strict verifier run are the evidence.
+- Outcomes E1/E3/P2/E4: integrate79/27cedf8,88/a5a6eae,89/7473067,
+  90/8dba429,91/b472af1 and92/9845de4. Source branches remain untouched.
+- Trusted recipient-specific spoken replies; bounded owned-recording cleanup;
+  literal relevant note selection; grounded full-adder lessons; comparisons
+  retain each side's actual measurements without invented differences/rates.
+- Codex also passes the validated build request into planning note selection:
+  eight current notes from the newest32, replacements excluded, current grants
+  retained. Empty-note planning contexts remain byte-identical.
+- GPT-6-Luna reviewed voice provenance/cleanup: no concrete blocker. Hardware
+  acceptance remains pending. PR92's failed reversed-order assertion is fixed;
+  final Claude9845de4 is included, preserving the same stricter check.
+- Pre-alignment sourceb84a9b0/focused42067282168 passed208native tests and
+  note-selection/project-knowledge tests, including restarted planning relevance
+  and denied access. Combined final full/client/isolated acceptance proof is
+  still required after alignment with current main.
 
-Memory development outside main:
+Recovery recorder, branch work/memory-recovery-journal:
 
-- M1 PR85 source0616ac1 passed native41962162480:201tests, canonical8-cell
-  source parity,768actual samples and generic test/load refusal. Actual player
-  construction/restart CI41962164694 remains live. The source admits only
-  preview/teaching/creative build, with loaded2-block isolation and exact
-  comparator entity ownership; existing bits are preserved and no test runs.
-- M2 edge model2f3498d passed native41963300184. Inspected independent replay:
-  32real native lever edges, exact paired lever/bulb states, source digests and
-  return to the initial pair. MemoryInputTransition carries no permission,
-  ticket, mutation or replay API. Generic stateful testing remains disabled.
-- Current work/memory-input-journal aligns these changes with PR84's corrected
-  default-flow proof and guide packaging. Only STATE conflicted; runtime files
-  merged automatically. Next: bounded durable NEW/PREPARED/OBSERVED stages,
-  interruption/uncertainty and original-state restoration receipts. Save intent
-  before each native edge, accept observation only once, and keep reloaded logs
-  permanently unable to execute. RESTORED must never mean functional pass.
-  Recovery requires a separate fresh authority/journal, never pulse replay.
-- Data-and-clock registers, broader memory modules and all remaining E2/E3/P2
-  requirements remain unfinished. No new release or human acceptance is claimed.
+- Exact3427a80/native42068459471 passed211required tests. Inspected independent
+  replay:32saved recovery logs,48native fixture recovery edges,32original-pair
+  restorations, frozen reloads and unchanged original histories. No pass.
+- Recorder is data only. It is not a connected fresh-authority recovery driver
+  and does not safely resume an interrupted recovery. Latest-recovery checkpoint
+  binding and fresh event-time execution remain to build.
 
-Durable M2 data log implemented on work/memory-input-journal: exclusive per-project
-files, exact PREPARED/OBSERVED sequencing, terminal interruption/uncertainty and
-original-pair RESTORED receipt (never functional pass). Reads replay exact event
-semantics then freeze permanently; no old log can resume a pulse. Save failure
-freezes the writer; byte changes refuse overwrite. Caps64files/4MiB per project,
-64KiB/file and9events, without automatic deletion. Scoped Java compilation passed.
-GPT-6-Luna found sequencing/failure behavior sound and flagged aggregate storage;
-that cap is now added. Native files-around32edges, frozen-load, external-tamper
-and full-directory proofs are written; fresh native CI is pending. A production
-fresh-authority action gate, stateful sampler and recovery remain unfinished.
-M1 source0616ac1/full41962164694 failed at normal preview dispatch. Separate
-fix78f1a0d adds exact canonical reviseProposal admission before catalog fallback;
-its native41965016972 passed, while fresh full CI is live. No player-build claim
-is made yet. PR84's exact request-count correction2f282e1 is also under fresh CI.
+## Next slices
 
-Memory journal development now includes the preview-dispatch fix78f1a0d and
-its native regression test; both independent test additions were preserved.
+1. Finish combined player-experience full CI and separate offline dedicated
+   acceptance on the exact current-main candidate; integrate green source heads.
+2. Bind latest recovery progress durably, implement fresh-authority recovery,
+   prove interruption/revocation/restart and then enable normal conversation
+   memory testing with scope-valid evidence. Never replay an old pulse.
+3. Prepare accurate alpha.3 guides and publish the verified paired main artifacts.
+   Do not replace exact-source manifests or claim human acceptance from CI.
+4. Continue registers/data-clock memory, displays/computers, interference/timing
+   and existing-structure adaptation. Broaden real resources, tools, crafting,
+   terrain, NPC machine construction and conflict-safe multiple builders.
+5. Complete provider/account feasibility, human mic/speaker and signed-in
+   acceptance, then audit every original requirement before goal completion.
 
-2026-11-05 evidence update: exact66ac346/native42051396860 passed all204 required
-tests. Inspected toggle-memory-native-replay.json: eight actual saved journals,
-32 prepared intents,32 native observations and eight restored original pairs;
-functionalPass=false and reloadedExecution=false. This supersedes the pending
-durable-journal proof above. It does not prove a production action driver,
-stateful sampler or recovery. Those remain unfinished.
-
-PR84 merged as3e48776 after exact2f282e1/full41963770230 passed all five checks.
-Inspected actual chat reports two passed trials for the current revision; strict
-default-flow counters passed. PR85 preview/build candidatee7a6c89 is running
-full42051307049: four checks passed, dedicated multiplayer remains live. Preserve
-that head until terminal. No saved-world memory-build claim is made yet.
-
-Internal MemoryInputDriver now owns fresh BUILD test authority, per-edge source/
-selection/connection/assignment/reservation checks and durable intent-before-pull.
-It records actual native results before stopping on failure, never restores by
-pulsing and releases only its captured lease. No command or conversation routes
-to it. GPT-6-Luna implemented it; parent review corrected cached observations,
-UUID comparison and cleanup identity. Scoped compileJava passed, including a new
-disconnected-owner refusal test. Native CI and connected-player execution proof
-remain pending; the sampler, recovery and functional pass remain unfinished.
-
-2026-11-05: exact5a69c70/native42054794918 passed all205 required tests. Inspected
-artifact retains768 settled observations and eight durable journal replays; the
-new disconnected-owner driver refusal test is included. This native suite does
-not execute the driver with a connected player. Separate work/memory-driver-player-
-proof aligns PR85 candidatee7a6c89 (including its bounded final Bob wait) and adds
-actual connected Alice four-edge execution, exclusive-driver refusal, frozen log
-reload, selection-loss cancellation and connected Bob BUILD-revocation refusal.
-The actual on-disk journal is exported and its completion marker is mandatory.
-Scoped compileClientJava and shell syntax passed. Full CI remains required;
-there is no new functional pass, production route, sampler or recovery.
-
-PR85 merged566a2f7 after exacte7a6c89/full42051307049 passed all five checks.
-Inspected actual Alice memory preview/teaching/build/refusal chat, independent
-memory-proof.json and successful dedicated launcher completion. Its mandatory
-memory build/restart receipts enforce the persisted eight-cell geometry, lit
-player bulb, seven assistant-owned cells, untested status and no test authority.
-This supersedes earlier pending M1 proof. PR86 exact0edcb02/full42055427604 is
-still live; keep that source stable until terminal before retargeting to main.
-
-Read-only MemoryStateSampler development is separate from driver authority:
-96 exact-tick actual observations over six phases, terminal failure on gaps,
-duplicates or conflicts, original pair observation and bounded detached evidence.
-The native fixture preserves its independent original trace and emits a second
-sampler trace; JavaScript hand-works all values and compares both traces plus
-canonical source. It does not grant pass, mutate blocks or resume old authority.
-Scoped compileJava passed for the sampler and duplicate-tick refusal fixture;
-script syntax/format checks passed. Native CI remains required for this slice.
-
-Sampler source877b906/native42057336040 passed all206 required tests. Inspected
-independent replay: eight sampler records and768 settled samples match the
-original separately recorded native trace and canonical source, both initial
-bits/all four rotations. Duplicate-tick refusal is included. No functional pass
-or connected timed execution is claimed. Next internal MemoryTimedTrial joins
-fresh driver authority to the96 exact-tick observations and durable RESTORED
-record; normal test routing and separate fresh interruption recovery stay pending.
-
-Internal MemoryTimedTrial now joins fresh driver authority and the read-only
-sampler: inspect every native tick, no catch-up, edges24/48/72/96,96 samples and
-completion143 only after durable RESTORED write/readback and fresh authority.
-The connected fixture uses a test-only native server-tick listener, exports the
-combined journal/observations and requires an independent JavaScript replay.
-No production route or functional pass is enabled. GPT-6-Luna implemented the
-controller/driver changes; parent review corrected first-callback timing and
-off-thread stop behavior. Java/client compile and script syntax/format passed.
-Full connected-player CI remains required; interruption recovery is unfinished.
-
-Player-experience integration (phase/57), 2026-11-05:
-
-- Outcome E1: requests select relevant current notes in discussion AND planning,
-  bounded eight from the newest32, without reviving replacements or bypassing
-  grants. Proof: persisted/restarted SQLite reasoning and denied-player tests.
-- Outcome E3: full adders explain their own16-case/35-pin contract; comparisons
-  retain one-sided actual measurements and never invent rates or faster claims.
-  Proof: both-order native assertions and unchanged measured-trial validators.
-- Outcome P2/E4: spoken replies require recipient-specific server payloads;
-  quit waits briefly for owned recognition cleanup. Separate offline dedicated
-  acceptance proves read-only behavior/privacy/restart, not human audio/login.
-
-Integrated exact source heads:79/27cedf8,88/a5a6eae,89/7473067,90/8dba429,
-91/b472af1,92/7db37d3. Source branches remain untouched and are not yet landed
-through this candidate. GPT-6-Luna independently reviewed voice provenance and
-cleanup: no concrete blocker, hardware acceptance pending. PR92 Fabric failure
-was an order-assuming configured-line assertion in its reversed comparison;
-the candidate checks both named configured sections and still forbids b's
-unmeasured values from the measured line. Production comparison is unchanged.
-Codex bridges the validated build request into GatewayMemory.reasoning; empty
-note contexts stay byte-identical and knowledge-revision/grant fences remain.
-Scoped TypeScript and Java/client compile passed. Focused CI and combined
-dedicated acceptance/full CI are required before integration/release. Hold main
-stable for final combined proof; do not bypass current-head checks.
-
-Exactb84a9b0/focused42067282168 passed. Inspected208 required native tests and
-successful note-selection/project-knowledge tests, including the restarted
-planning-relevance/replaced-note/privacy case. This fixes PR92's reversed-order
-test without inventing a measurement. It is not combined client/acceptance proof;
-align with PR93 after its live run finishes, then run final full/isolated flows.
-PR86 exact0edcb02/full42055427604 passed all five checks. Inspected exported
-on-disk journal: four PREPARED/OBSERVED native edges at tick16104, original
-lit/off pair retained and terminal INTERRUPTED, no pass. This proves action/
-paired logging, not timing. PR86 is ready; PR87 includes its source and is the
-intended combined integration candidate. Exact8f4751a/full42058802843 remains
-live, with four checks passed and dedicated multiplayer running.
-
-Recovery branch work/memory-recovery-assessment implements a durable CURRENT
-unfinished-run birth pointer before any edge, inert/blocking on load. An old
-valid journal alone must not authorize restoring a stale bit. Clear-before-
-release requires persisted original-pair proof or strictly proven zero edges.
-No recovery pulse or normal memory-test route is enabled. Pointer implementation
-and restart/forgery tests are written. Scoped Java/client compilation passed;
-native and connected-player CI remain required for this new pointer slice.
-
-Pointer sourced675c17/native42062006966 passed all207 required tests. Inspected
-artifact retains32 native edges/eight durable journals and eight independent
-sampler traces/768 observations. New checkpoint restart/forged-capability and
-recomputed-initial-target digest refusals are included. This does not prove
-connected pointer execution or recovery actions. Separate work/memory-recovery-
-plan now adds read-only assessment of only the CURRENT pointer's journal and
-actual pair; unexplained edits refuse. Independent replay is written for32
-rotation/initial/current-state cases. No recovery lease, pulse or pass is granted.
-
-PR87 merged21f6473 after exact8f4751a/full42058802843 passed all five checks.
-Inspected combined on-disk data and independent replay: actual connected Alice,
-start16076/final16219 (elapsed143),96 observations, four native edges, RESTORED
-and exact original lit/off pair. functionalPass=false. Superseded PR86 closed
-after verifying its head is an ancestor of the tested integration source.
-
-Read-only recovery plan now compiles with32 native current-state cases plus
-PREPARED ambiguity, unexplained edit/unsettled-pair refusal and retained RESTORED
-pointer zero-movement coverage. Scope is the current pointer only; proposed
-edges are freshly derived from actual state and cannot execute. Native CI and
-connected pointer execution remain required. A durable latest-recovery record,
-fresh action driver and normal memory-test routing are still unfinished.
+Historical failures, superseded notes and detailed proofs remain in Git/PR/CI
+history and the feature guides. No full milestone-completion claim is made.
