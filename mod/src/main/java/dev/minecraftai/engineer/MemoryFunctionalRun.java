@@ -14,6 +14,7 @@ final class MemoryFunctionalRun {
     private final ServerPlayer player;
     private final net.minecraft.server.network.ServerGamePacketListenerImpl connection;
     private final Blueprint blueprint;
+    private final ComponentAssignments.Task task;
     private final long authorization,generation;
     private final int revision;
     private final String basis;
@@ -21,7 +22,7 @@ final class MemoryFunctionalRun {
     private MemoryFunctionalRun(EngineeringSession session,MemoryTimedTrial trial) {
         this.session=session;this.trial=trial;player=session.player();connection=player.connection;
         blueprint=session.blueprint;revision=session.revision();authorization=session.access.revision();
-        var task=session.assignments.task(blueprint,"root");basis=task.basis;generation=task.generation;
+        task=session.assignments.task(blueprint,"root");basis=task.basis;generation=task.generation;
     }
     static MemoryFunctionalRun open(EngineeringSession session) {
         if(session.memoryFunctionalRun!=null || session.memoryRecoveryRun!=null)throw new IllegalStateException("Stop the current memory run first");
@@ -47,14 +48,22 @@ final class MemoryFunctionalRun {
             session.verified="passed:toggle-memory:revision-"+revision+":96-live-samples:"+record.get("id").getAsString();
             session.state="COMPLETED";session.detail="Memory test passed: 96 live tick samples confirmed toggle, hold and readout behavior; the original input and stored bit were restored.";
             closed=true;session.memoryFunctionalRun=null;
-            try{session.save();}catch(RuntimeException failure){session.verified="untested";throw failure;}
+            try{session.save();}catch(RuntimeException failure){discardPass(session,task);throw failure;}
             session.checkpoint();session.tell(session.detail);
         }catch(RuntimeException failure) {
             try{stop();}catch(RuntimeException cleanup){failure.addSuppressed(cleanup);}
-            session.verified="untested";session.state="PAUSED";
-            session.detail="Memory test interrupted: "+failure.getMessage()+(session.pendingMemoryInput!=null?". Original-state recovery is pending; inspect and explicitly resume.":". No current functional pass was granted.");
-            session.save();session.checkpoint();session.tell(session.detail);
+            recordFailure(session,task,failure);
         }
+    }
+    private static void discardPass(EngineeringSession session,ComponentAssignments.Task task) {
+        // Clear live evidence before any fallible rollback I/O, including a second save failure.
+        task.memoryPassEvidence=null;task.verified="untested";session.verified="untested";
+    }
+    static void recordFailure(EngineeringSession session,ComponentAssignments.Task task,RuntimeException failure) {
+        if(!session.server.isSameThread())throw new IllegalStateException("Memory failure belongs to the server thread");
+        discardPass(session,task);session.state="PAUSED";
+        session.detail="Memory test interrupted: "+failure.getMessage()+(session.pendingMemoryInput!=null?". Original-state recovery is pending; inspect and explicitly resume.":". No current functional pass was granted.");
+        session.save();session.checkpoint();session.tell(session.detail);
     }
     private Path persist(JsonObject record) {
         Path directory=session.manager.directory;

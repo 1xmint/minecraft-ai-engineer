@@ -12,6 +12,33 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Native feasibility for a stored bit. This is not a production memory/register contract. */
 public final class ToggleMemoryGameTests {
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void memoryPassBindingDoesNotSurviveLoadOrReassignment(GameTestHelper h){
+        var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),0).blueprint();
+        var assignments=new ComponentAssignments();assignments.reconcile(blueprint);var task=assignments.task(blueprint,"root");var trialId=java.util.UUID.randomUUID();
+        // Synthetic metadata isolates scope invalidation; this test claims no live functional run.
+        var record=new JsonObject();record.addProperty("id",trialId.toString());record.addProperty("kind","native-memory-functional-trial");record.addProperty("outcome","passed");record.addProperty("projectId",id.toString());record.addProperty("revision",1);record.addProperty("assignmentBasis",task.basis);record.addProperty("assignmentGeneration",task.generation);
+        var observations=new JsonObject();observations.add("intention",blueprint.source().deepCopy());var trace=new JsonObject();trace.add("observations",observations);record.add("trace",trace);
+        task.memoryPassEvidence=MemoryFunctionalEvidence.capture(blueprint,task,record);task.verified="passed:toggle-memory:revision-1:96-live-samples:"+trialId;
+        h.assertTrue(MemoryFunctionalEvidence.current(blueprint,task),"Synthetic scope starts matched; this does not exercise or certify the native test");
+        var saved=assignments.json();h.assertTrue(!saved.toString().contains("memoryPassEvidence"),"Live memory pass bindings are not serialized with task progress");
+        var restored=new ComponentAssignments();restored.load(blueprint,saved);var loaded=restored.task(blueprint,"root");
+        h.assertTrue(loaded.memoryPassEvidence==null && loaded.verified.startsWith("stale:") && !MemoryFunctionalEvidence.current(blueprint,loaded),"Saved task data cannot restore a live current pass");
+        loaded.verified=task.verified;h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,loaded),"A pass-looking string alone cannot replace the missing live scope binding");
+        var session=new EngineeringSession(manager,id,id,"minecraft:overworld");session.blueprint=blueprint;session.assignments.reconcile(blueprint);
+        var held=session.assignments.task(blueprint,"root");held.memoryPassEvidence=task.memoryPassEvidence;held.verified=task.verified;session.verified=task.verified;
+        boolean saveFailed=false,rollbackFailed=false;
+        try {
+            java.nio.file.Files.createDirectory(session.file); // A real blocked checkpoint target, not a mocked save.
+            try{session.save();}catch(RuntimeException expected){saveFailed=true;}
+            try{MemoryFunctionalRun.recordFailure(session,held,new IllegalStateException("Forced checkpoint failure"));}catch(RuntimeException expected){rollbackFailed=true;}
+            h.assertTrue(saveFailed && rollbackFailed && held.memoryPassEvidence==null && held.verified.equals("untested")
+                    && session.verified.equals("untested") && !MemoryFunctionalEvidence.current(blueprint,held),"Both saves can fail without leaving any in-memory current pass or binding");
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        finally{try{java.nio.file.Files.deleteIfExists(session.file);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+        var rotated=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),90).blueprint();
+        h.assertTrue(!MemoryFunctionalEvidence.current(rotated,task),"A different canonical source cannot reuse the pass binding");
+        task.assign(java.util.UUID.randomUUID(),"assistant");h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,task),"A new assignment generation invalidates the old binding even with the same geometry and pass text");h.succeed();
+    }
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOffEast(GameTestHelper h){probe(h,false,Rotation.NONE);}
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOnEast(GameTestHelper h){probe(h,true,Rotation.NONE);}
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOffSouth(GameTestHelper h){probe(h,false,Rotation.CLOCKWISE_90);}
