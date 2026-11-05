@@ -62,7 +62,12 @@ def build(root, output, jar=None):
         if required not in files:
             raise ValueError(f"Build first: missing {required}")
     files["START-HERE.md"] = read("docs/install.md")
-    for name in ["mod-guide.md", "companion-guide.md", "comparators.md", "acceptance-guide.md", "protocol.md"]:
+    for name in [
+        "mod-guide.md", "companion-guide.md", "comparators.md", "acceptance-guide.md",
+        "protocol.md", "connected-circuits.md", "full-adder.md", "physical-companion.md",
+        "schematics.md", "schematic-analysis.md", "schematic-transforms.md", "schematic-building.md",
+        "toggle-memory.md",
+    ]:
         files[f"docs/{name}"] = read(f"docs/{name}")
     images = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "docs/images"], cwd=root
