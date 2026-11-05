@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** All methods run on the server thread. Persistence is write-ahead, never best-effort. */
 final class EngineeringSession implements BuildExecutor {
+    private static final int MAX_PENDING_POINTER_CHECKPOINT_BYTES=8*1024*1024;
     final MinecraftServer server;
     final ProjectManager manager;
     final UUID projectId;
@@ -77,6 +78,7 @@ final class EngineeringSession implements BuildExecutor {
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
     MemoryInputDriver memoryInputDriver;
+    MemoryPendingInput pendingMemoryInput;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
     final ShutterTrial shutterTrial = new ShutterTrial(this);
     ShutterJournal shutterMotion;
@@ -151,6 +153,7 @@ final class EngineeringSession implements BuildExecutor {
     private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,REPAIR,UNDO }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
+        if(pendingMemoryInput!=null)throw new IllegalStateException("An interrupted memory input transaction needs explicit recovery before new project work");
         if(memoryInputDriver!=null)throw new IllegalStateException("A native memory input transaction is active; finish its observed edge before new project work");
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
@@ -255,6 +258,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void select(int corner, BlockPos pos) {
         access.require(actor(),ProjectAccess.Permission.EDIT);
+        if(pendingMemoryInput!=null)throw new IllegalStateException("The delegated workspace cannot change while a memory input transaction is pending");
         if(!owner.equals(actor()))throw new IllegalStateException("Only the project owner can change the delegated workspace");
         if(shutterOwned)throw new IllegalStateException("Release mechanical control before changing its delegated workspace");
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before changing the delegated region");
@@ -1554,6 +1558,7 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     void save() {
+        if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
         long timing="true".equals(System.getenv("CI")) && state.equals("EXECUTING") && blueprint!=null && ConnectedIntention.fullAdder(blueprint.source())?System.nanoTime():0;
         if(timing!=0 && constructionTimingStart==0)constructionTimingStart=timing;
         if(shutterMotion!=null){shutterMotion.requireScope(level(),acceptedMotionScope());shutterOwned=true;}
@@ -1561,6 +1566,7 @@ final class EngineeringSession implements BuildExecutor {
         if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
         pruneOperationScopes();validateOperationScopes();
         if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
+        if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
         json.addProperty("projectId",projectId.toString());json.addProperty("projectRevision",projectRevision);json.add("access",access.json());
         json.addProperty("memoryStatus",memoryStatus);
@@ -1572,6 +1578,7 @@ final class EngineeringSession implements BuildExecutor {
         if(restoredLayout!=null)json.add("restoredLayout",restoredLayout.json());
         if(shutterMotion!=null)json.add("shutterMotion",shutterMotion.json());
         json.addProperty("shutterOwned",shutterOwned);
+        if(pendingMemoryInput!=null)json.add("pendingMemoryInput",pendingMemoryInput.json());
         if(operationKind.equals("STRUCTURAL"))json.addProperty("structuralCursor",structuralCursor);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
@@ -1585,6 +1592,55 @@ final class EngineeringSession implements BuildExecutor {
         JsonArray surrounding=new JsonArray();dependencies.forEach((pos,state)->{var item=new JsonObject();item.add("pos",Blueprint.jsonPos(pos));item.addProperty("state",Blueprint.describe(state));surrounding.add(item);});json.add("dependencies",surrounding);
         LocalFiles.checkpoint(file,json);
         if(timing!=0){constructionSaveNanos+=System.nanoTime()-timing;constructionSaveCount++;}
+    }
+    void persistPendingMemoryInput(MemoryPendingInput pending) {
+        if(!server.isSameThread())throw new IllegalStateException("Pending memory scope belongs to the server thread");
+        if(pendingMemoryInput!=null)throw new IllegalStateException("Another memory input transaction is already pending");
+        pending.requireMatches(this);pendingMemoryInput=pending;
+        try {
+            save();requirePersistedPendingMemoryInput(pending);
+        } catch(RuntimeException | Error failure) {
+            try {
+                JsonObject stored=readBoundedCheckpoint();
+                if(!stored.has("pendingMemoryInput"))pendingMemoryInput=null;
+            } catch(Exception unreadable) { failure.addSuppressed(unreadable); }
+            throw failure;
+        }
+    }
+    void clearPendingMemoryInput(MemoryPendingInput expected) {
+        if(!server.isSameThread())throw new IllegalStateException("Pending memory scope belongs to the server thread");
+        if(pendingMemoryInput==null || !pendingMemoryInput.same(expected))throw new IllegalStateException("Pending memory scope identity changed");
+        expected.requireMatches(this);requirePersistedPendingMemoryInput(expected);pendingMemoryInput=null;
+        try {
+            save();JsonObject stored=readBoundedCheckpoint();
+            if(stored.has("pendingMemoryInput"))throw new IllegalStateException("Pending memory scope remains in the checkpoint after clear");
+        } catch(RuntimeException | Error failure) {
+            pendingMemoryInput=expected;
+            if(failure instanceof Error error)throw error;
+            throw (RuntimeException)failure;
+        }
+    }
+    private MemoryPendingInput readCheckpointPendingMemoryInput() {
+        JsonObject stored=readBoundedCheckpoint();
+        if(!stored.has("pendingMemoryInput"))throw new IllegalStateException("Pending memory scope is absent from checkpoint");
+        return MemoryPendingInput.read(stored.getAsJsonObject("pendingMemoryInput"),this);
+    }
+    void requirePersistedPendingMemoryInput(MemoryPendingInput expected) {
+        if(!server.isSameThread())throw new IllegalStateException("Pending memory scope belongs to the server thread");
+        if(pendingMemoryInput==null || !pendingMemoryInput.same(expected))throw new IllegalStateException("Current pending memory identity changed");
+        expected.requireMatches(this);
+        if(!expected.same(readCheckpointPendingMemoryInput()))throw new IllegalStateException("Persisted pending memory scope differs from its immutable birth identity");
+    }
+    private JsonObject readBoundedCheckpoint() {
+        try {
+            if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS) || Files.size(file)>MAX_PENDING_POINTER_CHECKPOINT_BYTES)
+                throw new IllegalStateException("Missing, linked or oversized project checkpoint");
+            try(var input=Files.newInputStream(file,LinkOption.NOFOLLOW_LINKS)) {
+                byte[] bytes=input.readNBytes(MAX_PENDING_POINTER_CHECKPOINT_BYTES+1);
+                if(bytes.length>MAX_PENDING_POINTER_CHECKPOINT_BYTES)throw new IllegalStateException("Oversized project checkpoint");
+                return JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            }
+        } catch(java.io.IOException failure) { throw new IllegalStateException("Cannot read bounded project checkpoint",failure); }
     }
     void load() {
         if(!Files.exists(file)) return;
@@ -1717,6 +1773,7 @@ final class EngineeringSession implements BuildExecutor {
                 shutterMotion=ShutterJournal.read(json.getAsJsonObject("shutterMotion"));
                 shutterMotion.requireScope(level(),acceptedMotionScope());
             }
+            if(json.has("pendingMemoryInput"))pendingMemoryInput=MemoryPendingInput.read(json.getAsJsonObject("pendingMemoryInput"),this);
             state="PAUSED";detail="Checkpoint restored. Inspect the world; explicit resume reconciles before editing.";
         }catch(Exception e){throw new IllegalStateException("Cannot safely load checkpoint; keep it for recovery",e);}
     }

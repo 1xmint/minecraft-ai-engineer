@@ -42,6 +42,7 @@ jobs:
           node --test dist/tests/note-selection.test.js dist/tests/project-knowledge.test.js
           node scripts/ci/verify-full-adder-native.mjs mod/build/native-gametest.log | tee mod/build/full-adder-native-replay.json
           node scripts/ci/verify-toggle-memory-native.mjs mod/build/native-gametest.log | tee mod/build/toggle-memory-native-replay.json
+          node scripts/ci/verify-memory-recovery-plans.mjs mod/build/native-gametest.log | tee mod/build/memory-recovery-plan-native-replay.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -50,6 +51,7 @@ jobs:
             mod/build/native-gametest.log
             mod/build/full-adder-native-replay.json
             mod/build/toggle-memory-native-replay.json
+            mod/build/memory-recovery-plan-native-replay.json
             mod/run/gametest/logs/latest.log
           if-no-files-found: warn
           retention-days: 7
