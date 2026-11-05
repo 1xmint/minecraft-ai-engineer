@@ -94,3 +94,4 @@ final class PhysicalGatherInspection {
         if(!Set.of("id","count").containsAll(stack.keySet()) || !stack.get("id").getAsString().equals(item))return -1;
         return stack.has("count")?stack.get("count").getAsInt():1;
     }
+}
