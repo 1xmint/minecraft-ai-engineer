@@ -165,7 +165,7 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Explicitly delegate this component with component build "+activeComponent);
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
-        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action)) || ImportedBlueprint.describes(reservationBlueprint(action).source());
+        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action)) || ImportedBlueprint.describes(reservationBlueprint(action).source()) || ToggleMemoryIntention.describes(reservationBlueprint(action).source());
         if((!test || purpose==MechanicalPurpose.CONSTRUCTION) && action==ProjectAccess.Permission.BUILD && task.executor.equals("unassigned"))task.assign(actor(),"assistant");
         delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
     }
@@ -183,7 +183,7 @@ final class EngineeringSession implements BuildExecutor {
     private static Set<BlockPos> dependencyPositions(Blueprint source,String component,boolean isolation) {
         if(ShutterDesign.describes(source.source())){ComponentTree.component(source,component);return ShutterDesign.read(source.source()).readCells();}
         Set<BlockPos> result=new LinkedHashSet<>();
-        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source) || ImportedBlueprint.describes(source.source()))?2:1,new HashSet<>(),result);
+        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source) || ImportedBlueprint.describes(source.source()) || ToggleMemoryIntention.describes(source.source()))?2:1,new HashSet<>(),result);
         return result;
     }
     private static void collectDependencies(Blueprint source,String id,int margin,Set<String> visited,Set<BlockPos> result) {
@@ -454,7 +454,7 @@ final class EngineeringSession implements BuildExecutor {
             if (!actual.isAir() && !Blueprint.matches(b.state(), actual)) throw new IllegalStateException("Occupied or incorrect block at " + b.pos().toShortString() + "; move the preview or correct it yourself");
             proposedBaseline.put(b.pos(), actual);
         }
-        if(GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source()))validateGeneratedBuildMargin();
+        if(GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source()) || ToggleMemoryIntention.describes(blueprint.source()))validateGeneratedBuildMargin();
         boolean mechanical=ShutterDesign.describes(blueprint.source());
         if(mechanical)ShutterEnvironment.validateConstruction(level(),ShutterDesign.read(blueprint.source()),dependencyPositions(true));
         var proposedDependencies=captureDependencies();
@@ -597,6 +597,7 @@ final class EngineeringSession implements BuildExecutor {
         return operationScopes.connected(activeOperation)?ConnectedWireUndo.Frame.capture(operationScopes.connectedBlocks(activeOperation,blueprint),journal,activeOperation):null;
     }
     private boolean matchesExpected(BlockPos pos,BlockState expected,BlockState actual,ConnectedWireUndo.Frame connectedOperation) {
+        if(ToggleMemoryIntention.describes(blueprint.source()) && (expected.is(net.minecraft.world.level.block.Blocks.LEVER) || expected.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT) && expected.getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock))return expected.equals(actual);
         if(connectedOperation!=null || ConnectedIntention.describes(blueprint.source())){
             if(expected.is(net.minecraft.world.level.block.Blocks.LEVER))return expected.equals(actual);
             if(expected.is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && connectedOperation!=null){
@@ -684,6 +685,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     @Override public void resume() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
+        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source()) && hasPendingTest())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && hasPendingTest()){
             restoreMotionDenial(); // A restored binding stays denied throughout input restoration.
@@ -1020,6 +1022,11 @@ final class EngineeringSession implements BuildExecutor {
         if(ConnectedIntention.describes(candidate.source())) {
             ConnectedIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
+            accept(candidate);return true;
+        }
+        if(ToggleMemoryIntention.describes(candidate.source())) {
+            ToggleMemoryIntention.validated(candidate);
+            if(hasBuiltStructure())throw new IllegalArgumentException("Built memory designs cannot be replaced by another preview; reconcile their existing work first");
             accept(candidate);return true;
         }
         if(AnalogIntention.describes(candidate.source())) {
@@ -1399,6 +1406,7 @@ final class EngineeringSession implements BuildExecutor {
         return batch;
     }
     private boolean undoAfterMatches(Change change,BlockState actual) {
+        if(change.after().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock && operationScopes.contains(change.operation()) && ToggleMemoryIntention.describes(operationScopes.blueprint(change.operation()).source()))return change.after().equals(actual);
         if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.connectedRoot(change.operation()))
             return ConnectedWireUndo.matchesPlanned(operationScopes.connectedCell(change.operation(),change.component(),change.pos()),change,actual,level());
         if(undoRequested && change.after().is(net.minecraft.world.level.block.Blocks.REDSTONE_WIRE) && operationScopes.contains(change.operation()) && ConnectedIntention.describes(operationScopes.blueprint(change.operation()).source()))
@@ -1452,6 +1460,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     boolean hasPendingTest() { return trial.pending(); }
     void test() {
+        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())){access.require(actor(),ProjectAccess.Permission.BUILD);throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);}
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before testing world state");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source())){shutterTrial.start();return;}
         trial.start();

@@ -55,7 +55,9 @@ final class FunctionalTrial {
     }
 
     void start(){
-        var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
+        var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
+        s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
         if(ImportedBlueprint.describes(s.executionBlueprint().source()))throw new IllegalStateException("Imported geometry has no independently defined functional test contract. It remains untested.");
@@ -438,6 +440,7 @@ final class FunctionalTrial {
         if(!s.level().getBlockState(pos).equals(wanted))throw new IllegalStateException("Minecraft rejected the test input; restoration journal retained");
     }
     void restore(){
+        if(session.blueprint!=null && ToggleMemoryIntention.describes(session.blueprint.source()) && pending())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         var s=session;s.testTick=-1;
         if(!pending() || !s.server.isSameThread() || !s.available() || !s.manager.mayMutate(s))return;
         for(var input:new ArrayList<>(inputs.values())){
@@ -482,6 +485,13 @@ final class FunctionalTrial {
         if(pending()){var first=inputs.values().iterator().next();json.addProperty("testOriginal",Blueprint.describe(first.original()));json.addProperty("testLast",Blueprint.describe(first.last()));}
     }
     void load(JsonObject json){
+        if(session.blueprint!=null && ToggleMemoryIntention.describes(session.blueprint.source()) &&
+            (json.has("testOriginal") || json.has("testLast") || json.has("functionalScope") || json.has("shutterOriginalInput")
+            || json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty()
+            || json.has("functionalEvidence") && !json.getAsJsonArray("functionalEvidence").isEmpty()
+            || session.verified.startsWith("passed:") || session.verified.startsWith("stale:")))
+            throw new IllegalStateException("Memory cannot restore a generic functional claim or input journal; stored state needs its own proven protocol");
+
         history.load(json.has("nativeTrialHistory")?json.getAsJsonArray("nativeTrialHistory"):new JsonArray());
         shutterOriginal=json.has("shutterOriginalInput")?Blueprint.state(json.get("shutterOriginalInput").getAsString()):null;
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
@@ -557,7 +567,7 @@ final class FunctionalTrial {
     }
     /** Display-only freshness check; retained history never grants execution authority. */
     static boolean matchesCurrentScope(Blueprint blueprint,ComponentAssignments.Task task){
-        if(blueprint==null || task==null || task.lastPassedScope==null || ImportedBlueprint.describes(blueprint.source()))return false;
+        if(blueprint==null || task==null || task.lastPassedScope==null || ImportedBlueprint.describes(blueprint.source()) || ToggleMemoryIntention.describes(blueprint.source()))return false;
         try{
             var scope=validateHistoricalScope(task.lastPassedScope);
             if(!scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())

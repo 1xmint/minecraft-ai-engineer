@@ -1431,7 +1431,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
           try(TestDedicatedServerConnection connection=server.connect()){
             publishServer(server,3);
             if(!LIVE_ACCEPTANCE)recoverNaturalRestart(context,server);
-            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);importedRestartRecovery(context,server);}
+            if(!LIVE_ACCEPTANCE){observerRecovery(context,server);analogRestartRecovery(context,server);connectedRestartRecovery(context,server);importedRestartRecovery(context,server);toggleMemoryRestartProof(context,server);}
             if(!LIVE_ACCEPTANCE)assertReconciledShutterOnLaterBoot(server);
             if(!LIVE_ACCEPTANCE)shutterFunctionalRecovery(server);
             if(!LIVE_ACCEPTANCE)shutterManualHandoff(context,server,false);
@@ -1891,7 +1891,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"Only the project owner can change");
             write("conversation-setup-editor-denied.done","passed");
         }
-        awaitFile(context, "finish");
+        await(context,()->Files.exists(directory().resolve("finish")),"finish",LIVE_ACCEPTANCE?WAIT_MILLIS:600_000); // End-of-scenario wait includes the longer owner memory/schematic flow.
         disconnect(context);
     }
 
@@ -3132,6 +3132,30 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Leave later, independently asserted fixtures a fresh real admission window.
         ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
         while(System.nanoTime()-ready<0)context.waitTicks(2);
+        toggleMemoryPreviewFlow(context,server);
+        ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+    }
+    private static void toggleMemoryPreviewFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        conversationSetup(context,server,previous,new BlockPos(2800,100,0),new BlockPos(2808,104,4));
+        MESSAGES.clear();setupSay(context,"Engineer, show me a one-bit memory");expectChat(context,"Preview ready: One-bit toggle memory");
+        server.waitFor(s->ToggleMemoryIntention.describes(session(s,"Alice").blueprint.source()));
+        var intendedReceipt=server.computeOnServer(s->{var project=session(s,"Alice");project.checkpoint();return project.lastCheckpoint;});check(intendedReceipt.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"The private companion acknowledges an untested canonical memory intention");
+        server.runOnServer(s->{var project=session(s,"Alice");var bulb=project.blueprint.anchor();check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"Memory preview grants no construction or functional pass");project.level().setBlockAndUpdate(bulb,Blueprint.state("minecraft:waxed_copper_bulb[lit=true,powered=false]"));commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer build");check(project.journal.isEmpty() && project.delegation==null && project.level().getBlockState(bulb).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"A real connected viewer cannot build or normalize an existing stored bit");});
+        MESSAGES.clear();say(context,"Engineer, explain this part");expectChat(context,"One-bit toggle memory");
+        conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");var blueprint=project.blueprint;check(blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))) && project.level().getBlockState(blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Actual native construction keeps the player's existing stored bit and completes only matching geometry");check(project.journal.size()==7 && project.verified.equals("untested") && project.delegation==null,"Only seven missing cells are assistant-owned; memory remains untested");write("toggle-memory-project",project.projectId.toString());});
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Automated stateful memory testing is not available yet");
+        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"Automated stateful memory testing is not available yet");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
+        write("toggle-memory-build.done","passed");
+    }
+    private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project use "+read("toggle-memory-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("toggle-memory-project")));
+        server.runOnServer(s->{var project=session(s,"Alice");check(ToggleMemoryIntention.describes(project.blueprint.source()) && project.blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))),"Saved-world restart retains all actual memory construction");check(project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT) && project.journal.size()==7 && project.verified.equals("untested") && project.delegation==null && !project.hasPendingTest(),"Reload preserves the player's stored bit and assistant journal, never restores test authority or a functional claim");});
+        write("toggle-memory-restarted.done","passed");send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());

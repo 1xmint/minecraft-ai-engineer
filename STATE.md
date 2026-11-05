@@ -129,3 +129,14 @@ Updated the verifier to require exactly18starts and that exact11-action sequence
 no broad allowance or production quota changed. Fresh full CI is required; the
 failed run remains failed. The harness does not export its SQLite database, so
 its exact counter error/client log and next strict verifier run are the evidence.
+
+PR84 merged3e48776 after exact2f282e1 passed all5checks41963770230. Its dedicated
+artifact was inspected, including normal-chat2passed/0failed/0interrupted for two
+separate current-revision attempts and the strict request audit.
+M1 source78f1a0d/full41965025674 reached and passed memory preview, teaching,
+7-cell construction preserving the existing lit bulb, denied viewer build and
+automated-test refusal. It later failed because Bob's final scenario wait was
+still4minutes while Alice continued the added memory/schematic flow. Only that
+end wait is extended to10minutes; other default waits remain4minutes and shell/
+job bounds remain35m/45m. Saved-world memory reload still needs fresh proof.
+This candidate reconciles current main and retains corrected repeated-trial proof.

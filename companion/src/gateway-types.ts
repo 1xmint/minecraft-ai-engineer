@@ -1,4 +1,5 @@
 import { validateGeneratedBlueprint } from "./generated.js";
+import { readToggleMemoryIntention } from "./toggle-memory-intention.js";
 import { validateAnalogIntention } from "./analog-intention.js";
 import { readConnectedIntention } from "./connected-intention.js";
 import { readImportedIntention } from "./imported-intention.js";
@@ -151,6 +152,20 @@ export function serverBlueprint(
       });
     } catch {
       throw new RequestError("Invalid canonical connected blueprint.");
+    }
+  }
+  if (
+    v.memory !== undefined ||
+    object(v.provenance).template === "toggle-memory"
+  ) {
+    try {
+      return readToggleMemoryIntention(v, {
+        worldId,
+        dimension,
+        projectId: context.projectId,
+      });
+    } catch {
+      throw new RequestError("Invalid canonical toggle-memory blueprint.");
     }
   }
   if (

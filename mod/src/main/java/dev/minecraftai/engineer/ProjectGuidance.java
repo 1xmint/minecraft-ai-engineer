@@ -82,6 +82,7 @@ final class ProjectGuidance {
         return untested(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> untested(EngineeringSession s,Function<BlockPos,BlockState> world){
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of("The toggle memory remains untested. "+ToggleMemoryIntention.TEST_UNAVAILABLE,NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint==null){
             out.add("Still untested: unknown. No design is loaded in this project, so there is nothing to test yet.");
@@ -108,6 +109,7 @@ final class ProjectGuidance {
         return next(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> next(EngineeringSession s,Function<BlockPos,BlockState> world){
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of("Follow your memory construction lesson or inspect its intended controls. "+ToggleMemoryIntention.TEST_UNAVAILABLE,NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint!=null && ImportedBlueprint.describes(s.blueprint.source())){
             out.add("This is imported geometry with no defined behavior contract. Its approved geometry can be built; functional testing needs a separately defined and supported behavior.");
