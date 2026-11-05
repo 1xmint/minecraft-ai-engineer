@@ -203,7 +203,10 @@ public final class ToggleMemoryGameTests {
         var orphan=MemoryRecoveryJournal.create(manager.directory,blueprint,root,firstPlan,session.owner,h.getLevel().getGameTime());
         h.assertTrue(MemoryRecoveryPlan.observe(session).data().get("originJournalId").getAsString().equals(root.journalId().toString()),"An uncheckpointed NEW recovery file cannot become the latest operation or authorize another plan");
         var first=MemoryRecoveryJournal.create(manager.directory,blueprint,root,firstPlan,session.owner,h.getLevel().getGameTime());
+        var staleSession=new EngineeringSession(manager,id,session.owner,"minecraft:overworld");
         var firstCheckpoint=MemoryRecoveryCheckpoint.create(session,first);session.persistPendingMemoryRecovery(root,null,firstCheckpoint);
+        boolean stalePlanRefused=false;try{MemoryRecoveryPlan.observe(staleSession);}catch(IllegalStateException expected){stalePlanRefused=true;}
+        h.assertTrue(stalePlanRefused,"A stale live session cannot ignore the newer persisted recovery pointer and plan from the root journal");
         boolean staleRefused=false;try{session.persistPendingMemoryRecovery(root,null,firstCheckpoint);}catch(IllegalStateException expected){staleRefused=true;}
         var forgedCheckpoint=firstCheckpoint.json();forgedCheckpoint.addProperty("connection","forged");boolean forgedRefused=false;
         try{MemoryRecoveryCheckpoint.read(forgedCheckpoint,session);}catch(RuntimeException expected){forgedRefused=true;}

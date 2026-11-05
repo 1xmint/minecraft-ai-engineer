@@ -30,6 +30,7 @@ final class MemoryRecoveryPlan {
             record=latest.json();originId=latest.id();
             if(!pending.initial().matches(latest.target()))throw new IllegalStateException("Current recovery chain no longer targets the original input pair");
         } else {
+            session.requireNoPendingMemoryRecovery(pending);
             record=MemoryInputJournal.read(pending.journalFile(session.manager.directory),session.blueprint).json();originId=pending.journalId();
         }
         var blueprint=session.blueprint;

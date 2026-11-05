@@ -1685,6 +1685,11 @@ final class EngineeringSession implements BuildExecutor {
         if(!expected.same(readCheckpointPendingMemoryRecovery()))
             throw new IllegalStateException("Persisted recovery checkpoint differs from its current pointer");
     }
+    void requireNoPendingMemoryRecovery(MemoryPendingInput expectedRoot) {
+        requirePersistedPendingMemoryInput(expectedRoot);
+        if(pendingMemoryRecovery!=null || readBoundedCheckpoint().has("pendingMemoryRecovery"))
+            throw new IllegalStateException("Recovery progress exists; reload its current checkpoint before inspecting the original run");
+    }
     private MemoryRecoveryCheckpoint readCheckpointPendingMemoryRecovery() {
         var stored=readBoundedCheckpoint();if(!stored.has("pendingMemoryRecovery"))throw new IllegalStateException("Recovery checkpoint is absent from checkpoint");
         return MemoryRecoveryCheckpoint.read(stored.getAsJsonObject("pendingMemoryRecovery"),this);
