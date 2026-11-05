@@ -300,9 +300,10 @@ public final class DesignComparisonGameTests {
             helper.assertTrue(has(lines,"a: 1 passed, 0 failed, 0 interrupted of 1 attempt for the current revision; 1 repeated checkpoint or replay record counted once")
                     && has(lines,"b: 0 passed, 1 failed, 1 interrupted of 2 attempts for the current revision"),"Duplicates and missing observations are counted as what they are: "+all(lines));
             String measuredLine=lines.stream().filter(line->line.startsWith("Measured timing")).findFirst().orElse("");
-            String intendedLine=lines.stream().filter(line->line.startsWith("Intended timing (configured in the design, not measured):")).findFirst().orElse("");
+            // Either order: compare(a,b) lists a first, compare(b,a) lists b first.
+            String intendedLine=lines.stream().filter(line->line.startsWith("Intended timing (configured in the design, not measured): ")).findFirst().orElse("");
             helper.assertTrue(intendedLine.contains("a on after 4 game ticks, off after 6") && intendedLine.contains("b on after 4 game ticks, off after 6")
-                    && !measuredLine.contains("b on after"),"Configured delay never fills in a missing measurement: "+measuredLine);
+                    && !measuredLine.contains("b on after"),"Configured delay never fills in a missing measurement: "+intendedLine+" | "+measuredLine);
             helper.assertTrue(lines.stream().noneMatch(line->line.contains("%") || line.contains("Recommendation: a") || line.contains("Recommendation: b")
                     || line.toLowerCase(Locale.ROOT).contains("winner") || line.toLowerCase(Locale.ROOT).contains("latency") || line.toLowerCase(Locale.ROOT).contains("verified")),
                     "No pick, winner, percentage, latency or verification is invented: "+all(lines));
