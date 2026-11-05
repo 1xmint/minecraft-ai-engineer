@@ -162,3 +162,30 @@ preview/build/teaching with explicit test refusal first, then add a separate
 stateful trial/restoration protocol. Generic lever restoration cannot safely
 restore an odd toggle or an originally high input. No production admission or
 memory test path has been changed while that decision is being checked.
+
+Memory admission decision (2026-11-05): expose exact preview/build/teaching first,
+with explicit automated-test refusal; then implement a separate stateful trial.
+GPT-6-Luna challenged the alternatives against Blueprint.parse, ComponentTree,
+FunctionalTrial.start/restore/load and EngineeringSession.resume. Reusing only
+the lever WAL is unsafe after an odd pulse; doing nothing leaves a proven circuit
+unavailable. A separate typed trial is clearer than expanding generic lever
+recovery with hidden stored-state assumptions. Both test and generic recovery/
+load must refuse memory journals before admission. Existing stored bits must be
+preserved during matching construction; strict undo conflicts must not be bypassed.
+
+Memory roadmap (serves E2/E3):
+
+1. Next: normal-chat preview/build/teaching with exact source validation and loaded
+   two-block isolation. Proof: actual owner build, denied peer, preserved existing
+   stored bit, explicit test refusal and saved-world reload without fake claims.
+   Task: add admission/transport and guards first; then wire conversation (M1).
+2. Next: typed stateful testing/restoration journal covering lever and bulb,
+   event-time authority and explicit recovery. Proof: every phase interruption,
+   both initial bits/four rotations, restart, revocation and conflicting human
+   edits; no pulse replay or lost stored bit (M2). No generic restore fallback.
+3. Later: data-and-clock registers and multiple memory bits/modules, with actual
+   native state transitions, interaction/interference and saved-world proof (M3).
+   A toggle memory never substitutes for those remaining requirements.
+   Trial-history8f6b8bf/full41956628847 passed all5checks; dedicated artifact and
+   actual12/16-tick results were inspected. Combined repeat proof remains live in
+   PR82, alongside the already-passed combined physical/full-adder proofs.
