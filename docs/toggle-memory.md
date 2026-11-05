@@ -39,3 +39,10 @@ planner dispatch admits this source yet. Native probes now build those canonical
 cells and require their settled states to match the intention, while the separate
 replay checks actual stored/output observations. Native/companion source parity
 and the new rejection tests still need CI proof.
+
+Canonical proof: sourcecef919e passed native CI41959507805. Inspected replay
+confirms eight cells, verification=untested and admitted=false, alongside all
+768physical observations. The probe now builds the canonical geometry and checks
+its actual settled block states, and the companion reader matches native source
+exactly. This answers source agreement, not player-facing admission or stateful
+restoration. A routine lever restore alone cannot undo an odd memory toggle.

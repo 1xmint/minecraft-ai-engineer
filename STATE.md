@@ -154,3 +154,11 @@ is pending; this does not register a production blueprint or authorize testing.
 Combined full-adder3a6523e/player41957262960 passed; artifact inspected:
 3544cells/35pins, two passed epochs with fresh clocks and zero remaining assistant
 changes after undo. General integration CI41957252832 remains live.
+
+Canonical memory sourcecef919e/native41959507805 passed and both replay records
+were inspected:8cells, untested/not-admitted source parity and768physical samples.
+Next admission choice is under focused architectural challenge: expose intended
+preview/build/teaching with explicit test refusal first, then add a separate
+stateful trial/restoration protocol. Generic lever restoration cannot safely
+restore an odd toggle or an originally high input. No production admission or
+memory test path has been changed while that decision is being checked.
