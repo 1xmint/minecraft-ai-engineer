@@ -18,8 +18,10 @@ final class ConversationText {
     static String normalized(String message){return message.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").replaceFirst("[.!?]+$","").strip();}
     static String lesson(String message){
         return switch(normalized(message)){
-            case "explain how this works","how does this work","explain this","what does this do","explain this part","explain this part again","what does this part do" -> "explain this part again";
-            case "explain the timing","show me how the timing works","how does the timing work" -> "explain the timing";
+            case "explain how this works","how does this work","explain this","what does this do","explain this part","explain this part again","what does this part do",
+                 "what is this","what's this","what is this part","what's this part" -> "explain this part again";
+            case "explain the timing","show me how the timing works","how does the timing work",
+                 "how is this tested","how will this be tested","how do you test this","what does the test check" -> "explain the timing";
             case "explain the materials","what materials do i need","what do i need to build this" -> "explain the materials";
             case "what are you working on","what are we working on" -> "what are you working on";
             case "where did we leave off","where were we","where did i leave off","catch me up","what were we doing" -> "where did we leave off";
