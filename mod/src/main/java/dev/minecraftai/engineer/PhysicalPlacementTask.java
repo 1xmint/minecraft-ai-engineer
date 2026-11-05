@@ -83,6 +83,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
         lease.validate(target);
         intention.run();
     }
+    String placedMaterial(){return inventory.item()==net.minecraft.world.item.Items.DIRT?"the retained dirt":"one retained oak plank";}
     boolean tick(){
         authority();
         if(PhysicalActionGate.placementObserved(worker,target)){

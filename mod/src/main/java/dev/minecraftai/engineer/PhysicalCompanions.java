@@ -204,7 +204,7 @@ final class PhysicalCompanions {
                 dismiss(project.projectId);project.tell("Gathering stopped. Inspect the source, dropped resources and saved inventory before another request: "+stopped.getMessage());
             }
             var placement=placing.get(project.projectId);if(placement!=null)try{
-                if(placement.tick()){placing.remove(project.projectId);project.tell("Your companion placed one retained item and verified its saved inventory. The mechanism remains untested.");}
+                if(placement.tick()){placing.remove(project.projectId);project.tell("Your companion placed "+placement.placedMaterial()+" and verified its saved inventory. The mechanism remains untested.");}
             }catch(RuntimeException stopped){dismiss(project.projectId);project.tell("Physical placement stopped; inspect the cell and saved inventory before retry: "+stopped.getMessage());}
         }
     }

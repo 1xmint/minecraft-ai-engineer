@@ -675,7 +675,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             for(var target:java.util.List.of(new BlockPos(2633,101,3),new BlockPos(2632,101,3),new BlockPos(2631,101,3),new BlockPos(2633,101,1))){
                 int remaining=3-index;int phase=++index;
                 MESSAGES.clear();say(context,"Engineer, place retained oak planks at "+target.getX()+" "+target.getY()+" "+target.getZ());
-                expectChat(context,"placed one retained item and verified its saved inventory");
+                expectChat(context,"placed one retained oak plank and verified its saved inventory");
                 server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.level().getBlockState(target).is(Blocks.OAK_PLANKS) && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==remaining && PhysicalWorkerMenus.capture(worker).empty(),"Native placement consumes exactly one actually crafted plank and retains every remainder");menuReceipt(worker,"plank-placement-"+phase);});
             }
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
