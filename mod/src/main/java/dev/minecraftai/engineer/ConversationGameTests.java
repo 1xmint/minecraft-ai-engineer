@@ -158,5 +158,21 @@ public final class ConversationGameTests {
         for(boolean[] pair:new boolean[][]{{true,true,false},{true,false,true},{false,true,true},{true,true,true}}){boolean rejected=false;try{ConversationReview.choose(pair[0],pair[1],pair[2]);}catch(IllegalStateException expected){rejected=true;}helper.assertTrue(rejected,"A vague yes cannot silently choose between multiple reviews");}
         helper.assertTrue(ConversationText.stop("Please stop!") && ConversationText.stop("hold on") && !ConversationText.stop("the sign says stop") && !ConversationText.yes("stop"),"Explicit stop remains distinct from approval or quoted world text");helper.succeed();
     }
+    @GameTest public void connectedTestExplanationsMatchTheirOwnContract(GameTestHelper helper){
+        var id=java.util.UUID.fromString("00000000-0000-4000-8000-000000000003");var anchor=new net.minecraft.core.BlockPos(0,100,0);
+        String half=LessonAssistant.connectedTestContract(ConnectedIntention.create(id,1,id,"test","minecraft:overworld",anchor,0).blueprint().source());
+        String full=LessonAssistant.connectedTestContract(ConnectedIntention.createFullAdder(id,1,id,"test","minecraft:overworld",anchor,0).blueprint().source());
+        helper.assertTrue(half.startsWith("Intended connected test: eight forward/reverse A/B cases") && half.contains("settles for "+ConnectedTrace.SETTLE+" game ticks") && half.contains("SUM is A XOR B"),"Half adder keeps its own contract: "+half);
+        helper.assertTrue(full.contains("full-adder") && full.contains("16 forward/reverse") && full.contains("35 pins") && full.contains("carry-in") && full.contains("waits "+FullAdderTrace.SETTLE+" game ticks"),"Full adder uses its own recorded contract: "+full);
+        helper.assertTrue(!full.contains("A XOR B;") && !full.contains("A AND B") && !full.contains("twenty") && !full.contains("two external") && !full.contains("settles for "+ConnectedTrace.SETTLE),"Full adder never gets half-adder wording: "+full);
+        for(String text:new String[]{half,full})helper.assertTrue(text.contains("not a measured latency") || text.contains("not measured latency"),"A configured wait is never presented as measured latency: "+text);
+        helper.assertTrue(!full.contains("passed") && !half.contains("passed") && full.contains("planned, not run"),"A test explanation claims no result");
+        for(String text:new String[]{"What is this?","what's this","What is this part?"})
+            helper.assertTrue("explain this part again".equals(ConversationText.lesson(text)),"What-is-this phrasing explains the planned part: "+text);
+        for(String text:new String[]{"How is this tested?","what does the test check"})
+            helper.assertTrue("explain the timing".equals(ConversationText.lesson(text)),"Test phrasing explains the intended test: "+text);
+        helper.assertTrue(ConversationText.lesson("what is this sign")==null,"Only exact phrasing is a lesson question");
+        helper.succeed();
+    }
     private static void rejects(GameTestHelper helper,Runnable action,String message){boolean rejected=false;try{action.run();}catch(IllegalArgumentException expected){rejected=true;}helper.assertTrue(rejected,message);}
 }

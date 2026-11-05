@@ -86,7 +86,7 @@ final class LessonAssistant {
         else if(memory){s.tell(ToggleMemoryIntention.TEST_UNAVAILABLE+" Intended behavior: each rising lever edge toggles one stored bit; held or falling power preserves it. No propagation timing was measured.");}
         else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
         else if(analog){s.tell("Intended analog test:66 numeric cases, covering every strength0..15 at all three inputs and both-side boundaries. Each case settles for8 game ticks and records3 consecutive samples. Every original selector state must be restored before a pass; this contract does not measure latency or run a new test.");}
-        else if(connected){s.tell("Intended connected test: eight forward/reverse A/B cases, observing all twenty signal pins every game tick. Each case settles for48 game ticks and requires8 stable samples. SUM is A XOR B; CARRY is A AND B. Only the two external levers are stimulated, and both original states must be restored before a pass. This is a test contract, not measured latency or a new test.");}
+        else if(connected){s.tell(connectedTestContract(selected.source()));}
         else if(contract!=null && contract.pulse()!=null){s.tell("Intended observer timing: both lever edges produce a pulse after 2 game ticks, powered for 2 game ticks; the lamp switches off 4 ticks after the pulse ends. Testing samples detector, receiver and lamp every tick. This is the intended contract, not a new measurement.");}
         else if(generated) {
             s.tell(intendedBehavior);
@@ -122,6 +122,23 @@ final class LessonAssistant {
         if(components.size()>8)s.tell((components.size()-8)+" more components; ask about one by name.");
         s.tell("For decisions and changes, ask 'what did we decide', 'what changed' or 'why did we choose this'.");
         s.tell(NOT_OBSERVED);
+    }
+    /**
+     * The intended connected-circuit test, from the design's own recorded test description and the
+     * trace contract's settle constant. A full adder never gets the half adder's wording. Settling is
+     * a configured wait, never a measured latency.
+     */
+    static String connectedTestContract(com.google.gson.JsonObject source) {
+        boolean full=ConnectedIntention.fullAdder(source);
+        var tests=source.has("tests") && source.get("tests").isJsonArray()?source.getAsJsonArray("tests"):new com.google.gson.JsonArray();
+        String recorded=tests.isEmpty() || !tests.get(0).isJsonObject() || !tests.get(0).getAsJsonObject().has("description")?"none recorded in this design.":tests.get(0).getAsJsonObject().get("description").getAsString().replaceAll("(?<=[a-z])(?=[0-9])"," ");
+        if(full)return "Intended connected full-adder test (planned, not run by this answer): "+recorded
+                +" Only the A, B and carry-in levers are stimulated. Each case waits "+FullAdderTrace.SETTLE+" game ticks to settle, then requires 8 stable samples."
+                +" SUM should be on when an odd number of A, B and carry-in are on; CARRY should be on when at least two are on."
+                +" The wait is configured, not a measured latency.";
+        return "Intended connected test: eight forward/reverse A/B cases, observing all twenty signal pins every game tick. Each case settles for "+ConnectedTrace.SETTLE
+                +" game ticks and requires 8 stable samples. SUM is A XOR B; CARRY is A AND B. Only the two external levers are stimulated, and both original states must be restored before a pass."
+                +" Recorded test: "+recorded+" This is a test contract, not measured latency or a new test.";
     }
     /** A stored functional result, marked stale when its pass belongs to an older design revision. */
     static String evidence(ComponentAssignments.Task task,Blueprint blueprint) {
