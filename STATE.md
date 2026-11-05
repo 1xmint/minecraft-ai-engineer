@@ -291,3 +291,15 @@ if a recipe changes. Gate start rejects0click no-ops and more than4steps; finish
 checks the sequence's exact terminal frame. No task/router invokes recovery yet.
 Scoped Java compile passed. GPT-6-Luna found no concrete resource/authority flaw.
 Actual recovery execution, durable acknowledgment and native restart proof remain.
+
+Prepared separate write-ahead native recovery observations (unexposed). Each
+new recovery file binds the original craft UUID and exact SHA256 bytes, project/
+owner/worker/world/dimension/source and current revisions. It reconstructs the
+plan from live resources, keeps the original untouched, and records PREPARED
+before native action, OBSERVED only after exact native saved resources, COMPLETE
+only at the settled frame. Each prepare/completion requires fresh executor
+authority; outcome observations remain writable after revocation to preserve
+facts without granting action. GPT-6-Luna identified the need for repeated
+authority checks, now added; server-thread and128record bounds also apply.
+Scoped Java compile passed. No executor or history-unblocking reader uses it
+yet; actual recovery/restart proof remains required. PR73 is unchanged.
