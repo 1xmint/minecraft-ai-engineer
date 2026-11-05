@@ -2,6 +2,8 @@ package dev.minecraftai.engineer;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
+import dev.minecraftai.engineer.client.AcceptanceSpeech;
 import dev.minecraftai.engineer.client.ClientPreview;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -33,10 +35,13 @@ import net.minecraft.server.level.ServerPlayer;
  * denied Eve, each in its own native client JVM. Every request below is ordinary addressed chat;
  * slash commands only set up fixtures (project, selection, sharing). The launcher pauses the real
  * companion process on request so a reply can arrive after a permission or selection change.
- * CI uses offline identities: this does not prove Mojang login or any human audio.
+ * Speech: each client's speech program is replaced by a recorder (AcceptanceSpeech); the server
+ * payload, client receiver and playback queue are real. Nothing private may be spoken where it may
+ * not be shown, and every spoken line must be a real engineer chat reply to that same player.
+ * CI uses offline identities: this does not prove Mojang login, a microphone or a real speaker.
  */
 public final class AcceptanceGameTests implements FabricClientGameTest {
-    private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<String> MESSAGES = new ConcurrentLinkedQueue<>(), CHAT_LOG = new ConcurrentLinkedQueue<>();
     private static final long WAIT_MILLIS = 300_000;
     private static final String GOAL = "Keep the entrance within six blocks.";
     private static final String DECISION = "Use a visible lamp for the output.";
@@ -50,16 +55,20 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
         if (role == null || role.isBlank()) return;
         try {
             Files.createDirectories(directory());
-            ClientReceiveMessageEvents.GAME.register((message, overlay) -> MESSAGES.add(message.getString()));
-            ClientReceiveMessageEvents.CHAT.register((message, signed, sender, type, time) -> MESSAGES.add(message.getString()));
+            ClientReceiveMessageEvents.GAME.register((message, overlay) -> { MESSAGES.add(message.getString()); CHAT_LOG.add(message.getString()); });
+            ClientReceiveMessageEvents.CHAT.register((message, signed, sender, type, time) -> { MESSAGES.add(message.getString()); CHAT_LOG.add(message.getString()); });
+            AcceptanceSpeech.install();
             switch (role) {
                 case "alice" -> owner(context);
                 case "bob" -> editor(context);
                 case "eve" -> denied(context);
                 default -> throw new AssertionError("Unknown acceptance role");
             }
+            spokenOnlyRealReplies();
+            writeSpoken(role);
             write(role + ".done", "passed");
         } catch (Throwable failure) {
+            writeSpoken(role);
             write(role + ".failed", failure.toString());
             if (failure instanceof RuntimeException runtime) throw runtime;
             throw new AssertionError(failure);
@@ -98,17 +107,22 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                         && !player(s, "Alice").getInventory().isEmpty());
 
                 // Memory: literal text, attribution and bounded retrieval through ordinary chat.
-                MESSAGES.clear(); memorySay(context, "Engineer, remember my goal: " + GOAL); expectChat(context, "knowledge revision 1");
-                MESSAGES.clear(); memorySay(context, "Engineer, remember my decision: " + DECISION); expectChat(context, "knowledge revision 2");
-                MESSAGES.clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes, revision 2"); expectChat(context, DECISION);
-                MESSAGES.clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL); expectChat(context, "not observed, built or tested");
+                clear(); memorySay(context, "Engineer, remember my goal: " + GOAL); expectChat(context, "knowledge revision 1");
+                clear(); memorySay(context, "Engineer, remember my decision: " + DECISION); expectChat(context, "knowledge revision 2");
+                clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes, revision 2"); expectChat(context, DECISION);
+                clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL); expectChat(context, "not observed, built or tested");
+                expectSpoken(context, "Note 1 (goal, current) by Alice: " + GOAL);
                 // Summary, guidance and comparison are read-only answers.
-                MESSAGES.clear(); memorySay(context, "Engineer, summarize this project"); expectChat(context, "Player statements (owner-authored notes"); expectChat(context, "This summary started no work");
-                MESSAGES.clear(); say(context, "Engineer, where did we leave off?"); expectChat(context, "Where we left off (rebuilt from project records just now)");
-                MESSAGES.clear(); say(context, "Engineer, what should I do next?"); expectChat(context, "Suggested next step for"); expectChat(context, "This answer started no work");
-                MESSAGES.clear(); say(context, "Engineer, what is still untested?"); expectChat(context, "What is still untested in");
-                MESSAGES.clear(); memorySay(context, "Engineer, compare this with catalog not gate"); expectChat(context, "catalog not-gate"); expectChat(context, "Reliability: unavailable"); expectChat(context, "This comparison changed nothing.");
+                clear(); memorySay(context, "Engineer, summarize this project"); expectChat(context, "Player statements (owner-authored notes"); expectChat(context, "This summary started no work");
+                clear(); say(context, "Engineer, where did we leave off?"); expectChat(context, "Where we left off (rebuilt from project records just now)");
+                clear(); say(context, "Engineer, what should I do next?"); expectChat(context, "Suggested next step for"); expectChat(context, "This answer started no work");
+                clear(); say(context, "Engineer, what is still untested?"); expectChat(context, "What is still untested in");
+                clear(); memorySay(context, "Engineer, compare this with catalog not gate"); expectChat(context, "catalog not-gate"); expectChat(context, "Reliability: unavailable"); expectChat(context, "This comparison changed nothing.");
                 context.takeScreenshot("acceptance-owner-memory");
+                // A chat line that only looks like the engineer is shown on the dedicated server but never spoken.
+                clear(); server.runCommand("tellraw Alice \"Engineer: lookalike line for the speech check\""); expectChat(context, "Engineer: lookalike line for the speech check");
+                context.waitTicks(40);
+                check(AcceptanceSpeech.heard().stream().noneMatch(line -> line.contains("lookalike")), "A lookalike chat line must not be spoken: " + AcceptanceSpeech.heard());
 
                 UUID project = UUID.fromString(projectId);
                 server.runOnServer(s -> commandAs(s, "Alice", "engineer project share Bob editor"));
@@ -133,13 +147,13 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 check(cancelled(bobFrame), "Bob's in-flight companion call was cancelled while the companion was frozen");
                 resumeCompanion(context, "a");
                 // A fresh owner read proves the resumed companion is answering again.
-                MESSAGES.clear(); memorySay(context, "Engineer, show note 2"); expectChat(context, "Note 2 (decision, current) by Alice: " + DECISION, 60_000);
+                clear(); memorySay(context, "Engineer, show note 2"); expectChat(context, "Note 2 (decision, current) by Alice: " + DECISION, 60_000);
                 write("late-a-resumed", "ready");
                 awaitFile(context, "bob-late.done");
 
                 // Late reply B: Alice's own search is in flight when she changes her selection.
                 pauseCompanion(context, "b");
-                MESSAGES.clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Searching shared project notes");
+                clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Searching shared project notes");
                 await(context, () -> server.computeOnServer(s -> pending(s, "Alice") != null), "Alice's search in flight");
                 Object aliceFrame = server.computeOnServer(s -> pending(s, "Alice"));
                 send(context, "engineer project new");
@@ -151,9 +165,10 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 // before the leak check, so the check is not vacuous.
                 memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes", 60_000);
                 check(MESSAGES.stream().noneMatch(message -> message.contains("Note 1 (goal")), "A search answer for the previous selection must not arrive after the selection changed: " + MESSAGES);
+                check(AcceptanceSpeech.heard().stream().noneMatch(line -> line.contains("Note 1 (goal")), "A search answer for the previous selection must not be spoken after the selection changed: " + AcceptanceSpeech.heard());
                 send(context, "engineer project use " + projectId);
                 server.waitFor(s -> projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s, "Alice").getUUID()))));
-                MESSAGES.clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Note 1 (goal, current) by Alice", 60_000);
+                clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Note 1 (goal, current) by Alice", 60_000);
                 write("late-b.done", "passed");
 
                 write("eve-go", "ready");
@@ -179,8 +194,9 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
             publishServer(server, 2);
             send(context, "engineer project use " + projectId);
             server.waitFor(s -> projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s, "Alice").getUUID()))));
-            MESSAGES.clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL, 60_000);
-            MESSAGES.clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes, revision 2", 60_000);
+            clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL, 60_000);
+            expectSpoken(context, "Note 1 (goal, current) by Alice: " + GOAL);
+            clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes, revision 2", 60_000);
             server.runOnServer(s -> {
                 var p = project(s, UUID.fromString(projectId));
                 check(p.owner.equals(UUID.fromString(read("alice-uuid"))), "Restart keeps ownership");
@@ -200,26 +216,27 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
         connect(context, 1);
         awaitFile(context, "bob-go");
         String project = read("project");
-        MESSAGES.clear(); send(context, "engineer project use " + project);
+        clear(); send(context, "engineer project use " + project);
         memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, GOAL);
-        MESSAGES.clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL);
-        MESSAGES.clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Note 1 (goal, current) by Alice");
-        MESSAGES.clear(); memorySay(context, "Engineer, summarize this project"); expectChat(context, "This summary started no work");
-        MESSAGES.clear(); memorySay(context, "Engineer, remember my decision: An editor cannot author this."); expectChat(context, "Only the project owner");
-        MESSAGES.clear(); memorySay(context, "Engineer, compare this with catalog not gate"); expectChat(context, "This comparison changed nothing.");
-        MESSAGES.clear(); say(context, "Engineer, explain how this works"); expectChat(context, "Lesson for component");
+        clear(); memorySay(context, "Engineer, show note 1"); expectChat(context, "Note 1 (goal, current) by Alice: " + GOAL);
+        expectSpoken(context, "Note 1 (goal, current) by Alice: " + GOAL);
+        clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Note 1 (goal, current) by Alice");
+        clear(); memorySay(context, "Engineer, summarize this project"); expectChat(context, "This summary started no work");
+        clear(); memorySay(context, "Engineer, remember my decision: An editor cannot author this."); expectChat(context, "Only the project owner");
+        clear(); memorySay(context, "Engineer, compare this with catalog not gate"); expectChat(context, "This comparison changed nothing.");
+        clear(); say(context, "Engineer, explain how this works"); expectChat(context, "Lesson for component");
         check(view(context) == null, "A client without the overlay keeps no visual project cache");
         write("bob-reads.done", "passed");
 
         awaitFile(context, "bob-late-ask");
-        MESSAGES.clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Reading shared project notes");
+        clear(); memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Reading shared project notes");
         write("bob-late-asked", "ready");
         awaitFile(context, "late-a-resumed");
         context.waitTicks(100);
         noLeak("A reply computed before revocation must not reach Bob afterwards");
 
-        MESSAGES.clear(); send(context, "engineer project use " + project); expectChat(context, "unavailable or not shared");
-        MESSAGES.clear(); memorySay(context, "Engineer, show note 1"); memorySay(context, "Engineer, summarize this project");
+        clear(); send(context, "engineer project use " + project); expectChat(context, "unavailable or not shared");
+        clear(); memorySay(context, "Engineer, show note 1"); memorySay(context, "Engineer, summarize this project");
         say(context, "Engineer, where did we leave off?"); say(context, "Engineer, compare this with catalog not gate"); context.waitTicks(60);
         noLeak("A revoked member receives no notes, summary, guidance or comparison");
         write("bob-late.done", "passed");
@@ -227,8 +244,8 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
         awaitFile(context, "bob-disconnect");
         disconnect(context);
         connect(context, 2);
-        MESSAGES.clear(); send(context, "engineer project use " + project); expectChat(context, "unavailable or not shared");
-        MESSAGES.clear(); memorySay(context, "Engineer, what do you remember about this project?"); memorySay(context, "Engineer, show note 1"); context.waitTicks(60);
+        clear(); send(context, "engineer project use " + project); expectChat(context, "unavailable or not shared");
+        clear(); memorySay(context, "Engineer, what do you remember about this project?"); memorySay(context, "Engineer, show note 1"); context.waitTicks(60);
         noLeak("Revocation survives the saved-world restart");
         write("bob-gen2.done", "passed");
         disconnect(context);
@@ -241,8 +258,8 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
         connect(context, 1);
         awaitFile(context, "eve-go");
         String project = read("project");
-        MESSAGES.clear(); send(context, "engineer project use " + project); expectChat(context, "not shared");
-        MESSAGES.clear(); memorySay(context, "Engineer, what do you remember about this project?"); memorySay(context, "Engineer, show note 1");
+        clear(); send(context, "engineer project use " + project); expectChat(context, "not shared");
+        clear(); memorySay(context, "Engineer, what do you remember about this project?"); memorySay(context, "Engineer, show note 1");
         memorySay(context, "Engineer, find notes about entrance"); memorySay(context, "Engineer, summarize this project");
         say(context, "Engineer, what should I do next?"); say(context, "Engineer, compare this with catalog not gate"); context.waitTicks(60);
         noLeak("A denied player learns nothing about the project");
@@ -254,7 +271,34 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
     // ---------------------------------------------------------------- Fixtures and evidence
 
     private static void noLeak(String message) {
-        for (String text : PRIVATE) check(MESSAGES.stream().noneMatch(line -> line.contains(text)), message + " (saw \"" + text + "\"): " + MESSAGES);
+        for (String text : PRIVATE) {
+            check(MESSAGES.stream().noneMatch(line -> line.contains(text)), message + " (saw \"" + text + "\"): " + MESSAGES);
+            check(AcceptanceSpeech.heard().stream().noneMatch(line -> line.contains(text)), message + " (heard \"" + text + "\"): " + AcceptanceSpeech.heard());
+        }
+    }
+
+    private static void clear() { MESSAGES.clear(); AcceptanceSpeech.clear(); }
+
+    private static void expectSpoken(ClientGameTestContext context, String text) {
+        long deadline = System.currentTimeMillis() + 20_000;
+        while (System.currentTimeMillis() < deadline) {
+            if (AcceptanceSpeech.heard().stream().anyMatch(line -> line.contains(text))) return;
+            context.waitTicks(1);
+        }
+        throw new AssertionError("Expected spoken: " + text + "; heard " + AcceptanceSpeech.heard());
+    }
+
+    /** Provenance: every spoken line is exactly what playback makes of one engineer chat reply this player received. */
+    private static void spokenOnlyRealReplies() {
+        var replies = CHAT_LOG.stream().filter(line -> line.startsWith("Engineer: ")).map(line -> AcceptanceSpeech.spokenForm(line.substring("Engineer: ".length()))).toList();
+        for (String line : AcceptanceSpeech.log())
+            check(!line.contains("lookalike") && replies.contains(line), "Spoken text must come from a real engineer reply to this player: " + line);
+    }
+
+    private static void writeSpoken(String role) {
+        var lines = new JsonArray();
+        AcceptanceSpeech.log().forEach(lines::add);
+        write(role + "-spoken.json", lines.toString());
     }
 
     /** The player's in-flight project-knowledge frame, read reflectively so production code stays unchanged. */

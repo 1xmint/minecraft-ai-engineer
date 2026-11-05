@@ -41,6 +41,9 @@ const receipts = [
   "alice.done",
   "bob.done",
   "eve.done",
+  "alice-spoken.json",
+  "bob-spoken.json",
+  "eve-spoken.json",
 ];
 for (const receipt of receipts)
   assert.ok(existsSync(join(coord, receipt)), `missing receipt ${receipt}`);
@@ -160,6 +163,36 @@ for (const name of ["Alice", "Bob"])
     `${name} snapshot covers a real, non-empty inventory`,
   );
 
+// Speech: the recorder stands in for each client's speech program; the payload path is real.
+const spoken = Object.fromEntries(
+  ["alice", "bob", "eve"].map((role) => [role, json(`${role}-spoken.json`)]),
+);
+const goalLine =
+  "Note 1 (goal, current) by Alice: Keep the entrance within six blocks.";
+assert.ok(
+  spoken.alice.filter((line) => line.startsWith(goalLine)).length >= 2,
+  "Alice heard her note before and after the restart",
+);
+assert.ok(
+  spoken.bob.some((line) => line.startsWith(goalLine)),
+  "Bob's overlay-free client heard a genuine reply while he was a member",
+);
+for (const role of ["alice", "bob", "eve"])
+  assert.ok(
+    spoken[role].every((line) => !line.includes("lookalike")),
+    `${role} never heard a lookalike chat line`,
+  );
+for (const text of [
+  "six blocks",
+  "visible lamp",
+  "by Alice",
+  "Shared project notes",
+])
+  assert.ok(
+    spoken.eve.every((line) => !line.includes(text)),
+    `The denied player never heard "${text}"`,
+  );
+
 console.log(
   JSON.stringify(
     {
@@ -181,6 +214,9 @@ console.log(
       snapshotBefore: before,
       snapshotAfter: after,
       snapshotRestart: reopened,
+      spokenLines: Object.fromEntries(
+        Object.entries(spoken).map(([role, lines]) => [role, lines.length]),
+      ),
     },
     null,
     2,
