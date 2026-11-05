@@ -27,7 +27,7 @@ public final class ToggleMemoryGameTests {
         for(int x=3;x<=6;x++)h.setBlock(at(new BlockPos(x,1,4),rotation),Blocks.STONE);
         var memory=Blueprint.state("minecraft:waxed_copper_bulb");
         h.setBlock(bulb,memory.setValue(BlockStateProperties.LIT,initial));
-        h.setBlock(comparator,Blocks.COMPARATOR.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,Direction.EAST).rotate(rotation));
+        h.setBlock(comparator,Blocks.COMPARATOR.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,Direction.WEST).rotate(rotation));
         h.setBlock(output,Blocks.REDSTONE_WIRE);
         h.setBlock(lever,Blocks.LEVER.defaultBlockState().setValue(BlockStateProperties.ATTACH_FACE,AttachFace.FLOOR));
         var samples=new JsonArray();long[] previous={-1};

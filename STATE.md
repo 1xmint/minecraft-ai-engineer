@@ -131,3 +131,9 @@ new SNBT fixture omitted its required palette. Corrected fixture adds the same
 air palette as the existing native labs; runtime memory behavior remains unproven.
 Combined physical source3a6523e/41957260041 passed and its independent NBT/crafting
 artifact was inspected, including four native plank placements and saved restart.
+
+Memory run41958011579 reached all eight circuits and found the comparator facing
+away from the bulb. The bulb state checks passed up to the output assertion.
+Corrected FACING to WEST (vanilla DiodeBlock reads its rear along FACING, as the
+already-proven AnalogDesign documents). New native proof is required; no pass
+is inferred from that correction.
