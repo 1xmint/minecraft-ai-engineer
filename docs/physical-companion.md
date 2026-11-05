@@ -125,3 +125,13 @@ the companion retains four planks and places no blocks. It refuses other items,
 another active task, stale owner authority and unresolved crafting history.
 Conversation, interruption/refusal proof and integration remain required before
 this candidate is shipped.
+
+Development recovery conversation: say 'Engineer, recover companion crafting
+resources' after inspecting an unfinished transaction. The owner must have the
+current idle companion summoned. Exactly one valid unfinished transaction is
+selected; ambiguous or altered history is refused. Recovery moves only the
+actual retained log or planks into their original hotbar slot and verifies
+native saving. It never takes another recipe result, creates replacement
+items or retries the original craft. Repeating a completed recovery moves
+nothing. Crafting a recovered log requires a separate fresh request. This
+candidate still needs its conversation and final integration CI proof.
