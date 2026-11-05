@@ -3157,9 +3157,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         toggleMemoryTimedProof(server);
     }
     private static void toggleMemoryConversationRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var pending=new java.util.concurrent.atomic.AtomicReference<MemoryPendingInput>();
         server.runOnServer(s->{
             var project=session(s,"Alice");var input=MemoryInputDriver.open(project,project.owner);input.pulse();input.stop();
             check(project.pendingMemoryInput!=null && project.memoryRecoveryRun==null && project.delegation==null,"The conversational fixture starts interrupted with no automatic recovery or lease");
+            pending.set(project.pendingMemoryInput);
         });
         conversationApprove(context,"CI resume selected lamp.");
         expectChat(context,"Recovering the original memory input and stored bit");
@@ -3170,6 +3172,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.pendingMemoryRecovery==null && project.memoryRecoveryDriver==null && project.delegation==null && project.verified.equals("untested")
                     && project.state.equals("PAUSED") && loaded.pendingMemoryInput==null && loaded.pendingMemoryRecovery==null && loaded.delegation==null
                     && loaded.memoryRecoveryRun==null && project.journal.size()==7,"An approved chat resume restores only the original pair and clears its saved scope; it neither restarts construction nor grants a functional pass");
+            var root=pending.get();var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(root.initial().matches(actual),"The conversational completion restores the actual original lever and stored bulb bit");
+            java.util.List<JsonObject> receipts=new java.util.ArrayList<>();
+            try(var paths=Files.list(project.manager.directory)) {
+                for(var path:paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".memory-recovery-") && path.getFileName().toString().endsWith(".json")).toList()) {
+                    var header=JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+                    if(root.birthDigest().equals(header.get("rootBirthDigest").getAsString()))receipts.add(MemoryRecoveryJournal.read(path,project.blueprint,root).json());
+                }
+            }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            check(receipts.size()==1 && receipts.get(0).get("stage").getAsString().equals("RESTORED")
+                    && receipts.get(0).getAsJsonArray("events").size()==7 && receipts.get(0).getAsJsonObject("target").equals(actual.json()),"The chat route has one strict durable recovery receipt for all three newly observed edges and the exact paired target");
+            var evidence=new JsonObject();evidence.add("pendingRoot",root.json());evidence.add("receipt",receipts.get(0));evidence.add("actual",actual.json());
+            write("toggle-memory-conversation-recovery-record.json",evidence.toString());
             write("toggle-memory-conversation-recovery.done","passed");
         });
     }
