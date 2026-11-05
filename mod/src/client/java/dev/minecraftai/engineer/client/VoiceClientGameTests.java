@@ -361,6 +361,39 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
         thread.join(5000);
         check(!thread.isAlive() && error.get() instanceof LocalProcess.Failure && error.get().getMessage().contains("stopped"), "Cancel stops recognition: " + error.get());
 
+        // Quit mid-recognition: cancel kills the program, and quit waits (bounded) until this run
+        // has deleted its own recording.
+        Path marker = Files.createTempFile("engineer-voice-marker", ".txt");
+        var quitting = new VoiceAdapters.ProcessRecognizer(new VoiceConfig.Command(List.of("sh", "-c", "printf %s \"$0\" > \"$1\"; exec sleep 30", "{wav}", marker.toString()), 60));
+        var background = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var quitError = new AtomicReference<Exception>();
+            background.execute(() -> { try { quitting.transcribe(new byte[10]); } catch (Exception e) { quitError.set(e); } });
+            long waitStart = System.nanoTime();
+            while (Files.size(marker) == 0 && System.nanoTime() - waitStart < TimeUnit.SECONDS.toNanos(10)) Thread.sleep(50);
+            Path running = Path.of(Files.readString(marker, StandardCharsets.UTF_8).strip());
+            check(Files.exists(running), "The run's own recording exists while recognition runs: " + running);
+            long quitStart = System.nanoTime();
+            quitting.cancel();
+            check(VoiceController.drain(background, VoiceClient.QUIT_CLEANUP_MILLIS), "Quit waits for the cancelled run to finish");
+            check(System.nanoTime() - quitStart < TimeUnit.MILLISECONDS.toNanos(VoiceClient.QUIT_CLEANUP_MILLIS + 500), "Quit cleanup is bounded");
+            check(quitError.get() instanceof LocalProcess.Failure && !Files.exists(running) && !Files.exists(running.getParent()),
+                    "A cancelled run removes its own recording before quit continues: " + quitError.get());
+        } finally {
+            background.shutdownNow();
+            Files.deleteIfExists(marker);
+        }
+        var stuck = java.util.concurrent.Executors.newSingleThreadExecutor();
+        var release = new CountDownLatch(1);
+        try {
+            stuck.execute(() -> { try { release.await(10, TimeUnit.SECONDS); } catch (InterruptedException ignored) { } });
+            long boundStart = System.nanoTime();
+            check(!VoiceController.drain(stuck, 200) && System.nanoTime() - boundStart < TimeUnit.SECONDS.toNanos(2), "Quit never waits past its bound for a stuck run");
+        } finally {
+            release.countDown();
+            stuck.shutdownNow();
+        }
+
         Path spoken = Files.createTempFile("engineer-voice-spoken", ".txt");
         new VoiceAdapters.ProcessSpeaker(new VoiceConfig.Command(List.of("sh", "-c", "cat > \"$0\"", spoken.toString()), 10)).speak("hello; $(rm -rf ~) there");
         check(Files.readString(spoken, StandardCharsets.UTF_8).equals("hello; $(rm -rf ~) there"), "Speech text goes to stdin untouched, never to a shell");

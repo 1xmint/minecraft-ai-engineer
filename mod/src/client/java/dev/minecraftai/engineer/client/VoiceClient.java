@@ -29,6 +29,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class VoiceClient implements ClientModInitializer {
     private static final String SETUP_HELP = " See docs/install.md. Typing still works.";
+    static final long QUIT_CLEANUP_MILLIS = 3000;
     private static final Executor RECOGNITION = Executors.newSingleThreadExecutor(Thread.ofPlatform().daemon().name("engineer-voice-recognizer").factory());
 
     // Test seams: CI swaps these for fakes; players always get the defaults.
@@ -68,6 +69,8 @@ public final class VoiceClient implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             controller.cancel(null);
             playback.stop();
+            // Give a cancelled recognition up to QUIT_CLEANUP_MILLIS to delete its own recording.
+            VoiceController.drain(RECOGNITION, QUIT_CLEANUP_MILLIS);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             controller.cancel(null);
