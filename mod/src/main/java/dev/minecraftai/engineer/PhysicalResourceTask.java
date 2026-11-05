@@ -23,7 +23,9 @@ final class PhysicalResourceTask implements AutoCloseable {
     PhysicalResourceTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos source,Set<BlockPos> planReads,Runnable intention){
         this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;this.source=source.immutable();this.planReads=Set.copyOf(planReads);this.intention=intention;
         if(!project.contains(source) || !project.level().hasChunkAt(source))throw new IllegalStateException("Requested resource must be loaded inside this workspace");
-        sourceState=project.level().getBlockState(source);PhysicalMaterial.source(sourceState);
+        sourceState=project.level().getBlockState(source);
+        // Explicit before the stance search, which otherwise reports every refusal as a missing route.
+        PhysicalGatherInventory.requireGatherable(worker,PhysicalMaterial.source(sourceState));
         var stance=stance(project,worker,source);
         if(stance.equals(worker.blockPosition()))gather=new PhysicalGatherTask(manager,project,worker,pack,source,planReads,intention);
         else movement=new PhysicalMoveTask(manager,project,worker,pack,stance,planReads,()->{intention.run();requireOriginalSource();});

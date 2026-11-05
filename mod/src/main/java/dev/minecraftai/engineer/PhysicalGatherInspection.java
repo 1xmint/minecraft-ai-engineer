@@ -51,11 +51,11 @@ final class PhysicalGatherInspection {
         String stage=value.get("stage").getAsString();int index=STAGES.indexOf(stage);
         var keys=new java.util.HashSet<>(Set.of("schemaVersion","world","project","worker","dimension","source","inventoryBefore","stage","events"));
         int version=value.get("schemaVersion").getAsBigDecimal().intValueExact();
-        if(version==2){
+        if(version==2 || version==3){
             keys.addAll(Set.of("material","sourceState","expectedItem","expectedCount"));
         }
         if(index>=2)keys.add("drop");if(index==4)keys.add("inventorySaved");
-        if(index<0 || !value.keySet().equals(keys) || version!=1 && version!=2
+        if(index<0 || !value.keySet().equals(keys) || version!=1 && version!=2 && version!=3
             || !value.get("world").getAsString().equals(manager.worldId) || !value.get("project").getAsString().equals(project.projectId.toString())
             || !value.get("worker").getAsString().equals(worker.toString()) || !value.get("dimension").getAsString().equals(project.dimension))
             throw new IllegalStateException("Gather record scope or schema changed");
@@ -63,6 +63,16 @@ final class PhysicalGatherInspection {
             var material=PhysicalMaterial.named(value.get("material").getAsString());
             if(material!=PhysicalMaterial.OAK_LOG || !value.get("expectedItem").getAsString().equals(material.itemId) || value.get("expectedCount").getAsBigDecimal().intValueExact()!=1
                 || !Blueprint.state(value.get("sourceState").getAsString()).is(material.block))throw new IllegalStateException("Unknown oak gather contract");
+        }
+        if(version==3){
+            var material=PhysicalMaterial.named(value.get("material").getAsString());
+            if(!value.get("expectedItem").getAsString().equals(material.itemId) || value.get("expectedCount").getAsBigDecimal().intValueExact()!=1
+                || !Blueprint.state(value.get("sourceState").getAsString()).is(material.block))throw new IllegalStateException("Unknown gather contract");
+            if(value.has("inventorySaved")){
+                var before=value.getAsJsonArray("inventoryBefore");var after=value.getAsJsonArray("inventorySaved");int changed=0;
+                for(int i=0;i<Math.min(before.size(),after.size());i++)if(!before.get(i).equals(after.get(i)))changed++;
+                if(changed!=1)throw new IllegalStateException("Completed gather record does not show exactly one changed slot");
+            }
         }
         var events=value.getAsJsonArray("events");if(events.size()!=index+1)throw new IllegalStateException("Invalid gather event history");
         for(int i=0;i<events.size();i++)if(!events.get(i).getAsString().equals(STAGES.get(i)))throw new IllegalStateException("Invalid gather stage order");

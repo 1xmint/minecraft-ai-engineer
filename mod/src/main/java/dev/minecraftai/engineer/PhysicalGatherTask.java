@@ -20,6 +20,7 @@ final class PhysicalGatherTask implements AutoCloseable {
     private final Runnable intention;
     private final boolean alongX;
     private com.google.gson.JsonArray savedInventory;
+    private final java.util.List<net.minecraft.world.item.ItemStack> baseline;
     private Vec3 settledPosition;
     private int settledTicks;
 
@@ -32,6 +33,7 @@ final class PhysicalGatherTask implements AutoCloseable {
         alongX=Math.abs(source.getX()-start.getX())>Math.abs(source.getZ()-start.getZ());
         if(level!=project.level())throw new IllegalStateException("Companion dimension changed");
         var reads=new HashSet<>(readFootprint(project,worker,source));reads.addAll(planReads);
+        baseline=PhysicalGatherInventory.snapshot(worker);
         lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),java.util.Set.of(source),reads);
         expires=manager.server.getTickCount()+1200;
         try {
@@ -49,11 +51,12 @@ final class PhysicalGatherTask implements AutoCloseable {
     static java.util.Set<BlockPos> readFootprint(EngineeringSession project,ServerPlayer worker,BlockPos source,BlockPos start) {
         int dx=source.getX()-start.getX(),dz=source.getZ()-start.getZ();
         boolean alongX=Math.abs(dx)>Math.abs(dz);int distance=alongX?Math.abs(dx):Math.abs(dz),sideOffset=alongX?Math.abs(dz):Math.abs(dx);
-        if(source.getY()!=start.getY() || sideOffset>1 || distance<2 || distance>4 || !worker.getInventory().isEmpty())
-            throw new IllegalStateException("Gather one dirt block two to four blocks straight ahead along a clear level path, with an empty companion inventory");
+        if(source.getY()!=start.getY() || sideOffset>1 || distance<2 || distance>4)
+            throw new IllegalStateException("Gather one resource two to four blocks straight ahead along a clear level path");
         var reads=new HashSet<BlockPos>();
         if(!project.contains(source) || !project.level().hasChunkAt(source))throw new IllegalStateException("Requested resource must be loaded inside this workspace");
         var material=PhysicalMaterial.source(project.level().getBlockState(source));
+        PhysicalGatherInventory.requireGatherable(worker,material);
         var origin=new BlockPos(alongX?start.getX():source.getX(),start.getY(),alongX?source.getZ():start.getZ());
         for(int step=0;step<=distance;step++)for(int side=-1;side<=1;side++)for(int y=-1;y<=1;y++) {
             var cell=origin.offset(alongX?Integer.signum(dx)*step:side,y,alongX?side:Integer.signum(dz)*step);
@@ -106,7 +109,8 @@ final class PhysicalGatherTask implements AutoCloseable {
             PhysicalActionGate.armPickup(worker,drop,expires,this::authority,()->journal.preparePickup(drop));
             pickupDrop=drop;call("lookAt",new Class[]{Vec3.class},drop.position());call("setForward",new Class[]{float.class},0.45f);picking=true;
         }
-        if(picking && !worker.getInventory().isEmpty()) {
+        // Pickup is observed as any change from the exact starting inventory; the journal then requires that change to be one plain unit.
+        if(picking && !PhysicalGatherInventory.unchanged(baseline,worker)) {
             call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);
             if(savedInventory==null){journal.inventorySaved();savedInventory=PhysicalWorkerStorage.inventory(worker);}
             else if(!savedInventory.equals(PhysicalWorkerStorage.inventory(worker)))throw new IllegalStateException("Gathered inventory changed before handoff");
