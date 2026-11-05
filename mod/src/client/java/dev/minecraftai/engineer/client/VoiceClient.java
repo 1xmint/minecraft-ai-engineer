@@ -59,7 +59,7 @@ public final class VoiceClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean inWorld = client.player != null && client.level != null;
-            while (stop.consumeClick()) playback.stop();
+            while (stop.consumeClick()) { playback.stop(); playback.retry(); } // Also the explicit retry after a speech-program failure.
             controller.tick(talk.isDown(), client.gui.screen() != null, focus.getAsBoolean(), inWorld);
         });
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> playback.offer(message.getString(), overlay));
