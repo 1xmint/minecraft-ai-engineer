@@ -10,11 +10,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.loader.api.FabricLoader;
+import dev.minecraftai.engineer.SpokenReplies;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
@@ -28,6 +29,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class VoiceClient implements ClientModInitializer {
     private static final String SETUP_HELP = " See docs/install.md. Typing still works.";
+    static final long QUIT_CLEANUP_MILLIS = 3000;
     private static final Executor RECOGNITION = Executors.newSingleThreadExecutor(Thread.ofPlatform().daemon().name("engineer-voice-recognizer").factory());
 
     // Test seams: CI swaps these for fakes; players always get the defaults.
@@ -62,10 +64,13 @@ public final class VoiceClient implements ClientModInitializer {
             while (stop.consumeClick()) { playback.stop(); playback.retry(); } // Also the explicit retry after a speech-program failure.
             controller.tick(talk.isDown(), client.gui.screen() != null, focus.getAsBoolean(), inWorld);
         });
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> playback.offer(message.getString(), overlay));
+        // Speech follows only the server's private reply payload, never chat text anyone could imitate.
+        ClientPlayNetworking.registerGlobalReceiver(SpokenReplies.SpokenReplyPayload.TYPE, (payload, context) -> playback.offer(payload.text()));
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             controller.cancel(null);
             playback.stop();
+            // Give a cancelled recognition up to QUIT_CLEANUP_MILLIS to delete its own recording.
+            VoiceController.drain(RECOGNITION, QUIT_CLEANUP_MILLIS);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             controller.cancel(null);

@@ -87,6 +87,25 @@ final class VoiceController {
         });
     }
 
+    /**
+     * Waits at most millis for work already queued on background (a cancelled recognition and its
+     * own cleanup) to finish. Used on quit so this session's temporary recording is deleted before
+     * the game exits. Returns false at the bound; it never waits longer and deletes nothing itself.
+     */
+    static boolean drain(java.util.concurrent.Executor background, long millis) {
+        var done = new java.util.concurrent.CompletableFuture<Void>();
+        try {
+            background.execute(() -> done.complete(null));
+            done.get(millis, java.util.concurrent.TimeUnit.MILLISECONDS);
+            return true;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception notFinished) {
+            return false;
+        }
+    }
+
     /** Ends listening or recognition; any late transcript is dropped and nothing is sent. */
     void cancel(String message) {
         if (state == State.LISTENING) current.source().cancel();
