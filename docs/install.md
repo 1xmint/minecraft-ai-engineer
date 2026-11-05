@@ -131,7 +131,9 @@ answer to you are spoken. That mark travels privately to your game alone, so a
 chat line that merely looks like `Engineer: ...` (another player's message, a
 renamed pet's death message, `/tellraw`, another mod) is shown as text but never
 spoken. Conversation replies, project-note replies and project status replies are
-spoken. Some other engineer lines, such as command help, project lists, building
+spoken. A spoken reply can quote words other people chose: a project note
+written by an authorized member, or a model's answer, is read out as written.
+Some other engineer lines, such as command help, project lists, building
 and inventory updates, are shown as text only for now. Players without the voice
 setup, or without the mod, still see every reply as ordinary chat.
 
