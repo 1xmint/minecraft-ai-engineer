@@ -79,7 +79,9 @@ for (const key of ["blocksSha256", "nonAirBlocks", "owner", "verified", "journal
   assert.deepEqual(reopened[key], before[key], `Saved-world restart kept ${key}`);
 }
 assert.equal(reopened.inventories.Alice, before.inventories.Alice, "Alice's inventory survived the restart unchanged");
-assert.ok(before.nonAirBlocks > 0, "The snapshot covers real placed or reference blocks");
+assert.ok(before.nonAirBlocks > 0, "The snapshot covers real placed fixture blocks");
+const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+for (const name of ["Alice", "Bob"]) assert.notEqual(before.inventories[name], emptyHash, `${name} snapshot covers a real, non-empty inventory`);
 
 console.log(JSON.stringify({
   project,

@@ -90,6 +90,12 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 server.waitFor(s -> session(s, "Alice").blueprint != null && session(s, "Alice").blueprint.anchor().equals(new BlockPos(40, 100, 0)));
                 server.runCommand("tp Alice 42 108 15 180 25");
                 server.waitFor(s -> session(s, "Alice").blueprint.blocks().stream().allMatch(block -> session(s, "Alice").level().hasChunkAt(block.pos())));
+                // Fixture only: real blocks beside the design and real items, so the
+                // before/after/restart snapshots compare non-empty world state.
+                server.runCommand("fill 34 97 -6 35 98 6 minecraft:stone");
+                server.runCommand("give Alice minecraft:redstone 16");
+                server.waitFor(s -> s.getLevel(net.minecraft.world.level.Level.OVERWORLD).getBlockState(new BlockPos(34, 97, -6)).is(net.minecraft.world.level.block.Blocks.STONE)
+                        && !player(s, "Alice").getInventory().isEmpty());
 
                 // Memory: literal text, attribution and bounded retrieval through ordinary chat.
                 MESSAGES.clear(); memorySay(context, "Engineer, remember my goal: " + GOAL); expectChat(context, "knowledge revision 1");
@@ -108,6 +114,8 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 server.runOnServer(s -> commandAs(s, "Alice", "engineer project share Bob editor"));
                 server.waitFor(s -> project(s, project).access.allows(player(s, "Bob").getUUID(), ProjectAccess.Permission.BUILD));
                 write("bob-uuid", server.computeOnServer(s -> player(s, "Bob").getUUID().toString()));
+                server.runCommand("give Bob minecraft:redstone 8");
+                server.waitFor(s -> !player(s, "Bob").getInventory().isEmpty());
                 write("snapshot-before.json", server.computeOnServer(s -> snapshot(s, project)));
                 write("bob-go", "ready");
                 awaitFile(context, "bob-reads.done");
