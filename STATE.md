@@ -119,3 +119,13 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
    verified release, then audit every original requirement before goal completion.
 
 Historical investigations and failed runs remain in Git history and CI artifacts.
+
+PR84 source2a38b22/full41960595421 failed only at the final exact inference
+counter (18observed versus17expected). All game receipts completed; Alice's
+actual chat at03:34:22 reports2passed/0failed/0interrupted of2attempts for the
+current revision. Its scoped action log is exactly design,design,build,test,test,
+design,design,test,undo,test,undo: one additional explicitly requested test.
+Updated the verifier to require exactly18starts and that exact11-action sequence;
+no broad allowance or production quota changed. Fresh full CI is required; the
+failed run remains failed. The harness does not export its SQLite database, so
+its exact counter error/client log and next strict verifier run are the evidence.
