@@ -110,7 +110,7 @@ Bounded navigation (focused dedicated multiplayer CI proven; combined integratio
 
 Bounded blueprint travel (focused dedicated multiplayer CI proven; combined integration pending): the one-request dirt blueprint job can now route to original resources beyond the build area, carry retained items back to an adjacent placement stance, and repeat. Every route reserves the blueprint's observed cells as read dependencies and retains the original owner, connection, plan and assignment checks. A changed intended cell stops the job. Routes close before fresh native mine or placement tickets are issued. The same flat stone-supported inert-terrain and material limits apply; general terrain, tools and crafting remain unfinished.
 
-Development oak resource contract (gameplay CI pending): say 'Engineer, gather oak log at X Y Z'. Only one isolated oak log on the same clear, stone-supported flat path is supported. Logs beside leaves or other logs are refused; this is not yet tree harvesting. The requested source material and exact block state are checked before native mining, and only its one captured native log drop can be collected. Existing dirt records retain version1; oak records use a strict version2 contract for read-only inspection. Retained logs are saved through native player data, never supplied or converted into materials by direct inventory editing. Preloaded inventory refuses another gather. Oak placement, plank crafting, tools and natural forest navigation remain unfinished.
+Development oak resource contract (gameplay CI pending): say 'Engineer, gather oak log at X Y Z'. Only one isolated oak log on the same clear, stone-supported flat path is supported. Logs beside leaves or other logs are refused; this is not yet tree harvesting. The requested source material and exact block state are checked before native mining, and only its one captured native log drop can be collected. Existing dirt records retain version1; oak records use a strict version2 contract for read-only inspection. Retained logs are saved through native player data, never supplied or converted into materials by direct inventory editing. Preloaded inventory refuses another gather. Oak log placement, tools and natural forest navigation remain unfinished. The bounded plank recipe is described below.
 
 Development crafting recovery: 'Engineer, inspect companion recovery' also
 reports this owner's crafting records and whether saved native inventory and
@@ -118,13 +118,13 @@ menu resources match the recorded observation. Record claims are labeled as
 claims. Inspection does not create a worker identity, move items, grant actions
 or retry incomplete crafting. Missing or invalid saved data is reported as
 unavailable, never assumed empty. The four-click oak-to-planks task has passed
-focused native gameplay and saved-world restart proof. The development branch
-adds `Engineer, craft oak planks` for an idle companion retaining exactly one
+focused native gameplay and saved-world restart proof. Main includes `Engineer, craft oak planks` for an idle companion retaining exactly one
 unchanged oak log. Minecraft consumes the log through its native inventory menu;
 the companion retains four planks and places no blocks. It refuses other items,
 another active task, stale owner authority and unresolved crafting history.
-Conversation, interruption/refusal proof and integration remain required before
-this candidate is shipped.
+Native crafting and recovery are integrated through PR73 and PR74, with focused
+conversation, interruption and saved-world proofs. The published alpha.2 download
+predates these changes.
 
 Development recovery conversation: say 'Engineer, recover companion crafting
 resources' after inspecting an unfinished transaction. The owner must have the
@@ -133,5 +133,16 @@ selected; ambiguous or altered history is refused. Recovery moves only the
 actual retained log or planks into their original hotbar slot and verifies
 native saving. It never takes another recipe result, creates replacement
 items or retries the original craft. Repeating a completed recovery moves
-nothing. Crafting a recovered log requires a separate fresh request. This
-candidate still needs its conversation and final integration CI proof.
+nothing. Crafting a recovered log requires a separate fresh request. Its conversation and final integration CI passed before PR74 merged.
+
+Development crafted-plank placement: say `Engineer, place retained oak planks at
+X Y Z` to place one item from the companion's existing plain stack of one to four
+planks. The target must be clear, within four blocks, above stone and inside the
+loaded delegated workspace with inert surroundings. Every native placement
+checks current authority, exact main-hand inventory and a one-use commit; its
+saved full inventory must match the predicted one-item decrement. No supplied
+items or creative edits are used. Dirt blueprint jobs still accept only dirt.
+This candidate has compiled and passed focused review; actual four-placement
+and saved-world restart CI is pending. It is not general NPC machine building.
+An interrupted placement requires inspecting the world and saved resources;
+never compensate missing items or automatically replay an old placement.

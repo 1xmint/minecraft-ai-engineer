@@ -25,7 +25,7 @@ final class PhysicalCompanions {
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
         var gather=java.util.regex.Pattern.compile("gather (dirt|oak log) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
-        var place=java.util.regex.Pattern.compile("place retained dirt at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
+        var place=java.util.regex.Pattern.compile("place retained (dirt|oak planks) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean craftRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
@@ -34,7 +34,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained dirt.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
@@ -75,9 +75,9 @@ final class PhysicalCompanions {
         if(placeRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
-            var target=new BlockPos(Integer.parseInt(place.group(1)),Integer.parseInt(place.group(2)),Integer.parseInt(place.group(3)));
-            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target));
-            project.tell("Your companion is placing its retained dirt through a native survival action.");return true;
+            var target=new BlockPos(Integer.parseInt(place.group(2)),Integer.parseInt(place.group(3)),Integer.parseInt(place.group(4)));
+            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target,Set.of(),()->{},place.group(1).equals("dirt")?PhysicalPlacementInventory.Material.DIRT:PhysicalPlacementInventory.Material.OAK_PLANKS));
+            project.tell("Your companion is placing one retained item through a native survival action.");return true;
         }
         if(gatherRequest){
             var binding=actors.get(project.projectId);
@@ -204,7 +204,7 @@ final class PhysicalCompanions {
                 dismiss(project.projectId);project.tell("Gathering stopped. Inspect the source, dropped resources and saved inventory before another request: "+stopped.getMessage());
             }
             var placement=placing.get(project.projectId);if(placement!=null)try{
-                if(placement.tick()){placing.remove(project.projectId);project.tell("Your companion placed the retained dirt and verified its saved inventory. The mechanism remains untested.");}
+                if(placement.tick()){placing.remove(project.projectId);project.tell("Your companion placed "+placement.placedMaterial()+" and verified its saved inventory. The mechanism remains untested.");}
             }catch(RuntimeException stopped){dismiss(project.projectId);project.tell("Physical placement stopped; inspect the cell and saved inventory before retry: "+stopped.getMessage());}
         }
     }

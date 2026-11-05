@@ -735,13 +735,58 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());check(worker!=null && recovery.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)) && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Actual saved-world restart retains the recovered stacks and restores no authority");PhysicalCraftRecord.requireNoUnresolved(EngineerMod.managerFor(s),session(s,"Alice"),worker,OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG)));menuReceipt(worker,"craft-recovered-"+recovery.step()+"-restarted");});
                 MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,recovery.step()<3?"crafted four oak planks from its retained log and verified its saved inventory":"Crafting needs exactly one unchanged retained oak log");
-                server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty(),"After validated recovery only a fresh owner request can craft an existing log; existing planks are not duplicated");menuReceipt(worker,"craft-after-recovery-"+recovery.step());});
+                server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty(),"After validated recovery only a fresh owner request can craft an existing log; existing planks are not duplicated");nativePlacementGateRefusals(s,worker);menuReceipt(worker,"craft-after-recovery-"+recovery.step());});
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             }
             write("physical-craft-recovery.done","passed");
+            var recovered=recoveredCrafts.get(recoveredCrafts.size()-1);
+            send(context,"engineer project use "+recovered.project());server.waitFor(s->recovered.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            int index=0;
+            for(var target:java.util.List.of(new BlockPos(2633,101,3),new BlockPos(2632,101,3),new BlockPos(2631,101,3),new BlockPos(2633,101,1))){
+                int remaining=3-index;int phase=++index;
+                MESSAGES.clear();say(context,"Engineer, place retained oak planks at "+target.getX()+" "+target.getY()+" "+target.getZ());
+                expectChat(context,"placed one retained oak plank and verified its saved inventory");
+                server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.level().getBlockState(target).is(Blocks.OAK_PLANKS) && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==remaining && PhysicalWorkerMenus.capture(worker).empty(),"Native placement consumes exactly one actually crafted plank and retains every remainder");menuReceipt(worker,"plank-placement-"+phase);});
+            }
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            var recovered=recoveredCrafts.get(recoveredCrafts.size()-1);
+            server.runOnServer(s->{check(s.getPlayerList().getPlayer(recovered.worker())==null,"Placed plank restart restores no worker automatically");for(var target:java.util.List.of(new BlockPos(2633,101,3),new BlockPos(2632,101,3),new BlockPos(2631,101,3),new BlockPos(2633,101,1)))check(s.overworld().getBlockState(target).is(Blocks.OAK_PLANKS),"All four native plank placements survive the actual saved-world restart");});
+            send(context,"engineer project use "+recovered.project());server.waitFor(s->recovered.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.getInventory().isEmpty() && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Restart retains the consumed inventory and restores no construction delegation");menuReceipt(worker,"plank-placement-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            write("physical-plank-placement.done","passed");
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
+    private static void nativePlacementGateRefusals(MinecraftServer server,ServerPlayer worker){
+        var manager=EngineerMod.managerFor(server);var project=session(server,"Alice");var owner=player(server,"Alice");var target=new BlockPos(2633,101,3);
+        var initial=PhysicalCraftFrame.capture(worker);var plan=PhysicalPlacementInventory.capture(worker,PhysicalPlacementInventory.Material.OAK_PLANKS);
+        var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(target.below()).add(0,0.5,0),net.minecraft.core.Direction.UP,target.below(),false);
+        for(int fault=0;fault<5;fault++){
+            try(var lease=new PhysicalWorkLease(manager,project,owner,java.util.Set.of(target),java.util.Set.of(target.below()))){
+                var prepared=new java.util.concurrent.atomic.AtomicBoolean();
+                PhysicalActionGate.armPlace(worker,target,server.getTickCount()+100,()->lease.validate(target),()->prepared.set(true),plan);
+                var context=new net.minecraft.world.item.context.BlockPlaceContext(worker,net.minecraft.world.InteractionHand.MAIN_HAND,worker.getMainHandItem(),hit);
+                if(fault<2){
+                    var forged=new net.minecraft.world.item.context.BlockPlaceContext(worker,fault==0?net.minecraft.world.InteractionHand.MAIN_HAND:net.minecraft.world.InteractionHand.OFF_HAND,fault==0?worker.getMainHandItem().copy():worker.getMainHandItem(),hit);
+                    var result=((net.minecraft.world.item.BlockItem)net.minecraft.world.item.Items.OAK_PLANKS).place(forged);
+                    check(!result.consumesAction() && !prepared.get(),"A detached or wrong-hand stack cannot reach placement intent or native world mutation");
+                }else{
+                    check(PhysicalActionGate.place(context) && prepared.get(),"An exact native before-frame prepares a one-use commit");
+                    if(fault==2){check(!PhysicalActionGate.placeBlock(context,Blocks.STONE.defaultBlockState()),"Plank inventory cannot authorize a different block");}
+                    else if(fault==3){manager.selections.remove(project.owner);try{check(!PhysicalActionGate.placeBlock(context,Blocks.OAK_PLANKS.defaultBlockState()),"Selection loss between intent and native commit refuses mutation");}finally{manager.selections.put(project.owner,project.projectId);}}
+                    else{var mode=worker.gameMode.getGameModeForPlayer();worker.gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.ADVENTURE);try{check(!PhysicalActionGate.placeBlock(context,Blocks.OAK_PLANKS.defaultBlockState()),"Worker mode loss between intent and commit refuses mutation");}finally{worker.gameMode.changeGameModeForPlayer(mode);}}
+                    check(!PhysicalActionGate.placeBlock(context,Blocks.OAK_PLANKS.defaultBlockState()),"A refused commit cannot be replayed after the condition is restored");
+                }
+                check(project.level().getBlockState(target).isAir() && initial.matches(PhysicalCraftFrame.capture(worker)),"Every rejected placement preserves the actual retained planks and target");
+            }finally{PhysicalActionGate.cancel(worker);}
+        }
+        write("physical-placement-gate.done","passed");
+    }
     private static void assertCraftAcknowledgment(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
         var recipe=OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));var before=PhysicalCraftFrame.capture(worker);
         try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
@@ -1033,6 +1078,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             // Dispose only this negative fixture's item. Production must preserve
             // uncertain resources for recovery, never discard them to retry.
             drop.discard();
+            PhysicalActionGate.cancel(worker);
             var manager=EngineerMod.managerFor(s);
             gatherRecord.set(new PhysicalGatherRecord(directory().resolve("gather-records"),manager.worldId,session(s,"Alice").projectId,worker,new BlockPos(2421,101,5),()->{}));
             PhysicalActionGate.arm(worker,"mine",new BlockPos(2421,101,5),Blocks.DIRT.defaultBlockState(),s.getTickCount()+1200,()->{},()->gatherRecord.get().prepareMine());

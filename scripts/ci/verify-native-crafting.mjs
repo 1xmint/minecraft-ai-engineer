@@ -294,3 +294,47 @@ console.log(
     retainedPlanks: 4,
   }),
 );
+
+// Read the real native player files with an independent NBT implementation.
+const placementSource = nbt.simplify(
+  (
+    await nbt.parse(
+      await readFile(join(directory, "worker-menu-craft-after-recovery-4.dat")),
+    )
+  ).parsed,
+);
+assert.equal(placementSource.Inventory.length, 1);
+assert.equal(placementSource.Inventory[0].id, "minecraft:oak_planks");
+assert.equal(placementSource.Inventory[0].count, 4);
+let placedWorker = placementSource.UUID;
+for (const phase of [1, 2, 3, 4, "restarted"]) {
+  const bytes = await readFile(
+    join(directory, `worker-menu-plank-placement-${phase}.dat`),
+  );
+  assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+  const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+  const remaining = typeof phase === "number" ? 4 - phase : 0;
+  assert.equal(player.Inventory.length, remaining ? 1 : 0);
+  if (remaining) {
+    assert.equal(player.Inventory[0].id, "minecraft:oak_planks");
+    assert.equal(player.Inventory[0].count, remaining);
+    assert.ok(player.Inventory[0].Slot >= 0 && player.Inventory[0].Slot < 9);
+  }
+  assert.deepEqual(player.engineer_worker_menu, {
+    schemaVersion: 1,
+    inputs: [{}, {}, {}, {}],
+    cursor: {},
+  });
+  for (const stack of Object.values(player.equipment ?? {}))
+    assert.deepEqual(stack, {});
+  if (placedWorker) assert.deepEqual(player.UUID, placedWorker);
+  placedWorker = player.UUID;
+}
+console.log(
+  JSON.stringify({
+    kind: "native-crafted-plank-placement",
+    blocks: 4,
+    consumedPlanks: 4,
+    savedWorldRestart: true,
+  }),
+);
