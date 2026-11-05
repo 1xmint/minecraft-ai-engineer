@@ -87,7 +87,7 @@ Memory-circuit foundation on main:
 Player experience, branch phase/57-player-experience-integration:
 
 - Outcomes E1/E3/P2/E4: integrate79/27cedf8,88/a5a6eae,89/7473067,
-  90/8dba429,91/b472af1 and92/9845de4. Source branches remain untouched.
+  90/8dba429,91/b472af1,92/9845de4 and94/0ca75a7. Source branches remain untouched.
 - Trusted recipient-specific spoken replies; bounded owned-recording cleanup;
   literal relevant note selection; grounded full-adder lessons; comparisons
   retain each side's actual measurements without invented differences/rates.
@@ -97,6 +97,11 @@ Player experience, branch phase/57-player-experience-integration:
 - GPT-6-Luna reviewed voice provenance/cleanup: no concrete blocker. Hardware
   acceptance remains pending. PR92's failed reversed-order assertion is fixed;
   final Claude9845de4 is included, preserving the same stricter check.
+- PR94 adds speech-boundary capture to the actual dedicated-server acceptance:
+  real private payload/receiver/playback, lookalike rejection, late reply privacy
+  and restart. GPT-6-Luna reviewed the three new test/recorder files: no concrete
+  blocker; standalone42064544775/full and42064545106/acceptance are green on
+  exact0ca75a7. Real audio hardware/login remain unproven.
 - Pre-alignment sourceb84a9b0/focused42067282168 passed208native tests and
   note-selection/project-knowledge tests, including restarted planning relevance
   and denied access. Combined final full/client/isolated acceptance proof is
