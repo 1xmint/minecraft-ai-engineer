@@ -400,7 +400,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
-        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery;
+        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
@@ -594,6 +594,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
                 write("physical-craft-inspection.done","passed");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            conversationCraft=physicalOakFlow(context,server,"oak-conversation");
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            int craftedBefore=server.computeOnServer(s->s.getPlayerList().getPlayer(conversationCraft.worker()).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS));
+            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log and verified its saved inventory");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(conversationCraft.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty() && worker.getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS)==craftedBefore+4,"Ordinary owner conversation crafts the actual retained log using native onTake, without commands or supplied resources");menuReceipt(worker,"craft-conversation");});
+            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"Crafting needs exactly one unchanged retained oak log");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(conversationCraft.worker()),net.minecraft.world.item.Items.OAK_PLANKS)==4,"Repeated natural request creates no additional planks"));
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             for(int step=1;step<=4;step++){
                 var recovered=physicalOakFlow(context,server,"oak-interrupted-"+step);
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
@@ -614,6 +622,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             }
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            send(context,"engineer project use "+conversationCraft.project());server.waitFor(s->conversationCraft.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(conversationCraft.worker());check(worker!=null && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Conversational crafting survives actual saved-world restart without old authority");menuReceipt(worker,"craft-conversation-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-craft-conversation.done","passed");
             for(var recovery:interruptedCrafts){
                 server.runOnServer(s->check(s.getPlayerList().getPlayer(recovery.worker())==null,"Interrupted crafting boots without actors or automatic retry"));
                 send(context,"engineer project use "+recovery.project());server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
@@ -819,6 +831,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project use "+read("physical-project"));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Only the project owner");
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"The companion is at");
         MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, place retained dirt at 2401 101 2");expectChat(context,"Only the project owner");

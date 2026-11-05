@@ -16,7 +16,7 @@ final class PhysicalCraftTask {
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only this project's current owner request may start crafting");
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         PhysicalWorkLease.requireIdle(project);exclusive.run();PhysicalWorkerMenus.requireSettled(worker);
-        var identity=PhysicalWorkerIdentity.open(manager,project);
+        var identity=PhysicalWorkerIdentity.existing(manager,project);
         if(!identity.restore() || !identity.id().equals(worker.getUUID()))throw new IllegalStateException("Crafting requires this project's initialized physical companion");
         var human=manager.server.getPlayerList().getPlayer(project.owner);if(human==null)throw new IllegalStateException("Crafting owner is unavailable");
         var level=worker.level();var connection=worker.connection;var origin=worker.position();var box=worker.getBoundingBox();

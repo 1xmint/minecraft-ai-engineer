@@ -118,5 +118,10 @@ menu resources match the recorded observation. Record claims are labeled as
 claims. Inspection does not create a worker identity, move items, grant actions
 or retry incomplete crafting. Missing or invalid saved data is reported as
 unavailable, never assumed empty. The four-click oak-to-planks task has passed
-focused native gameplay and saved-world restart proof, but is not yet exposed
-to player requests; interruption/refusal proof and integration remain required.
+focused native gameplay and saved-world restart proof. The development branch
+adds `Engineer, craft oak planks` for an idle companion retaining exactly one
+unchanged oak log. Minecraft consumes the log through its native inventory menu;
+the companion retains four planks and places no blocks. It refuses other items,
+another active task, stale owner authority and unresolved crafting history.
+Conversation, interruption/refusal proof and integration remain required before
+this candidate is shipped.

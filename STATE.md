@@ -243,3 +243,16 @@ resource compensation. Independent NBT reads and hand-worked journal frames
 cover all8before/after-restart files. No production task authority changed.
 Scoped client compile and JavaScript/shell syntax checks passed before final
 selection/mode fixture refinement; runtime CI pending.
+
+Owner crafting inspection sourcec818d93 passed focused41940273765; actual
+inspection receipt and previous native crafting reports inspected. Prepared
+the natural conversation candidate on a separate branch while interruption
+proof16c0406/run41940683369 remains live. 'craft oak planks' uses the exact idle
+binding, current owner connection/selection/project/access revisions and no
+competing physical task; the underlying lease rechecks authority before each
+click. Existing-only identity loading creates no replacement on a failed craft.
+GPT-6-Luna reviewed; explicit selection comparison was also added to the route
+for clarity (the physical lease already enforced it). The real-client fixture
+adds owner chat, denied editor, repeated request refusal, native statistic and
+saved-world output checks. Java/client compile and JS/shell checks passed.
+Do not merge until interruption, conversation and final combined CI pass.

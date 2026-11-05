@@ -141,3 +141,36 @@ console.log(
     compensation: false,
   }),
 );
+
+const conversationGather = JSON.parse(
+  await readFile(
+    join(directory, "oak-conversation-gather-records", "oak.json"),
+    "utf8",
+  ),
+);
+for (const suffix of ["", "-restarted"]) {
+  const bytes = await readFile(
+    join(directory, `worker-menu-craft-conversation${suffix}.dat`),
+  );
+  assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+  const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+  assert.deepEqual(player.Inventory, [{ Slot: 0, ...planks }]);
+  assert.deepEqual(player.engineer_worker_menu, expected[4].menu);
+  for (const stack of Object.values(player.equipment ?? {}))
+    assert.deepEqual(stack, {});
+  const identity = Buffer.alloc(16);
+  Array.from(player.UUID).forEach((part, index) =>
+    identity.writeInt32BE(part, index * 4),
+  );
+  assert.equal(
+    identity.toString("hex"),
+    conversationGather.worker.replaceAll("-", ""),
+  );
+}
+console.log(
+  JSON.stringify({
+    kind: "conversational-native-crafting",
+    retainedPlanks: 4,
+    savedWorldRestart: true,
+  }),
+);
