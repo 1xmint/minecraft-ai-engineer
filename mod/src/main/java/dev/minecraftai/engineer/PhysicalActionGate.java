@@ -14,7 +14,7 @@ import net.minecraft.world.phys.BlockHitResult;
 
 /** Managed actor actions fail closed; tickets never replace project authority. */
 public final class PhysicalActionGate {
-    private record MenuTicket(int step,int slot,long expires,Runnable writeAhead) { }
+    private record MenuTicket(int step,int slot,int button,long expires,Runnable writeAhead) { }
     private static final class MenuRun {
         final UUID operation;final PhysicalMenuProtocol sequence;final Object connection;final net.minecraft.world.inventory.AbstractContainerMenu menu;final Runnable authority;
         int next=1;boolean inFlight;MenuTicket ticket;
@@ -82,7 +82,7 @@ public final class PhysicalActionGate {
     }
     static void beginMenu(ServerPlayer actor,UUID operation,PhysicalMenuProtocol sequence,Runnable authority){
         var entry=menuActor(actor);java.util.Objects.requireNonNull(sequence);if(sequence.needsSettledStart())PhysicalWorkerMenus.requireSettled(actor);java.util.Objects.requireNonNull(operation);java.util.Objects.requireNonNull(authority);
-        if(sequence.clicks()<1 || sequence.clicks()>4)throw new IllegalStateException("Menu protocol has no bounded native actions");
+        if(sequence.clicks()<1 || sequence.clicks()>GridCraftSequence.MAX_CLICKS)throw new IllegalStateException("Menu protocol has no bounded native actions");
         if(!menuIdle(entry))throw new IllegalStateException("Worker already has an action or resource phase");
         authority.run();
         if(menuActor(actor)!=entry || !menuIdle(entry) || !sequence.before(1).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Worker changed before crafting admission");
@@ -93,7 +93,8 @@ public final class PhysicalActionGate {
         var entry=menuActor(actor);var run=entry.menuRun;
         if(run==null || !run.operation.equals(operation) || run.next!=step || run.inFlight || run.ticket!=null || expires!=(long)actor.level().getServer().getTickCount()+1)throw new IllegalStateException("No exact same-tick crafting step");
         validateMenu(actor,entry,run,step);
-        run.ticket=new MenuTicket(step,run.sequence.slot(step),expires,java.util.Objects.requireNonNull(writeAhead));
+        int button=run.sequence.button(step);if(button!=0 && button!=1)throw new IllegalStateException("Unsupported native menu button");
+        run.ticket=new MenuTicket(step,run.sequence.slot(step),button,expires,java.util.Objects.requireNonNull(writeAhead));
     }
     private static void validateMenu(ServerPlayer actor,Entry entry,MenuRun run,int step){
         if(menuActor(actor)!=entry || entry.menuRun!=run || actor.connection!=run.connection || actor.inventoryMenu!=run.menu || actor.containerMenu!=run.menu
@@ -111,7 +112,7 @@ public final class PhysicalActionGate {
         var run=entry.menuRun;
         try{
             var ticket=run==null?null:run.ticket;
-            if(ticket==null || run.inFlight || run.next!=ticket.step() || menu!=run.menu || slot!=ticket.slot() || button!=0 || input!=net.minecraft.world.inventory.ContainerInput.PICKUP
+            if(ticket==null || run.inFlight || run.next!=ticket.step() || menu!=run.menu || slot!=ticket.slot() || button!=ticket.button() || input!=net.minecraft.world.inventory.ContainerInput.PICKUP
                 || ticket.expires()!=(long)actor.level().getServer().getTickCount()+1)throw new IllegalStateException("No exact native menu ticket");
             validateMenu(actor,entry,run,ticket.step());run.ticket=null;run.inFlight=true;ticket.writeAhead().run();
             validateMenu(actor,entry,run,ticket.step());
