@@ -179,6 +179,7 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
   cp "$coord/toggle-memory-recovery-reconnect-record.json" "$evidence/"
   cp "$coord/toggle-memory-conversation-recovery-record.json" "$evidence/"
   cp "$coord/toggle-memory-functional-record.json" "$evidence/"
+  node "$repo/scripts/ci/verify-memory-timed.mjs" "$coord/toggle-memory-functional-record.json" --functional-record >"$evidence/toggle-memory-functional-replay.json"
   cp "$coord/toggle-memory-timed-record.json" "$evidence/"
   node "$repo/scripts/ci/verify-memory-timed.mjs" "$coord/toggle-memory-timed-record.json" >"$evidence/toggle-memory-timed-replay.json"
   export_file="$temporary/config-alice/schematics/exports/ci-gate.schem"
