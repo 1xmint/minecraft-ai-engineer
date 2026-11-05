@@ -104,7 +104,7 @@ final class VoiceStaleChecks {
             @Override public void stop() { }
         };
         var playback = new VoicePlayback(() -> missing, () -> true, notice -> notice.deliver(line -> { synchronized (failures) { failures.add(line); } reported.countDown(); }));
-        check(playback.offer("Engineer: hello", false), "The reply is queued");
+        check(playback.offer("hello"), "The reply is queued");
         check(reported.await(5, TimeUnit.SECONDS), "A failing speech program is reported");
         waitIdle(playback);
         synchronized (failures) {
@@ -114,13 +114,13 @@ final class VoiceStaleChecks {
 
         // One notice per failure episode: later replies are not queued, not retried and not re-reported.
         check(playback.failed(), "The failure starts an episode");
-        for (int i = 0; i < 3; i++) check(!playback.offer("Engineer: later " + i, false), "A later reply is not queued during the episode");
+        for (int i = 0; i < 3; i++) check(!playback.offer("later " + i), "A later reply is not queued during the episode");
         playback.stop(); // Stopping alone (for example pressing talk) is not a retry.
-        check(!playback.offer("Engineer: after stop", false) && playback.failed(), "Stop alone does not end the episode");
+        check(!playback.offer("after stop") && playback.failed(), "Stop alone does not end the episode");
         Thread.sleep(100);
         synchronized (failures) { check(failures.size() == 1, "Exactly one notice per episode: " + failures); }
         playback.retry();
-        check(!playback.failed() && playback.offer("Engineer: after retry", false), "The explicit retry tries the program again");
+        check(!playback.failed() && playback.offer("after retry"), "The explicit retry tries the program again");
         waitIdle(playback);
         synchronized (failures) { check(failures.size() == 2, "A failed retry is a new episode with one new notice: " + failures); }
 
@@ -137,7 +137,7 @@ final class VoiceStaleChecks {
             @Override public void stop() { release.countDown(); }
         };
         var stoppable = new VoicePlayback(() -> slow, () -> true, notice -> notice.deliver(line -> { synchronized (stoppedFailures) { stoppedFailures.add(line); } }));
-        stoppable.offer("Engineer: a long answer", false);
+        stoppable.offer("a long answer");
         check(speaking.await(5, TimeUnit.SECONDS), "Speech started");
         stoppable.stop();
         waitIdle(stoppable);
@@ -148,7 +148,7 @@ final class VoiceStaleChecks {
         var queued = new ArrayList<VoicePlayback.FailureNotice>();
         var enqueued = new CountDownLatch(1);
         var delayed = new VoicePlayback(() -> missing, () -> true, notice -> { synchronized(queued){queued.add(notice);} enqueued.countDown(); });
-        delayed.offer("Engineer: reply before stop",false);
+        delayed.offer("reply before stop");
         check(enqueued.await(5,TimeUnit.SECONDS),"Failure reaches the pending client delivery queue");
         waitIdle(delayed);delayed.stop();
         var delivered=new ArrayList<String>();synchronized(queued){queued.getFirst().deliver(delivered::add);}

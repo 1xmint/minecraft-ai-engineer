@@ -1,7 +1,6 @@
 package dev.minecraftai.engineer;
 
 import java.util.*;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 /** Private setup dialogue. Stored choices are descriptions, never grants or world authority. */
@@ -87,5 +86,5 @@ final class ConversationSetup {
         }
         return true;
     }
-    private static void reply(ServerPlayer player,String message){player.sendSystemMessage(Component.literal("Engineer: "+message));}
+    private static void reply(ServerPlayer player,String message){SpokenReplies.tell(player,message);}
 }

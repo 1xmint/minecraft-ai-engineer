@@ -62,7 +62,7 @@ final class ProjectKnowledgeClient {
     private CompletableFuture<JsonObject> request(Frame f,String route,JsonObject body) {
         try{return Companion.gateway(f.session,route,body,f.actor);}catch(RuntimeException failure){finish(f);throw failure;}
     }
-    private void tell(Frame f,String message){if(current(f))f.player.sendSystemMessage(Component.literal("Engineer: "+message));}
+    private void tell(Frame f,String message){if(current(f))SpokenReplies.tell(f.player,message);}
     private void finish(Frame f){var pending=pendingActions.get(f.actor);if(pending!=null && pending.frame()==f)pendingActions.remove(f.actor);active.remove(f.actor,f);if(f.future!=null && !f.future.isDone())f.future.cancel(true);}
     void tick(){for(var f:new ArrayList<>(active.values()))if(!current(f)){if(sameScope(f))f.player.sendSystemMessage(Component.literal(f.discussion?"Engineer: Discussion timed out; ask again explicitly. No automatic retry.":"Engineer: Project-note result not confirmed. Read notes before retrying a write."));finish(f);}}
     void close(){closed=true;recentActions.clear();for(var f:new ArrayList<>(active.values()))finish(f);}

@@ -6,16 +6,16 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Reads the engineer's own replies aloud through the player's local speech program. Only system
- * lines that start with "Engineer: " are spoken; other players' chat never is. One utterance at a
- * time, at most MAX_QUEUED waiting, and stop silences everything at once.
+ * Reads the engineer's own replies aloud through the player's local speech program. Only the
+ * server's private spoken-reply payload for this player is spoken (see SpokenReplies); chat text is
+ * never spoken, so a lookalike "Engineer: " line from a player, pet name, /tellraw or another mod
+ * stays silent. One utterance at a time, at most MAX_QUEUED waiting, and stop silences everything.
  *
  * A failing speech program is one episode: it is reported once, and later replies stay text-only
  * (no new attempt, no repeated notice) until the player explicitly retries with the stop key.
  * Nothing retries on its own.
  */
 final class VoicePlayback {
-    static final String SPOKEN_PREFIX = "Engineer: ";
     static final int MAX_QUEUED = 4, MAX_SPOKEN = 600;
 
     private final Supplier<VoiceAdapters.Speaker> speakers;
@@ -43,10 +43,10 @@ final class VoicePlayback {
                 + " Fix the speaker in config/" + VoiceConfig.FILE + ", then press the voice stop key (B by default) to try spoken replies again.";
     }
 
-    /** Called with each received system line. Returns true when it was queued to be spoken. */
-    boolean offer(String line, boolean overlay) {
-        if (overlay || line == null || !line.startsWith(SPOKEN_PREFIX) || !idle.getAsBoolean()) return false;
-        String text = VoiceController.clean(line.substring(SPOKEN_PREFIX.length()));
+    /** Called only with a server spoken-reply payload's text. Returns true when it was queued to be spoken. */
+    boolean offer(String reply) {
+        if (reply == null || !idle.getAsBoolean()) return false;
+        String text = VoiceController.clean(reply);
         if (text.isEmpty()) return false;
         if (text.length() > MAX_SPOKEN) text = text.substring(0, MAX_SPOKEN);
         synchronized (this) {
