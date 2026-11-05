@@ -232,3 +232,14 @@ never resumes work. Wrong-owner history and missing identity rejection fixtures
 are included. GPT-6-Luna found a check/open race that could create an identity;
 both gathering/crafting inspection now use an existing-only reader. Scoped
 compile and syntax checks passed before the final identity fixture; CI pending.
+
+Prepared crafting interruption proof for all4native return boundaries. Each
+scenario actually gathers its own oak log, then stops after click1/4, loses
+owner project selection after click2, or loses a permitted owner mode after
+click3. No subsequent click may occur. Each uncertain history refuses another
+transaction, including settled click4. A fifth saved-world boot must preserve
+all4exact inventory/grid/cursor outcomes without actor/lease restoration or
+resource compensation. Independent NBT reads and hand-worked journal frames
+cover all8before/after-restart files. No production task authority changed.
+Scoped client compile and JavaScript/shell syntax checks passed before final
+selection/mode fixture refinement; runtime CI pending.

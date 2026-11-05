@@ -81,3 +81,63 @@ console.log(
     resultStored: false,
   }),
 );
+
+// Independently hand-work each interrupted native return, including the
+// already-settled fourth click. No production snapshot/recipe code is imported.
+for (let stopped = 1; stopped <= 4; stopped++) {
+  const location = join(directory, `craft-interrupted-${stopped}`);
+  const names = (await readdir(location)).filter(
+    (name) => name.includes(".craft-") && name.endsWith(".json"),
+  );
+  assert.equal(names.length, 1);
+  const history = JSON.parse(await readFile(join(location, names[0]), "utf8"));
+  assert.equal(history.kind, "native-oak-planks-v1");
+  assert.equal(history.stage, "UNCERTAIN");
+  assert.equal(history.step, stopped);
+  assert.equal(history.steps.length, stopped);
+  assert.equal(history.sourceHotbar, record.sourceHotbar);
+  assert.equal(history.initial.selected, record.initial.selected);
+  assert.deepEqual(history.initial, expected[0]);
+  assert.deepEqual(history.outcome, expected[stopped]);
+  const sequence = ["NEW"];
+  for (let step = 1; step <= stopped; step++) {
+    assert.deepEqual(history.steps[step - 1], {
+      step,
+      status: "OBSERVED",
+      before: expected[step - 1],
+      expectedAfter: expected[step],
+      observedAfter: expected[step],
+    });
+    sequence.push(`PREPARED:${step}`, `OBSERVED:${step}`);
+  }
+  sequence.push("UNCERTAIN");
+  assert.deepEqual(history.events, sequence);
+  for (const suffix of ["", "-restarted"]) {
+    const bytes = await readFile(
+      join(directory, `worker-menu-craft-interrupted-${stopped}${suffix}.dat`),
+    );
+    assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+    const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+    assert.deepEqual(
+      player.Inventory,
+      stopped === 4 ? [{ Slot: history.sourceHotbar, ...planks }] : [],
+    );
+    assert.deepEqual(player.engineer_worker_menu, expected[stopped].menu);
+    for (const stack of Object.values(player.equipment ?? {}))
+      assert.deepEqual(stack, {});
+    const identity = Buffer.alloc(16);
+    Array.from(player.UUID).forEach((part, index) =>
+      identity.writeInt32BE(part, index * 4),
+    );
+    assert.equal(identity.toString("hex"), history.worker.replaceAll("-", ""));
+  }
+}
+console.log(
+  JSON.stringify({
+    kind: "native-crafting-interruptions",
+    stoppedAfterClicks: [1, 2, 3, 4],
+    savedWorldRestart: true,
+    automaticRetry: false,
+    compensation: false,
+  }),
+);
