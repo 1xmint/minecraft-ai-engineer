@@ -209,7 +209,6 @@ unexposed to player requests. CI launchers prepare shared assets serially.
 The final project mirror fixture now explicitly acknowledges structural-project
 on the current boot; its verifier remains unchanged.
 
-
 Native lifetime source5f62b4b passed actual physical run41912627609. Inspected
 physical-craft-lifetime.done and independent five-snapshot worker-menu proof:
 the real mined dirt remains exactly once, without a stored result slot.
