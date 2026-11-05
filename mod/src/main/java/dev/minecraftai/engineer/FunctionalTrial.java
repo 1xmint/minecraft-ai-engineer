@@ -14,6 +14,8 @@ final class FunctionalTrial {
     private final EngineeringSession session;
     private final Map<String,Input> inputs=new LinkedHashMap<>();
     private JsonArray evidence=new JsonArray();
+    private final NativeTrialHistory history=new NativeTrialHistory();
+    java.util.List<TrialEvidenceTally.Attempt> attempts(){return history.attempts();}
     private JsonObject evidenceScope,evidenceBlueprint;
     private MechanismCatalog.Contract contract;
     private int vector,nextTick;
@@ -26,6 +28,9 @@ final class FunctionalTrial {
     private AnalogTrace analog;
     private ConnectedTrace connected;
     private HalfAdderDesign connectedDesign;
+    private FullAdderTrace fullAdder;
+    private JsonObject fullAdderGraph;
+    private String fullAdderDigest;
     private boolean pulseOriginal;
     private JsonObject generatedRow;
     private long startedGameTick,phaseStart,lastBaseline=-1;
@@ -36,6 +41,7 @@ final class FunctionalTrial {
     String shutterOriginalSnapshot(){return shutterOriginal==null?null:Blueprint.describe(shutterOriginal);}
     void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();evidenceScope=null;evidenceBlueprint=null;contract=null;shutterOriginal=null;}
     private void archiveEvidence(){
+        history.capture(evidenceScope,evidence);
         if(evidence.isEmpty())return;var s=session;
         if(evidenceScope==null || evidenceBlueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
         var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);
@@ -49,7 +55,9 @@ final class FunctionalTrial {
     }
 
     void start(){
-        var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);s.requireCreative();
+        var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
+        s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");
         if(s.blueprint==null || s.state.equals("EXECUTING") || s.testTick>=0)throw new IllegalStateException("Complete and stop building before testing");
         if(ImportedBlueprint.describes(s.executionBlueprint().source()))throw new IllegalStateException("Imported geometry has no independently defined functional test contract. It remains untested.");
@@ -68,7 +76,9 @@ final class FunctionalTrial {
         generatedBehavior=accepted instanceof BehaviorSpec buffer?buffer:null;
         truthBehavior=accepted instanceof TruthTableSpec truth?truth:null;settled=null;
         generatedRow=null;transition=null;pulse=null;analog=null;startedGameTick=s.level().getGameTime();lastBaseline=-1;
-        connected=null;connectedDesign=ConnectedIntention.describes(s.executionBlueprint().source())?new HalfAdderDesign():null;
+        var fullAdderSource=ConnectedIntention.fullAdder(s.executionBlueprint().source())?ConnectedIntention.validated(s.executionBlueprint()).source():null;
+        fullAdder=null;fullAdderGraph=fullAdderSource==null?null:fullAdderSource.getAsJsonObject("connected");fullAdderDigest=fullAdderSource==null?null:fullAdderSource.get("graphDigest").getAsString();
+        connected=null;connectedDesign=ConnectedIntention.describes(s.executionBlueprint().source()) && fullAdderGraph==null?new HalfAdderDesign():null;
         s.testTick=0;s.verified="untested";s.state="VERIFYING";s.detail="Tick-accurate "+contract.template()+(contract.analogMode()!=null?" settled numeric suite running":contract.pulse()!=null?" pulse test running":" truth table running");
         s.save();s.checkpoint();
         s.tell(s.detail);
@@ -78,6 +88,7 @@ final class FunctionalTrial {
         try{
             s.validateMutation();s.requireCreative();s.validateTestArea();
             for(var input:inputs.values())if(input.pending() || !s.level().getBlockState(input.pos()).equals(input.last()))throw new IllegalStateException("Player changed test input "+input.name()+"; edit preserved");
+            if(fullAdderGraph!=null){tickFullAdder();return;}
             if(connectedDesign!=null){tickConnected();return;}
             if(contract.analogMode()!=null){tickAnalog();return;}
             if(contract.pulse()!=null){tickPulse();return;}
@@ -101,6 +112,36 @@ final class FunctionalTrial {
             }
             s.testTick++;
         }catch(RuntimeException failure){s.verified="failed: "+failure.getMessage();s.pause("Functional test failed: "+failure.getMessage());}
+    }
+    private void tickFullAdder(){
+        var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
+        if(vector<0 && s.testTick<contract.settleTicks())return;
+        String digest=fullAdderDigest;
+        if(fullAdder==null){
+            vector++;int value=FullAdderEvidence.vector(vector);
+            apply(Map.of("a:control",(value&4)!=0,"b:control",(value&2)!=0,"cin:control",(value&1)!=0));
+            fullAdder=new FullAdderTrace(digest,value,now);phaseStart=now;evidence.add(fullAdder.json());s.save();
+        }
+        long elapsed=now-phaseStart;if(elapsed<FullAdderTrace.SETTLE)return;
+        if(elapsed>FullAdderTrace.END)throw new IllegalStateException("inconclusive: full-adder settled game-tick window missed");
+        var ports=new JsonObject();var blueprint=s.executionBlueprint();
+        for(var value:fullAdderGraph.getAsJsonArray("ports")){
+            var pin=value.getAsJsonObject();String id=pin.get("id").getAsString();var pos=Blueprint.pos(pin.getAsJsonObject("pos")).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor());s.validateTarget(pos);var actual=s.level().getBlockState(pos);
+            switch(pin.get("physical").getAsString()){
+                case "lever"->{if(!actual.is(Blocks.LEVER))throw new IllegalStateException("Full-adder external lever changed");ports.addProperty(id,actual.getValue(BlockStateProperties.POWERED));}
+                case "wire"->{if(!actual.is(Blocks.REDSTONE_WIRE))throw new IllegalStateException("Full-adder signal pin changed");ports.addProperty(id,actual.getValue(BlockStateProperties.POWER));}
+                case "lamp"->{if(!actual.is(Blocks.REDSTONE_LAMP))throw new IllegalStateException("Full-adder receiver changed");ports.addProperty(id,actual.getValue(BlockStateProperties.LIT));}
+                default->throw new IllegalStateException("Unknown full-adder physical pin");
+            }
+        }
+        fullAdder.sample(now,ports);evidence.set(vector,fullAdder.json());s.save();
+        if(fullAdder.verdict().equals("failed"))throw new IllegalStateException("Full-adder pin mismatch: "+fullAdder.json().get("firstMismatch"));
+        if(!fullAdder.passed())return;
+        FullAdderEvidence.validate(evidence,digest,false);if(vector<15){fullAdder=null;return;}
+        FullAdderEvidence.validate(evidence,digest,true);
+        var originals=new LinkedHashMap<BlockPos,BlockState>();for(var input:inputs.values())originals.put(input.pos(),input.original());int total=s.testTick;restore();
+        if(pending() || originals.size()!=3 || originals.entrySet().stream().anyMatch(entry->!s.level().hasChunkAt(entry.getKey()) || !s.level().getBlockState(entry.getKey()).equals(entry.getValue())))throw new IllegalStateException("Full-adder original input restoration incomplete; no pass recorded");
+        s.verified="passed:full-adder:16 cases@"+total;s.assignments.task(s.blueprint,evidenceScope.get("component").getAsString()).lastPassedScope=evidenceScope.deepCopy();s.state="COMPLETED";s.detail="Actual full-adder passed all16 forward/reverse cases at all35 pins; all three original input states restored. Latency was not measured.";s.manager.release(s);s.save();s.checkpoint();s.tell(s.detail);
     }
     private void tickConnected(){
         var s=session;long now=s.level().getGameTime();s.testTick=Math.toIntExact(now-startedGameTick);
@@ -399,6 +440,7 @@ final class FunctionalTrial {
         if(!s.level().getBlockState(pos).equals(wanted))throw new IllegalStateException("Minecraft rejected the test input; restoration journal retained");
     }
     void restore(){
+        if(session.blueprint!=null && ToggleMemoryIntention.describes(session.blueprint.source()) && pending())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         var s=session;s.testTick=-1;
         if(!pending() || !s.server.isSameThread() || !s.available() || !s.manager.mayMutate(s))return;
         for(var input:new ArrayList<>(inputs.values())){
@@ -435,6 +477,7 @@ final class FunctionalTrial {
         return entries;
     }
     void write(JsonObject json){
+        history.capture(evidenceScope,evidence);json.add("nativeTrialHistory",history.json());
         if(shutterOriginal!=null)json.addProperty("shutterOriginalInput",Blueprint.describe(shutterOriginal));
         json.add("testInputs",inputsSnapshot());json.add("functionalEvidence",evidence.deepCopy());
         if(evidenceScope!=null)json.add("functionalScope",evidenceScope.deepCopy());
@@ -442,6 +485,14 @@ final class FunctionalTrial {
         if(pending()){var first=inputs.values().iterator().next();json.addProperty("testOriginal",Blueprint.describe(first.original()));json.addProperty("testLast",Blueprint.describe(first.last()));}
     }
     void load(JsonObject json){
+        if(session.blueprint!=null && ToggleMemoryIntention.describes(session.blueprint.source()) &&
+            (json.has("testOriginal") || json.has("testLast") || json.has("functionalScope") || json.has("shutterOriginalInput")
+            || json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty()
+            || json.has("functionalEvidence") && !json.getAsJsonArray("functionalEvidence").isEmpty()
+            || session.verified.startsWith("passed:") || session.verified.startsWith("stale:")))
+            throw new IllegalStateException("Memory cannot restore a generic functional claim or input journal; stored state needs its own proven protocol");
+
+        history.load(json.has("nativeTrialHistory")?json.getAsJsonArray("nativeTrialHistory"):new JsonArray());
         shutterOriginal=json.has("shutterOriginalInput")?Blueprint.state(json.get("shutterOriginalInput").getAsString()):null;
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();
@@ -449,7 +500,9 @@ final class FunctionalTrial {
             || json.has("testInputs") && !json.getAsJsonArray("testInputs").isEmpty() || session.verified.startsWith("passed:") || session.verified.startsWith("stale:")))
             throw new IllegalStateException("Imported geometry cannot restore a functional claim or input-control journal without an independent behavior contract");
         if(evidence.size()>128)throw new IllegalStateException("Too much functional evidence");
-        if(session.blueprint!=null && ConnectedIntention.describes(session.blueprint.source()))
+        if(session.blueprint!=null && ConnectedIntention.fullAdder(session.blueprint.source()))
+            FullAdderEvidence.validate(evidence,ConnectedIntention.validated(session.blueprint).source().get("graphDigest").getAsString(),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
+        else if(session.blueprint!=null && ConnectedIntention.describes(session.blueprint.source()))
             ConnectedEvidence.validate(evidence,ConnectedIntention.validated(session.blueprint).source().get("graphDigest").getAsString(),session.verified.startsWith("passed:") || session.verified.startsWith("stale:"));
         else validateCases(evidence,session.blueprint!=null && AnalogIntention.describes(session.blueprint.source())?45:32);
         evidenceScope=null;evidenceBlueprint=null;
@@ -514,7 +567,7 @@ final class FunctionalTrial {
     }
     /** Display-only freshness check; retained history never grants execution authority. */
     static boolean matchesCurrentScope(Blueprint blueprint,ComponentAssignments.Task task){
-        if(blueprint==null || task==null || task.lastPassedScope==null || ImportedBlueprint.describes(blueprint.source()))return false;
+        if(blueprint==null || task==null || task.lastPassedScope==null || ImportedBlueprint.describes(blueprint.source()) || ToggleMemoryIntention.describes(blueprint.source()))return false;
         try{
             var scope=validateHistoricalScope(task.lastPassedScope);
             if(!scope.get("projectId").getAsString().equals(blueprint.projectId()) || !scope.get("blueprintId").getAsString().equals(blueprint.id())

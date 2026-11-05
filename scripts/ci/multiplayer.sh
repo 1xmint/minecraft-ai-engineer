@@ -14,10 +14,11 @@ pids=()
 copies=()
 companion_pid=""
 companion_entry="$repo/scripts/ci/companion.mjs"
-# Includes real approval expiry, analog suites, connected build/retest/undo and
-# saved-world recovery. Source3d4f732 reached valid recovery but exceeded23m.
-client_timeout=29m
-harness_seconds=1800
+# Includes real approval expiry, analog/connected suites, native repeated trials,
+# memory construction and saved-world recovery. Memory preview now begins near
+# minute22; keep a bounded window for the added construction/reload proof.
+client_timeout=35m
+harness_seconds=2160
 # Synthetic provider only; this offline UUID carries no real account credentials.
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
   export MCE_CODEX_OPERATOR_UUID=10920508-d5d8-3eed-93d2-92f193afe7d7
@@ -170,6 +171,9 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
 fi
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
+  for marker in toggle-memory-build.done toggle-memory-restarted.done; do
+    [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing memory construction proof: $marker" >&2; exit 1; }
+  done
   export_file="$temporary/config-alice/schematics/exports/ci-gate.schem"
   [[ -s "$export_file" && "$(head -c2 "$export_file" | od -An -tx1 | tr -d ' ')" == 1f8b ]] || { echo "In-game export did not write a gzip schematic" >&2; exit 1; }
   [[ "$(find "$temporary/config-alice/schematics/exports" -type f | wc -l)" -eq 1 ]] || { echo "The refused duplicate export wrote a file" >&2; exit 1; }

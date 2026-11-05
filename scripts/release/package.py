@@ -52,7 +52,7 @@ def build(root, output, jar=None):
     for name in modules:
         emitted = "dist/" + name[:-3] + ".js"
         files[emitted] = read(emitted)
-    for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "imported-materials.json"]:
+    for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "imported-materials.json"]:
         emitted = f"dist/catalog/{name}"
         files[emitted] = read(emitted)
     for required in [
@@ -62,7 +62,11 @@ def build(root, output, jar=None):
         if required not in files:
             raise ValueError(f"Build first: missing {required}")
     files["START-HERE.md"] = read("docs/install.md")
-    for name in ["mod-guide.md", "companion-guide.md", "comparators.md", "acceptance-guide.md", "protocol.md"]:
+    for name in [
+        "mod-guide.md", "companion-guide.md", "comparators.md", "acceptance-guide.md",
+        "protocol.md", "connected-circuits.md", "full-adder.md", "physical-companion.md",
+        "schematics.md", "schematic-analysis.md", "schematic-transforms.md", "schematic-building.md",
+    ]:
         files[f"docs/{name}"] = read(f"docs/{name}")
     images = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "docs/images"], cwd=root
@@ -89,7 +93,7 @@ def build(root, output, jar=None):
             metadata = json.loads(archive.read("fabric.mod.json"))
             if metadata["id"] != "engineer" or jar_path.name.endswith("-sources.jar"):
                 raise ValueError("Expected the deployable engineer jar")
-            for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "imported-materials.json"]:
+            for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "imported-materials.json"]:
                 if archive.read(f"engineer/{name}") != read(f"catalog/{name}"):
                     raise ValueError("Jar catalog differs from the companion checkout")
 

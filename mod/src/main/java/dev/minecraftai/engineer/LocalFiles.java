@@ -13,6 +13,7 @@ import net.minecraft.world.level.storage.LevelResource;
 
 final class LocalFiles {
     static final Gson GSON = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
+    private static final Gson CHECKPOINT_GSON = new GsonBuilder().serializeNulls().create();
     static Path configDir() {
         String override = System.getenv("MCE_CONFIG_DIR");
         if (override != null && !override.isBlank()) return Path.of(override);
@@ -81,10 +82,15 @@ final class LocalFiles {
         } catch (Exception e) { throw new IllegalStateException("Cannot locate the legacy world", e); }
     }
     static void write(Path file, JsonObject value) {
+        write(file,value,GSON);
+    }
+    /** Machine checkpoints retain identical data without repeated indentation bytes. */
+    static void checkpoint(Path file,JsonObject value){write(file,value,CHECKPOINT_GSON);}
+    private static void write(Path file,JsonObject value,Gson encoder){
         try {
             Files.createDirectories(file.getParent());
             Path temp = file.resolveSibling(file.getFileName() + ".tmp");
-            Files.writeString(temp, GSON.toJson(value), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(temp, encoder.toJson(value), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             try (FileChannel channel = FileChannel.open(temp, StandardOpenOption.WRITE)) { channel.force(true); }
             try { Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
             catch (AtomicMoveNotSupportedException e) { Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING); }

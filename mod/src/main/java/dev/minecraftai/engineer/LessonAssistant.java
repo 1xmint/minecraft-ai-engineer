@@ -60,7 +60,8 @@ final class LessonAssistant {
         String intendedBehavior=generated?GeneratedBlueprint.behavior(selected).summary().replace(" Functional testing is still required.",""):null;
         boolean analog=AnalogIntention.describes(selected.source());
         boolean connected=ConnectedIntention.describes(selected.source());
-        Blueprint canonical=generated || mechanical || analog || connected?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
+        boolean memory=ToggleMemoryIntention.describes(selected.source());
+        Blueprint canonical=generated || mechanical || analog || connected || memory?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
             s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?intendedBehavior:canonical.source().get("explanation").getAsString()));
             String current=currentComponent(s,false);
@@ -82,6 +83,7 @@ final class LessonAssistant {
             else if(analog){var design=AnalogIntention.validated(selected).design();for(int bank=0;bank<3;bank++)s.tell("Intended measured "+(bank==0?"rear":bank==1?"first side":"second side")+" strength input at "+design.input(bank).toShortString()+"; one of15 ceiling levers selects strength1..15, all off selects0.");s.tell("Intended numeric output at "+design.output().toShortString()+". Port positions are design information, not an observed measurement.");}
             else for(var port:contract.ports())s.tell("Intended "+(port.input()?"input ":"output ")+port.name()+" at "+port.pos().toShortString());
         } else if(topic==Topic.MATERIALS)materials(s,target,canonical);
+        else if(memory){s.tell(ToggleMemoryIntention.TEST_UNAVAILABLE+" Intended behavior: each rising lever edge toggles one stored bit; held or falling power preserves it. No propagation timing was measured.");}
         else if(mechanical){s.tell("Intended shutter test: allow 8 game ticks to settle, then observe 8 stable tick intervals for each off/on/off phase. This is a test contract, not a measured latency or a new test.");}
         else if(analog){s.tell("Intended analog test:66 numeric cases, covering every strength0..15 at all three inputs and both-side boundaries. Each case settles for8 game ticks and records3 consecutive samples. Every original selector state must be restored before a pass; this contract does not measure latency or run a new test.");}
         else if(connected){s.tell("Intended connected test: eight forward/reverse A/B cases, observing all twenty signal pins every game tick. Each case settles for48 game ticks and requires8 stable samples. SUM is A XOR B; CARRY is A AND B. Only the two external levers are stimulated, and both original states must be restored before a pass. This is a test contract, not measured latency or a new test.");}
@@ -123,6 +125,7 @@ final class LessonAssistant {
     }
     /** A stored functional result, marked stale when its pass belongs to an older design revision. */
     static String evidence(ComponentAssignments.Task task,Blueprint blueprint) {
+        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source()))return "untested memory: automated stateful testing is not available yet";
         if(blueprint!=null && ImportedBlueprint.describes(blueprint.source()))return "untested imported geometry: no defined behavior contract";
         if(task==null)return "untested";
         String stale=staleNote(task,blueprint);

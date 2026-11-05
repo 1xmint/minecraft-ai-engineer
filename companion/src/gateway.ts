@@ -455,6 +455,7 @@ export class ServerGateway {
       blueprint,
       memory.knowledge(context),
       selected,
+      message,
     );
     if (v.recentAction !== undefined) {
       const action = readRecentAction(v.recentAction, capabilities);
@@ -579,6 +580,7 @@ export class ServerGateway {
       memory.blueprint(context),
       memory.knowledge(context),
       componentId,
+      message,
     );
     const discuss = this.options.provider.discuss?.bind(this.options.provider);
     if (!discuss)

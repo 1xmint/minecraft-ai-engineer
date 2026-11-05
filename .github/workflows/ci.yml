@@ -65,6 +65,7 @@ jobs:
           npm run build
           node scripts/ci/verify-analog-native.mjs mod/build/native-gametest.log | tee mod/build/analog-native-replay.json
           node scripts/ci/verify-connected-native.mjs mod/build/native-gametest.log | tee mod/build/connected-native-replay.json
+          node scripts/ci/verify-full-adder-native.mjs mod/build/native-gametest.log | tee mod/build/full-adder-native-replay.json
       - name: Verify catalog bytes in the Fabric jar
         run: |
           jar_file=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -print -quit)
@@ -94,6 +95,7 @@ jobs:
             mod/build/native-gametest.log
             mod/build/analog-native-replay.json
             mod/build/connected-native-replay.json
+            mod/build/full-adder-native-replay.json
             mod/run/gametest/logs/latest.log
           if-no-files-found: warn
           retention-days: 14
@@ -101,7 +103,7 @@ jobs:
   multiplayer:
     name: Dedicated multiplayer
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
     steps:

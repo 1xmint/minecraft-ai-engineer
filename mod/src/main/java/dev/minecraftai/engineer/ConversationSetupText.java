@@ -25,7 +25,9 @@ final class ConversationSetupText {
             case "show me a comparator","show me a compare comparator" -> "comparator-compare";
             case "show me a subtracting comparator","show me a subtract comparator" -> "comparator-subtract";
             case "show me a sticky shutter" -> "sticky-shutter";
+            case "show me a toggle memory","show me a one-bit memory","show me a one bit memory" -> "toggle-memory";
             case "show me a half-adder","show me a half adder" -> "half-adder";
+            case "show me a full-adder","show me a full adder","show me an adder with carry-in" -> "full-adder";
             default -> null;
         };
         if(template!=null)return new Request(Operation.PREVIEW,template);

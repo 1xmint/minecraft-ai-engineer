@@ -54,17 +54,35 @@ final class PhysicalCraftRecord {
         try(var records=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
             for(var path:records){
                 if(++count>1024 || !Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>131072)throw new IllegalStateException("Crafting history needs explicit recovery");
-                var record=JsonParser.parseString(Files.readString(path)).getAsJsonObject();
-                validateComplete(record,manager,project,worker,plan,path.getFileName().toString());
+                byte[] bytes=Files.readAllBytes(path);if(bytes.length>131072)throw new IllegalStateException("Crafting history is oversized");
+                var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                var history=validateHistory(record,manager,project,worker,plan,path.getFileName().toString());
+                if(!record.get("stage").getAsString().equals("COMPLETE"))PhysicalCraftRecoveryHistory.requireAcknowledged(manager,project,worker,bytes,record,history);
             }
         }catch(java.io.IOException failure){throw new IllegalStateException("Crafting history could not be inspected; no new crafting started",failure);}
     }
-    private static int number(JsonObject value,String field){var item=value.get(field);if(item==null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isNumber())throw new IllegalStateException("Malformed crafting record");return item.getAsBigDecimal().intValueExact();}
-    private static void validateComplete(JsonObject record,ProjectManager manager,EngineeringSession project,ServerPlayer worker,OakCraftingPlan plan,String name){
-        if(!record.keySet().equals(KEYS) || number(record,"schemaVersion")!=1 || !record.get("kind").getAsString().equals("native-oak-planks-v1")
+    static Path unresolvedForRecovery(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
+        if(!manager.server.isSameThread() || !project.owner.equals(project.actor()) || !project.projectId.equals(manager.selections.get(project.owner)))throw new IllegalStateException("Only the current project owner may select crafting recovery");
+        project.access.require(project.actor(),ProjectAccess.Permission.BUILD);project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
+        Path unresolved=null;int count=0;
+        try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
+            for(var file:files){
+                if(++count>1024 || !Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS) || Files.size(file)>131072)throw new IllegalStateException("Crafting history needs operator inspection");
+                byte[] bytes=Files.readAllBytes(file);if(bytes.length>131072)throw new IllegalStateException("Crafting history is oversized");
+                var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();var history=validateHistory(record,manager,project,worker,OakCraftingPlan.recordedContract(),file.getFileName().toString());
+                if(record.get("stage").getAsString().equals("COMPLETE") || PhysicalCraftRecoveryHistory.acknowledged(manager,project,worker,bytes,record,history))continue;
+                if(unresolved!=null)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");unresolved=file;
+            }
+            return unresolved;
+        }catch(java.io.IOException failure){throw new IllegalStateException("Crafting recovery could not be selected; no items moved",failure);}
+    }
+    static int number(JsonObject value,String field){var item=value.get(field);if(item==null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isNumber())throw new IllegalStateException("Malformed crafting record");return item.getAsBigDecimal().intValueExact();}
+    record History(OakCraftingSequence sequence,List<Integer> possibleResources) { }
+    static History validateHistory(JsonObject record,ProjectManager manager,EngineeringSession project,ServerPlayer worker,OakCraftingPlan plan,String name){
+        String stage=record.get("stage").getAsString();var keys=new HashSet<>(KEYS);if(stage.equals("UNCERTAIN"))keys.add("outcome");
+        if(!Set.of("NEW","PREPARED","OBSERVED","COMPLETE","UNCERTAIN").contains(stage) || !record.keySet().equals(keys) || number(record,"schemaVersion")!=1 || !record.get("kind").getAsString().equals("native-oak-planks-v1")
             || !record.get("world").getAsString().equals(manager.worldId) || !record.get("dimension").getAsString().equals(project.dimension)
-            || !record.get("project").getAsString().equals(project.projectId.toString()) || !record.get("owner").getAsString().equals(project.owner.toString()) || !record.get("worker").getAsString().equals(worker.getUUID().toString())
-            || !record.get("stage").getAsString().equals("COMPLETE") || number(record,"step")!=4)throw new IllegalStateException("Crafting has an unfinished or invalid record; preserve resources for explicit recovery");
+            || !record.get("project").getAsString().equals(project.projectId.toString()) || !record.get("owner").getAsString().equals(project.owner.toString()) || !record.get("worker").getAsString().equals(worker.getUUID().toString()))throw new IllegalStateException("Crafting has an invalid record; preserve resources for explicit recovery");
         String operation=record.get("operation").getAsString();if(!UUID.fromString(operation).toString().equals(operation) || !name.equals(project.projectId+".craft-"+operation+".json"))throw new IllegalStateException("Crafting record identity differs");
         int revision=number(record,"projectRevision");var authorization=record.get("authorizationRevision");
         if(revision<0 || revision>project.revision() || authorization==null || !authorization.isJsonPrimitive() || !authorization.getAsJsonPrimitive().isNumber()
@@ -73,12 +91,31 @@ final class PhysicalCraftRecord {
         var items=new ArrayList<ItemStack>(Collections.nCopies(PhysicalCraftFrame.SLOTS,ItemStack.EMPTY));if(source<0 || source>=9)throw new IllegalStateException("Invalid recorded crafting source");items.set(source,new ItemStack(Items.OAK_LOG));
         var empty=new PhysicalMenuSnapshot(Collections.nCopies(4,ItemStack.EMPTY),ItemStack.EMPTY);var sequence=OakCraftingSequence.predict(new PhysicalCraftFrame(items,empty,ItemStack.EMPTY,selected),source,plan);
         if(!record.get("initial").equals(resources(sequence.before(1),worker)))throw new IllegalStateException("Recorded crafting baseline differs");
-        var events=new JsonArray();events.add("NEW");var steps=record.getAsJsonArray("steps");if(steps.size()!=4)throw new IllegalStateException("Incomplete crafting history");
-        for(int step=1;step<=4;step++){
-            var row=steps.get(step-1).getAsJsonObject();if(!row.keySet().equals(Set.of("step","status","before","expectedAfter","observedAfter")) || number(row,"step")!=step || !row.get("status").getAsString().equals("OBSERVED")
-                || !row.get("before").equals(resources(sequence.before(step),worker)) || !row.get("expectedAfter").equals(resources(sequence.after(step),worker)) || !row.get("observedAfter").equals(row.get("expectedAfter")))throw new IllegalStateException("Crafting history has an unverified native step");
-            events.add("PREPARED:"+step);events.add("OBSERVED:"+step);
+        int last=number(record,"step");var events=new JsonArray();events.add("NEW");var steps=record.getAsJsonArray("steps");
+        if(last<0 || last>4 || steps.size()!=last || stage.equals("NEW") && last!=0 || stage.equals("COMPLETE") && last!=4 || Set.of("PREPARED","OBSERVED").contains(stage) && last==0)throw new IllegalStateException("Invalid crafting progress");
+        boolean prepared=false;
+        for(int step=1;step<=last;step++){
+            var row=steps.get(step-1).getAsJsonObject();String status=row.get("status").getAsString();prepared=status.equals("PREPARED");
+            var rowKeys=prepared?Set.of("step","status","before","expectedAfter"):Set.of("step","status","before","expectedAfter","observedAfter");
+            if(!Set.of("PREPARED","OBSERVED").contains(status) || prepared && step!=last || !row.keySet().equals(rowKeys) || number(row,"step")!=step
+                || !row.get("before").equals(resources(sequence.before(step),worker)) || !row.get("expectedAfter").equals(resources(sequence.after(step),worker))
+                || !prepared && !row.get("observedAfter").equals(row.get("expectedAfter")))throw new IllegalStateException("Crafting history has an invalid native step");
+            events.add("PREPARED:"+step);if(!prepared)events.add("OBSERVED:"+step);
         }
-        events.add("COMPLETE");if(!events.equals(record.get("events")))throw new IllegalStateException("Crafting event sequence differs");
+        if(stage.equals("PREPARED") && !prepared || Set.of("OBSERVED","COMPLETE").contains(stage) && prepared)throw new IllegalStateException("Crafting stage differs from its last step");
+        if(Set.of("COMPLETE","UNCERTAIN").contains(stage))events.add(stage);
+        if(!events.equals(record.get("events"))){
+            // Cleanup may fail after COMPLETE was durably written. Preserve
+            // that history without treating the later UNCERTAIN state as a pass.
+            if(!stage.equals("UNCERTAIN") || last!=4 || prepared)throw new IllegalStateException("Crafting event sequence differs");
+            events.remove(events.size()-1);events.add("COMPLETE");events.add("UNCERTAIN");
+            if(!events.equals(record.get("events")))throw new IllegalStateException("Crafting event sequence differs");
+        }
+        var possible=prepared?List.of(last-1,last):List.of(last);
+        if(stage.equals("UNCERTAIN")){
+            var matched=new ArrayList<Integer>();for(int index:possible){var frame=index==0?sequence.before(1):sequence.after(index);if(record.get("outcome").equals(resources(frame,worker)))matched.add(index);}
+            if(matched.isEmpty())throw new IllegalStateException("Uncertain crafting outcome needs operator inspection");possible=List.copyOf(matched);
+        }
+        return new History(sequence,possible);
     }
 }

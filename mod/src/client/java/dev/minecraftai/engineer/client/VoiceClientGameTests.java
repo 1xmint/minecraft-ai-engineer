@@ -262,6 +262,34 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
             context.waitTicks(20);
             check(sent().stream().noneMatch(line -> line.startsWith("You:")), "Nothing was sent during playback checks: " + sent());
             context.takeScreenshot("voice-03-after-playback");
+
+            // 13. A broken speech program is one failure episode: one notice, later replies stay
+            // text-only without new attempts, and only the explicit stop key retries.
+            var attempts = new AtomicInteger();
+            VoiceClient.speakers = () -> new VoiceAdapters.Speaker() {
+                @Override public void speak(String text) throws Exception { attempts.incrementAndGet(); throw new LocalProcess.Failure("could not start fake-speaker"); }
+                @Override public void stop() { }
+            };
+            clear(context);
+            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: first after breaking")));
+            context.waitFor(c -> VoiceClient.playback().failed() && String.valueOf(VoiceClient.controller().lastNotice()).contains("fake-speaker"), 200);
+            String episode = notice(context);
+            check(episode.contains("Replies still show in chat") && episode.contains("stop key"), "The failure explains text still works and how to retry: " + episode);
+            server.runOnServer(s -> { for (int i = 0; i < 3; i++) player(s).sendSystemMessage(Component.literal("Engineer: later reply " + i)); });
+            context.waitFor(c -> sent().stream().anyMatch(line -> line.contains("later reply 2")), 200);
+            context.waitTicks(10);
+            check(attempts.get() == 1, "Later replies do not retry the broken program: " + attempts.get());
+            check(notice(context).equals(episode), "No second notice for later replies: " + notice(context));
+            check(context.computeOnClient(c -> c.gui.screen() == null) && sent().stream().noneMatch(line -> line.startsWith("You:")), "The failure opens nothing and sends nothing: " + sent());
+            VoiceClient.speakers = () -> speaker;
+            speaker.hold = false;
+            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: still failed")));
+            context.waitTicks(20);
+            check(!speaker.heard().contains("still failed"), "Fixing the program alone does not retry automatically: " + speaker.heard());
+            context.getInput().pressKey(VoiceClient.stopKey());
+            context.waitFor(c -> !VoiceClient.playback().failed(), 100);
+            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: after retry")));
+            context.waitFor(c -> speaker.heard().contains("after retry"), 200);
         } finally {
             VoiceClient.setups = VoiceClient::configuredSetup;
             VoiceClient.speakers = VoiceClient::configuredSpeaker;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -171,6 +172,169 @@ console.log(
   JSON.stringify({
     kind: "conversational-native-crafting",
     retainedPlanks: 4,
+    savedWorldRestart: true,
+  }),
+);
+
+for (let stopped = 1; stopped <= 4; stopped++) {
+  const originalDirectory = join(directory, `craft-interrupted-${stopped}`);
+  const originalNames = (await readdir(originalDirectory)).filter(
+    (name) => name.includes(".craft-") && name.endsWith(".json"),
+  );
+  assert.equal(originalNames.length, 1);
+  const originalBytes = await readFile(
+    join(originalDirectory, originalNames[0]),
+  );
+  const original = JSON.parse(originalBytes.toString("utf8"));
+  const recoveryDirectory = join(directory, `craft-recovered-${stopped}`);
+  const names = (await readdir(recoveryDirectory)).filter(
+    (name) => name.includes(".resource-recovery-") && name.endsWith(".json"),
+  );
+  assert.equal(names.length, 1);
+  const recovery = JSON.parse(
+    await readFile(join(recoveryDirectory, names[0]), "utf8"),
+  );
+  assert.equal(recovery.kind, "native-oak-resource-recovery-v1");
+  assert.equal(recovery.stage, "COMPLETE");
+  for (const field of [
+    "world",
+    "dimension",
+    "project",
+    "owner",
+    "worker",
+    "sourceHotbar",
+  ])
+    assert.equal(recovery[field], original[field]);
+  assert.equal(recovery.craftOperation, original.operation);
+  assert.equal(
+    recovery.craftSha256,
+    createHash("sha256").update(originalBytes).digest("hex"),
+  );
+  const finalFrame = expected[stopped < 3 ? 0 : 4];
+  assert.deepEqual(recovery.initial, expected[stopped]);
+  assert.deepEqual(recovery.expectedFinal, finalFrame);
+  assert.deepEqual(recovery.savedFinal, finalFrame);
+  const movement =
+    stopped === 1
+      ? [[36 + record.sourceHotbar, expected[1], expected[0]]]
+      : stopped === 2
+        ? [
+            [1, expected[2], expected[1]],
+            [36 + record.sourceHotbar, expected[1], expected[0]],
+          ]
+        : stopped === 3
+          ? [[36 + record.sourceHotbar, expected[3], expected[4]]]
+          : [];
+  assert.equal(recovery.clicks, movement.length);
+  assert.equal(recovery.step, movement.length);
+  assert.equal(recovery.steps.length, movement.length);
+  const events = ["NEW"];
+  movement.forEach(([slot, before, after], index) => {
+    const step = index + 1;
+    assert.notEqual(slot, 0);
+    assert.deepEqual(recovery.steps[index], {
+      step,
+      slot,
+      status: "OBSERVED",
+      before,
+      expectedAfter: after,
+      observedAfter: after,
+    });
+    events.push(`PREPARED:${step}`, `OBSERVED:${step}`);
+  });
+  events.push("COMPLETE");
+  assert.deepEqual(recovery.events, events);
+  for (const suffix of ["", "-restarted"]) {
+    const bytes = await readFile(
+      join(directory, `worker-menu-craft-recovered-${stopped}${suffix}.dat`),
+    );
+    assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+    const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+    assert.deepEqual(player.Inventory, [
+      { Slot: record.sourceHotbar, ...(stopped < 3 ? log : planks) },
+    ]);
+    assert.deepEqual(player.engineer_worker_menu, finalFrame.menu);
+    for (const stack of Object.values(player.equipment ?? {}))
+      assert.deepEqual(stack, {});
+    const identity = Buffer.alloc(16);
+    Array.from(player.UUID).forEach((part, index) =>
+      identity.writeInt32BE(part, index * 4),
+    );
+    assert.equal(identity.toString("hex"), original.worker.replaceAll("-", ""));
+  }
+}
+console.log(
+  JSON.stringify({
+    kind: "native-crafting-resource-recovery",
+    cases: 4,
+    originalHistoryPreserved: true,
+    resultClicks: 0,
+    savedWorldRestart: true,
+  }),
+);
+
+for (let stopped = 1; stopped <= 4; stopped++) {
+  const bytes = await readFile(
+    join(directory, `worker-menu-craft-after-recovery-${stopped}.dat`),
+  );
+  assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+  const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+  assert.deepEqual(player.Inventory, [
+    { Slot: record.sourceHotbar, ...planks },
+  ]);
+  assert.deepEqual(player.engineer_worker_menu, expected[4].menu);
+  for (const stack of Object.values(player.equipment ?? {}))
+    assert.deepEqual(stack, {});
+}
+console.log(
+  JSON.stringify({
+    kind: "acknowledged-native-recovery",
+    cases: 4,
+    explicitFreshRequest: true,
+    retainedPlanks: 4,
+  }),
+);
+
+// Read the real native player files with an independent NBT implementation.
+const placementSource = nbt.simplify(
+  (
+    await nbt.parse(
+      await readFile(join(directory, "worker-menu-craft-after-recovery-4.dat")),
+    )
+  ).parsed,
+);
+assert.equal(placementSource.Inventory.length, 1);
+assert.equal(placementSource.Inventory[0].id, "minecraft:oak_planks");
+assert.equal(placementSource.Inventory[0].count, 4);
+let placedWorker = placementSource.UUID;
+for (const phase of [1, 2, 3, 4, "restarted"]) {
+  const bytes = await readFile(
+    join(directory, `worker-menu-plank-placement-${phase}.dat`),
+  );
+  assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+  const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+  const remaining = typeof phase === "number" ? 4 - phase : 0;
+  assert.equal(player.Inventory.length, remaining ? 1 : 0);
+  if (remaining) {
+    assert.equal(player.Inventory[0].id, "minecraft:oak_planks");
+    assert.equal(player.Inventory[0].count, remaining);
+    assert.ok(player.Inventory[0].Slot >= 0 && player.Inventory[0].Slot < 9);
+  }
+  assert.deepEqual(player.engineer_worker_menu, {
+    schemaVersion: 1,
+    inputs: [{}, {}, {}, {}],
+    cursor: {},
+  });
+  for (const stack of Object.values(player.equipment ?? {}))
+    assert.deepEqual(stack, {});
+  if (placedWorker) assert.deepEqual(player.UUID, placedWorker);
+  placedWorker = player.UUID;
+}
+console.log(
+  JSON.stringify({
+    kind: "native-crafted-plank-placement",
+    blocks: 4,
+    consumedPlanks: 4,
     savedWorldRestart: true,
   }),
 );

@@ -5,7 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
 /** The sole supported four-click protocol. Prediction does not mutate a player. */
-final class OakCraftingSequence {
+final class OakCraftingSequence implements PhysicalMenuProtocol {
     private final int source;
     private final List<PhysicalCraftFrame> frames;
     private OakCraftingSequence(int source,List<PhysicalCraftFrame> frames){this.source=source;this.frames=List.copyOf(frames);}
@@ -29,8 +29,10 @@ final class OakCraftingSequence {
             new PhysicalCraftFrame(taken,new PhysicalMenuSnapshot(empty,plan.output()),ItemStack.EMPTY,selected),
             new PhysicalCraftFrame(result,new PhysicalMenuSnapshot(empty,ItemStack.EMPTY),ItemStack.EMPTY,selected)));
     }
-    PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
-    PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
-    int slot(int step){requireStep(step);return switch(step){case 1,4->36+source;case 2->1;case 3->0;default->throw new AssertionError();};}
+    public int clicks(){return 4;}
+    public void validateNative(ServerPlayer actor){OakCraftingPlan.inspect(actor.level(),before(1).inventory().get(source));}
+    public PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
+    public PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    public int slot(int step){requireStep(step);return switch(step){case 1,4->36+source;case 2->1;case 3->0;default->throw new AssertionError();};}
     private static void requireStep(int step){if(step<1 || step>4)throw new IllegalArgumentException("Unsupported native crafting step");}
 }

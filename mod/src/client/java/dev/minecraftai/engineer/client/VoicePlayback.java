@@ -9,6 +9,10 @@ import java.util.function.Supplier;
  * Reads the engineer's own replies aloud through the player's local speech program. Only system
  * lines that start with "Engineer: " are spoken; other players' chat never is. One utterance at a
  * time, at most MAX_QUEUED waiting, and stop silences everything at once.
+ *
+ * A failing speech program is one episode: it is reported once, and later replies stay text-only
+ * (no new attempt, no repeated notice) until the player explicitly retries with the stop key.
+ * Nothing retries on its own.
  */
 final class VoicePlayback {
     static final String SPOKEN_PREFIX = "Engineer: ";
@@ -24,6 +28,7 @@ final class VoicePlayback {
     private VoiceAdapters.Speaker current;
     private Thread worker;
     private int spoken, generation;
+    private boolean failed;
 
     /** failures receives one plain line when the speech program fails on its own (never when stop ended it). */
     VoicePlayback(Supplier<VoiceAdapters.Speaker> speakers, BooleanSupplier idle, Consumer<FailureNotice> failures) {
@@ -34,7 +39,8 @@ final class VoicePlayback {
 
     static String failure(Exception failed) {
         String why = failed instanceof LocalProcess.Failure process ? process.getMessage() : "failed";
-        return "Spoken replies stopped: the speech program " + why + ". Replies still show in chat, and typing still works.";
+        return "Spoken replies stopped: the speech program " + why + ". Replies still show in chat, and typing still works."
+                + " Fix the speaker in config/" + VoiceConfig.FILE + ", then press the voice stop key (B by default) to try spoken replies again.";
     }
 
     /** Called with each received system line. Returns true when it was queued to be spoken. */
@@ -44,7 +50,7 @@ final class VoicePlayback {
         if (text.isEmpty()) return false;
         if (text.length() > MAX_SPOKEN) text = text.substring(0, MAX_SPOKEN);
         synchronized (this) {
-            if (queue.size() >= MAX_QUEUED) return false;
+            if (failed || queue.size() >= MAX_QUEUED) return false; // A failed program is not retried by the next reply.
             queue.add(text);
             if (worker == null || !worker.isAlive()) worker = Thread.ofPlatform().daemon().name("engineer-voice-speaker").start(this::run);
             notifyAll();
@@ -66,10 +72,10 @@ final class VoicePlayback {
                 run = generation;
             }
             try { speaker.speak(text); }
-            catch (Exception failed) {
+            catch (Exception error) {
                 boolean own;
-                synchronized (this) { own = run == generation; if (own) queue.clear(); }
-                if (own) failures.accept(new FailureNotice(failure(failed),()->{synchronized(this){return run==generation;}}));
+                synchronized (this) { own = run == generation; if (own) { queue.clear(); failed = true; } }
+                if (own) failures.accept(new FailureNotice(failure(error),()->{synchronized(this){return run==generation;}}));
             }
             synchronized (this) { current = null; if (run == generation) spoken++; }
         }
@@ -86,6 +92,10 @@ final class VoicePlayback {
         if (speaking != null) speaking.stop();
     }
 
+    /** The player's explicit retry after a failure: the next reply tries the speech program again. */
+    synchronized void retry() { failed = false; }
+
+    synchronized boolean failed() { return failed; }
     synchronized boolean busy() { return current != null || !queue.isEmpty(); }
     synchronized int queued() { return queue.size(); }
     synchronized int spoken() { return spoken; }

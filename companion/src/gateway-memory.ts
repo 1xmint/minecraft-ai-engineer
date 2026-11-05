@@ -10,6 +10,7 @@ import {
   NOTE_SEARCH_LIMIT,
 } from "./project-knowledge.js";
 import type { DatabaseSync } from "node:sqlite";
+import { currentNotes } from "./discussion.js";
 import { validateInventory, type InventorySnapshot } from "./inventory.js";
 import {
   componentMemoryScopes,
@@ -1021,8 +1022,10 @@ export class GatewayMemory {
     // Preserve byte-for-byte empty-note contexts used by existing acceptance receipts.
     if (knowledge.revision === 0)
       return Object.freeze({ knowledgeRevision: 0, text: legacy });
-    const notes = knowledge.notes.slice(-8);
     const replaced = this.replacedRevisions(context);
+    // Replaced notes are history: never listed as a current requirement.
+    const current = currentNotes(knowledge);
+    const notes = current.notes;
     return Object.freeze({
       knowledgeRevision: knowledge.revision,
       text: JSON.stringify({
@@ -1032,10 +1035,15 @@ export class GatewayMemory {
           source:
             "owner-authored requirements; not observed or verified world state",
           notes,
-          hasEarlier:
-            knowledge.hasEarlier || knowledge.notes.length > notes.length,
+          hasEarlier: knowledge.hasEarlier || current.omitted,
           // Absent for version 1 projects so recorded planning text stays byte-identical.
-          ...(replaced.length ? { replaced } : {}),
+          ...(replaced.length
+            ? {
+                replaced,
+                replacedNotes:
+                  "history only; not current requirements and not listed in notes",
+              }
+            : {}),
         },
       }),
     });
