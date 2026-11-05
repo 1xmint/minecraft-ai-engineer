@@ -182,3 +182,11 @@ allows the current undo controller with current UNDO and VIEW to stop their
 own undo; other stops still require BUILD. Both command and conversation
 use the same check. Native permission-matrix coverage added; scoped Java
 compile and diff checks passed. Independent review found no remaining issue.
+
+Source422859a stop-authority matrix passed native41913776616. Source5946dc5
+full flow41913045469 reached both complete native trials and successfully
+stopped/resumed partial undo, but its 25-minute child deadline expired during
+continued restoration. No watchdog occurred. Prepared a fixed four-entry undo
+budget per tick, retaining one full preflight per batch and the existing fresh
+per-target authority/world/neighbor checks and save after each entry. No deadline
+or verifier change. Scoped Java compile passed; actual flow proof pending.

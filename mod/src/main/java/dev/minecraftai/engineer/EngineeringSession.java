@@ -750,7 +750,7 @@ final class EngineeringSession implements BuildExecutor {
         if (undoRequested && state.equals("EXECUTING")) {
             try {
                 validateMutation(ProjectAccess.Permission.UNDO);
-                if(applyUndoEntriesReserved(1))finishUndo();
+                if(applyUndoEntriesReserved(4))finishUndo();
             }catch(RuntimeException failure){pause("Undo paused: "+failure.getMessage());}
             tickTutorials();return;
         }
