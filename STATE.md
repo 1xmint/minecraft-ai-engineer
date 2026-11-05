@@ -118,3 +118,13 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
    verified release, then audit every original requirement before goal completion.
 
 Historical investigations and failed runs remain in Git history and CI artifacts.
+
+Integration PR82 merged066923a after exact3a6523e passed all5checks41957252832.
+Dedicated memory/restart artifact was inspected, as were combined physical
+41957260041 and full-adder41957262960 proofs. The source PRs are now integrated.
+Proof correction: native trial-history and two-request assertions were accidentally
+placed in optional liveStructuralFlow, not default conversationDesignFlow. The
+normal CI run therefore did NOT prove those assertions. work/trial-repeat-default-flow
+moves them to the actually-driven generated conversation, with no model calls or
+runtime-feature changes. CI must show actual two-attempt chat counts before that
+specific producer/persistence/repeat proof is claimed complete.
