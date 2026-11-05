@@ -726,8 +726,9 @@ like this:
 
 There is no meaning-based search and no web lookup: a note about `lamps` is
 not found by asking about `lights`. Ask `find notes about lights` to search the
-whole history yourself. When the engineer plans or revises a build, it is given
-the eight newest current notes; your request does not change which ones yet.
+whole history yourself. When the engineer plans or revises a build, the same
+bounded literal matching uses your build request to choose current notes. A
+request without matching subject words falls back to the newest current notes.
 Choosing a note never makes it true: notes stay owner-authored requirements, not
 observations or proof that anything works.
 

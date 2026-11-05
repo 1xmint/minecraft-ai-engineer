@@ -928,6 +928,26 @@ test("replaced notes never reach discussion or planning as current requirements,
       ),
     );
     assert.match(planning.replacedNotes, /history only/);
+    const requestedPlanning = JSON.parse(
+      store.gateway.reasoning(c, "build around filler marker2").text,
+    ).knowledge;
+    assert.equal(requestedPlanning.notes.length, 8);
+    assert.ok(
+      requestedPlanning.notes.some(
+        (n: { text: string }) => n.text === "filler marker2",
+      ),
+      "The planning request retrieves a relevant older current note after restart",
+    );
+    assert.ok(
+      requestedPlanning.notes.every(
+        (n: { revision: number }) => n.revision !== 1,
+      ),
+      "Request relevance cannot revive a replaced requirement",
+    );
+    assert.throws(
+      () => store.gateway.reasoning({ ...c, actorId: EVE }, "marker2"),
+      "A planning subject grants no access to an unrelated player's private notes",
+    );
     // The replaced note is still history: show reads it back with its replacement named.
     assert.equal(store.gateway.replacedBy(c, 1), replacement.revision);
   } finally {

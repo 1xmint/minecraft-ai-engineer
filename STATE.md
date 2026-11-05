@@ -236,3 +236,28 @@ No production route or functional pass is enabled. GPT-6-Luna implemented the
 controller/driver changes; parent review corrected first-callback timing and
 off-thread stop behavior. Java/client compile and script syntax/format passed.
 Full connected-player CI remains required; interruption recovery is unfinished.
+
+Player-experience integration (phase/57), 2026-11-05:
+
+- Outcome E1: requests select relevant current notes in discussion AND planning,
+  bounded eight from the newest32, without reviving replacements or bypassing
+  grants. Proof: persisted/restarted SQLite reasoning and denied-player tests.
+- Outcome E3: full adders explain their own16-case/35-pin contract; comparisons
+  retain one-sided actual measurements and never invent rates or faster claims.
+  Proof: both-order native assertions and unchanged measured-trial validators.
+- Outcome P2/E4: spoken replies require recipient-specific server payloads;
+  quit waits briefly for owned recognition cleanup. Separate offline dedicated
+  acceptance proves read-only behavior/privacy/restart, not human audio/login.
+
+Integrated exact source heads:79/27cedf8,88/a5a6eae,89/7473067,90/8dba429,
+91/b472af1,92/7db37d3. Source branches remain untouched and are not yet landed
+through this candidate. GPT-6-Luna independently reviewed voice provenance and
+cleanup: no concrete blocker, hardware acceptance pending. PR92 Fabric failure
+was an order-assuming configured-line assertion in its reversed comparison;
+the candidate checks both named configured sections and still forbids b's
+unmeasured values from the measured line. Production comparison is unchanged.
+Codex bridges the validated build request into GatewayMemory.reasoning; empty
+note contexts stay byte-identical and knowledge-revision/grant fences remain.
+Scoped TypeScript and Java/client compile passed. Focused CI and combined
+dedicated acceptance/full CI are required before integration/release. Hold main
+stable for final combined proof; do not bypass current-head checks.
