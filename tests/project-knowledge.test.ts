@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { MemoryStore } from "../companion/src/memory.js";
+import { discussionGrounding } from "../companion/src/discussion.js";
 import { makeReferenceBlueprint } from "../companion/src/blueprint.js";
 import {
   readProjectNote,
@@ -828,6 +829,107 @@ test("show and find return the same records after a restart", () => {
       found,
     );
     assert.equal(store.gateway.showNote(c, 2).entry?.replacedBy, 3);
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test("replaced notes never reach discussion or planning as current requirements, even after a restart", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mce-knowledge-current-")),
+    file = join(dir, "memory.sqlite");
+  let store = new MemoryStore(file);
+  try {
+    sync(store);
+    store.gateway.rememberNote(
+      frame(),
+      decision("use repeaters for the clock"),
+      0,
+    );
+    // Ten more current notes push past the bound of eight.
+    for (let i = 1; i <= 10; i++)
+      store.gateway.rememberNote(frame(), decision(`filler marker${i}`), i);
+    const replacement = store.gateway.rememberNote(
+      frame(),
+      decision("use comparators for the clock  <keep spacing>", {
+        rationale: "smaller",
+        supersedes: 1,
+      }),
+      11,
+    );
+    store.gateway.rememberNote(
+      frame(),
+      { schemaVersion: 2, kind: "goal", text: "keep the lamp row visible" },
+      12,
+    );
+    store.close();
+    store = new MemoryStore(file);
+    const c = frame({ serverEpoch: "epoch-two" });
+    sync(store, c);
+    const knowledge = store.gateway.knowledge(c);
+    const grounding = (message?: string) =>
+      discussionGrounding("Shared", 1, blueprint, knowledge, "root", message);
+    const sources = (message?: string) =>
+      JSON.parse(grounding(message).text).sources.filter(
+        (source: { kind: string }) =>
+          source.kind === "owner-authored-requirement",
+      ) as { id: string; data: { revision: number; text: string } }[];
+
+    const asked = sources("why does the lamp row stay visible?");
+    assert.equal(asked.length, 8, "Bounded to eight notes");
+    assert.ok(
+      asked.every((source) => source.data.revision !== 1),
+      "The replaced note is never offered as a current requirement",
+    );
+    assert.ok(
+      asked.some(
+        (source) =>
+          source.data.text === "use comparators for the clock  <keep spacing>",
+      ),
+      "The replacement keeps its literal text and its author",
+    );
+    assert.ok(
+      asked.some((source) => source.data.text === "keep the lamp row visible"),
+    );
+    // A question about an older current note pulls it in ahead of the newest notes.
+    const filler = sources("what did marker2 say?");
+    assert.ok(filler.some((source) => source.data.text === "filler marker2"));
+    assert.ok(
+      !sources().some((source) => source.data.text === "filler marker2"),
+    );
+    assert.deepEqual(
+      filler.map((source) => source.data.revision),
+      [...filler.map((source) => source.data.revision)].sort((a, b) => a - b),
+      "Chosen notes keep their stored order",
+    );
+    assert.equal(
+      grounding("what did marker2 say?").text,
+      grounding("what did marker2 say?").text,
+      "The same question gives byte-identical context",
+    );
+    const context = JSON.parse(grounding().text);
+    assert.equal(context.replacedNotesOmitted, 1);
+    assert.equal(context.earlierNotesOmitted, true);
+    assert.equal(
+      grounding().availableBasis.has(
+        `note:${knowledge.notes.find((n) => n.revision === 1)!.id}`,
+      ),
+      false,
+      "A reply may not cite the replaced note as a basis",
+    );
+
+    const planning = JSON.parse(store.gateway.reasoning(c).text).knowledge;
+    assert.deepEqual(planning.replaced, [1]);
+    assert.ok(
+      planning.notes.every((n: { revision: number }) => n.revision !== 1),
+    );
+    assert.ok(
+      planning.notes.some(
+        (n: { revision: number }) => n.revision === replacement.revision,
+      ),
+    );
+    assert.match(planning.replacedNotes, /history only/);
+    // The replaced note is still history: show reads it back with its replacement named.
+    assert.equal(store.gateway.replacedBy(c, 1), replacement.revision);
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

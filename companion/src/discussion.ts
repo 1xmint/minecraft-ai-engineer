@@ -62,6 +62,55 @@ export function validateDiscussionReply(
   });
 }
 
+export const DISCUSSION_NOTE_LIMIT = 8;
+const words = (value: string) =>
+  new Set(value.toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+/**
+ * Current notes only: a note another note replaced is history, never a current requirement.
+ * When more than the limit are current, notes that share a word with the question or name the
+ * selected component come first, then the newest; the chosen notes keep their stored order.
+ */
+export function currentNotes(
+  knowledge: ProjectKnowledge,
+  message?: string,
+  componentId?: string,
+) {
+  const replaced = new Set(
+    knowledge.notes.flatMap((note) =>
+      note.schemaVersion === 2 && note.supersedes !== undefined
+        ? [note.supersedes]
+        : [],
+    ),
+  );
+  const current = knowledge.notes.filter(
+    (note) => !replaced.has(note.revision),
+  );
+  if (current.length <= DISCUSSION_NOTE_LIMIT)
+    return {
+      notes: current,
+      replaced: knowledge.notes.length - current.length,
+      omitted: false,
+    };
+  const asked = words(`${message ?? ""} ${componentId ?? ""}`);
+  const relevant = (note: (typeof current)[number]) =>
+    [
+      ...words(
+        `${note.text} ${note.schemaVersion === 2 ? (note.rationale ?? "") : ""}`,
+      ),
+    ].some((word) => asked.has(word));
+  // Relevant notes newest first, then the newest of the rest, up to the limit.
+  const chosen = new Set([
+    ...current.filter(relevant).reverse(),
+    ...[...current].reverse(),
+  ]);
+  const kept = new Set([...chosen].slice(0, DISCUSSION_NOTE_LIMIT));
+  return {
+    notes: current.filter((note) => kept.has(note)),
+    replaced: knowledge.notes.length - current.length,
+    omitted: true,
+  };
+}
+
 /** Only supplied intention and literal shared notes. Never a private inventory or a fresh observation. */
 export function discussionGrounding(
   name: string,
@@ -69,7 +118,9 @@ export function discussionGrounding(
   blueprint: Blueprint | undefined,
   knowledge: ProjectKnowledge,
   componentId?: string,
+  message?: string,
 ) {
+  const notes = currentNotes(knowledge, message, componentId);
   // Fabric exposes one logical root for standalone mechanisms; block-group labels
   // inside a catalog recipe are not separately selectable project components.
   const ids = blueprint
@@ -104,7 +155,7 @@ export function discussionGrounding(
       },
     },
   ];
-  for (const note of knowledge.notes.slice(-8))
+  for (const note of notes.notes)
     sources.push({
       id: `note:${note.id}`,
       kind: "owner-authored-requirement",
@@ -148,7 +199,14 @@ export function discussionGrounding(
       knowledgeRevision: knowledge.revision,
       selectedComponent: componentId ?? null,
       worldEvidence: "not-inspected",
-      earlierNotesOmitted: knowledge.hasEarlier || knowledge.notes.length > 8,
+      earlierNotesOmitted: knowledge.hasEarlier || notes.omitted,
+      // Absent when nothing was replaced, so recorded contexts stay byte-identical.
+      ...(notes.replaced
+        ? {
+            replacedNotesOmitted: notes.replaced,
+            replacedNotes: "history only; not current requirements",
+          }
+        : {}),
       sources,
     }),
   });
