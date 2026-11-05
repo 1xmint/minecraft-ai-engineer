@@ -174,3 +174,96 @@ Prepared actual native hydration fault cases separately from live b470f4b physic
 PR64 final candidate2331827 CI41898009579 passed Windows planner, Companion, Fabric and native client. The extracted-runtime smoke jobs now pass on both Linux and Windows with the packaged full-adder asset. Dedicated collaboration remains live. Full-adder13f7bea passed181native tests/source parity41896766710; its actual player flow41897093594 remains live. No complete full-adder or worker-menu recovery pass is claimed.
 
 Positive native menu recovery b470f4b passed focused41897807048. Inspected real grid/cursor restart receipts and independent worker-menu-proof.json: grid/cursor/settled .dat records retain the same single native dirt and UUID, with no saved result or extra equipment. Existing physical gathering/navigation/build/oak/restart assertions also passed. Fault candidatee6c6442 is live in41898690326 and is not yet proven. Aligning with main3364dad required STATE and Storage conflict resolution: retain the new full inventory+menu disk verification, which replaces the earlier inventory-only settled guard without weakening its no-false-receipt purpose. Production Java code is unchanged from the separately tested fault candidate; final combined full CI is required before merge.
+
+## Phase48: native oak crafting (started, not executed)
+
+Outcomes: (1) ordinary owner conversation converts one genuinely retained oak log into four native oak planks through vanilla2x2 menu clicks, with exact other inventory preservation; proof includes native recipe awards, no supplied items and restart. (2) current owner/worker/menu/step/full-resource state is checked before each click; wrong recipe/material, revocation, stop or changed state refuses further transformation without invented resources. (3) unknown result-take failures preserve actual inventory/grid/cursor and deny automatic retry; no counts rollback. Tasks: read-only native recipe preflight; exact per-click menu tickets without world-write grants; durable task stages and actual native execution; owner-chat/refusal/restart and independent resource proof. Menu recovery PR72 must pass its own gates before crafting integration.
+
+Added read-only native oak_planks recipe preflight using copied input. Requires the exact key, one default oak log, four default planks and no remainders; predictions never enter a worker inventory. Native GameTest candidate checks actual recipe output, unchanged input, detached predictions and wrong/count/custom-item refusals. No crafting executor/menu permission or player interaction is added yet. GPT-6-Luna is challenging the per-click authority/resource boundary before implementation. Tests remain GitHub-only.
+
+Native recipe preflight compileJava passed. GPT-6-Luna's per-click design challenge requires one-call exact actor/menu/owner/connection/transaction/step/full-stack tickets, native before/after verification, native save before observed journal state, and uncertain prepared states never retrying automatically. No world-write lease is needed for self-inventory, but owner/selection/revision/grant/body/job exclusivity must be fresh at each click. Result preview is checked before the native result take; produced output is never inserted by code. Current implementation is prediction only.
+
+Menu recovery fault sourcee6c6442 passed focused41898690326. Inspected independent five-snapshot NBT proof (grid/grid-fault/cursor/cursor-fault/settled) and actual malformed/grid-fault/cursor-fault receipts. Same single mined dirt survives, original UUID retained, no result stored. `git diff e6c6442 bf73540` excluding STATE is empty: PR72 code/workflows/tests match that focused proof. Exact bf73540 full CI41898933908 has four green checks; dedicated collaboration remains live. No merge until that final check completes. Foundation d6cb99d also passed all five checks41894835217; it is not a substitute for the larger recovery candidate.
+
+Prepared native crafting click protocol and event gate: immutable43-slot inventory/grid/cursor/derived-preview/selected-slot frames define all four exact before/after states; original hotbar source is fixed, output remains prediction data only. One transaction must observe each native after-state before its next ticket, and each ticket is consumed before native clicked/onTake and its write-ahead callback. Exact actor/menu/connection/full-frame/current recipe and authority are rechecked around that callback. Native mine/pickup cannot overlap a menu run; cancellation clears capabilities, and final completion rechecks the exact resources. No task/router invokes these APIs yet, so no player-facing crafting is enabled.
+
+GPT-6-Luna reviewed the protocol and identified two hardening gaps, now fixed: begin refuses every retained mine/drop/place phase (not just armed tickets), and per-click expiry must be exactly the current server tick plus1, checked again at actual use. A durable task journal, current owner/project closure and actual native click/replay/refusal/exception tests remain to implement. Scoped compileJava passed after these changes; protocol tests are prepared but not yet run on CI. Native recipe preflightfb3fe58 has four green checks in41899994245; dedicated collaboration remains live.
+
+Full-adder13f7bea driven41897093594 reached actual construction, revocation/stop recovery, complete16case/35pin trials before and after same-world reboot, and interference refusal. Inspected receipts and logs: first full pass19:45:25, restarted pass19:53:51, expected later-control undo refusal19:53:51. Overall25minute child timeout killed the valid undo request before completion. Checkpoint metrics at3328cells show218595ms in6660saves across366405ms elapsed; actual tests each took about8.5minutes. Do not claim overall success. Next reduce repeated test-margin geometry work while still reading every current reserved position each tick, and inspect/bound undo metadata work without weakening WAL. Source2331827 final full CI41898009579 remains live.
+
+Prepared PhysicalCraftRecord and PhysicalCraftTask, still unexposed: fixed4native clicks through the one-use gate, exact observed frames, verified native inventory/menu save before journal OBSERVED, and a final COMPLETE record. NEW/PREPARED/OBSERVED/UNCERTAIN records cannot automatically resume; any non-complete or malformed history blocks another craft. Completed history is checked against the fixed native protocol without restoring resources or authority. Task requires the current owner request and uses the existing exclusive body-occupancy/read lease with an empty world-write set; body, owner, connection, selection, revision, assignment and recipe remain fresh. Output is never inserted directly. Scoped compileJava passed before final owner-request/revision validation additions.
+
+GPT-6-Luna reviewed task/record ordering and confirmed a material prerequisite before routing: stop/dismiss or another native save can reenter while clicked/onTake is mutating. Add an exact actor click-stack guard, defer managed teardown until native return and saved outcome, and refuse/defer midpoint player-data saves. Also add the owner crafting-recovery inspector and actual native click/award/replay/revocation/exception/restart proof. No player-facing crafting handler calls this task yet; do not enable it before these gates are implemented and proven. Existing gathered task close() already cancels mining/drop phase fields after verified settled handoff, so the menu's strict idle check can follow completed gathering.
+
+Native recipe preflightfb3fe58 passed all five checks41899994245. Geometry player flow41904043755 failed before gameplay due Bob's concurrent Loom asset .lock race, not a test assertion. Undo index99c823a passed native41904669543; CI-only launcher correction80cbc80 now prepares assets serially and skips that task in concurrent launches. Its new player run must prove completion; no deadline/assertion was relaxed.
+
+## Pending native crafting lifetime proof (2026-11-04)
+
+E2/P2 candidate: native crafting defers worker player-data writes during each
+native menu call and delays removal until returned resources are saved and
+verified. Stop cancels further tickets; stale same-UUID removal cannot detach
+a replacement actor. The physical fixture uses its real mined dirt stack to
+exercise nested native save/removal and explicit rejoin. Java/client compile
+and shell syntax passed locally; runtime CI is pending. Crafting remains
+unexposed to player requests. CI launchers prepare shared assets serially.
+The final project mirror fixture now explicitly acknowledges structural-project
+on the current boot; its verifier remains unchanged.
+
+Native lifetime source5f62b4b passed actual physical run41912627609. Inspected
+physical-craft-lifetime.done and independent five-snapshot worker-menu proof:
+the real mined dirt remains exactly once, without a stored result slot.
+
+Next E2/P2 candidate exercises the unexposed task on the actual gathered oak
+log after saved-world recovery: four native clicks, native crafting statistics,
+exact four-plank result, no replayed clicks or repeated task output, followed
+by a fourth saved-world boot without restored authority. Independent NBT and
+hand-written journal frame verification are required. Scoped client compile,
+JavaScript syntax, shell syntax and diff checks passed. Runtime CI pending.
+
+Native oak execution sourceaa2d329 passed focused41913485653. Inspected actual
+craft/restart receipts and independent NBT/journal report: four clicks consumed
+one actually gathered log, native onTake awarded4, exactly4planks survived the
+fourth saved-world boot, no stored result or replayed capabilities.
+
+Prepared owner-only read-only crafting inspection through existing recovery
+conversation. It reports record claims and decoded saved-resource matches,
+never resumes work. Wrong-owner history and missing identity rejection fixtures
+are included. GPT-6-Luna found a check/open race that could create an identity;
+both gathering/crafting inspection now use an existing-only reader. Scoped
+compile and syntax checks passed before the final identity fixture; CI pending.
+
+Prepared crafting interruption proof for all4native return boundaries. Each
+scenario actually gathers its own oak log, then stops after click1/4, loses
+owner project selection after click2, or loses a permitted owner mode after
+click3. No subsequent click may occur. Each uncertain history refuses another
+transaction, including settled click4. A fifth saved-world boot must preserve
+all4exact inventory/grid/cursor outcomes without actor/lease restoration or
+resource compensation. Independent NBT reads and hand-worked journal frames
+cover all8before/after-restart files. No production task authority changed.
+Scoped client compile and JavaScript/shell syntax checks passed before final
+selection/mode fixture refinement; runtime CI pending.
+
+Owner crafting inspection sourcec818d93 passed focused41940273765; actual
+inspection receipt and previous native crafting reports inspected. Prepared
+the natural conversation candidate on a separate branch while interruption
+proof16c0406/run41940683369 remains live. 'craft oak planks' uses the exact idle
+binding, current owner connection/selection/project/access revisions and no
+competing physical task; the underlying lease rechecks authority before each
+click. Existing-only identity loading creates no replacement on a failed craft.
+GPT-6-Luna reviewed; explicit selection comparison was also added to the route
+for clarity (the physical lease already enforced it). The real-client fixture
+adds owner chat, denied editor, repeated request refusal, native statistic and
+saved-world output checks. Java/client compile and JS/shell checks passed.
+Do not merge until interruption, conversation and final combined CI pass.
+
+Native interruption source16c0406 passed focused41940683369. Inspected actual
+interruption receipt and independent8snapshot NBT/journal proof for all4click
+boundaries and the fifth saved-world boot: no compensation or automatic retry.
+
+Aligned this native crafting candidate with mainb48f932. Main's PR72 was a
+squash of the same menu foundation, so Git reported overlapping conflicts;
+resolved them to the candidate implementations after inspecting the two-tree
+diff. Code/scripts match2ee1e52 exactly after reconciliation; no main behavior
+was dropped. Full final-head CI and conversation proof41941120901 remain gates.
+Closed superseded drafts44/46/57/58/61/62/63 after confirming their work is
+in merged integrations49/48/66. The goal and broad remaining scope are unchanged.

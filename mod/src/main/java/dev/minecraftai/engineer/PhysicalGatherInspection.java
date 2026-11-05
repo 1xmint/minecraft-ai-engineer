@@ -21,7 +21,7 @@ final class PhysicalGatherInspection {
             if(records.isEmpty()){project.tell("No gather recovery records exist for this project.");return;}
             var identityPath=manager.directory.resolve(project.projectId+".physical-worker.json");
             if(!Files.exists(identityPath))throw new IllegalStateException("Worker identity is missing; no replacement was created");
-            var identity=PhysicalWorkerIdentity.open(manager,project);
+            var identity=PhysicalWorkerIdentity.existing(manager,project);
             com.google.gson.JsonArray inventory=null;
             try{inventory=PhysicalWorkerStorage.savedInventory(project.player(),new net.minecraft.server.players.NameAndId(identity.id(),"Eng_"+identity.id().toString().substring(0,8)));}catch(RuntimeException unavailable){/* Report absence, never invent an empty inventory. */}
             int number=0;for(var file:records) {

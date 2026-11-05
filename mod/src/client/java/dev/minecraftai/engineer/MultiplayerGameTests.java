@@ -400,7 +400,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
 
     private static void physicalOwner(ClientGameTestContext context) throws Exception {
-        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery;
+        var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
+        var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -567,11 +568,102 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"inventory saving was verified at completion");expectChat(context,"saved inventory matches the recorded snapshot");
             MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"Preloaded oak inventory refuses a second gather without clearing or replacing resources"));
+            server.runOnServer(s->nativeOakCraftingProof(s,oakRecovery.worker()));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-oak-restarted.done","passed");
         }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            server.runOnServer(s->check(s.getPlayerList().getPlayer(oakRecovery.worker())==null,"Crafting restart recreates no actor or capabilities"));
+            send(context,"engineer project use "+oakRecovery.project());server.waitFor(s->oakRecovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(oakRecovery.worker());var project=session(s,"Alice");check(worker!=null && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty(),"Actual saved-world restart keeps only the four natively crafted planks");
+                check(project.delegation==null && !project.access.allows(worker.getUUID(),ProjectAccess.Permission.BUILD),"Crafting history restores neither grants nor delegation");
+                PhysicalCraftRecord.requireNoUnresolved(EngineerMod.managerFor(s),project,worker,OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG)));
+                var before=PhysicalCraftFrame.capture(worker);worker.inventoryMenu.clicked(0,0,net.minecraft.world.inventory.ContainerInput.PICKUP,worker);check(before.matches(PhysicalCraftFrame.capture(worker)),"Reloaded result click cannot replay the old transaction");menuReceipt(worker,"crafted-restarted");write("physical-craft-restarted.done","passed");});
+            MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"claims complete at step 4 of 4; saved native resources match that recorded snapshot");
+            server.runOnServer(s->{var project=session(s,"Alice");var worker=s.getPlayerList().getPlayer(oakRecovery.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && PhysicalWorkerMenus.capture(worker).empty() && project.delegation==null && !PhysicalCraftGuard.active(worker),"Crafting inspection creates no items, native actions, lifetime guard or world lease");
+                var manager=EngineerMod.managerFor(s);var frame=PhysicalCraftFrame.capture(worker);
+                var missing=new EngineeringSession(manager,UUID.randomUUID(),project.owner,project.dimension);boolean missingRefused=false;
+                try{PhysicalWorkerIdentity.existing(manager,missing);}catch(IllegalStateException expected){missingRefused=true;}
+                check(missingRefused && !Files.exists(manager.directory.resolve(missing.projectId+".physical-worker.json")),"Read-only identity loading refuses a missing file without creating a replacement");
+                try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
+                    var file=files.iterator().next();String original=Files.readString(file);try{
+                        var bad=JsonParser.parseString(original).getAsJsonObject();bad.addProperty("owner",UUID.randomUUID().toString());LocalFiles.write(file,bad);
+                        boolean refused=false;try{PhysicalCraftInspection.show(manager,project);}catch(IllegalStateException expected){refused=true;}
+                        check(refused && JsonParser.parseString(Files.readString(file)).equals(bad) && frame.matches(PhysicalCraftFrame.capture(worker)),"Wrong-owner crafting history is refused without rewriting records or native resources");
+                    }finally{Files.writeString(file,original);}
+                }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+                write("physical-craft-inspection.done","passed");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            conversationCraft=physicalOakFlow(context,server,"oak-conversation");
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            int craftedBefore=server.computeOnServer(s->s.getPlayerList().getPlayer(conversationCraft.worker()).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS));
+            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log and verified its saved inventory");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(conversationCraft.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty() && worker.getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS)==craftedBefore+4,"Ordinary owner conversation crafts the actual retained log using native onTake, without commands or supplied resources");menuReceipt(worker,"craft-conversation");});
+            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"Crafting needs exactly one unchanged retained oak log");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(conversationCraft.worker()),net.minecraft.world.item.Items.OAK_PLANKS)==4,"Repeated natural request creates no additional planks"));
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            for(int step=1;step<=4;step++){
+                var recovered=physicalOakFlow(context,server,"oak-interrupted-"+step);
+                MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+                final int stoppedStep=step;
+                interruptedCrafts.add(server.computeOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);var observed=new java.util.ArrayList<Integer>();boolean stopped=false;var owner=player(s,"Alice");var oldMode=owner.gameMode.getGameModeForPlayer();
+                    try{PhysicalCraftTask.execute(manager,project,worker,()->{},current->{observed.add(current);if(current==stoppedStep){
+                        if(stoppedStep==2)manager.selections.remove(project.owner);
+                        else if(stoppedStep==3)owner.gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.ADVENTURE);
+                        else{PhysicalCraftGuard.requestStop(worker);throw new IllegalStateException("Fixture stop after native step "+current);}
+                    }});}catch(IllegalStateException expected){stopped=true;}finally{manager.selections.put(project.owner,project.projectId);owner.gameMode.changeGameModeForPlayer(oldMode);}
+                    check(stopped && observed.size()==stoppedStep && !PhysicalCraftGuard.active(worker),"Stop, selection loss or invalid owner mode preserves the returned native outcome and allows no later click");
+                    var resources=PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker);assertCraftRetryRefused(manager,project,worker,resources);menuReceipt(worker,"craft-interrupted-"+stoppedStep);
+                    try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){var out=directory().resolve("craft-interrupted-"+stoppedStep);Files.createDirectories(out);for(var file:files)Files.copy(file,out.resolve(file.getFileName()));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+                    return new CraftFailureRecovery(project.projectId.toString(),worker.getUUID(),resources,stoppedStep);
+                }));
+                MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"claims uncertain at step "+step+" of 4; saved native resources match that recorded snapshot");
+                MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            }
+        }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            send(context,"engineer project use "+conversationCraft.project());server.waitFor(s->conversationCraft.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(conversationCraft.worker());check(worker!=null && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Conversational crafting survives actual saved-world restart without old authority");menuReceipt(worker,"craft-conversation-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-craft-conversation.done","passed");
+            for(var recovery:interruptedCrafts){
+                server.runOnServer(s->check(s.getPlayerList().getPlayer(recovery.worker())==null,"Interrupted crafting boots without actors or automatic retry"));
+                send(context,"engineer project use "+recovery.project());server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+                MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+                server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);check(worker!=null && recovery.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)),"Saved-world restart retains the exact interrupted inventory, grid and cursor without compensation");assertCraftRetryRefused(manager,project,worker,recovery.resources());check(project.delegation==null,"Interrupted crafting restores no world delegation");menuReceipt(worker,"craft-interrupted-"+recovery.step()+"-restarted");});
+                MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"claims uncertain at step "+recovery.step()+" of 4; saved native resources match that recorded snapshot");
+                MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            }
+            write("physical-craft-interruptions.done","passed");
+        }
+    }
+    private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
+    private static void assertCraftRetryRefused(ProjectManager manager,EngineeringSession project,ServerPlayer worker,com.google.gson.JsonObject expected){
+        boolean refused=false;try{PhysicalCraftRecord.requireNoUnresolved(manager,project,worker,OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG)));}catch(IllegalStateException blocked){refused=true;}
+        check(refused,"Uncertain history blocks a new transaction, including an already-settled fourth step");refused=false;
+        try{PhysicalCraftTask.execute(manager,project,worker,()->{});}catch(IllegalStateException blocked){refused=true;}
+        check(refused && expected.equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)),"Explicit retry does not move or recreate resources after interruption");
+    }
+    private static void nativeOakCraftingProof(MinecraftServer server,UUID id){
+        var worker=server.getPlayerList().getPlayer(id);var manager=EngineerMod.managerFor(server);var project=session(server,"Alice");
+        int awards=worker.getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS);
+        var observed=new java.util.ArrayList<Integer>();
+        PhysicalCraftTask.execute(manager,project,worker,()->check(server.getPlayerList().getPlayer(id)==worker,"Crafting retains the exact bound body"),observed::add);
+        check(observed.equals(java.util.List.of(1,2,3,4)) && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && PhysicalWorkerMenus.capture(worker).empty(),"Four native clicks consume the actually gathered log and retain exactly four planks");
+        check(worker.getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS)==awards+4,"Native result onTake awards the actual four crafted items");
+        var before=PhysicalCraftFrame.capture(worker);worker.inventoryMenu.clicked(0,0,net.minecraft.world.inventory.ContainerInput.PICKUP,worker);worker.inventoryMenu.clicked(36,0,net.minecraft.world.inventory.ContainerInput.PICKUP,worker);
+        check(before.matches(PhysicalCraftFrame.capture(worker)) && !PhysicalCraftGuard.active(worker),"Finished transaction leaves no reusable menu capability or lifetime guard");
+        boolean refused=false;try{PhysicalCraftTask.execute(manager,project,worker,()->{});}catch(IllegalStateException expected){refused=true;}
+        check(refused && before.matches(PhysicalCraftFrame.capture(worker)),"A repeated task cannot manufacture another output from retained planks");
+        menuReceipt(worker,"crafted");
+        try(var records=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){for(var record:records)Files.copy(record,directory().resolve(record.getFileName()));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        write("physical-craft.done","passed");
     }
     private record OakRecovery(String project,UUID worker,com.google.gson.JsonArray inventory,String world,UUID epoch) { }
     private static OakRecovery physicalOakFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        return physicalOakFlow(context,server,"oak");
+    }
+    private static OakRecovery physicalOakFlow(ClientGameTestContext context,TestDedicatedServerContext server,String evidence){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         server.runCommand("forceload add 2624 -16 2656 32");server.runCommand("fill 2630 100 0 2635 100 9 minecraft:stone");server.runCommand("setblock 2631 101 4 minecraft:oak_log[axis=x]");server.runCommand("setblock 2631 101 6 minecraft:oak_log");server.runCommand("tp Alice 2634.5 101 8 180 0");
         send(context,"engineer select1 2630 100 0");send(context,"engineer select2 2634 102 7");server.waitFor(s->new BlockPos(2634,102,7).equals(session(s,"Alice").corner2));
@@ -586,7 +678,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var recovery=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
             int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==1 && s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native hand mining and exact pickup produce one retained oak log");
             check(s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"The other original log is untouched");
-            try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==1,"Refused oak requests create no gather journals");var out=directory().resolve("oak-gather-records");Files.createDirectories(out);Files.copy(records.getFirst(),out.resolve("oak.json"));}catch(java.io.IOException failed){throw new IllegalStateException(failed);}
+            try(var paths=Files.list(manager.directory)){var records=paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".gather-")).toList();check(records.size()==1,"Refused oak requests create no gather journals");var out=directory().resolve(evidence+"-gather-records");Files.createDirectories(out);Files.copy(records.getFirst(),out.resolve("oak.json"));}catch(java.io.IOException failed){throw new IllegalStateException(failed);}
             return new OakRecovery(project.projectId.toString(),worker,PhysicalWorkerStorage.inventory(body),manager.worldId,manager.epoch);
         });
         MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");server.runOnServer(s->checkAdvancementOwner(s.getPlayerList().getPlayer(worker)));
@@ -739,6 +831,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         send(context,"engineer project use "+read("physical-project"));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Only the project owner");
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, where is my companion?");expectChat(context,"The companion is at");
         MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"Only the project owner");
         MESSAGES.clear();say(context,"Engineer, place retained dirt at 2401 101 2");expectChat(context,"Only the project owner");
@@ -840,7 +933,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}return false;},30_000);
         server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(id);try{var pack=inventoryPack(worker);pack.getClass().getMethod("stopAll").invoke(pack);}catch(Exception failed){throw new IllegalStateException(failed);}
             check(countDirt(worker)==1 && Files.exists(directory().resolve("physical-pickup-prepared")),"Exactly one ticketed native mined drop is present after pickup intent");gatherRecord.get().inventorySaved();
-            check(worker.inventoryMenu.getSlot(36).getItem().is(net.minecraft.world.item.Items.DIRT) && worker.inventoryMenu.getSlot(1).getItem().isEmpty(),"Real mined item starts in the original native hotbar slot");worker.inventoryMenu.getSlot(1).set(worker.inventoryMenu.getSlot(36).remove(1));menuReceipt(worker,"grid");write("physical-menu-grid-saved.done","passed");
+            check(worker.inventoryMenu.getSlot(36).getItem().is(net.minecraft.world.item.Items.DIRT) && worker.inventoryMenu.getSlot(1).getItem().isEmpty(),"Real mined item starts in the original native hotbar slot");
+            worker=craftingLifetimeProbe(s,worker);menuReceipt(worker,"grid");write("physical-menu-grid-saved.done","passed");
             s.getPlayerList().remove(worker);PhysicalActionGate.forget(worker);write("physical-inventory-saved.done","passed");});
     }
 
@@ -848,6 +942,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         PhysicalWorkerStorage.save(worker);
         try{var source=worker.level().getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(worker.getUUID()+".dat");Files.copy(source,directory().resolve("worker-menu-"+phase+".dat"));}
         catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+    }
+    private static ServerPlayer craftingLifetimeProbe(MinecraftServer server,ServerPlayer worker){
+        var path=server.getWorldPath(net.minecraft.world.level.storage.LevelResource.PLAYER_DATA_DIR).resolve(worker.getUUID()+".dat");
+        try{byte[] before=Files.readAllBytes(path);PhysicalCraftGuard.begin(worker);try{
+            PhysicalCraftGuard.click(worker,()->{
+                // Fixture-only movement of the actual mined stack makes a
+                // distinguishable midpoint without supplying replacement items.
+                worker.inventoryMenu.getSlot(1).set(worker.inventoryMenu.getSlot(36).remove(1));
+                boolean refused=false;try{PhysicalWorkerStorage.save(worker);}catch(IllegalStateException expected){refused=true;}check(refused,"A nested inventory save cannot certify a native midpoint");
+                server.getPlayerList().saveAll();try{check(java.util.Arrays.equals(before,Files.readAllBytes(path)),"Native player-data writer defers this worker while its call is mutating");}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+                server.getPlayerList().remove(worker);
+                check(server.getPlayerList().getPlayer(worker.getUUID())==worker,"Direct native removal is deferred while the call is mutating");
+            });
+            check(server.getPlayerList().getPlayer(worker.getUUID())==worker,"Native return alone does not remove an unrecorded outcome");PhysicalWorkerStorage.save(worker);
+        }finally{PhysicalCraftGuard.finish(worker);}
+        check(server.getPlayerList().getPlayer(worker.getUUID())==null && !PhysicalCraftGuard.active(worker),"Only stable verified resources allow deferred native removal");PhysicalActionGate.forget(worker);
+        var restored=inventoryWorker(server,worker.getUUID(),worker.getGameProfile().name(),true);check(PhysicalWorkerMenus.capture(restored).inputs().getFirst().is(net.minecraft.world.item.Items.DIRT) && restored.getInventory().isEmpty(),"Deferred removal saved the real grid stack before an explicit rejoin");
+        server.getPlayerList().remove(worker);check(server.getPlayerList().getPlayer(restored.getUUID())==restored,"Stale native removal cannot detach the new body under the same worker identity");write("physical-craft-lifetime.done","passed");return restored;
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
     }
     private static void interruptedWorkerMenu(MinecraftServer server,UUID id,String name,int step,String phase){
         var expected=server.getPlayerList().loadPlayerData(new net.minecraft.server.players.NameAndId(id,name)).orElseThrow().getCompound(PhysicalWorkerMenus.KEY).orElseThrow().copy();
@@ -1368,7 +1481,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.structuralBefore().source().equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo retains the true original source again");check(project.structuralBefore().blocks().stream().allMatch(b->Blueprint.matches(b.state(),project.level().getBlockState(b.pos()))) && project.level().getBlockState(new BlockPos(264,100,0)).is(Blocks.STONE),"Second inverse restores original world geometry and preserves adopted player support");var restored=saved(project).getAsJsonObject("restoredLayout");check(restored.get("schemaVersion").getAsInt()==2 && restored.getAsJsonObject("before").equals(JsonParser.parseString(read("structural-before")).getAsJsonObject()),"Repeated undo saves all distinct physical/accepted/proposed identities");});
         assertPersisted(server);
         // Fresh mirrors describe saved intentions and stale state, not new functional passes.
-        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
+        var mirrors=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return java.util.List.of("project","components-project","generated-project","structural-project").stream().map(name->{var project=manager.projects.get(UUID.fromString(read(name)));return Companion.gateway(project,null,new JsonObject(),project.owner);}).toList();});
         for(var mirror:mirrors)check(mirror.get(30,java.util.concurrent.TimeUnit.SECONDS).get("protocol").getAsInt()==2,"Latest boot acknowledges fresh metadata mirrors before persistence verification");
         write("structural-replan-recovery.done","passed");
     }
