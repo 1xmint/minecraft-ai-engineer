@@ -17,7 +17,7 @@ final class MemoryRecoveryPlan {
     static MemoryRecoveryPlan observe(EngineeringSession session) {
         Objects.requireNonNull(session);
         if(!session.server.isSameThread())throw new IllegalStateException("Memory recovery inspection belongs to the server thread");
-        if(session.delegation!=null || session.memoryInputDriver!=null)throw new IllegalStateException("Stop active project work before inspecting pending memory");
+        if(session.delegation!=null || session.memoryInputDriver!=null || session.memoryRecoveryDriver!=null)throw new IllegalStateException("Stop active project work before inspecting pending memory");
         var pending=session.pendingMemoryInput;
         if(pending==null)throw new IllegalStateException("No current pending memory input scope exists");
         session.requirePersistedPendingMemoryInput(pending);

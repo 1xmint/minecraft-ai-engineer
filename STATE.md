@@ -124,3 +124,5 @@ and one interrupted-recovery chain selecting latest progress after session reloa
 Schema2 chains are bounded; schema1 logs remain readable; pointers grant no lease
 or functional pass. Full current-main candidate checks remain pending. Connected
 fresh-authority recovery execution is not yet implemented.
+
+Fresh recovery controller candidate: stale checkpoint-free sessions are now refused (4cc3eeb/native42116017412 passed214 required tests; replay artifact inspected). Internal MemoryRecoveryDriver now acquires fresh typed BUILD authority, publishes a new checkpoint before edges, rechecks live scope before/after native calls, records outcomes without automatic compensation, and clears pointers only after RESTORED readback. Local Java compile passed. Connected-player interruption/revocation/restart proof and independent authority review remain pending; no player route is enabled.

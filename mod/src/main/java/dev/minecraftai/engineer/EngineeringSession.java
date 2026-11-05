@@ -78,6 +78,7 @@ final class EngineeringSession implements BuildExecutor {
     int testTick = -1;
     final FunctionalTrial trial = new FunctionalTrial(this);
     MemoryInputDriver memoryInputDriver;
+    MemoryRecoveryDriver memoryRecoveryDriver;
     MemoryPendingInput pendingMemoryInput;
     MemoryRecoveryCheckpoint pendingMemoryRecovery;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -150,6 +151,22 @@ final class EngineeringSession implements BuildExecutor {
     }
     void claim(ProjectAccess.Permission action, boolean test) {
         claim(action,test,MechanicalPurpose.ORDINARY);
+    }
+    /** Narrow fresh claim for the current interrupted memory scope; never clears that scope. */
+    void claimMemoryRecovery(MemoryPendingInput root,MemoryRecoveryCheckpoint latest) {
+        if(!server.isSameThread() || memoryInputDriver!=null || memoryRecoveryDriver!=null || delegation!=null)
+            throw new IllegalStateException("Stop existing work before claiming memory recovery");
+        if(!projectId.equals(manager.selections.get(actor())) || !activeComponent.equals("root")
+                || testTick>=0 || hasPendingTest() || state.equals("EXECUTING") || state.equals("VERIFYING") || state.equals("PLANNING"))
+            throw new IllegalStateException("A selected settled root memory project is required");
+        ToggleMemoryIntention.validated(blueprint);
+        requirePersistedPendingMemoryInput(root);
+        if(latest==null)requireNoPendingMemoryRecovery(root);else requirePersistedPendingMemoryRecovery(root,latest);
+        requireCreative();access.require(actor(),ProjectAccess.Permission.BUILD);
+        var task=assignments.task(blueprint,activeComponent);
+        var lease=manager.acquire(this,actor(),ProjectAccess.Permission.BUILD,true);
+        controller=actor();delegation=lease;delegationConnection=player().connection;isolationLease=true;
+        delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
     }
     private enum MechanicalPurpose { ORDINARY,RECOVERY,TRIAL,HANDOFF,CONSTRUCTION,REPAIR,UNDO }
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
@@ -746,7 +763,7 @@ final class EngineeringSession implements BuildExecutor {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        try{shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        try{if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
         finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
@@ -1650,7 +1667,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void persistPendingMemoryRecovery(MemoryPendingInput expectedRoot,MemoryRecoveryCheckpoint expectedPrevious,MemoryRecoveryCheckpoint next) {
         if(!server.isSameThread())throw new IllegalStateException("Recovery checkpoint belongs to the server thread");
-        if(memoryInputDriver!=null)throw new IllegalStateException("Stop the active memory input driver before changing recovery checkpoints");
+        if(memoryInputDriver!=null || memoryRecoveryDriver!=null)throw new IllegalStateException("Stop active memory drivers before changing recovery checkpoints");
         if(pendingMemoryInput==null || !pendingMemoryInput.same(expectedRoot))throw new IllegalStateException("Current root memory scope identity changed");
         expectedRoot.requireMatches(this);requirePersistedPendingMemoryInput(expectedRoot);
         if((pendingMemoryRecovery==null)!=(expectedPrevious==null) || pendingMemoryRecovery!=null && !pendingMemoryRecovery.same(expectedPrevious))throw new IllegalStateException("Current recovery checkpoint compare-and-swap failed");
