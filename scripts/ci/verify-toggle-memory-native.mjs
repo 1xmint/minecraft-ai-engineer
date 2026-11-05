@@ -228,3 +228,85 @@ console.log(
     reloadedExecution: false,
   }),
 );
+
+// Replay the production-shaped read-only sampler independently of its Java
+// implementation and compare it with the original native fixture observations.
+const samplerMarker = "ENGINEER_MEMORY_STATE_SAMPLES ";
+const samplerRecords = lines
+  .filter((line) => line.includes(samplerMarker))
+  .map((line) =>
+    JSON.parse(line.slice(line.indexOf(samplerMarker) + samplerMarker.length)),
+  );
+assert.equal(samplerRecords.length, 8);
+const samplerIdentities = new Set();
+for (const record of samplerRecords) {
+  assert.deepEqual(
+    Object.keys(record).sort(),
+    [
+      "schemaVersion",
+      "kind",
+      "intention",
+      "rotation",
+      "initial",
+      "startedTick",
+      "stage",
+      "sampleCount",
+      "samples",
+      "restored",
+    ].sort(),
+  );
+  assert.equal(record.schemaVersion, 1);
+  assert.equal(record.kind, "memory-state-samples");
+  assert.equal(record.stage, "COMPLETE");
+  assert.equal(record.sampleCount, 96);
+  assert.equal(record.samples.length, 96);
+  const orientation = orientations[record.rotation];
+  assert.ok(orientation);
+  assert.equal(record.intention.rotation, orientation.angle);
+  assert.deepEqual(
+    readToggleMemoryIntention(record.intention, context),
+    record.intention,
+  );
+  const frame = (stored) => ({
+    lever: `minecraft:lever[face=floor,facing=${orientation.facing},powered=false]`,
+    bulb: `minecraft:waxed_copper_bulb[lit=${stored},powered=false]`,
+  });
+  const initial = record.initial.bulb === frame(true).bulb;
+  assert.deepEqual(record.initial, frame(initial));
+  assert.deepEqual(record.restored, frame(initial));
+  const key = `${record.rotation}:${initial}`;
+  assert.ok(!samplerIdentities.has(key));
+  samplerIdentities.add(key);
+  const native = records.find(
+    (entry) => entry.rotation === record.rotation && entry.initial === initial,
+  );
+  assert.ok(native);
+  assert.equal(record.startedTick, native.samples[0].gameTick - 8);
+  assert.ok(
+    Number.isSafeInteger(record.startedTick) && record.startedTick >= 0,
+  );
+  record.samples.forEach((sample, index) => {
+    const phase = Math.floor(index / 16),
+      elapsedTicks = 8 + (index % 16);
+    const stored = phase === 1 || phase === 2 ? !initial : initial;
+    assert.deepEqual(sample, {
+      gameTick: record.startedTick + phase * 24 + elapsedTicks,
+      phase,
+      elapsedTicks,
+      input: phase === 1 || phase === 3,
+      stored,
+      comparatorPowered: stored,
+      signal: stored ? 15 : 0,
+    });
+    const { comparatorPowered, ...shared } = sample;
+    assert.deepEqual(shared, native.samples[index]);
+  });
+}
+console.log(
+  JSON.stringify({
+    kind: "memory-state-sampler-native-replay",
+    records: 8,
+    settledSamples: 768,
+    functionalPass: false,
+  }),
+);
