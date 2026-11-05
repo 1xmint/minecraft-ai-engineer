@@ -118,10 +118,14 @@ final class ProjectManager {
         LocalFiles.write(directory.resolveSibling("creator-grants.json"), data);
     }
     RegionReservations.Scope scope(EngineeringSession project) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId); }
+    static void validateWorkspaceBounds(BlockPos a,BlockPos b){
+        if(a==null || b==null)throw new IllegalStateException("A complete workspace requires both corners");
+        long x=Math.abs((long)a.getX()-b.getX())+1,y=Math.abs((long)a.getY()-b.getY())+1,z=Math.abs((long)a.getZ()-b.getZ())+1;
+        // Check axes before multiplication so malformed saved coordinates cannot overflow.
+        if(x>128 || y>128 || z>128 || x*y*z>65536)throw new IllegalStateException("A workspace must fit 65536 block positions within 128 blocks per axis");
+    }
     void workspace(EngineeringSession project, UUID actor, BlockPos a, BlockPos b) {
-        long volume=((long)Math.abs((long)a.getX()-b.getX())+1)*(Math.abs((long)a.getY()-b.getY())+1)*(Math.abs((long)a.getZ()-b.getZ())+1);
-        if(volume<1 || volume>4096 || Math.abs((long)a.getX()-b.getX())>127 || Math.abs((long)a.getY()-b.getY())>127 || Math.abs((long)a.getZ()-b.getZ())>127)
-            throw new IllegalStateException("A workspace must fit 4096 blocks within 128 blocks per axis");
+        validateWorkspaceBounds(a,b);
         for(var other:projects.values()) {
             if(other==project || !other.dimension.equals(project.dimension) || other.corner1==null || other.corner2==null)continue;
             boolean overlap=Math.max(Math.min(a.getX(),b.getX()),Math.min(other.corner1.getX(),other.corner2.getX()))<=Math.min(Math.max(a.getX(),b.getX()),Math.max(other.corner1.getX(),other.corner2.getX()))

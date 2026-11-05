@@ -290,6 +290,16 @@ separately. These questions do not inspect the world, count private inventory,
 change lessons or run tests. The status answer labels the assistant's shared task
 and your personal lesson separately.
 
+`/engineer ask what should I do next` and `/engineer ask what is still untested`
+are the exception: they read the design's blocks in chunks that are already
+loaded (never loading or changing any). Before suggesting a test they check that
+the component and every prerequisite match the design. The answer says which of
+these applies: go nearer because the area is unloaded, build a named prerequisite
+first, finish the component (with matching/total blocks), test it, or re-test it
+because its earlier pass is stale. A test is suggested only for a fully built
+component. Imported geometry never gets a test suggestion. Neither question starts
+building, testing or assigning anything.
+
 Only the listed question forms are recognized. Other text asks you to choose a
 supported lesson question; construction still uses the explicit permission-checked
 commands. You need project view permission and an existing project. Lessons are
@@ -532,6 +542,22 @@ not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
 
+### Compare two designs (development source)
+
+Ask `compare this design with <project or catalog design>` in addressed chat.
+The answer is read-only and changes nothing. Every number carries its unit:
+blocks, blocks² for footprint, blocks³ for the bounding-box volume, and items
+for materials. Material counts are what each design calls for, not what anyone
+has collected or stored. A generated design's configured delay is shown as
+intended timing and is never called a measurement. Measured timing and
+reliability stay "unavailable" unless validated trial records exist for the
+current revision. When records exist, the answer gives separate counts of
+passed, failed and interrupted attempts, never a rate. One sample is one
+off/on/off attempt at one revision, so checkpoints and replays of the same
+attempt count once, and records from an earlier revision are not counted.
+The game does not store trial records yet, so in-game comparisons currently
+always show measured timing and reliability as unavailable.
+
 ### Mechanical control handoff (development source)
 
 For an accepted sticky-shutter project, `/engineer release` returns mechanical
@@ -683,8 +709,26 @@ with authorized project members.
 Ambiguous requests such as `remember that` ask for explicit note text instead
 of silently guessing what to save. Commands remain a fallback.
 
+When the assistant reasons about the project or answers a question, it is
+given at most eight current notes. A note you replaced stays in history (ask
+`what changed` or `show note N`) but is never handed over as a current
+requirement. If more than eight notes are current, notes that share a word with
+your question come first, then the newest.
+
 ![Shared project notes read through actual player chat](images/project-memory.png)
 
 Captured from [the verified multiplayer run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41367933778).
 The notes remain owner-authored requirements; the chat does not imply a new model
 request, world inspection or functional test.
+
+Native generated-buffer comparisons can use the most recent64 observed trial
+attempts saved with each project. The server captures the real off/on/off samples
+when it checkpoints the native test. Repeated saves update one attempt rather
+than counting as more trials. Observations survive reload but restore no input
+journal, permissions, actions or functional pass. Older archived evidence files
+remain untouched; the comparison window is limited to recent history.
+
+Only validated passing traces supply observed timing. Failed and interrupted
+attempts are counted separately, never as a reliability percentage. Other circuit
+families and imported geometry still have no repeated-trial timing producer.
+Project view permission is required for both sides of a comparison.

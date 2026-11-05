@@ -137,12 +137,16 @@ runs as a command.
 folder only while your recogniser runs, and deleted straight after, whether it
 succeeded, failed or was cancelled. Recording stops after 30 seconds. The
 recogniser is stopped after `timeoutSeconds`. Each run cleans only its own private
-folder. A hard process or computer crash can leave that run's temporary audio;
+folder. Quitting the game while a recording is being recognised, or a hard
+process or computer crash, can leave that run's temporary audio;
 startup does not delete other clients' folders or active recordings.
 
 **If something is missing.** With no config, an invalid config, no microphone or a
 failing recogniser, pressing V shows one plain line explaining why and nothing is
-sent. Typing still works.
+sent. Typing still works. If the speech program fails, you get one notice; later
+replies stay text-only with no repeat notice and no new attempt until you fix the
+speaker and press **B**, which tries spoken replies again. Nothing retries by
+itself.
 
 ### Microphone and speaker acceptance check
 
@@ -177,7 +181,9 @@ available. Typing still works.`
     come back.
 12. Break the speaker path in the config and ask a question. Expect
     `Spoken replies stopped: the speech program could not start ...`; the reply
-    still shows in chat and typing still works.
+    still shows in chat and typing still works. Ask two more questions: expect no
+    second notice and no speech attempt. Fix the path, ask again: still silent.
+    Press B, ask again: the reply is spoken.
 
 Still to be validated by a person: recognition quality and speed on real
 hardware, the Windows and Linux speaker commands above, microphone permission

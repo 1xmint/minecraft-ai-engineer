@@ -9,6 +9,11 @@ final class EngineeringContracts {
             return new MechanismCatalog.Contract("schematic-geometry",java.util.List.of(),java.util.List.of(),0);
         }
         if(ConnectedIntention.describes(blueprint.source())){
+            if(ConnectedIntention.fullAdder(blueprint.source())){
+                var source=ConnectedIntention.validated(blueprint).source();var ports=new java.util.ArrayList<MechanismCatalog.Port>();
+                for(var value:source.getAsJsonArray("ports")){var port=value.getAsJsonObject();ports.add(new MechanismCatalog.Port(port.get("name").getAsString(),Blueprint.pos(port.getAsJsonObject("pos")).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()),port.get("kind").getAsString().equals("input")));}
+                return new MechanismCatalog.Contract("full-adder",ports,java.util.List.of(),8);
+            }
             ConnectedIntention.validated(blueprint);var design=new HalfAdderDesign();
             var ports=new java.util.ArrayList<MechanismCatalog.Port>();
             for(var pin:design.pins())if(pin.role()==HalfAdderDesign.Role.EXTERNAL_CONTROL || pin.role()==HalfAdderDesign.Role.RESULT)

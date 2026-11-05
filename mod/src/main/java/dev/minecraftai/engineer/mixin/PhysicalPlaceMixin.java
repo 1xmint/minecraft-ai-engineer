@@ -17,4 +17,6 @@ abstract class PhysicalPlaceMixin {
     }
     @Inject(method="place",at=@At("RETURN"))
     private void engineer$physicalPlaced(BlockPlaceContext context,CallbackInfoReturnable<InteractionResult> result){PhysicalActionGate.placed(context,result.getReturnValue());}
+    @Inject(method="placeBlock",at=@At("HEAD"),cancellable=true)
+    private void engineer$physicalCommit(BlockPlaceContext context,net.minecraft.world.level.block.state.BlockState state,CallbackInfoReturnable<Boolean> result){if(!PhysicalActionGate.placeBlock(context,state))result.setReturnValue(false);}
 }

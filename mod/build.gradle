@@ -24,6 +24,7 @@ processResources {
     from('../catalog/shutter.json') { into 'engineer' }
     from('../catalog/half-adder.json') { into 'engineer' }
     from('../catalog/half-adder-definition.json') { into 'engineer' }
+    from('../catalog/full-adder-definition.json') { into 'engineer' }
     from('../catalog/imported-materials.json') { into 'engineer' }
     from('../tests/fixtures/shutter-design.json') { into 'engineer/fixtures' }
     from('../tests/fixtures/shutter-trace.json') { into 'engineer/fixtures' }
