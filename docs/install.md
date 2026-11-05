@@ -123,9 +123,17 @@ without a restart.
 the chat box as `Engineer, ...`. Nothing is sent until you press Enter, so you
 can correct the words or press Esc to discard them. Esc (or switching away from
 the game) while listening or transcribing cancels, and nothing is sent. Press
-**B** to stop the engineer speaking; pressing V also stops it. Only the
-engineer's own replies are read aloud, never other players' chat. Both keys can
-be changed under Controls, in the "Engineer voice" category.
+**B** to stop the engineer speaking; pressing V also stops it. Both keys can be
+changed under Controls, in the "Engineer voice" category.
+
+**What gets read aloud.** Only replies the server marks as the engineer's own
+answer to you are spoken. That mark travels privately to your game alone, so a
+chat line that merely looks like `Engineer: ...` (another player's message, a
+renamed pet's death message, `/tellraw`, another mod) is shown as text but never
+spoken. Conversation replies, project-note replies and project status replies are
+spoken. Some other engineer lines, such as command help, project lists, building
+and inventory updates, are shown as text only for now. Players without the voice
+setup, or without the mod, still see every reply as ordinary chat.
 
 A spoken request goes through exactly the same permissions, delegation and
 confirmations as a typed one. Saying "yes" only puts "Engineer, yes" in the chat
@@ -179,7 +187,9 @@ available. Typing still works.`
 11. Hold V, speak, release, and switch to another window while `Transcribing`
     shows. Expect `Voice cancelled. Nothing was sent.` and no chat box when you
     come back.
-12. Break the speaker path in the config and ask a question. Expect
+12. Ask another player to send a chat line or `/tellraw` text starting with
+    `Engineer:`. Expect it in chat and silence from the speaker.
+13. Break the speaker path in the config and ask a question. Expect
     `Spoken replies stopped: the speech program could not start ...`; the reply
     still shows in chat and typing still works. Ask two more questions: expect no
     second notice and no speech attempt. Fix the path, ask again: still silent.

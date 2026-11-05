@@ -1,6 +1,7 @@
 package dev.minecraftai.engineer.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.minecraftai.engineer.SpokenReplies;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -226,18 +227,34 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
             context.waitTicks(20);
             check(sent().isEmpty() && context.computeOnClient(c -> c.gui.screen() == null), "Failures send nothing: " + sent());
 
-            // 12. Playback: only the engineer's own replies, stoppable, bounded.
+            // 12. Playback speaks only the server's private reply for this player, never chat text.
             VoiceClient.speakers = () -> speaker;
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: hello there")));
-            context.waitFor(c -> speaker.heard().contains("hello there"), 200);
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Server restarting soon")));
+            clear(context);
+            context.setScreen(() -> new ChatScreen("", false));
+            context.getInput().typeChars("Engineer, what does this do");
+            context.getInput().pressKey(InputConstants.KEY_RETURN);
+            context.waitFor(c -> !speaker.heard().isEmpty(), 200);
+            context.waitTicks(40);
+            var replies = sent().stream().filter(line -> line.startsWith("Engineer: ")).map(line -> VoiceController.clean(line.substring("Engineer: ".length()))).toList();
+            var genuine = speaker.heard();
+            check(!replies.isEmpty() && replies.containsAll(genuine) && genuine.size() <= replies.size() && genuine.stream().distinct().count() == genuine.size(),
+                    "A real addressed-chat reply is shown in chat and spoken once: chat " + replies + ", spoken " + genuine);
+            int before = genuine.size();
+            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: raw system lookalike")));
+            server.runCommand("tellraw @a \"Engineer: tellraw lookalike\"");
             server.runCommand("say Engineer: this is chat, not the engineer");
+            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Server restarting soon")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "hello there"));
+            context.waitFor(c -> speaker.heard().contains("hello there"), 200);
             context.waitTicks(20);
-            check(speaker.heard().equals(List.of("hello there")), "Other messages are never spoken: " + speaker.heard());
+            var after = speaker.heard().subList(before, speaker.heard().size());
+            check(after.equals(List.of("hello there")), "Lookalike Engineer lines are never spoken; the genuine reply is spoken once: " + after);
+            check(sent().contains("Engineer: raw system lookalike") && sent().stream().anyMatch(line -> line.contains("tellraw lookalike")) && sent().contains("Engineer: hello there"),
+                    "Lookalikes and the genuine reply still show as ordinary chat text: " + sent());
 
             speaker.hold = true;
             speaker.release = new CountDownLatch(1);
-            server.runOnServer(s -> { for (int i = 0; i < 8; i++) player(s).sendSystemMessage(Component.literal("Engineer: reply " + i)); });
+            server.runOnServer(s -> { for (int i = 0; i < 8; i++) SpokenReplies.tell(player(s), "reply " + i); });
             context.waitFor(c -> speaker.heard().contains("reply 0"), 200);
             context.waitTicks(5);
             int queued = context.computeOnClient(c -> VoiceClient.playback().queued());
@@ -247,13 +264,13 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
             check(speaker.stops.get() >= 1 && !speaker.heard().contains("reply 1"), "Stop silences speech and drops the queue: " + speaker.heard());
 
             speaker.release = new CountDownLatch(1);
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: talking over you")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "talking over you"));
             context.waitFor(c -> speaker.heard().contains("talking over you"), 200);
             int stops = speaker.stops.get();
             recognizer.answer = "stop talking";
             hold(context);
             check(speaker.stops.get() == stops + 1, "Pressing talk stops playback first");
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: while listening")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "while listening"));
             context.waitTicks(5);
             check(!speaker.heard().contains("while listening"), "Nothing is spoken while the microphone is open");
             release(context);
@@ -271,11 +288,11 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
                 @Override public void stop() { }
             };
             clear(context);
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: first after breaking")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "first after breaking"));
             context.waitFor(c -> VoiceClient.playback().failed() && String.valueOf(VoiceClient.controller().lastNotice()).contains("fake-speaker"), 200);
             String episode = notice(context);
             check(episode.contains("Replies still show in chat") && episode.contains("stop key"), "The failure explains text still works and how to retry: " + episode);
-            server.runOnServer(s -> { for (int i = 0; i < 3; i++) player(s).sendSystemMessage(Component.literal("Engineer: later reply " + i)); });
+            server.runOnServer(s -> { for (int i = 0; i < 3; i++) SpokenReplies.tell(player(s), "later reply " + i); });
             context.waitFor(c -> sent().stream().anyMatch(line -> line.contains("later reply 2")), 200);
             context.waitTicks(10);
             check(attempts.get() == 1, "Later replies do not retry the broken program: " + attempts.get());
@@ -283,12 +300,12 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
             check(context.computeOnClient(c -> c.gui.screen() == null) && sent().stream().noneMatch(line -> line.startsWith("You:")), "The failure opens nothing and sends nothing: " + sent());
             VoiceClient.speakers = () -> speaker;
             speaker.hold = false;
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: still failed")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "still failed"));
             context.waitTicks(20);
             check(!speaker.heard().contains("still failed"), "Fixing the program alone does not retry automatically: " + speaker.heard());
             context.getInput().pressKey(VoiceClient.stopKey());
             context.waitFor(c -> !VoiceClient.playback().failed(), 100);
-            server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: after retry")));
+            server.runOnServer(s -> SpokenReplies.tell(player(s), "after retry"));
             context.waitFor(c -> speaker.heard().contains("after retry"), 200);
         } finally {
             VoiceClient.setups = VoiceClient::configuredSetup;
