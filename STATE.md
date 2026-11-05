@@ -261,3 +261,9 @@ note contexts stay byte-identical and knowledge-revision/grant fences remain.
 Scoped TypeScript and Java/client compile passed. Focused CI and combined
 dedicated acceptance/full CI are required before integration/release. Hold main
 stable for final combined proof; do not bypass current-head checks.
+
+Exactb84a9b0/focused42067282168 passed. Inspected208 required native tests and
+successful note-selection/project-knowledge tests, including the restarted
+planning-relevance/replaced-note/privacy case. This fixes PR92's reversed-order
+test without inventing a measurement. It is not combined client/acceptance proof;
+align with PR93 after its live run finishes, then run final full/isolated flows.
