@@ -35,6 +35,10 @@ public final class ToggleMemoryGameTests {
                     && session.verified.equals("untested") && !MemoryFunctionalEvidence.current(blueprint,held),"Both saves can fail without leaving any in-memory current pass or binding");
         }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
         finally{try{java.nio.file.Files.deleteIfExists(session.file);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+        held.memoryPassEvidence=task.memoryPassEvidence;held.verified=task.verified;session.verified=task.verified;
+        held.assign(java.util.UUID.randomUUID(),"player");session.save();
+        h.assertTrue(session.verified.startsWith("stale:") && held.verified.startsWith("stale:")
+                && !ProjectGuidance.evidence(session).getFirst().currentPass(),"Saving a reassigned memory scope labels both raw status and guidance stale rather than repeating the old pass text");
         var rotated=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),90).blueprint();
         h.assertTrue(!MemoryFunctionalEvidence.current(rotated,task),"A different canonical source cannot reuse the pass binding");
         task.assign(java.util.UUID.randomUUID(),"assistant");h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,task),"A new assignment generation invalidates the old binding even with the same geometry and pass text");h.succeed();

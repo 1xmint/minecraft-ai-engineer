@@ -1599,7 +1599,13 @@ final class EngineeringSession implements BuildExecutor {
         if(shutterOwned && (blueprint==null || !ShutterDesign.describes(blueprint.source())))throw new IllegalStateException("Mechanical control requires its accepted mechanical design");
         if(restoredLayout!=null && (blueprint==null || !restoredLayout.after().source().equals(blueprint.source())))restoredLayout=null;
         pruneOperationScopes();validateOperationScopes();
-        if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
+        if(blueprint!=null){
+            assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;
+            if(ToggleMemoryIntention.describes(blueprint.source()) && verified.startsWith("passed:toggle-memory:")
+                    && !MemoryFunctionalEvidence.current(blueprint,task)) {
+                verified="stale: memory source or assignment changed; a fresh test is required";task.verified=verified;
+            }
+        }
         if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
         if(pendingMemoryRecovery!=null)pendingMemoryRecovery.requireMatches(this);
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
