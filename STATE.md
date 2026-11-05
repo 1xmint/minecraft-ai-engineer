@@ -383,3 +383,21 @@ wiring and actual crafting-to-construction/restart proof remain to implement.
 Hand-worked native tests cover all4remaining counts, source selection, alias
 isolation, dirt compatibility and wrong-material refusal. Scoped Java compile
 passed; native test CI remains pending with the upcoming execution integration.
+
+PR73 merged d76e832 after exactc3ac69f passed all5checks41945504555; inspected
+that run's dedicated memory/restart proof. Recovery PR74/fb0e87a also passed
+all5checks41947647607 and needs reconciliation with the newly squashed main.
+Full-adder combined player1a265c6/41947057332 passed; final69845d0 full PR CI
+41947347153 remains live. No parent/live heads were changed during those runs.
+
+Prepared typed placement admission for plain dirt1 and retained oak planks1..4.
+It binds the exact full resources, selected source and actual MAIN_HAND object.
+A separate one-use commit is consumed at native BlockItem.placeBlock immediately
+before setBlock, rechecking authority, actor/list/connection/mode, loaded target
+and exact permitted block. Direct result reuse, detached stacks and wrong block
+types cannot gain mutation authority. All retained mining/pickup/placement/menu
+phases exclude overlapping work and cancel clears both placement capabilities.
+Pinned native signatures inspected; scoped Java/client compile and shell checks
+passed. GPT-6-Luna found no concrete bypass or dirt false-positive. Runtime
+fixture now rejects5event-time faults using actual crafted planks and retains
+legacy positive dirt flows. New plank producer/placement success remains unwired.
