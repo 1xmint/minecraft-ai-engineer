@@ -668,6 +668,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             }
             write("physical-craft-recovery.done","passed");
+            var recovered=recoveredCrafts.get(recoveredCrafts.size()-1);
+            send(context,"engineer project use "+recovered.project());server.waitFor(s->recovered.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            int index=0;
+            for(var target:java.util.List.of(new BlockPos(2633,101,3),new BlockPos(2632,101,3),new BlockPos(2631,101,3),new BlockPos(2633,101,1))){
+                int remaining=3-index;int phase=++index;
+                MESSAGES.clear();say(context,"Engineer, place retained oak planks at "+target.getX()+" "+target.getY()+" "+target.getZ());
+                expectChat(context,"placed one retained item and verified its saved inventory");
+                server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.level().getBlockState(target).is(Blocks.OAK_PLANKS) && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==remaining && PhysicalWorkerMenus.capture(worker).empty(),"Native placement consumes exactly one actually crafted plank and retains every remainder");menuReceipt(worker,"plank-placement-"+phase);});
+            }
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            var recovered=recoveredCrafts.get(recoveredCrafts.size()-1);
+            server.runOnServer(s->{check(s.getPlayerList().getPlayer(recovered.worker())==null,"Placed plank restart restores no worker automatically");for(var target:java.util.List.of(new BlockPos(2633,101,3),new BlockPos(2632,101,3),new BlockPos(2631,101,3),new BlockPos(2633,101,1)))check(s.overworld().getBlockState(target).is(Blocks.OAK_PLANKS),"All four native plank placements survive the actual saved-world restart");});
+            send(context,"engineer project use "+recovered.project());server.waitFor(s->recovered.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.getInventory().isEmpty() && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Restart retains the consumed inventory and restores no construction delegation");menuReceipt(worker,"plank-placement-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            write("physical-plank-placement.done","passed");
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
