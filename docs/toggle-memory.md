@@ -100,3 +100,13 @@ tests passing. Its independently replayed artifact contains eight actual journal
 32 PREPARED records,32 native observations and eight returns to the initial pair.
 Every reloaded journal remains unable to execute; no functional pass is claimed.
 No production actuator or recovery handler uses these records yet.
+
+The internal MemoryInputDriver is the next execution boundary. It accepts no saved
+record as authority: opening requires a fresh connected creative controller, current
+selection, BUILD grant and test reservation. Each native lever edge rechecks the
+source, assignment, connection, both reserved write cells and loaded isolation,
+persists PREPARED, then repeats those checks and the exact paired before-state.
+It records the actual pair after the native call and stops on failure or lost
+authority. Stop never emits a restoration pulse. Cleanup releases only its own
+reservation. No command or conversation starts this driver yet; it supplies no
+settled sampler, functional pass or recovery. Connected-player proof is pending.

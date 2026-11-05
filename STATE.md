@@ -181,3 +181,12 @@ Inspected actual chat reports two passed trials for the current revision; strict
 default-flow counters passed. PR85 preview/build candidatee7a6c89 is running
 full42051307049: four checks passed, dedicated multiplayer remains live. Preserve
 that head until terminal. No saved-world memory-build claim is made yet.
+
+Internal MemoryInputDriver now owns fresh BUILD test authority, per-edge source/
+selection/connection/assignment/reservation checks and durable intent-before-pull.
+It records actual native results before stopping on failure, never restores by
+pulsing and releases only its captured lease. No command or conversation routes
+to it. GPT-6-Luna implemented it; parent review corrected cached observations,
+UUID comparison and cleanup identity. Scoped compileJava passed, including a new
+disconnected-owner refusal test. Native CI and connected-player execution proof
+remain pending; the sampler, recovery and functional pass remain unfinished.

@@ -113,6 +113,17 @@ public final class ToggleMemoryGameTests {
         boolean refused=false;try{session.reviseProposal(blueprint);}catch(IllegalArgumentException expected){refused=expected.getMessage().startsWith("Built memory designs");}
         h.assertTrue(refused && session.blueprint==blueprint && session.journal.isEmpty() && session.delegation==null,"Memory preview routes through exact canonical admission and preserves an existing built design, never through the ordinary catalog fallback");h.succeed();
     }
+    @GameTest public void memoryDriverRejectsDisconnectedAuthorityBeforeAcquiringOrRecording(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());var id=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();
+        var session=new EngineeringSession(manager,id,owner,"minecraft:overworld");
+        session.blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
+        session.commandActor=owner;manager.selections.put(owner,id);
+        var before=session.blueprint.blocks().stream().map(cell->session.level().getBlockState(cell.pos())).toList();
+        boolean refused=false;try{MemoryInputDriver.open(session,owner);}catch(IllegalStateException expected){refused=true;}
+        h.assertTrue(refused && session.delegation==null && session.memoryInputDriver==null,"Selection and an owner UUID alone cannot create a live memory driver or lease without an authenticated connection");
+        h.assertTrue(before.equals(session.blueprint.blocks().stream().map(cell->session.level().getBlockState(cell.pos())).toList()) && session.verified.equals("untested") && !session.hasPendingTest(),"Rejected memory authority changes no paired state, generic test or verification");
+        manager.selections.remove(owner);h.succeed();
+    }
     @GameTest public void admittedMemoryCannotUseGenericTestOrRecovery(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var owner=java.util.UUID.randomUUID();
         var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
