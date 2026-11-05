@@ -118,31 +118,37 @@ Recovery recorder, branch work/memory-recovery-journal:
 Historical failures, superseded notes and detailed proofs remain in Git/PR/CI
 history and the feature guides. No full milestone-completion claim is made.
 
-Recovery checkpoint candidate PR96: b06a0c2/native42115150145 passed212 required
-tests. Inspected replay proves32 plans,32 recovery logs/48 native fixture edges,
-and one interrupted-recovery chain selecting latest progress after session reload.
-Schema2 chains are bounded; schema1 logs remain readable; pointers grant no lease
-or functional pass. Full current-main candidate checks remain pending. Connected
-fresh-authority recovery execution is not yet implemented.
+Current combined memory candidate (PR100; not merged):
 
-Fresh recovery controller candidate: stale checkpoint-free sessions are now refused (4cc3eeb/native42116017412 passed214 required tests; replay artifact inspected). Internal MemoryRecoveryDriver now acquires fresh typed BUILD authority, publishes a new checkpoint before edges, rechecks live scope before/after native calls, records outcomes without automatic compensation, and clears pointers only after RESTORED readback. Local Java compile passed. Connected-player interruption/revocation/restart proof and independent authority review remain pending; no player route is enabled.
-
-Connected recovery fixture candidate: real Alice/Bob connections exercise partial recovery, session reload with no restored authority, fresh completion from the latest log, BUILD revocation and selection loss before a pulse, and durable clearing of both pointers. Default multiplayer CI now requires its done marker and retains its recovery records. Scoped Java compilation passed; the new connected flow has not run yet. A full server-reboot recovery proof remains pending.
-
-Authority review: GPT-6.1-sol reviewed fb08670 and found no actionable implementation defect; requested genuine same-UUID reconnect regression coverage. That fixture is now added to the existing real disconnect/reconnect sequence, with mandatory evidence and no new player route. Local compileClientJava passed; runtime proof remains pending. Kept on a separate branch while PR98's exact-head CI is live.
-
-Conversational recovery candidate: MemoryRecoveryRun connects an explicit resume to fresh recovery authority and advances at most one native edge per four game ticks. It finishes paused after original-pair readback, with no automatic test or functional pass. Stop freezes progress; checkpoint load creates no runner. New actual-chat fixture and required marker compile locally; runtime proof is pending. Current CI heads were left unchanged on their original branches.
-
-Resume route review: GPT-6.1-sol found no concrete implementation defect at8532f5a. It requested stronger chat completion evidence. The fixture now compares the actual original lever/bulb pair and strictly reads exactly one matching RESTORED journal with all three observed edges, retaining the root/receipt/actual frame artifact. Scoped compileClientJava passed; runtime result pending. Separate evidence branch preserves all live CI heads.
-
-Native memory functional-test candidate: explicit test requests now create an ephemeral timed run, require96 live samples/four native edges and original-pair restoration, recheck the exact current connection/source/grant, durably save bounded trial evidence, then publish a current pass. Existing load rules mark saved passes stale and restore no runner. Actual-chat fixture checks the durable trace and paired target; the reconnect fixture now interrupts a real timed test after its first edge. Guides distinguish testing from recovery. Local Java compilation passed before the last native assertion update; CI and focused evidence review remain pending.
-
-Functional evidence candidate: the independent timed replay checker now accepts the native-memory-functional-trial wrapper, validates exact fields/source/controller/revision and scope bounds, then independently replays all96 samples/four native edges/restoration. It explicitly grants no current pass from offline data. Default multiplayer requires this replay artifact. Verifier syntax and diff checks passed; runtime evidence/review pending.
-
-Functional-pass review found a real status inconsistency: existing generic scope checks reject toggle-memory evidence, so summary/lesson could contradict a fresh pass. Fix candidate adds an ephemeral immutable MemoryFunctionalEvidence binding to exact source/revision/root basis/generation and the durable record ID, shared by summary/guidance/lessons. It is never serialized or loaded; saved traces remain history. The player fixture now checks all views agree and that reload has no current binding. Local compile initially caught a misnamed summary helper, corrected to records; recompilation passed. PR100 must not merge without this fix and exact-head CI.
-
-Follow-up review found a failed-save edge: a second checkpoint save failure could leave the task's live pass binding intact. The failure path now clears task binding, task pass text and session pass text before any rollback I/O. A native regression blocks the real checkpoint path with a directory, forces both saves to fail, and asserts no current binding survives. Added assignment-generation/source/load/pass-string invalidation checks. Local compileJava/compileClientJava passed. PR96 exact3d7eec8/full42115690389 is green; inspected multiplayer artifact shows96 native samples/four edges/restored original pair, plus normal persisted engineering proof. Combined candidate still pending.
-
-Scope/save regression proof: exact52441db/native42120494863 passed215 required tests; replay artifact inspected (32 plans,32 recovery logs/48 native edges,one latest-progress chain). GPT-6.1-sol confirmed the double-save cleanup fix. A final consistency guard now marks raw session/task pass text stale during save if its live memory binding no longer matches after reassignment/source changes; native scope fixture checks raw status and guidance together. Scoped Java compilation passed; current-head native proof pending.
-
-Raw-status invalidation exacte992df0/native42120882739 passed215 required tests; artifact inspected. PR98 exactfb08670/full42116822093 also passed; inspected connected recovery record shows INTERRUPTED first attempt, RESTORED second following its ID, revoked/selection-loss attempts with one interruption event and no edge, and final RESTORED. Full server-restart candidate now persists a partially completed recovery across the suite's existing dedicated-server shutdown, verifies epoch/pointer identity/no loaded authority, and requests fresh recovery via approved chat after loading the area. Mandatory marker/artifact added; compileClientJava passed, runtime proof pending.
+- Durable latest-recovery pointers, bounded strict schema2 origin chains and
+  schema1 compatibility; stale checkpoint-free sessions refuse to plan.
+- Fresh connected recovery authority, journal-before-edge ordering, event-time
+  selection/connection/grant/reservation checks and no automatic compensation.
+- Explicit chat resume restores the original pair, clears both pointers and
+  stops paused. Normal test requires96 live samples/four native edges,
+  original-pair restoration, durable evidence and fresh authority before a pass.
+- Live pass bindings pin exact source/revision/root basis/generation/record ID
+  and are shared by summaries, guidance and lessons. They never load from disk;
+  saved passes become stale. Failure clears task/session pass and binding before
+  rollback I/O, including when both checkpoint saves fail. Reassignment also
+  marks raw status stale. Offline replay cannot grant a current pass.
+- Player fixtures cover partial recovery/session reload, revocation/selection,
+  real same-UUID reconnect, chat resume/test and full dedicated-server restart.
+  The last three flows and final pass-scope fixes still need combined runtime
+  proof. These fixtures do not prove human audio or Mojang login.
+- Reviewed by GPT-6.1-sol: recovery authority/routing had no implementation
+  blocker; identified scope-status and double-save defects were fixed and the
+  fixes reviewed. Native scope/source/generation/load/save-failure regressions
+  passed215 required tests at52441db/42120494863 and e992df0/42120882739;
+  artifacts inspected. Local Java compile passed for restart fixture774049e.
+- Foundation exact3d7eec8/full42115690389 and separate acceptance42115690549
+  passed; artifacts inspected:96 samples/four edges/original pair restored,
+  persisted engineering proof, unchanged52-block acceptance fixture/inventories.
+- Connected recovery exactfb08670/full42116822093 passed. Inspected record:
+  INTERRUPTED first attempt, RESTORED second following its ID, revocation and
+  selection-loss attempts each had one interruption event/no native edge, final
+  fresh restoration succeeded. No functional pass came from recovery.
+- Superseded runs42117395903/42117840340/42119500629 are being explicitly
+  cancelled because reviewed fixes and full-restart coverage replace their code,
+  not because observation expired. Confirm terminal before updating PR100 head;
+  then run all required checks and inspect exact-head artifacts before merging.
