@@ -112,6 +112,18 @@ final class VoiceStaleChecks {
                     "The failure names the program and says text still works: " + failures);
         }
 
+        // One notice per failure episode: later replies are not queued, not retried and not re-reported.
+        check(playback.failed(), "The failure starts an episode");
+        for (int i = 0; i < 3; i++) check(!playback.offer("Engineer: later " + i, false), "A later reply is not queued during the episode");
+        playback.stop(); // Stopping alone (for example pressing talk) is not a retry.
+        check(!playback.offer("Engineer: after stop", false) && playback.failed(), "Stop alone does not end the episode");
+        Thread.sleep(100);
+        synchronized (failures) { check(failures.size() == 1, "Exactly one notice per episode: " + failures); }
+        playback.retry();
+        check(!playback.failed() && playback.offer("Engineer: after retry", false), "The explicit retry tries the program again");
+        waitIdle(playback);
+        synchronized (failures) { check(failures.size() == 2, "A failed retry is a new episode with one new notice: " + failures); }
+
         // Stopping speech on purpose is not a failure and reports nothing.
         var stoppedFailures = new ArrayList<String>();
         var speaking = new CountDownLatch(1);
