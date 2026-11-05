@@ -74,7 +74,8 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Active integration candidates
 
-- Full-adder PR64 head69845d0: full PR CI41947347153 is live. Gameplay code matches
+- Full-adder PR64 headec5e826: full PR CI41953618308 is live.
+  Prior69845d0/full41947347153 passed all five checks. Gameplay code matches
   combined1a265c6, which passed dedicated player41947057332; final source differs
   only in STATE. Prior6204521/player41943360761 also passed and independent SQLite
   proof was inspected:3544cells,35pins,16cases with8samples each, two epochs with
@@ -82,21 +83,21 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
   undo. Bounded undo uses at most4durable entries/tick and fresh UNDO checks.
   UNDO-only controllers can stop their own undo. No latency/reliability claim.
   Merge reconciliation with newly squashed main is required; do not disturb live CI.
-- Native resource recovery PR74: priorfb0e87a passed all5checks41947647607. This
-  branch reconciles it with main d76e832 without changing runtime code. Require
-  new exact-head full CI before merge. Actual recoverydff7f30/41943972746,
-  acknowledgmentb1312e6/41945127313 and conversation65b8f1e/41946354513 passed
-  six saved-world boots and independent NBT/journal/SHA256 proof. Four interrupted
-  shapes are stored without result clicks or extra crafting awards; original
-  history stays unchanged. Forged/incomplete acknowledgments, editor requests
-  and ambiguous history refuse. Repeat recovery is a no-op; crafting needs a
-  separate fresh request. No resources or execution authority are restored.
-- Placement development:89881aa predicts exact dirt1/planks1..4 inventory changes.
-  Gate64a28b2/player41951347079 is live separately: actual main-hand identity,
-  exact full resource frames, one-use commit immediately before native setBlock,
-  current owner/connection/mode/target checks and closed resource phases. Scoped
-  Java/client compile and GPT-6-Luna review passed; runtime proof still pending.
-  A plank producer and positive gather/craft/place/restart flow remain unwired.
+- Native resource recovery PR74 merged cd1188f. Exact39dd3da passed all five
+  checks41951701598; dedicated memory/restart proof was inspected. Actual
+  conversation65b8f1e/41946354513 proved four interrupted shapes across six boots,
+  preserved original history, rejected forged/ambiguous acknowledgments and
+  repeated recovery without duplication. Recovery returns existing resources;
+  fresh crafting requires a separate request. No authority is restored.
+- Placement gate64a28b2/player41951347079 passed; artifact marker and independent
+  native crafting/recovery proof were inspected. Detached/wrong-hand stacks,
+  mismatched blocks, stale selection/mode and replay refuse without mutation.
+- Crafted plank producer c40bf76 is pushed; actual player CI41955315620 is live.
+  Local Java/client compile, script checks and focused GPT-6-Luna review passed.
+  It places one real retained plank per request and verifies the entire predicted
+  remainder. Four actual chat placements and a seventh saved-world boot are in
+  the fixture; runtime completion is not yet proven. Integration preserves the
+  same runtime source. General materials, tools and terrain remain unfinished.
 
 ## Next Codex slices
 
