@@ -30,6 +30,8 @@ public final class ToggleMemoryGameTests {
         var intention=ToggleMemoryIntention.create(identity,1,identity,"test","minecraft:overworld",at(new BlockPos(4,2,4),rotation),angle);
         var blueprint=intention.blueprint();
         for(var cell:blueprint.blocks())h.setBlock(cell.pos(),cell.state().is(memory.getBlock())?cell.state().setValue(BlockStateProperties.LIT,initial):cell.state());
+        MemoryInputJournal journal;
+        try{journal=MemoryInputJournal.create(java.nio.file.Files.createTempDirectory("engineer-memory-input-"),blueprint,new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb)),h.getLevel().getGameTime());}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
         var samples=new JsonArray();var edges=new JsonArray();long[] previous={-1};
         // The same unpowered input appears with two different stored outputs. Holding
         // a high input or returning it low must never produce a second toggle.
@@ -38,10 +40,15 @@ public final class ToggleMemoryGameTests {
             int base=8+phase*24;
             if(phase>=1 && phase<=4)h.runAtTickTime(base,()->{
                 var before=new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb));
-                var edge=MemoryInputTransition.predict(blueprint,before,input);
+                var edge=journal.prepare(before,h.getLevel().getGameTime());
+                var loaded=MemoryInputJournal.read(journal.file(),blueprint);boolean refused=false;
+                try{loaded.prepare(before,h.getLevel().getGameTime());}catch(IllegalStateException expected){refused=true;}
+                h.assertTrue(loaded.stage().equals("PREPARED") && refused && before.matches(new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb))),"Durable PREPARED precedes the real edge, and reloading the log grants no execution or replay");
                 h.pullLever(lever);
                 var actual=new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb));
                 h.assertTrue(edge.after().matches(actual) && !edge.before().matches(actual),"A real native lever edge immediately produces the exact coupled lever/bulb frame, never just input restoration");
+                journal.observe(actual,h.getLevel().getGameTime());
+                h.assertTrue(MemoryInputJournal.read(journal.file(),blueprint).stage().equals("OBSERVED"),"The exact native paired observation is durable after the edge");
                 var restored=MemoryInputTransition.read(edge.json(),blueprint);
                 h.assertTrue(restored.after().matches(actual),"Reloaded transition data agrees with the actual edge but grants no execution");
                 var row=new JsonObject();row.addProperty("phase",step);row.addProperty("gameTick",h.getLevel().getGameTime());row.add("transition",edge.json());row.add("observedAfter",actual.json());edges.add(row);
@@ -63,9 +70,28 @@ public final class ToggleMemoryGameTests {
         }
         h.runAtTickTime(154,()->{
             h.assertTrue(samples.size()==96 && !h.getBlockState(lever).getValue(BlockStateProperties.POWERED) && h.getBlockState(bulb).getValue(BlockStateProperties.LIT)==initial,"Two native pulses restore the original stored bit and original unpowered input");
-            var record=new JsonObject();record.addProperty("kind","toggle-memory-native-feasibility");record.addProperty("rotation",rotation.name());record.addProperty("initial",initial);record.add("samples",samples);record.add("edges",edges);
+            journal.restored(new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb)),h.getLevel().getGameTime());
+            h.assertTrue(MemoryInputJournal.read(journal.file(),blueprint).stage().equals("RESTORED"),"A complete two-pulse log observes its original pair, never a functional pass");
+            var record=new JsonObject();record.add("inputJournal",storedMemoryRecord(journal.file()));record.addProperty("kind","toggle-memory-native-feasibility");record.addProperty("rotation",rotation.name());record.addProperty("initial",initial);record.add("samples",samples);record.add("edges",edges);
             System.out.println("ENGINEER_TOGGLE_MEMORY_NATIVE "+record);h.succeed();
         });
+    }
+    private static JsonObject storedMemoryRecord(java.nio.file.Path file){try{return JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+    @GameTest public void preparedMemoryLogsStayFrozenAndRejectExternalChanges(GameTestHelper h){
+        var id=java.util.UUID.randomUUID();var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().state();var frame=new MemoryInputTransition.Frame(lever,Blueprint.state("minecraft:waxed_copper_bulb"));
+        try{
+            var directory=java.nio.file.Files.createTempDirectory("engineer-memory-log-refusals-");var journal=MemoryInputJournal.create(directory,blueprint,frame,10);journal.prepare(frame,11);
+            var loaded=MemoryInputJournal.read(journal.file(),blueprint);boolean refused=false;try{loaded.observe(MemoryInputTransition.predict(blueprint,frame,true).after(),12);}catch(IllegalStateException expected){refused=true;}h.assertTrue(refused && loaded.stage().equals("PREPARED"),"A loaded PREPARED log cannot claim that its old edge executed");
+            journal.interrupt(frame,12);h.assertTrue(MemoryInputJournal.read(journal.file(),blueprint).stage().equals("UNCERTAIN"),"Stopping an intent without a native observation remains ambiguous even if the before pair is still visible");
+            var other=MemoryInputJournal.create(directory,blueprint,frame,20);var forged=other.json();forged.addProperty("verified","passed");java.nio.file.Files.writeString(other.file(),forged.toString());refused=false;
+            try{other.prepare(frame,21);}catch(IllegalStateException expected){refused=true;}h.assertTrue(refused && storedMemoryRecord(other.file()).has("verified"),"Externally changed logs are never silently overwritten");
+            refused=false;try{MemoryInputJournal.read(other.file(),blueprint);}catch(RuntimeException expected){refused=true;}h.assertTrue(refused,"A persisted functional claim is not part of a memory input log");
+            var full=java.nio.file.Files.createTempDirectory("engineer-memory-log-full-");
+            for(int index=0;index<MemoryInputJournal.MAX_FILES;index++)java.nio.file.Files.createFile(full.resolve(blueprint.projectId()+".memory-input-"+java.util.UUID.randomUUID()+".json"));
+            refused=false;try{MemoryInputJournal.create(full,blueprint,frame,30);}catch(IllegalStateException expected){refused=true;}h.assertTrue(refused,"Per-project journal count is bounded before production creation; old records are never automatically deleted");
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        h.succeed();
     }
     @GameTest public void memoryEdgeRecordsRejectRelabelingClaimsAndUnsettledFrames(GameTestHelper h){
         var id=java.util.UUID.fromString("d0c177a4-75a5-436c-9440-554ad92f9d62");var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0).blueprint();

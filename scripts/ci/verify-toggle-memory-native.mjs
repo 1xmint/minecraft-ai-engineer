@@ -158,6 +158,55 @@ for (const record of records) {
   });
   assert.equal(input, false);
   assert.equal(bit, record.initial);
+  const log = record.inputJournal;
+  assert.deepEqual(
+    Object.keys(log).sort(),
+    [
+      "schemaVersion",
+      "kind",
+      "id",
+      "intention",
+      "initial",
+      "startedTick",
+      "stage",
+      "events",
+    ].sort(),
+  );
+  assert.equal(log.schemaVersion, 1);
+  assert.equal(log.kind, "memory-input-journal");
+  assert.match(
+    log.id,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
+  );
+  assert.deepEqual(log.intention, intended);
+  assert.deepEqual(log.initial, frame(false, record.initial));
+  assert.ok(
+    Number.isSafeInteger(log.startedTick) &&
+      log.startedTick >= 0 &&
+      log.startedTick <= record.edges[0].gameTick,
+  );
+  assert.equal(log.stage, "RESTORED");
+  assert.equal(log.events.length, 9);
+  record.edges.forEach((edge, index) => {
+    assert.deepEqual(log.events[index * 2], {
+      stage: "PREPARED",
+      step: index + 1,
+      tick: edge.gameTick,
+      transition: edge.transition,
+    });
+    assert.deepEqual(log.events[index * 2 + 1], {
+      stage: "OBSERVED",
+      step: index + 1,
+      tick: edge.gameTick,
+      observed: edge.observedAfter,
+    });
+  });
+  assert.deepEqual(log.events[8], {
+    stage: "RESTORED",
+    step: 4,
+    tick: origin + 154,
+    observed: frame(false, record.initial),
+  });
 }
 console.log(
   JSON.stringify({
@@ -165,5 +214,17 @@ console.log(
     nativeEdges: 32,
     restoresInitialPair: true,
     executionAuthority: false,
+  }),
+);
+
+console.log(
+  JSON.stringify({
+    kind: "memory-input-journal-native-replay",
+    journals: 8,
+    preparedBeforeEdges: 32,
+    observedAfterEdges: 32,
+    restoredPairs: 8,
+    functionalPass: false,
+    reloadedExecution: false,
   }),
 );

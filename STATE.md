@@ -150,3 +150,18 @@ Memory development outside main:
   Recovery requires a separate fresh authority/journal, never pulse replay.
 - Data-and-clock registers, broader memory modules and all remaining E2/E3/P2
   requirements remain unfinished. No new release or human acceptance is claimed.
+
+Durable M2 data log implemented on work/memory-input-journal: exclusive per-project
+files, exact PREPARED/OBSERVED sequencing, terminal interruption/uncertainty and
+original-pair RESTORED receipt (never functional pass). Reads replay exact event
+semantics then freeze permanently; no old log can resume a pulse. Save failure
+freezes the writer; byte changes refuse overwrite. Caps64files/4MiB per project,
+64KiB/file and9events, without automatic deletion. Scoped Java compilation passed.
+GPT-6-Luna found sequencing/failure behavior sound and flagged aggregate storage;
+that cap is now added. Native files-around32edges, frozen-load, external-tamper
+and full-directory proofs are written; fresh native CI is pending. A production
+fresh-authority action gate, stateful sampler and recovery remain unfinished.
+M1 source0616ac1/full41962164694 failed at normal preview dispatch. Separate
+fix78f1a0d adds exact canonical reviseProposal admission before catalog fallback;
+its native41965016972 passed, while fresh full CI is live. No player-build claim
+is made yet. PR84's exact request-count correction2f282e1 is also under fresh CI.

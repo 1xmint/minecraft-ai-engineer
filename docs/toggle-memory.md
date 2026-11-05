@@ -81,3 +81,19 @@ compilation and script syntax/format passed; focused GPT-6-Luna review found no
 concrete issue. This new proof is pending CI. It does not implement persistence,
 write-ahead stages, one-use event authority or recovery; those still belong to
 the separate stateful trial before automated testing can be enabled.
+
+Durable input journal development: the recording process exclusively creates a
+per-project file, saves PREPARED before returning an edge description, then saves
+OBSERVED only for the exact native paired result. Stop before an observation is
+UNCERTAIN; a completed four-edge sequence may record RESTORED only when the
+original pair is observed again. RESTORED is not a functional pass.
+
+Every load reconstructs the complete bounded event sequence and returns a frozen
+reader. Loaded logs cannot prepare, observe, stop or resume execution. Failed
+saves freeze the writer, and externally changed bytes are never overwritten.
+The namespace is limited to64files/4MiB per project,64KiB per file and9events;
+old logs require explicit archiving, never automatic deletion. Native tests write
+and reload the actual files around all32real lever edges and exercise stopped,
+forged, externally changed and full-directory refusals. Java compilation and
+focused review passed; this new durable proof still needs CI. No production
+actuator or recovery handler uses these records yet.
