@@ -709,11 +709,27 @@ with authorized project members.
 Ambiguous requests such as `remember that` ask for explicit note text instead
 of silently guessing what to save. Commands remain a fallback.
 
-When the assistant reasons about the project or answers a question, it is
-given at most eight current notes. A note you replaced stays in history (ask
-`what changed` or `show note N`) but is never handed over as a current
-requirement. If more than eight notes are current, notes that share a word with
-your question come first, then the newest.
+When the assistant answers a question about the project, it is given at most
+eight current notes, chosen from the 32 most recent notes. A note you replaced
+stays in history (ask `what changed` or `show note N`) but is never handed over
+as a current requirement. If more than eight notes are current, the choice works
+like this:
+
+- Words of three or more letters in your question, and in the name of the part
+  you selected, are matched literally against each note's text and reason. A
+  plural `s` is ignored, so `lamps` matches `lamp`. Question words such as
+  `what`, `this`, `does` and `why` are ignored; circuit words such as `and`,
+  `xor` and `led` count.
+- Notes sharing more of those words come first, newest first on a tie. The rest
+  of the eight are the newest remaining notes.
+- A question with no matching words gets the eight newest notes.
+
+There is no meaning-based search and no web lookup: a note about `lamps` is
+not found by asking about `lights`. Ask `find notes about lights` to search the
+whole history yourself. When the engineer plans or revises a build, it is given
+the eight newest current notes; your request does not change which ones yet.
+Choosing a note never makes it true: notes stay owner-authored requirements, not
+observations or proof that anything works.
 
 ![Shared project notes read through actual player chat](images/project-memory.png)
 
