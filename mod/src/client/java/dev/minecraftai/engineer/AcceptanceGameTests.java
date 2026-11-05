@@ -115,8 +115,14 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 // Late reply A: Bob's read is in flight when Alice revokes him.
                 pauseCompanion(context, "a");
                 write("bob-late-ask", "ready"); awaitFile(context, "bob-late-asked");
+                // Positive proof the request is really in flight on the frozen companion.
+                await(context, () -> server.computeOnServer(s -> pending(s, "Bob") != null), "Bob's read in flight");
+                Object bobFrame = server.computeOnServer(s -> pending(s, "Bob"));
                 server.runOnServer(s -> commandAs(s, "Alice", "engineer project revoke Bob"));
                 server.waitFor(s -> !project(s, project).access.allows(player(s, "Bob").getUUID(), ProjectAccess.Permission.VIEW));
+                // The in-flight frame is dropped and its companion call cancelled before the companion can answer.
+                await(context, () -> server.computeOnServer(s -> pending(s, "Bob") == null), "Bob's frame dropped after revocation");
+                check(cancelled(bobFrame), "Bob's in-flight companion call was cancelled while the companion was frozen");
                 resumeCompanion(context, "a");
                 // A fresh owner read proves the resumed companion is answering again.
                 MESSAGES.clear(); memorySay(context, "Engineer, show note 2"); expectChat(context, "Note 2 (decision, current) by Alice: " + DECISION, 60_000);
@@ -126,10 +132,16 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
                 // Late reply B: Alice's own search is in flight when she changes her selection.
                 pauseCompanion(context, "b");
                 MESSAGES.clear(); memorySay(context, "Engineer, find notes about entrance"); expectChat(context, "Searching shared project notes");
+                await(context, () -> server.computeOnServer(s -> pending(s, "Alice") != null), "Alice's search in flight");
+                Object aliceFrame = server.computeOnServer(s -> pending(s, "Alice"));
                 send(context, "engineer project new");
                 server.waitFor(s -> !projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s, "Alice").getUUID()))));
+                await(context, () -> server.computeOnServer(s -> pending(s, "Alice") == null), "Alice's frame dropped after the selection change");
+                check(cancelled(aliceFrame), "Alice's in-flight companion call was cancelled while the companion was frozen");
                 resumeCompanion(context, "b");
-                context.waitTicks(100);
+                // A fresh read on the new selection proves the resumed companion answers again
+                // before the leak check, so the check is not vacuous.
+                memorySay(context, "Engineer, what do you remember about this project?"); expectChat(context, "Shared project notes", 60_000);
                 check(MESSAGES.stream().noneMatch(message -> message.contains("Note 1 (goal")), "A search answer for the previous selection must not arrive after the selection changed: " + MESSAGES);
                 send(context, "engineer project use " + projectId);
                 server.waitFor(s -> projectId.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s, "Alice").getUUID()))));
@@ -235,6 +247,27 @@ public final class AcceptanceGameTests implements FabricClientGameTest {
 
     private static void noLeak(String message) {
         for (String text : PRIVATE) check(MESSAGES.stream().noneMatch(line -> line.contains(text)), message + " (saw \"" + text + "\"): " + MESSAGES);
+    }
+
+    /** The player's in-flight project-knowledge frame, read reflectively so production code stays unchanged. */
+    private static Object pending(MinecraftServer server, String name) {
+        var player = server.getPlayerList().getPlayerByName(name);
+        if (player == null) return null;
+        try {
+            var field = ProjectKnowledgeClient.class.getDeclaredField("active");
+            field.setAccessible(true);
+            return ((java.util.Map<?, ?>) field.get(EngineerMod.managerFor(server).knowledge)).get(player.getUUID());
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+    }
+
+    private static boolean cancelled(Object frame) {
+        check(frame != null, "Expected an in-flight frame");
+        try {
+            var field = frame.getClass().getDeclaredField("future");
+            field.setAccessible(true);
+            var future = (java.util.concurrent.CompletableFuture<?>) field.get(frame);
+            return future != null && future.isCancelled();
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 
     private static void pauseCompanion(ClientGameTestContext context, String episode) {

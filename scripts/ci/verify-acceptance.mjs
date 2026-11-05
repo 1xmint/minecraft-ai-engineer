@@ -74,7 +74,7 @@ assert.equal(planningStarts, 0, "No read-only question started planning work");
 const before = json("snapshot-before.json");
 const after = json("snapshot-after.json");
 const reopened = json("snapshot-restart.json");
-assert.deepEqual(after, before, "Reads, summaries, guidance, comparisons and late replies changed no blocks, inventory, ownership or verification");
+assert.deepEqual(after, before, "The editor reads, both late replies and the denied player changed no blocks, inventory, ownership or verification");
 for (const key of ["blocksSha256", "nonAirBlocks", "owner", "verified", "journal", "designRevision"]) {
   assert.deepEqual(reopened[key], before[key], `Saved-world restart kept ${key}`);
 }
