@@ -40,6 +40,7 @@ jobs:
           npm run build
           node --test dist/tests/full-adder-intention.test.js dist/tests/connected-intention.test.js
           node scripts/ci/verify-full-adder-native.mjs mod/build/native-gametest.log | tee mod/build/full-adder-native-replay.json
+          node scripts/ci/verify-toggle-memory-native.mjs mod/build/native-gametest.log | tee mod/build/toggle-memory-native-replay.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -47,6 +48,7 @@ jobs:
           path: |
             mod/build/native-gametest.log
             mod/build/full-adder-native-replay.json
+            mod/build/toggle-memory-native-replay.json
             mod/run/gametest/logs/latest.log
           if-no-files-found: warn
           retention-days: 7

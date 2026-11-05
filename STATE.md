@@ -118,3 +118,10 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
    verified release, then audit every original requirement before goal completion.
 
 Historical investigations and failed runs remain in Git history and CI artifacts.
+
+Next E2 foundation: work/toggle-memory-foundation adds disposable native tests
+for a one-bit copper-bulb toggle memory, with both initial bits/four rotations,
+held/falling input, comparator output and original-bit restoration. Outcomes and
+next production slice are in docs/toggle-memory.md. Pinned vanilla bytecode was
+inspected; physical feasibility is not yet proven. No player-facing memory
+contract or functional pass is claimed.
