@@ -578,6 +578,20 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(project.delegation==null && !project.access.allows(worker.getUUID(),ProjectAccess.Permission.BUILD),"Crafting history restores neither grants nor delegation");
                 PhysicalCraftRecord.requireNoUnresolved(EngineerMod.managerFor(s),project,worker,OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG)));
                 var before=PhysicalCraftFrame.capture(worker);worker.inventoryMenu.clicked(0,0,net.minecraft.world.inventory.ContainerInput.PICKUP,worker);check(before.matches(PhysicalCraftFrame.capture(worker)),"Reloaded result click cannot replay the old transaction");menuReceipt(worker,"crafted-restarted");write("physical-craft-restarted.done","passed");});
+            MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"claims complete at step 4 of 4; saved native resources match that recorded snapshot");
+            server.runOnServer(s->{var project=session(s,"Alice");var worker=s.getPlayerList().getPlayer(oakRecovery.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && PhysicalWorkerMenus.capture(worker).empty() && project.delegation==null && !PhysicalCraftGuard.active(worker),"Crafting inspection creates no items, native actions, lifetime guard or world lease");
+                var manager=EngineerMod.managerFor(s);var frame=PhysicalCraftFrame.capture(worker);
+                var missing=new EngineeringSession(manager,UUID.randomUUID(),project.owner,project.dimension);boolean missingRefused=false;
+                try{PhysicalWorkerIdentity.existing(manager,missing);}catch(IllegalStateException expected){missingRefused=true;}
+                check(missingRefused && !Files.exists(manager.directory.resolve(missing.projectId+".physical-worker.json")),"Read-only identity loading refuses a missing file without creating a replacement");
+                try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".craft-*.json")){
+                    var file=files.iterator().next();String original=Files.readString(file);try{
+                        var bad=JsonParser.parseString(original).getAsJsonObject();bad.addProperty("owner",UUID.randomUUID().toString());LocalFiles.write(file,bad);
+                        boolean refused=false;try{PhysicalCraftInspection.show(manager,project);}catch(IllegalStateException expected){refused=true;}
+                        check(refused && JsonParser.parseString(Files.readString(file)).equals(bad) && frame.matches(PhysicalCraftFrame.capture(worker)),"Wrong-owner crafting history is refused without rewriting records or native resources");
+                    }finally{Files.writeString(file,original);}
+                }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+                write("physical-craft-inspection.done","passed");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         }
     }

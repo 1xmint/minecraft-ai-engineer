@@ -111,3 +111,12 @@ Bounded navigation (focused dedicated multiplayer CI proven; combined integratio
 Bounded blueprint travel (focused dedicated multiplayer CI proven; combined integration pending): the one-request dirt blueprint job can now route to original resources beyond the build area, carry retained items back to an adjacent placement stance, and repeat. Every route reserves the blueprint's observed cells as read dependencies and retains the original owner, connection, plan and assignment checks. A changed intended cell stops the job. Routes close before fresh native mine or placement tickets are issued. The same flat stone-supported inert-terrain and material limits apply; general terrain, tools and crafting remain unfinished.
 
 Development oak resource contract (gameplay CI pending): say 'Engineer, gather oak log at X Y Z'. Only one isolated oak log on the same clear, stone-supported flat path is supported. Logs beside leaves or other logs are refused; this is not yet tree harvesting. The requested source material and exact block state are checked before native mining, and only its one captured native log drop can be collected. Existing dirt records retain version1; oak records use a strict version2 contract for read-only inspection. Retained logs are saved through native player data, never supplied or converted into materials by direct inventory editing. Preloaded inventory refuses another gather. Oak placement, plank crafting, tools and natural forest navigation remain unfinished.
+
+Development crafting recovery: 'Engineer, inspect companion recovery' also
+reports this owner's crafting records and whether saved native inventory and
+menu resources match the recorded observation. Record claims are labeled as
+claims. Inspection does not create a worker identity, move items, grant actions
+or retry incomplete crafting. Missing or invalid saved data is reported as
+unavailable, never assumed empty. The four-click oak-to-planks task has passed
+focused native gameplay and saved-world restart proof, but is not yet exposed
+to player requests; interruption/refusal proof and integration remain required.

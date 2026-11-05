@@ -220,3 +220,15 @@ exact four-plank result, no replayed clicks or repeated task output, followed
 by a fourth saved-world boot without restored authority. Independent NBT and
 hand-written journal frame verification are required. Scoped client compile,
 JavaScript syntax, shell syntax and diff checks passed. Runtime CI pending.
+
+Native oak execution sourceaa2d329 passed focused41913485653. Inspected actual
+craft/restart receipts and independent NBT/journal report: four clicks consumed
+one actually gathered log, native onTake awarded4, exactly4planks survived the
+fourth saved-world boot, no stored result or replayed capabilities.
+
+Prepared owner-only read-only crafting inspection through existing recovery
+conversation. It reports record claims and decoded saved-resource matches,
+never resumes work. Wrong-owner history and missing identity rejection fixtures
+are included. GPT-6-Luna found a check/open race that could create an identity;
+both gathering/crafting inspection now use an existing-only reader. Scoped
+compile and syntax checks passed before the final identity fixture; CI pending.
