@@ -128,3 +128,8 @@ its own lever actions; this sampler is not yet joined to the fresh-authority
 driver. Independent JavaScript replay checks the emitted trace against canonical
 TypeScript geometry, hand-worked expected states and the original native trace.
 No sampled trace grants a functional pass by itself. Runtime proof is pending.
+
+Native CI42057336040 on877b906 passed all206 required tests. The inspected
+independent replay matched eight sampler traces/768 settled observations to the
+separate original native traces and canonical source. This proves the read-only
+sampler and duplicate-tick refusal; connected timed driver execution is pending.

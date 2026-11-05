@@ -218,3 +218,11 @@ sampler trace; JavaScript hand-works all values and compares both traces plus
 canonical source. It does not grant pass, mutate blocks or resume old authority.
 Scoped compileJava passed for the sampler and duplicate-tick refusal fixture;
 script syntax/format checks passed. Native CI remains required for this slice.
+
+Sampler source877b906/native42057336040 passed all206 required tests. Inspected
+independent replay: eight sampler records and768 settled samples match the
+original separately recorded native trace and canonical source, both initial
+bits/all four rotations. Duplicate-tick refusal is included. No functional pass
+or connected timed execution is claimed. Next internal MemoryTimedTrial joins
+fresh driver authority to the96 exact-tick observations and durable RESTORED
+record; normal test routing and separate fresh interruption recovery stay pending.
