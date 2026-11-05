@@ -190,3 +190,17 @@ continued restoration. No watchdog occurred. Prepared a fixed four-entry undo
 budget per tick, retaining one full preflight per batch and the existing fresh
 per-target authority/world/neighbor checks and save after each entry. No deadline
 or verifier change. Scoped Java compile passed; actual flow proof pending.
+
+Full-adder source1574e88/player41939920429 completed the actual21minute flow,
+including both16case/35pin trials, stop/resume of incremental undo, and zero
+remaining owned blocks. All client receipts passed. The final verifier failed
+because it selected a PAUSED checkpoint retaining old passed evidence as though
+it must be another COMPLETED trial. Actual read-only SQLite inspection found
+COMPLETED firstepoch clocks3750, PAUSED sameepoch/sameevidence, COMPLETED newepoch
+clocks8000. Its action list also needs the third explicit undo after stop.
+Prepared a verifier that selects actual COMPLETED checkpoints, retains all
+strict scope/pin/sample/twoepoch/freshclock/zerojournal assertions, and expects
+the exact three undo requests. Read-only verification of the downloaded CI
+artifact passes; scoped TypeScript dependency compilation and script syntax
+checks passed. No local game/test execution. Fresh final integration CI remains
+required; source gameplay success does not make the original CI run green.

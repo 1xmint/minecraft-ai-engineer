@@ -117,7 +117,9 @@ function cases(rows) {
 }
 const passes = db
   .prepare(
-    "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:full-adder:16 cases@%' ORDER BY id",
+    // Disconnect/stop may retain historical evidence in a PAUSED checkpoint.
+    // Only actual completed trials count as the two required epoch passes.
+    "SELECT document FROM gateway_audit WHERE server_id=? AND project_id=? AND kind='checkpoint' AND json_extract(document,'$.checkpoint.status')='COMPLETED' AND json_extract(document,'$.checkpoint.verified') LIKE 'passed:full-adder:16 cases@%' ORDER BY id",
   )
   .all(server.serverId, project);
 const epochs = new Set();
@@ -179,6 +181,7 @@ assert.deepEqual(actions, [
   "test",
   "test",
   "test",
+  "undo",
   "undo",
   "undo",
 ]);
