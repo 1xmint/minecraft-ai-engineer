@@ -77,6 +77,7 @@ console.log(
     kind: "toggle-memory-native-source-parity",
     cells: expected.blocks.length,
     verification: expected.verification,
-    admitted: false,
+    admission: "preview-build-only",
+    automatedTesting: false,
   }),
 );

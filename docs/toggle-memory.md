@@ -46,3 +46,23 @@ confirms eight cells, verification=untested and admitted=false, alongside all
 its actual settled block states, and the companion reader matches native source
 exactly. This answers source agreement, not player-facing admission or stateful
 restoration. A routine lever restore alone cannot undo an odd memory toggle.
+
+Preview/build candidate (not yet gameplay-proven): say `Engineer, show me a one-bit
+memory` after selecting a workspace, ask about the lesson, then request and approve
+construction. New bulbs start off; a matching player-placed bulb keeps its existing
+bit. Construction stays creative, delegated, loaded and isolated; this is not NPC
+survival machine building. The comparator exception covers only the exact canonical
+cell and never imports block-entity data. Stored-bit changes block reconciliation
+or undo rather than being silently overwritten.
+
+The admitted source has two external ports (toggle and output); the internal stored
+bit is `memory.storage`, rather than a new global port kind. This revision needs new
+source-parity proof. Asking for an automated test explicitly refuses without a pulse
+or pass. Generic test journals/claims refuse on load, and no generic recovery path
+can stimulate memory. A separate typed stateful trial remains unfinished.
+
+Default dedicated CI now contains a normal-chat preview/build/teaching flow, a real
+connected viewer denied construction, adoption of an already-lit player bulb, seven
+assistant-owned cells, test refusal and actual saved-world reload. Its two receipts
+are mandatory in the default CI launcher. These flows are written; their run is
+pending and is not replaced by the earlier native physical feasibility proof.

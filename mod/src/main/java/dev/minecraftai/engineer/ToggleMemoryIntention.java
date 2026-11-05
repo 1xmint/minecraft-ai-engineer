@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 
-/** Canonical intended geometry only. Not registered for admission, execution or functional testing. */
+/** Canonical intended geometry only. Preview/build intention, never a functional pass or input-control journal. */
 final class ToggleMemoryIntention {
     private static final JsonObject DEFINITION=definition();
     private final JsonObject source;
@@ -16,6 +16,16 @@ final class ToggleMemoryIntention {
             byte[] bytes=input.readNBytes(65537);if(bytes.length>65536)throw new IllegalStateException("Oversized toggle-memory definition");
             return JsonParser.parseString(new String(bytes,StandardCharsets.UTF_8)).getAsJsonObject();
         }catch(java.io.IOException failure){throw new IllegalStateException("Could not load toggle-memory definition",failure);}
+    }
+    static final String TEST_UNAVAILABLE="Automated stateful memory testing is not available yet. The stored bit is preserved; no test or recovery pulse was started.";
+    static boolean describes(JsonObject source){
+        if(source.has("memory"))return true;
+        var provenance=source.get("provenance");if(provenance==null || !provenance.isJsonObject())return false;
+        var template=provenance.getAsJsonObject().get("template");return template!=null && template.isJsonPrimitive() && template.getAsJsonPrimitive().isString() && template.getAsString().equals("toggle-memory");
+    }
+    static ToggleMemoryIntention validated(Blueprint blueprint){
+        var intended=read(blueprint.source(),blueprint.worldId(),blueprint.dimension(),UUID.fromString(blueprint.projectId()));
+        if(!intended.blueprint().equals(blueprint))throw new IllegalArgumentException("Memory blueprint differs from its exact canonical source");return intended;
     }
     static ToggleMemoryIntention create(UUID id,int revision,UUID project,String world,String dimension,BlockPos anchor,int rotation){
         Objects.requireNonNull(id);Objects.requireNonNull(project);Objects.requireNonNull(anchor);

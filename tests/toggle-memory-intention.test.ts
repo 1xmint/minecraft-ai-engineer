@@ -4,6 +4,7 @@ import {
   createToggleMemoryIntention,
   readToggleMemoryIntention,
 } from "../companion/src/toggle-memory-intention.js";
+import { serverBlueprint } from "../companion/src/gateway-types.js";
 
 const identity = {
   id: "db1175eb-1559-4cca-a740-d63f224a4068",
@@ -19,6 +20,15 @@ const context = {
   dimension: identity.dimension,
   projectId: identity.projectId,
 };
+const gateway = {
+  serverId: "server",
+  serverEpoch: "epoch",
+  actorId: identity.id,
+  projectId: identity.projectId,
+  projectRevision: identity.revision,
+  authorizationRevision: 1,
+  requestId: "request",
+};
 
 test("canonical toggle-memory intentions describe only the intended mechanism", () => {
   for (const rotation of [0, 90, 180, 270] as const) {
@@ -26,7 +36,10 @@ test("canonical toggle-memory intentions describe only the intended mechanism", 
     assert.deepEqual(readToggleMemoryIntention(value, context), value);
     assert.equal(value.blocks.length, 8);
     assert.equal(value.stages.length, 4);
-    assert.equal(value.ports.length, 3);
+    assert.deepEqual(
+      value.ports.map((port) => port.kind),
+      ["input", "output"],
+    );
     assert.deepEqual(value.resources, {
       "minecraft:stone": 4,
       "minecraft:waxed_copper_bulb": 1,
@@ -36,6 +49,10 @@ test("canonical toggle-memory intentions describe only the intended mechanism", 
     });
     assert.equal(value.memory.function, "toggle-memory");
     assert.equal(value.memory.initialBit, "observed-at-test-start");
+    assert.deepEqual(value.memory.storage, {
+      pos: { x: 0, y: 0, z: 0 },
+      property: "lit",
+    });
     assert.deepEqual(value.memory.phaseInputs, [
       false,
       true,
@@ -50,6 +67,64 @@ test("canonical toggle-memory intentions describe only the intended mechanism", 
       max: { x: 2, y: 0, z: 0 },
     });
   }
+});
+
+test("server blueprint admission accepts only the current canonical memory source", () => {
+  const source = createToggleMemoryIntention(identity);
+  const accepted = serverBlueprint(
+    source,
+    gateway,
+    context.worldId,
+    context.dimension,
+  );
+  assert.deepEqual(accepted, source);
+  assert.equal(accepted.ports.length, 2);
+  assert.deepEqual(
+    readToggleMemoryIntention(accepted, context).memory.storage,
+    {
+      pos: { x: 0, y: 0, z: 0 },
+      property: "lit",
+    },
+  );
+
+  const invalid: unknown[] = [];
+  for (const field of ["ownerId", "permissions", "serverEpoch", "passed"])
+    invalid.push({ ...structuredClone(source), [field]: true });
+  const changedMemory = structuredClone(source);
+  Object.assign(changedMemory.memory.storage, { property: "powered" });
+  invalid.push(changedMemory);
+  const missingMemory = structuredClone(source) as unknown as Record<
+    string,
+    unknown
+  >;
+  delete missingMemory.memory;
+  invalid.push(missingMemory);
+  for (const candidate of invalid)
+    assert.throws(() =>
+      serverBlueprint(candidate, gateway, context.worldId, context.dimension),
+    );
+  assert.throws(() =>
+    serverBlueprint(
+      source,
+      { ...gateway, projectRevision: identity.revision + 1 },
+      context.worldId,
+      context.dimension,
+    ),
+  );
+  assert.throws(() =>
+    serverBlueprint(
+      source,
+      { ...gateway, projectId: "00000000-0000-0000-0000-000000000000" },
+      context.worldId,
+      context.dimension,
+    ),
+  );
+  assert.throws(() =>
+    serverBlueprint(source, gateway, "other", context.dimension),
+  );
+  assert.throws(() =>
+    serverBlueprint(source, gateway, context.worldId, "minecraft:the_nether"),
+  );
 });
 
 test("saved toggle-memory intent rejects identity, geometry and authority changes", () => {

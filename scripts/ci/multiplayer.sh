@@ -170,6 +170,9 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
 fi
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
+  for marker in toggle-memory-build.done toggle-memory-restarted.done; do
+    [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing memory construction proof: $marker" >&2; exit 1; }
+  done
   export_file="$temporary/config-alice/schematics/exports/ci-gate.schem"
   [[ -s "$export_file" && "$(head -c2 "$export_file" | od -An -tx1 | tr -d ' ')" == 1f8b ]] || { echo "In-game export did not write a gzip schematic" >&2; exit 1; }
   [[ "$(find "$temporary/config-alice/schematics/exports" -type f | wc -l)" -eq 1 ]] || { echo "The refused duplicate export wrote a file" >&2; exit 1; }

@@ -4,6 +4,13 @@ package dev.minecraftai.engineer;
 final class EngineeringContracts {
     private EngineeringContracts() { }
     static MechanismCatalog.Contract contract(Blueprint blueprint) {
+        if(ToggleMemoryIntention.describes(blueprint.source())){
+            ToggleMemoryIntention.validated(blueprint);var ports=new java.util.ArrayList<MechanismCatalog.Port>();
+            for(var value:blueprint.source().getAsJsonArray("ports")){var port=value.getAsJsonObject();ports.add(new MechanismCatalog.Port(port.get("name").getAsString(),Blueprint.pos(port.getAsJsonObject("pos")).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()),port.get("kind").getAsString().equals("input")));}
+            // Describes intended external ports only. Generic test/recovery explicitly refuse this type.
+            return new MechanismCatalog.Contract("toggle-memory",ports,java.util.List.of(),8);
+        }
+
         if(ImportedBlueprint.describes(blueprint.source())){
             ImportedBlueprint.validate(blueprint);
             return new MechanismCatalog.Contract("schematic-geometry",java.util.List.of(),java.util.List.of(),0);

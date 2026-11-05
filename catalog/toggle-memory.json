@@ -128,15 +128,6 @@
       "kind": "input"
     },
     {
-      "name": "stored",
-      "pos": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "kind": "state"
-    },
-    {
       "name": "output",
       "pos": {
         "x": 2,
@@ -178,7 +169,15 @@
     "requiredInitialInput": false,
     "phaseInputs": [false, true, false, true, false, false],
     "sampleStartGameTicks": 8,
-    "stableSamples": 16
+    "stableSamples": 16,
+    "storage": {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "property": "lit"
+    }
   },
   "provenance": {
     "kind": "curated",

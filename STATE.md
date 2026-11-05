@@ -189,3 +189,16 @@ Memory roadmap (serves E2/E3):
    Trial-history8f6b8bf/full41956628847 passed all5checks; dedicated artifact and
    actual12/16-tick results were inspected. Combined repeat proof remains live in
    PR82, alongside the already-passed combined physical/full-adder proofs.
+
+M1 preview/build admission is now implemented on work/toggle-memory-preview,
+not main. Canonical source now has2external ports and memory.storage for the
+internal bit; this avoids widening the shared port-kind API. Java parse/tree,
+companion transport and local normal-chat preview admit only exact intended data.
+Generic test/start/load/recovery refuses stateful claims/journals. Matching build
+adopts existing bit state; strict bit/lever reconciliation and bulb undo refuse
+later edits. Comparator access is exact-cell/exact-entity, air-created ownership
+only, never entity data copying. Two-block loaded isolation is reserved.
+Scoped Java/client and TS compilation, script syntax and formatting passed.
+Native refusal/entity-boundary tests and default dedicated owner-chat/viewer-denial/
+existing-lit-bit/build/refused-test/restart proofs are written, with mandatory
+receipts; new exact-source CI is pending. No stateful automated test is implemented.

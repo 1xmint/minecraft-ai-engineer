@@ -1,18 +1,18 @@
 import { isDeepStrictEqual } from "node:util";
 import definition from "../../catalog/toggle-memory.json" with { type: "json" };
 import { rotatePosition } from "./geometry.js";
-import type { Position, Rotation } from "./types.js";
+import type { Blueprint, Position, Rotation } from "./types.js";
 
-export type ToggleMemoryIntention = typeof definition & {
-  schemaVersion: 1;
-  id: string;
-  projectId: string;
-  revision: number;
-  worldId: string;
-  dimension: string;
-  anchor: Position;
-  rotation: Rotation;
-};
+export interface ToggleMemoryIntention extends Blueprint {
+  ports: { name: string; pos: Position; kind: "input" | "output" }[];
+  provenance: {
+    kind: "curated";
+    template: "toggle-memory";
+    minecraft: "26.3";
+    catalogRevision: 1;
+  };
+  memory: typeof definition.memory;
+}
 
 export interface ToggleMemoryIntentionInput {
   id: string;
@@ -144,7 +144,7 @@ export function createToggleMemoryIntention(
     anchor,
     rotation: angle,
     ...structuredClone(definition),
-  };
+  } as ToggleMemoryIntention;
 }
 
 /** Regenerate the canonical recipe and require the current identity context. */
