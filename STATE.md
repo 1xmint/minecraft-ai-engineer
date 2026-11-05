@@ -303,3 +303,19 @@ facts without granting action. GPT-6-Luna identified the need for repeated
 authority checks, now added; server-thread and128record bounds also apply.
 Scoped Java compile passed. No executor or history-unblocking reader uses it
 yet; actual recovery/restart proof remains required. PR73 is unchanged.
+
+Prepared explicit native resource recovery execution, still unexposed to player
+requests. Shared PhysicalInventoryAuthority now fences crafting and recovery
+with the same current owner/connection/selection/revision/body/support/occupancy
+checks; it holds no block-write lease. Recovery uses0/1/2exact native clicks,
+write-ahead intent, returned frame observation and verified saves, and never
+takes the crafting result. Its separate journal leaves original history intact
+and does not yet unblock it. Failure cancels tickets and records actual outcome
+without automatic retry. Scoped Java/client compile and JS/shell syntax passed.
+
+Prepared actual6boot proof for all4interrupted resource shapes, unchanged original
+record bytes and crafting statistics, exact recovered inventory after restart,
+and independent NBT plus journal/SHA256 verification. Recovery loader/acknowledgment
+and normal conversation still require implementation after native proof. PR73
+remains unchanged while its original full CI finishes; formatting fixc3ac69f
+is ready separately, not pushed over the live candidate.

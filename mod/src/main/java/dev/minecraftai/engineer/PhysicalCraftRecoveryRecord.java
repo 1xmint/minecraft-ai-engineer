@@ -12,8 +12,8 @@ final class PhysicalCraftRecoveryRecord {
     private final Runnable authority;
     private final Path file;
     private JsonObject facts;
-    PhysicalCraftRecoveryRecord(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Path original,OakCraftRecoveryPlan plan,Runnable authority){
-        this.worker=worker;this.plan=plan;this.authority=Objects.requireNonNull(authority);
+    PhysicalCraftRecoveryRecord(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Path original,Runnable authority){
+        this.worker=worker;this.authority=Objects.requireNonNull(authority);
         if(!manager.server.isSameThread() || !project.owner.equals(project.actor()) || !project.projectId.equals(manager.selections.get(project.owner))
             || !PhysicalActionGate.exactConnection(worker) || !PhysicalCraftGuard.active(worker))throw new IllegalStateException("Recovery recording needs the current owner and protected native worker");
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
@@ -31,9 +31,7 @@ final class PhysicalCraftRecoveryRecord {
                 || !history.get("world").getAsString().equals(manager.worldId) || !history.get("dimension").getAsString().equals(project.dimension)
                 || !history.get("project").getAsString().equals(project.projectId.toString()) || !history.get("owner").getAsString().equals(project.owner.toString())
                 || !history.get("worker").getAsString().equals(worker.getUUID().toString()) || !Set.of("NEW","PREPARED","OBSERVED","UNCERTAIN").contains(history.get("stage").getAsString()))throw new IllegalStateException("Original crafting scope or stage differs");
-            var frame=PhysicalCraftFrame.capture(worker);var expected=OakCraftRecoveryPlan.inspect(frame,history.get("sourceHotbar").getAsBigDecimal().intValueExact());
-            if(expected.clicks()!=plan.clicks() || !expected.settled().matches(plan.settled()))throw new IllegalStateException("Recovery plan does not preserve the original source slot");
-            for(int step=1;step<=plan.clicks();step++)if(expected.slot(step)!=plan.slot(step) || !expected.before(step).matches(plan.before(step)) || !expected.after(step).matches(plan.after(step)))throw new IllegalStateException("Recovery plan changed before recording");
+            var frame=PhysicalCraftFrame.capture(worker);plan=OakCraftRecoveryPlan.inspect(frame,history.get("sourceHotbar").getAsBigDecimal().intValueExact());
             PhysicalWorkerStorage.saveResources(worker);
             authority.run();if(!frame.matches(PhysicalCraftFrame.capture(worker)))throw new IllegalStateException("Recovery baseline changed while saving");
             var value=new JsonObject();value.addProperty("schemaVersion",1);value.addProperty("kind","native-oak-resource-recovery-v1");value.addProperty("world",manager.worldId);value.addProperty("dimension",project.dimension);
@@ -44,6 +42,8 @@ final class PhysicalCraftRecoveryRecord {
             value.add("initial",PhysicalCraftRecord.resources(frame,worker));value.add("expectedFinal",PhysicalCraftRecord.resources(plan.settled(),worker));value.add("steps",new JsonArray());value.add("events",new JsonArray());persist(value,"NEW");
         }catch(java.io.IOException | java.security.NoSuchAlgorithmException failure){throw new IllegalStateException("Could not record recovery; no movement was authorized",failure);}
     }
+    OakCraftRecoveryPlan plan(){return plan;}
+    UUID operation(){return UUID.fromString(facts.get("operation").getAsString());}
     private void thread(){if(!worker.level().getServer().isSameThread())throw new IllegalStateException("Recovery observations need the server thread");}
     private void persist(JsonObject value,String event){thread();value.getAsJsonArray("events").add(event);LocalFiles.write(file,value);facts=value;}
     void prepare(int step){
