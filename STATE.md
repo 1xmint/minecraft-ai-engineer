@@ -373,3 +373,13 @@ Require final-head full PR CI before merge. ParentPR73/41945504555 and full-adde
 PR64/41947347153 plus combined player41947057332 remain live on stable heads.
 The broader native survival, tools, terrain, machinery and full original goals
 remain unfinished; Claude's parallel experience lane is separate.
+
+Prepared detached one-block placement accounting for existing dirt and crafted
+oak-plank stacks (1through4). It predicts exact full inventory/menu/selected
+source before and after consuming1item, preserving every remaining plank and
+rejecting other materials, extra stacks/equipment, changed components or unsettled
+menus. Prediction mutates no player or world; native placement gate/executor
+wiring and actual crafting-to-construction/restart proof remain to implement.
+Hand-worked native tests cover all4remaining counts, source selection, alias
+isolation, dirt compatibility and wrong-material refusal. Scoped Java compile
+passed; native test CI remains pending with the upcoming execution integration.
