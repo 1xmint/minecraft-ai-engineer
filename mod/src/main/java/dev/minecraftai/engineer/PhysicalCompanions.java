@@ -25,7 +25,7 @@ final class PhysicalCompanions {
     private static boolean oakPath(ServerPlayer worker){
         var inventory=worker.getInventory();int logs=0,occupied=0;boolean single=false;
         for(int slot=0;slot<36;slot++){var held=inventory.getItem(slot);if(held.is(net.minecraft.world.item.Items.OAK_LOG))logs+=held.getCount();}
-        if(logs==0)return true;
+        if(logs==0)return false;
         for(int slot=0;slot<9;slot++){var held=inventory.getItem(slot);if(held.isEmpty())continue;occupied++;single=held.is(net.minecraft.world.item.Items.OAK_LOG) && held.getCount()==1;}
         return occupied==1 && single && logs==1;
     }
@@ -49,7 +49,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null)GridCraftRecord.show(manager,project,shown.actor);return true;}
-        if(gatherRequest || placeRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);}}
+        if(gatherRequest || placeRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
         if(craftRequest || recoveryRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             Runnable exclusive=()->{

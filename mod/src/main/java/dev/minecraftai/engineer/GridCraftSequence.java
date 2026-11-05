@@ -15,7 +15,8 @@ import net.minecraft.world.item.ItemStack;
  */
 final class GridCraftSequence implements PhysicalMenuProtocol {
     enum Kind { CRAFT, RECOVERY }
-    static final int MAX_CLICKS=8;
+    /** A craft needs at most 8 clicks; recovering a full grid plus a held cursor needs 9. */
+    static final int MAX_CLICKS=9;
     static final int MAIN_SLOTS=36;
     final Kind kind;
     final GridCraftPlan.Recipe recipe;
@@ -138,7 +139,8 @@ final class GridCraftSequence implements PhysicalMenuProtocol {
     static GridCraftSequence recovery(ServerLevel level,PhysicalCraftFrame current,GridCraftPlan.Recipe recipe){return recovery(level,current,recipe,false);}
     static GridCraftSequence replayRecovery(ServerLevel level,PhysicalCraftFrame current,GridCraftPlan.Recipe recipe){return recovery(level,current,recipe,true);}
     private static GridCraftSequence recovery(ServerLevel level,PhysicalCraftFrame current,GridCraftPlan.Recipe recipe,boolean replay){
-        var builder=new Builder(new Model(level,current,replay?recipe:null));
+        // Recovery never takes a result, so its frames always use the native preview a half-filled grid really shows.
+        var builder=new Builder(new Model(level,current,null));
         if(!builder.model.cursor.isEmpty())builder.click(menuSlot(target(builder.model.inventory,builder.model.cursor)),0);
         for(int cell=0;cell<4;cell++){
             if(builder.model.grid.get(cell).isEmpty())continue;

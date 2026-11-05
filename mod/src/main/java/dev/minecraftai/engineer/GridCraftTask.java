@@ -13,6 +13,8 @@ final class GridCraftTask {
         var sequence=GridCraftSequence.capture(worker,recipe);
         requireNoUnresolved(manager,project,worker);
         run(manager,project,worker,exclusive,afterObserved,"Native crafting stopped. Inspect companion recovery before another request; nothing will retry automatically",authority->{
+            // Save first so a crash after the record is written restores the inventory the record names.
+            PhysicalWorkerStorage.saveResources(worker);authority.run();
             // The prediction must still describe the live worker after authority is taken.
             if(!PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker).equals(PhysicalCraftRecord.resources(sequence.initial(),worker)))throw new IllegalStateException("Companion resources changed before crafting; nothing was moved");
             return new GridCraftRecord(manager,project,worker,sequence,"",authority);
