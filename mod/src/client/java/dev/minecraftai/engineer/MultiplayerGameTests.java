@@ -3213,7 +3213,48 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(refused && revoked.recordStage().equals("INTERRUPTED") && revoked.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && project.pendingMemoryInput==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"A connected editor's revoked BUILD grant cancels before another lever edge and clears only the proven no-edge operation");
             }finally{project.commandActor=null;project.controller=alice;project.access.member(alice,bob,ProjectAccess.Role.VIEWER);}
             project.save();write("toggle-memory-driver.done","passed");
+            toggleMemoryRecoveryProof(project,bob);
         });
+    }
+    private static void toggleMemoryRecoveryProof(EngineeringSession project,java.util.UUID bob) {
+        var alice=project.owner;var manager=project.manager;
+        var input=MemoryInputDriver.open(project,alice);input.pulse();input.stop();
+        var root=project.pendingMemoryInput;var origin=input.recordSnapshot();
+        check(root!=null && project.delegation==null,"An interrupted real input edge retains recovery scope without authority");
+        var first=MemoryRecoveryDriver.open(project,alice);first.pulse();first.stop();
+        var firstRecord=first.recordSnapshot();var pointer=project.pendingMemoryRecovery;
+        check(first.closed() && firstRecord.get("stage").getAsString().equals("INTERRUPTED") && pointer!=null && project.delegation==null,"Stopping recovery keeps its observed falling edge and current checkpoint without another pulse");
+        var loaded=new EngineeringSession(manager,project.projectId,alice,project.dimension);
+        check(loaded.pendingMemoryRecovery.same(pointer) && loaded.memoryRecoveryDriver==null && loaded.delegation==null && loaded.verified.equals("untested"),"Reload restores recovery data but never authority or a pass");
+        manager.projects.put(project.projectId,loaded);
+        var second=MemoryRecoveryDriver.open(loaded,alice);second.pulse();second.pulse();var restored=second.finishRestored();
+        check(restored.get("stage").getAsString().equals("RESTORED") && restored.get("originJournalId").getAsString().equals(firstRecord.get("id").getAsString())
+                && loaded.pendingMemoryInput==null && loaded.pendingMemoryRecovery==null && loaded.delegation==null && loaded.memoryRecoveryDriver==null
+                && MemoryInputJournal.read(root.journalFile(manager.directory),loaded.blueprint).json().equals(origin),"Fresh connected recovery follows the latest observed attempt, restores the original pair and leaves original history intact");
+        var interrupted=MemoryInputDriver.open(loaded,alice);interrupted.pulse();interrupted.stop();
+        var before=new MemoryInputTransition.Frame(loaded.level().getBlockState(loaded.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos()),loaded.level().getBlockState(loaded.blueprint.anchor()));
+        var previousSelection=manager.selections.put(bob,loaded.projectId);
+        loaded.access.member(alice,bob,ProjectAccess.Role.EDITOR);loaded.commandActor=bob;
+        com.google.gson.JsonObject revokedRecord;
+        try {
+            var revoked=MemoryRecoveryDriver.open(loaded,bob);loaded.access.permission(alice,bob,ProjectAccess.Permission.BUILD,false);boolean refused=false;
+            try{revoked.pulse();}catch(IllegalStateException expected){refused=true;}
+            revokedRecord=revoked.recordSnapshot();
+            check(refused && revoked.closed() && revokedRecord.getAsJsonArray("events").size()==1 && revokedRecord.get("stage").getAsString().equals("INTERRUPTED")
+                    && loaded.pendingMemoryRecovery!=null && loaded.delegation==null,"Revoking a connected recovery builder prevents its first native edge and retains the recovery checkpoint");
+        } finally {
+            loaded.commandActor=null;loaded.controller=alice;loaded.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+            if(previousSelection==null)manager.selections.remove(bob);else manager.selections.put(bob,previousSelection);
+        }
+        var selected=MemoryRecoveryDriver.open(loaded,alice);manager.selections.remove(alice);boolean refused=false;
+        try{selected.pulse();}catch(IllegalStateException expected){refused=true;}
+        manager.selections.put(alice,loaded.projectId);
+        check(refused && selected.closed() && selected.recordSnapshot().getAsJsonArray("events").size()==1 && before.matches(new MemoryInputTransition.Frame(loaded.level().getBlockState(loaded.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos()),loaded.level().getBlockState(loaded.blueprint.anchor()))),"Selection loss cancels recovery without pulsing the actual pair");
+        var finalRecovery=MemoryRecoveryDriver.open(loaded,alice);for(int edge=0;edge<3;edge++)finalRecovery.pulse();var finalRecord=finalRecovery.finishRestored();
+        loaded.save();var clean=new EngineeringSession(manager,loaded.projectId,alice,loaded.dimension);
+        check(clean.pendingMemoryInput==null && clean.pendingMemoryRecovery==null && clean.delegation==null && clean.verified.equals("untested"),"Restored recovery clears both saved pointers without a functional-pass claim");
+        var proof=new com.google.gson.JsonObject();proof.add("origin",origin);proof.add("first",firstRecord);proof.add("second",restored);proof.add("revoked",revokedRecord);proof.add("selectionLost",selected.recordSnapshot());proof.add("final",finalRecord);
+        write("toggle-memory-recovery-record.json",proof.toString());write("toggle-memory-recovery.done","passed");
     }
     private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
