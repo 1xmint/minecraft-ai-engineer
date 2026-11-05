@@ -133,6 +133,71 @@ public final class DesignComparisonGameTests {
         helper.succeed();
     }
 
+    @GameTest public void guidanceChecksConstructionBeforeSuggestingATest(GameTestHelper helper){
+        // b is listed first and depends on a, so "next" must walk prerequisite, unfinished, unloaded, built and stale in turn.
+        var nodes=com.google.gson.JsonParser.parseString("""
+            [{"id":"root","kind":"group"},
+             {"id":"b","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":8,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":["a"]},
+             {"id":"a","parent":"root","kind":"mechanism","template":"signal-lamp","anchor":{"x":0,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]}]
+            """).getAsJsonArray();
+        var project=ComponentTree.compose(WORLD,DIM,new BlockPos(0,64,0),0,nodes);
+        var world=new HashMap<BlockPos,BlockState>();var unloaded=new HashSet<BlockPos>();var reads=new int[1];
+        java.util.function.Function<BlockPos,BlockState> reader=pos->{reads[0]++;return unloaded.contains(pos)?null:world.getOrDefault(pos,Blocks.AIR.defaultBlockState());};
+        UUID alice=UUID.randomUUID(),bob=UUID.randomUUID();
+        var manager=EngineerMod.managerFor(helper.getLevel().getServer());var session=new EngineeringSession(manager,UUID.fromString(project.projectId()),alice,DIM);
+        session.blueprint=project;session.commandActor=alice;
+        var aBlocks=ComponentTree.component(project,"a").blocks();var bBlocks=ComponentTree.component(project,"b").blocks();
+
+        var lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Build prerequisite component a first") && !has(lines,"Test component") && !has(lines,"Re-test component") && has(lines,ProjectGuidance.OBSERVED),"An empty world asks for the prerequisite, never a test: "+all(lines));
+        aBlocks.forEach(block->world.put(block.pos(),block.state()));
+        lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Finish building component b: 0 of "+bBlocks.size()+" blocks match") && has(lines,"not ready to test yet") && !has(lines,"Test component"),"Unbuilt b is unfinished, not testable: "+all(lines));
+        world.put(bBlocks.getFirst().pos(),bBlocks.getFirst().state());
+        lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Finish building component b: 1 of "+bBlocks.size()+" blocks match"),"Half-built b reports its exact progress: "+all(lines));
+        bBlocks.forEach(block->world.put(block.pos(),block.state()));unloaded.add(bBlocks.getLast().pos());
+        lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Go near component b so its area is loaded") && !has(lines,"Test component"),"Unloaded geometry is unknown, never assumed built: "+all(lines));
+        unloaded.clear();unloaded.add(aBlocks.getFirst().pos());
+        helper.assertTrue(ProjectGuidance.readiness(project,"b",reader).build()==ProjectGuidance.Build.UNKNOWN && ProjectGuidance.readiness(project,"b",reader).prerequisite().equals("a"),"An unloaded prerequisite is unknown too");
+        unloaded.clear();
+        lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Test component b: its blocks and prerequisites match the design") && has(lines,"/engineer component test b") && has(lines,"it has no actual pass"),"Only a fully built component with built prerequisites is suggested for a test: "+all(lines));
+        world.put(aBlocks.getFirst().pos(),Blocks.GOLD_BLOCK.defaultBlockState());
+        helper.assertTrue(has(ProjectGuidance.next(session,reader),"Build prerequisite component a first"),"Breaking a prerequisite after b is built withdraws the test suggestion");
+        world.put(aBlocks.getFirst().pos(),aBlocks.getFirst().state());
+
+        var stale=new ComponentAssignments.Task("b",ComponentAssignments.basis(project,"b"));stale.verified="stale: design changed";session.assignments.tasks.put("b",stale);
+        lines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(lines,"Re-test component b") && has(lines,"its earlier pass is stale"),"Stale evidence asks for a re-test, not a fresh-test claim: "+all(lines));
+        var untested=ProjectGuidance.untested(session,reader);
+        helper.assertTrue(has(untested,"Untested for the current design: component b (stale:") && has(untested,"in the world now: built: all "+bBlocks.size()+" blocks") && has(untested,"Untested for the current design: component a |")
+                && has(untested,ProjectGuidance.OBSERVED) && !has(untested,"Recorded pass for the current design scope"),"Untested separates stale from never-tested and shows build state: "+all(untested));
+
+        // Two players keep their own tutorial positions; changing one selection never moves the other.
+        session.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+        session.cursor(alice).stage=0;session.cursor(bob).stage=project.stages().size()-1;
+        session.commandActor=alice;var aliceLines=ProjectGuidance.next(session,reader);
+        session.commandActor=bob;var bobLines=ProjectGuidance.next(session,reader);
+        helper.assertTrue(has(aliceLines,"Your lesson is at step 1/") && has(bobLines,"Your lesson is at step "+project.stages().size()+"/"),"Each player sees their own lesson step: "+all(aliceLines)+" || "+all(bobLines));
+        session.cursor(alice).stage=1;session.commandActor=bob;
+        helper.assertTrue(ProjectGuidance.next(session,reader).equals(bobLines),"Alice changing selection leaves Bob's guidance unchanged");
+        session.commandActor=alice;helper.assertTrue(has(ProjectGuidance.next(session,reader),"Your lesson is at step 2/"),"Alice's changed selection is reflected for her");
+
+        // Revoked access: the guidance question is refused before anything is read.
+        session.access.revoke(alice,bob);session.commandActor=bob;
+        boolean refused=false;int before=reads[0];
+        try{LessonAssistant.ask(session,"what should I do next");}catch(RuntimeException expected){refused=true;}
+        helper.assertTrue(refused && reads[0]==before && !session.access.allows(bob,ProjectAccess.Permission.VIEW),"A revoked player gets no guidance");
+
+        // Read-only: guidance changed no block, task or assistant state.
+        var snapshot=new HashMap<>(world);String state=session.state;
+        ProjectGuidance.next(session,reader);ProjectGuidance.untested(session,reader);
+        helper.assertTrue(world.equals(snapshot) && stale.verified.equals("stale: design changed") && session.assignments.tasks.size()==1 && Objects.equals(state,session.state),"Guidance starts no construction, test or assignment");
+        helper.succeed();
+    }
+
     @GameTest public void importedGeometryIsNeverLabelledTested(GameTestHelper helper){
         var placement=new com.google.gson.JsonArray();
         for(int x=0;x<3;x++){var cell=new JsonObject();var pos=new com.google.gson.JsonArray();pos.add(x);pos.add(0);pos.add(0);cell.add("pos",pos);cell.addProperty("state","minecraft:stone");placement.add(cell);}

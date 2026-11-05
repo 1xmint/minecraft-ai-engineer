@@ -290,6 +290,16 @@ separately. These questions do not inspect the world, count private inventory,
 change lessons or run tests. The status answer labels the assistant's shared task
 and your personal lesson separately.
 
+`/engineer ask what should I do next` and `/engineer ask what is still untested`
+are the exception: they read the design's blocks in chunks that are already
+loaded (never loading or changing any). Before suggesting a test they check that
+the component and every prerequisite match the design. The answer says which of
+these applies: go nearer because the area is unloaded, build a named prerequisite
+first, finish the component (with matching/total blocks), test it, or re-test it
+because its earlier pass is stale. A test is suggested only for a fully built
+component. Imported geometry never gets a test suggestion. Neither question starts
+building, testing or assigning anything.
+
 Only the listed question forms are recognized. Other text asks you to choose a
 supported lesson question; construction still uses the explicit permission-checked
 commands. You need project view permission and an existing project. Lessons are
