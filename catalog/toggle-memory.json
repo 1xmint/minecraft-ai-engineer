@@ -1,0 +1,190 @@
+{
+  "name": "One-bit toggle memory",
+  "explanation": "Each rising lever edge toggles a stored copper-bulb bit. Held high and falling inputs retain it. The same low input can therefore have either output, depending on earlier pulses. This is toggle memory, not a data-and-clock register.",
+  "stages": [
+    {
+      "id": "foundation",
+      "title": "Support the memory",
+      "explanation": "Place four stone supports.",
+      "prerequisites": []
+    },
+    {
+      "id": "storage",
+      "title": "Add the stored bit",
+      "explanation": "A waxed copper bulb retains its lit bit after power is removed.",
+      "prerequisites": ["foundation"]
+    },
+    {
+      "id": "controls",
+      "title": "Add the toggle control",
+      "explanation": "Place an unpowered lever. Each rising edge toggles the stored bit once.",
+      "prerequisites": ["foundation", "storage"]
+    },
+    {
+      "id": "readout",
+      "title": "Read the stored bit",
+      "explanation": "The comparator reads the bulb and emits zero or fifteen into the output wire.",
+      "prerequisites": ["foundation", "storage", "controls"]
+    }
+  ],
+  "blocks": [
+    {
+      "pos": {
+        "x": -1,
+        "y": -1,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": -1,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": -1,
+        "z": 0
+      },
+      "state": "minecraft:stone",
+      "stage": "foundation",
+      "component": "root",
+      "prerequisites": []
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:waxed_copper_bulb[lit=false,powered=false]",
+      "stage": "storage",
+      "component": "root",
+      "prerequisites": ["foundation"]
+    },
+    {
+      "pos": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]",
+      "stage": "controls",
+      "component": "root",
+      "prerequisites": ["foundation", "storage"]
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:comparator[facing=west,mode=compare,powered=false]",
+      "stage": "readout",
+      "component": "root",
+      "prerequisites": ["foundation", "storage", "controls"]
+    },
+    {
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]",
+      "stage": "readout",
+      "component": "root",
+      "prerequisites": ["foundation", "storage", "controls"]
+    }
+  ],
+  "ports": [
+    {
+      "name": "toggle",
+      "pos": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "kind": "input"
+    },
+    {
+      "name": "stored",
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "kind": "state"
+    },
+    {
+      "name": "output",
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 0
+      },
+      "kind": "output"
+    }
+  ],
+  "tests": [
+    {
+      "id": "toggle-memory",
+      "description": "Observe six held/rising/falling phases from an actual initial bit, then restore the original unpowered input and stored bit. No propagation latency claim."
+    }
+  ],
+  "resources": {
+    "minecraft:stone": 4,
+    "minecraft:waxed_copper_bulb": 1,
+    "minecraft:lever": 1,
+    "minecraft:comparator": 1,
+    "minecraft:redstone": 1
+  },
+  "bounds": {
+    "min": {
+      "x": -1,
+      "y": -1,
+      "z": 0
+    },
+    "max": {
+      "x": 2,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "memory": {
+    "schemaVersion": 1,
+    "function": "toggle-memory",
+    "initialBit": "observed-at-test-start",
+    "requiredInitialInput": false,
+    "phaseInputs": [false, true, false, true, false, false],
+    "sampleStartGameTicks": 8,
+    "stableSamples": 16
+  },
+  "provenance": {
+    "kind": "curated",
+    "template": "toggle-memory",
+    "minecraft": "26.3",
+    "catalogRevision": 1
+  },
+  "verification": "untested"
+}

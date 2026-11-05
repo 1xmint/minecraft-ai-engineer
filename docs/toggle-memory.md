@@ -29,3 +29,13 @@ samples; the native suite passed all199required tests. Both original input and
 stored bit are restored after two pulses. The first fixture attempt lacked its
 air palette; the next exposed a reversed comparator. Both were corrected and
 remain recorded failures. This proves the physical foundation only.
+
+Canonical intention development uses catalog/toggle-memory.json on both the
+server and companion. The source fixes all eight cells, four teaching stages,
+three port roles, required initially-low control and six observation phases.
+Both readers rebuild the exact intended source and reject altered geometry,
+behavior, resources, identity, ownership or verification fields. No parser or
+planner dispatch admits this source yet. Native probes now build those canonical
+cells and require their settled states to match the intention, while the separate
+replay checks actual stored/output observations. Native/companion source parity
+and the new rejection tests still need CI proof.

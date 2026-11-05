@@ -143,3 +143,14 @@ Native toggle-memory proof1be52d3/41958383492 passed. Artifact inspected:
 bits/four rotations/six phases, with two pulses restoring original input/bit.
 Production intention/conversation/construction, stateful stop/restart-safe
 restoration and owner-authorized testing remain the next E2 slice.
+
+Canonical toggle-memory intention work is on work/toggle-memory-contract. Shared
+catalog fixes8cells/4stages/3roles and the intended six phases; Java and TypeScript
+readers reject any changed source or identity. GPT-6-Luna implemented only the
+companion creator/reader and rejection tests. Scoped TS compilation and Java
+compilation passed; script syntax/format passed. The native fixture now builds
+canonical cells and checks actual settled geometry. Source parity/rejection CI
+is pending; this does not register a production blueprint or authorize testing.
+Combined full-adder3a6523e/player41957262960 passed; artifact inspected:
+3544cells/35pins, two passed epochs with fresh clocks and zero remaining assistant
+changes after undo. General integration CI41957252832 remains live.

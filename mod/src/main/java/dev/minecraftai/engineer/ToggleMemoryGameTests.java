@@ -24,12 +24,12 @@ public final class ToggleMemoryGameTests {
     private static void probe(GameTestHelper h,boolean initial,Rotation rotation){
         var lever=at(new BlockPos(3,2,4),rotation);var bulb=at(new BlockPos(4,2,4),rotation);
         var comparator=at(new BlockPos(5,2,4),rotation);var output=at(new BlockPos(6,2,4),rotation);
-        for(int x=3;x<=6;x++)h.setBlock(at(new BlockPos(x,1,4),rotation),Blocks.STONE);
         var memory=Blueprint.state("minecraft:waxed_copper_bulb");
-        h.setBlock(bulb,memory.setValue(BlockStateProperties.LIT,initial));
-        h.setBlock(comparator,Blocks.COMPARATOR.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING,Direction.WEST).rotate(rotation));
-        h.setBlock(output,Blocks.REDSTONE_WIRE);
-        h.setBlock(lever,Blocks.LEVER.defaultBlockState().setValue(BlockStateProperties.ATTACH_FACE,AttachFace.FLOOR));
+        var identity=java.util.UUID.fromString("d0c177a4-75a5-436c-9440-554ad92f9d62");
+        int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
+        var intention=ToggleMemoryIntention.create(identity,1,identity,"test","minecraft:overworld",at(new BlockPos(4,2,4),rotation),angle);
+        var blueprint=intention.blueprint();
+        for(var cell:blueprint.blocks())h.setBlock(cell.pos(),cell.state().is(memory.getBlock())?cell.state().setValue(BlockStateProperties.LIT,initial):cell.state());
         var samples=new JsonArray();long[] previous={-1};
         // The same unpowered input appears with two different stored outputs. Holding
         // a high input or returning it low must never produce a second toggle.
@@ -42,6 +42,7 @@ public final class ToggleMemoryGameTests {
                 h.runAtTickTime(base+elapsed,()->{
                     long tick=h.getLevel().getGameTime();
                     h.assertTrue(previous[0]<tick,"Memory observations must advance in native game time");previous[0]=tick;
+                    for(var cell:blueprint.blocks())h.assertTrue(Blueprint.matches(cell.state(),h.getBlockState(cell.pos())),"Actual settled memory geometry must match its canonical intention");
                     var actualLever=h.getBlockState(lever);var actualBulb=h.getBlockState(bulb);var actualComparator=h.getBlockState(comparator);var actualOutput=h.getBlockState(output);
                     h.assertTrue(actualLever.is(Blocks.LEVER) && actualLever.getValue(BlockStateProperties.POWERED)==input,"Actual input differs from the requested memory phase");
                     h.assertTrue(actualBulb.is(memory.getBlock()) && actualBulb.getValue(BlockStateProperties.POWERED)==input && actualBulb.getValue(BlockStateProperties.LIT)==bit,"A real rising edge toggles once; falling/held input preserves the stored bit");
@@ -57,4 +58,16 @@ public final class ToggleMemoryGameTests {
             System.out.println("ENGINEER_TOGGLE_MEMORY_NATIVE "+record);h.succeed();
         });
     }
+    @GameTest public void canonicalIntentionRejectsClaimsAndRelabeling(GameTestHelper h){
+        var id=java.util.UUID.fromString("d0c177a4-75a5-436c-9440-554ad92f9d62");
+        var intended=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0);
+        var source=intended.source();h.assertTrue(ToggleMemoryIntention.read(source,"test","minecraft:overworld",id).blueprint().blocks().size()==8,"Canonical memory has eight intended cells and no actual pass");
+        for(String field:java.util.List.of("owner","permissions","verified")){
+            var altered=source.deepCopy();altered.addProperty(field,"passed");boolean refused=false;try{ToggleMemoryIntention.read(altered,"test","minecraft:overworld",id);}catch(RuntimeException expected){refused=true;}h.assertTrue(refused,"Extra authority or verification claim refuses: "+field);
+        }
+        var altered=source.deepCopy();altered.getAsJsonObject("memory").addProperty("stableSamples",1);boolean refused=false;try{ToggleMemoryIntention.read(altered,"test","minecraft:overworld",id);}catch(RuntimeException expected){refused=true;}h.assertTrue(refused,"Changed memory behavior refuses");
+        var copy=intended.source();copy.addProperty("verification","passed");h.assertTrue(intended.source().get("verification").getAsString().equals("untested"),"Returned source cannot mutate canonical intention");
+        System.out.println("ENGINEER_TOGGLE_MEMORY_INTENTION "+source);h.succeed();
+    }
+
 }

@@ -44,3 +44,39 @@ console.log(
     productionContract: false,
   }),
 );
+
+const { createToggleMemoryIntention, readToggleMemoryIntention } =
+  await import("../../dist/companion/src/toggle-memory-intention.js");
+const intentionLines = lines.filter((line) =>
+  line.includes("ENGINEER_TOGGLE_MEMORY_INTENTION "),
+);
+assert.equal(intentionLines.length, 1);
+const intentionMarker = "ENGINEER_TOGGLE_MEMORY_INTENTION ";
+const nativeIntention = JSON.parse(
+  intentionLines[0].slice(
+    intentionLines[0].indexOf(intentionMarker) + intentionMarker.length,
+  ),
+);
+const identity = "d0c177a4-75a5-436c-9440-554ad92f9d62";
+const context = {
+  worldId: "test",
+  dimension: "minecraft:overworld",
+  projectId: identity,
+};
+const expected = createToggleMemoryIntention({
+  ...context,
+  id: identity,
+  revision: 1,
+  anchor: { x: 0, y: 80, z: 0 },
+  rotation: 0,
+});
+assert.deepEqual(nativeIntention, expected);
+assert.deepEqual(readToggleMemoryIntention(nativeIntention, context), expected);
+console.log(
+  JSON.stringify({
+    kind: "toggle-memory-native-source-parity",
+    cells: expected.blocks.length,
+    verification: expected.verification,
+    admitted: false,
+  }),
+);
