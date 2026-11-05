@@ -74,34 +74,37 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Active integration candidates
 
-- Full-adder PR64 headec5e826: full PR CI41953618308 is live.
-  Prior69845d0/full41947347153 passed all five checks. Gameplay code matches
-  combined1a265c6, which passed dedicated player41947057332; final source differs
-  only in STATE. Prior6204521/player41943360761 also passed and independent SQLite
-  proof was inspected:3544cells,35pins,16cases with8samples each, two epochs with
-  fresh clocks, conflict/revocation/stop/restart and zero remaining changes after
-  undo. Bounded undo uses at most4durable entries/tick and fresh UNDO checks.
-  UNDO-only controllers can stop their own undo. No latency/reliability claim.
-  Merge reconciliation with newly squashed main is required; do not disturb live CI.
-- Native resource recovery PR74 merged cd1188f. Exact39dd3da passed all five
-  checks41951701598; dedicated memory/restart proof was inspected. Actual
-  conversation65b8f1e/41946354513 proved four interrupted shapes across six boots,
-  preserved original history, rejected forged/ambiguous acknowledgments and
-  repeated recovery without duplication. Recovery returns existing resources;
-  fresh crafting requires a separate request. No authority is restored.
-- Placement gate64a28b2/player41951347079 passed; artifact marker and independent
-  native crafting/recovery proof were inspected. Detached/wrong-hand stacks,
-  mismatched blocks, stale selection/mode and replay refuse without mutation.
-- Crafted plank producer c40bf76 is pushed; actual player CI41955315620 is live.
-  Local Java/client compile, script checks and focused GPT-6-Luna review passed.
-  It places one real retained plank per request and verifies the entire predicted
-  remainder. Four actual chat placements and a seventh saved-world boot are in
-  the fixture; runtime completion is not yet proven. Integration preserves the
-  same runtime source. General materials, tools and terrain remain unfinished.
+- phase/56-engineering-integration combines PR64,75,76,77,78,80,81 and the
+  repeated-native-trial proof. Main is held stable at cd1188f until the exact
+  combined head passes required checks. Source PRs stay open until integration
+  lands. GitHub's strict up-to-date rule prevents independent stale-head merges.
+- Full-adder gameplay1a265c6/41947057332 passed independent SQLite proof:
+  3544cells,35pins,16cases×8samples, two epochs/fresh clocks and complete bounded
+  undo. Prior69845d0/full41947347153 passed all5checks. Alignedec5e826/full
+  41953618308 failed after Alice stopped at saved-world shutdown; no assertion
+  failure was present in the captured client log. Preserve this failure and
+  require fresh combined proof; do not label the failed run green.
+- Plank source5b36258/player41955934297 passed; artifact inspected: four actual
+  chat placements consume4actually crafted planks, native NBT remainders3/2/1/0,
+  four persistent blocks after seventh boot and no restored authority/pass.
+  Priorc40bf76 failed solely because dirt completion wording changed; corrected
+  source preserves it. PR80 full41955959964 remains live independently.
+- Claude76/77/78 passed all5checks; Fabric artifacts inspected (180native tests
+  passed for guidance/comparison). Changes retain current notes, check loaded
+  construction before advice and label comparison units/attempts honestly.
+  Voice75 client checks passed; its dedicated job was still live at integration.
+  Human microphone/speaker acceptance remains pending.
+- Native trial history8f6b8bf/PR81/full41956628847 remains live. Producer stores
+  detached recent64buffer attempts, updates same-attempt checkpoints and exposes
+  observations only to authorized comparisons. Older archive files are retained;
+  no grant, input journal or functional pass is restored. Scoped compilation and
+  GPT-6-Luna review passed. aa67e59 adds two separately requested actual tests,
+  exact12/16-game-tick counts, save deduplication and normal-chat comparison.
+  Combined CI must prove this new repeat flow before timing claims are shipped.
 
 ## Next Codex slices
 
-1. Finish green integration of PR64 and PR74, inspect exact-source evidence and
+1. Finish green combined integration, inspect exact-source evidence and
    update this note when they land. Preserve already-proven guards and v1 formats.
 2. Complete native crafted-plank placement: consume1real item per world block,
    retain every remainder, reject detached/wrong-hand stacks and stale authority,
