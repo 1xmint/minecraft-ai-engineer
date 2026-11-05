@@ -354,3 +354,22 @@ and Windows all passed; Companion failed only STATE formatting. Inspected
 dedicated memory-proof.json. Applied formatting-onlyc3ac69f (one blank-line
 deletion) to its phase branch after the run was terminal. PR CI41945504555
 is live on that exact unchanged-code head. Do not duplicate or restart it.
+
+## Native resource recovery integration candidate (2026-11-05)
+
+Recovery conversation65b8f1e passed actual6boot CI41946354513. Inspected
+independent native NBT/journal proof and recovery receipt:4interrupted shapes
+stored without result clicks or additional crafting awards; original history
+bytes and SHA256 retained; acknowledgments survived restart; fresh owner
+requests used recovered logs without duplicating existing planks. Editor and
+ambiguous-history requests refused; repeated recovery created no task/journal.
+Acknowledgment b1312e6 independently passed41945127313 with8forgery cases per
+resource shape. Shared authority/gate/record/reader/route reviews found no
+concrete remaining resource or authorization flaw. No human acceptance claim.
+
+This candidate aligns that tested code with native crafting parentc3ac69f/PR73.
+Merge changed no code from65b8f1e; only project memory records integration.
+Require final-head full PR CI before merge. ParentPR73/41945504555 and full-adder
+PR64/41947347153 plus combined player41947057332 remain live on stable heads.
+The broader native survival, tools, terrain, machinery and full original goals
+remain unfinished; Claude's parallel experience lane is separate.
