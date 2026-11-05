@@ -181,3 +181,11 @@ independent replay checked32saved recovery logs,48actual native fixture edges
 and32original-pair restorations. Loaded logs cannot execute; no functional pass
 is granted. This does not prove a connected recovery controller or safe resume
 after an interruption of recovery itself.
+
+Recovery checkpoint candidate b06a0c2 passed native CI42115150145 (212 required
+tests). The current checkpoint follows the latest recovery journal through bounded
+schema2 origin chains; legacy schema1 records remain readable. A native fixture
+interrupts the first recovery, reloads the session, derives two fresh edges from
+that latest progress and restores the original pair. Orphan logs are not selected,
+stale checkpoint updates and cycles are rejected, and no execution lease or
+functional pass is loaded. Connected recovery execution remains unavailable.

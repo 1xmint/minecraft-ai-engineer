@@ -140,7 +140,7 @@ final class EngineeringSession implements BuildExecutor {
         for(ServerLevel level:server.getAllLevels()) if(dimension.equals(level.dimension().identifier().toString()))return level;
         throw new IllegalStateException("Project dimension is unavailable");
     }
-    void tell(String text) { ServerPlayer player = player(); if (player != null) player.sendSystemMessage(Component.literal("Engineer: " + text)); }
+    void tell(String text) { ServerPlayer player = player(); if (player != null) SpokenReplies.tell(player, text); }
     boolean available() { ServerPlayer p = server.getPlayerList().getPlayer(controller);
         return p != null && dimension.equals(p.level().dimension().identifier().toString()); }
     void requireCreative() {

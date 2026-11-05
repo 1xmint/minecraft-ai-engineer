@@ -82,7 +82,7 @@ final class ConversationMemoryText {
         var request=parse(message);
         if(request==null){
             if(ambiguous(message)){
-                session.player().sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: Tell me exactly what to save, for example 'remember my preference: keep the wiring visible because it is easier to debug' or 'replace decision 2: use comparators' or 'remember our reference: copy the tested clock layout'. Ask 'show note 3' or 'find notes about lamps' to look one up. Notes are shared with authorized project members."));
+                SpokenReplies.tell(session.player(),"Tell me exactly what to save, for example 'remember my preference: keep the wiring visible because it is easier to debug' or 'replace decision 2: use comparators' or 'remember our reference: copy the tested clock layout'. Ask 'show note 3' or 'find notes about lamps' to look one up. Notes are shared with authorized project members.");
                 return true;
             }
             return false;

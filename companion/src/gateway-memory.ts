@@ -1016,6 +1016,7 @@ export class GatewayMemory {
   /** Capture explicit shared requirements separately from geometry and world evidence. */
   reasoning(
     context: GatewayContext,
+    request?: string,
   ): Readonly<{ knowledgeRevision: number; text: string }> {
     const knowledge = this.knowledge(context);
     const legacy = this.context(context);
@@ -1024,7 +1025,7 @@ export class GatewayMemory {
       return Object.freeze({ knowledgeRevision: 0, text: legacy });
     const replaced = this.replacedRevisions(context);
     // Replaced notes are history: never listed as a current requirement.
-    const current = currentNotes(knowledge);
+    const current = currentNotes(knowledge, request);
     const notes = current.notes;
     return Object.freeze({
       knowledgeRevision: knowledge.revision,

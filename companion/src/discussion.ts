@@ -63,12 +63,34 @@ export function validateDiscussionReply(
 }
 
 export const DISCUSSION_NOTE_LIMIT = 8;
-const words = (value: string) =>
-  new Set(value.toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+// Question words that say nothing about which note is meant. Short circuit terms such as
+// "and", "xor", "led" and "hub" stay meaningful.
+const IGNORED = new Set(
+  (
+    "the for you are was why how did does what this that with have has can our its not but " +
+    "from into about when where which who will would should could there their they them then " +
+    "than these those your use used make made need just also some more most very much like " +
+    "want tell show explain note notes project engineer part doing done say said do is it we"
+  ).split(" "),
+);
+/** Literal words of three or more letters; a plural "s" is folded so "lamps" matches "lamp". */
+export function noteWords(value: string): ReadonlySet<string> {
+  const found = new Set<string>();
+  for (const raw of value.toLowerCase().match(/[a-z0-9]+/g) ?? []) {
+    if (raw.length < 3 || IGNORED.has(raw)) continue;
+    found.add(
+      raw.length > 4 && raw.endsWith("s") && !raw.endsWith("ss")
+        ? raw.slice(0, -1)
+        : raw,
+    );
+  }
+  return found;
+}
 /**
  * Current notes only: a note another note replaced is history, never a current requirement.
- * When more than the limit are current, notes that share a word with the question or name the
- * selected component come first, then the newest; the chosen notes keep their stored order.
+ * When more than the limit are current, notes sharing more literal words with the question or the
+ * selected component's id come first (ties: newest first), then the newest of the rest; the chosen
+ * notes keep their stored order. Selection only orders what is offered; it never changes a note.
  */
 export function currentNotes(
   knowledge: ProjectKnowledge,
@@ -91,19 +113,22 @@ export function currentNotes(
       replaced: knowledge.notes.length - current.length,
       omitted: false,
     };
-  const asked = words(`${message ?? ""} ${componentId ?? ""}`);
-  const relevant = (note: (typeof current)[number]) =>
+  const asked = noteWords(`${message ?? ""} ${componentId ?? ""}`);
+  const shared = (note: (typeof current)[number]) =>
     [
-      ...words(
+      ...noteWords(
         `${note.text} ${note.schemaVersion === 2 ? (note.rationale ?? "") : ""}`,
       ),
-    ].some((word) => asked.has(word));
-  // Relevant notes newest first, then the newest of the rest, up to the limit.
-  const chosen = new Set([
-    ...current.filter(relevant).reverse(),
-    ...[...current].reverse(),
-  ]);
-  const kept = new Set([...chosen].slice(0, DISCUSSION_NOTE_LIMIT));
+    ].filter((word) => asked.has(word)).length;
+  const newestFirst = [...current].reverse();
+  const scored = newestFirst
+    .map((note, order) => ({ note, order, score: shared(note) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.order - b.order)
+    .map((entry) => entry.note);
+  const kept = new Set(
+    [...new Set([...scored, ...newestFirst])].slice(0, DISCUSSION_NOTE_LIMIT),
+  );
   return {
     notes: current.filter((note) => kept.has(note)),
     replaced: knowledge.notes.length - current.length,

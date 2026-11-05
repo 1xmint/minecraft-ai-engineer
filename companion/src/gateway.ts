@@ -344,7 +344,7 @@ export class ServerGateway {
     fittingMechanisms(input); // Fit validation before spending quota.
     if (context.projectRevision >= Number.MAX_SAFE_INTEGER)
       throw new RequestError("Project revision exhausted.", 409);
-    const reasoning = memory.reasoning(context);
+    const reasoning = memory.reasoning(context, input.request);
     memory.claim(context, "design");
     const controller = new AbortController(),
       active = { context, controller };
@@ -718,7 +718,7 @@ export class ServerGateway {
         "This planning provider does not support generated designs.",
         503,
       );
-    const reasoning = memory.reasoning(context);
+    const reasoning = memory.reasoning(context, input.request);
     memory.claim(
       context,
       geometry ? "generated-geometry" : "generated-behavior",
