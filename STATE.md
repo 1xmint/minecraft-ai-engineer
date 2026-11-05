@@ -302,3 +302,12 @@ formatting. Recovery execution dff7f30/41943972746, acknowledgment b1312e6/
 and independent NBT/restart proofs; those recovery extensions are not in this
 candidate. Claude owns the next memory/guidance/comparison/voice player milestones;
 Codex owns execution, larger circuits, multiple builders, integration/release.
+
+Native crafting PR73 is now merged as d76e832 after all5exact-head checks
+41945504555 passed and dedicated evidence was inspected. Full-adder69845d0
+passed all5checks41947347153; combined gameplay1a265c6 passed41947057332.
+This alignment incorporates the newly squashed main without any runtime change
+from69845d0/1a265c6. Only STATE is reconciled; require fresh exact-head full CI
+before merge. Native recovery PR74 likewise passed its prior full CI and now
+uses aligned39dd3da with CI41951701598 live. The larger original scope is still
+incomplete; no native plank-placement producer is included in this candidate.
