@@ -137,7 +137,8 @@ runs as a command.
 folder only while your recogniser runs, and deleted straight after, whether it
 succeeded, failed or was cancelled. Recording stops after 30 seconds. The
 recogniser is stopped after `timeoutSeconds`. Each run cleans only its own private
-folder. A hard process or computer crash can leave that run's temporary audio;
+folder. Quitting the game while a recording is being recognised, or a hard
+process or computer crash, can leave that run's temporary audio;
 startup does not delete other clients' folders or active recordings.
 
 **If something is missing.** With no config, an invalid config, no microphone or a
