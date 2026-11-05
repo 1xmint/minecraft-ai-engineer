@@ -14,6 +14,8 @@ final class FunctionalTrial {
     private final EngineeringSession session;
     private final Map<String,Input> inputs=new LinkedHashMap<>();
     private JsonArray evidence=new JsonArray();
+    private final NativeTrialHistory history=new NativeTrialHistory();
+    java.util.List<TrialEvidenceTally.Attempt> attempts(){return history.attempts();}
     private JsonObject evidenceScope,evidenceBlueprint;
     private MechanismCatalog.Contract contract;
     private int vector,nextTick;
@@ -36,6 +38,7 @@ final class FunctionalTrial {
     String shutterOriginalSnapshot(){return shutterOriginal==null?null:Blueprint.describe(shutterOriginal);}
     void resetEvidence(){if(pending())throw new IllegalStateException("Pending inputs must be reconciled before revising the design");archiveEvidence();evidence=new JsonArray();evidenceScope=null;evidenceBlueprint=null;contract=null;shutterOriginal=null;}
     private void archiveEvidence(){
+        history.capture(evidenceScope,evidence);
         if(evidence.isEmpty())return;var s=session;
         if(evidenceScope==null || evidenceBlueprint==null)throw new IllegalStateException("Stored test evidence needs its original intended identity");
         var history=new JsonObject();history.addProperty("worldId",s.worldId);history.addProperty("dimension",s.dimension);
@@ -435,6 +438,7 @@ final class FunctionalTrial {
         return entries;
     }
     void write(JsonObject json){
+        history.capture(evidenceScope,evidence);json.add("nativeTrialHistory",history.json());
         if(shutterOriginal!=null)json.addProperty("shutterOriginalInput",Blueprint.describe(shutterOriginal));
         json.add("testInputs",inputsSnapshot());json.add("functionalEvidence",evidence.deepCopy());
         if(evidenceScope!=null)json.add("functionalScope",evidenceScope.deepCopy());
@@ -442,6 +446,7 @@ final class FunctionalTrial {
         if(pending()){var first=inputs.values().iterator().next();json.addProperty("testOriginal",Blueprint.describe(first.original()));json.addProperty("testLast",Blueprint.describe(first.last()));}
     }
     void load(JsonObject json){
+        history.load(json.has("nativeTrialHistory")?json.getAsJsonArray("nativeTrialHistory"):new JsonArray());
         shutterOriginal=json.has("shutterOriginalInput")?Blueprint.state(json.get("shutterOriginalInput").getAsString()):null;
         if(shutterOriginal!=null && (session.blueprint==null || !ShutterDesign.describes(session.blueprint.source())))throw new IllegalStateException("Mechanical original input has no accepted mechanical intention");
         inputs.clear();evidence=json.has("functionalEvidence")?json.getAsJsonArray("functionalEvidence").deepCopy():new JsonArray();

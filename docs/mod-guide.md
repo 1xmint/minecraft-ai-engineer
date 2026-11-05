@@ -704,3 +704,15 @@ of silently guessing what to save. Commands remain a fallback.
 Captured from [the verified multiplayer run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41367933778).
 The notes remain owner-authored requirements; the chat does not imply a new model
 request, world inspection or functional test.
+
+Native generated-buffer comparisons can use the most recent64 observed trial
+attempts saved with each project. The server captures the real off/on/off samples
+when it checkpoints the native test. Repeated saves update one attempt rather
+than counting as more trials. Observations survive reload but restore no input
+journal, permissions, actions or functional pass. Older archived evidence files
+remain untouched; the comparison window is limited to recent history.
+
+Only validated passing traces supply observed timing. Failed and interrupted
+attempts are counted separately, never as a reliability percentage. Other circuit
+families and imported geometry still have no repeated-trial timing producer.
+Project view permission is required for both sides of a comparison.

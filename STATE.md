@@ -267,3 +267,11 @@ diff. Code/scripts match2ee1e52 exactly after reconciliation; no main behavior
 was dropped. Full final-head CI and conversation proof41941120901 remain gates.
 Closed superseded drafts44/46/57/58/61/62/63 after confirming their work is
 in merged integrations49/48/66. The goal and broad remaining scope are unchanged.
+
+Native trial-history development: work/native-trial-history builds on Claude's
+comparison PR78. It captures a bounded64-attempt recent history from actual
+FunctionalTrial writes, persists detached scopes/rows and supplies those samples
+to authorized comparisons. It never restores execution authority or a pass.
+Scoped Java/client compilation passed. Native persistence/bounds tests and an
+actual dedicated12/16-game-tick trace assertion are added; CI proof is pending.
+This is generated-buffer evidence, not general measured circuit optimization.

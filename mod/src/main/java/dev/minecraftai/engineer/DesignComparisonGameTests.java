@@ -228,4 +228,23 @@ public final class DesignComparisonGameTests {
         helper.assertTrue(DesignComparisonText.target("compare designs 1 and 2")==null && DesignComparisonText.target("what does this do")==null,"Other requests are untouched");
         helper.succeed();
     }
+    @GameTest public void nativeTrialHistoryKeepsRecentDetachedAttemptsAcrossReload(GameTestHelper helper){
+        var blueprint=timed();var task=passed(blueprint);var rows=passing(blueprint,100);
+        var history=new NativeTrialHistory();history.capture(task.lastPassedScope,rows);
+        rows.get(0).getAsJsonObject().addProperty("tick",99999);
+        helper.assertTrue(history.attempts().size()==1 && TrialEvidenceTally.tally(blueprint,task,history.attempts()).passed()==1,"Captured native samples are detached from their mutable producer");
+        var saved=history.json();var loaded=new NativeTrialHistory();loaded.load(saved);
+        saved.get(0).getAsJsonObject().getAsJsonArray("rows").get(0).getAsJsonObject().addProperty("tick",12345);
+        var copied=loaded.attempts();copied.get(0).rows().get(0).getAsJsonObject().addProperty("tick",88888);
+        helper.assertTrue(TrialEvidenceTally.tally(blueprint,task,loaded.attempts()).passed()==1,"Reload and returned observations cannot alias persisted samples");
+        loaded.capture(task.lastPassedScope,passing(blueprint,100));
+        helper.assertTrue(loaded.attempts().size()==1,"Saving the same native attempt never creates a repeated trial");
+        for(int index=1;index<=65;index++)loaded.capture(task.lastPassedScope,passing(blueprint,100+index*100));
+        helper.assertTrue(loaded.attempts().size()==64 && TrialEvidenceTally.tally(blueprint,task,loaded.attempts()).passed()==64,"Only the most recent64 attempts are retained in the bounded session history");
+        boolean denied=false;var invalid=loaded.json();invalid.add(invalid.get(0).deepCopy());
+        try{loaded.load(invalid);}catch(RuntimeException expected){denied=true;}
+        helper.assertTrue(denied && loaded.attempts().size()==64,"Oversized history fails atomically without replacing prior observations");
+        helper.succeed();
+    }
+
 }
