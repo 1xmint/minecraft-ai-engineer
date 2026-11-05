@@ -640,6 +640,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             server.runOnServer(s->{var body=s.getPlayerList().getPlayer(oakRecovery.worker());check(body!=null && PhysicalWorkerStorage.inventory(body).equals(oakRecovery.inventory()) && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1,"Actual world restart preserves the exact oak inventory under the same native identity");check(s.overworld().getBlockState(new BlockPos(2631,101,4)).isAir(),"Native mined source remains absent after saved-world restart");check(!body.gameMode.destroyBlock(new BlockPos(2631,101,6)),"Restored oak inventory grants no native mining authority");});
             MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"inventory saving was verified at completion");expectChat(context,"saved inventory matches the recorded snapshot");
+            MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 6");expectChat(context,"Requested resource does not match");
+            server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A refused request after restart leaves the restored resources and source unchanged"));
             server.runCommand("tp Alice 2631.5 101 5.5");
             MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A player standing in the path refuses a second gather without changing the restored resources"));
@@ -945,6 +947,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 for(var record:records){var material=com.google.gson.JsonParser.parseString(Files.readString(record)).getAsJsonObject().get("material").getAsString();Files.copy(record,out.resolve(material.equals("dirt")?"1-dirt.json":"2-oak.json"));}}
             catch(java.io.IOException failed){throw new IllegalStateException(failed);}
         });
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");
+        // Merge: a second dirt joins the existing plain dirt stack instead of taking a new slot.
+        server.runCommand("setblock 2731 101 2 minecraft:dirt");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 2731 101 2");expectChat(context,"gathering one dirt block");expectChat(context,"verified its saved inventory",60_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;
+            check(countItem(body,net.minecraft.world.item.Items.DIRT)==2 && countItem(body,net.minecraft.world.item.Items.OAK_LOG)==1 && occupied==2 && s.overworld().getBlockState(new BlockPos(2731,101,2)).isAir(),"Third gather merges one dirt into the existing stack");});
         MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"saved inventory matches the recorded snapshot");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-accumulate.done","passed");
     }
