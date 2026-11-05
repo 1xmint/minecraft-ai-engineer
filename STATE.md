@@ -190,3 +190,14 @@ to it. GPT-6-Luna implemented it; parent review corrected cached observations,
 UUID comparison and cleanup identity. Scoped compileJava passed, including a new
 disconnected-owner refusal test. Native CI and connected-player execution proof
 remain pending; the sampler, recovery and functional pass remain unfinished.
+
+2026-11-05: exact5a69c70/native42054794918 passed all205 required tests. Inspected
+artifact retains768 settled observations and eight durable journal replays; the
+new disconnected-owner driver refusal test is included. This native suite does
+not execute the driver with a connected player. Separate work/memory-driver-player-
+proof aligns PR85 candidatee7a6c89 (including its bounded final Bob wait) and adds
+actual connected Alice four-edge execution, exclusive-driver refusal, frozen log
+reload, selection-loss cancellation and connected Bob BUILD-revocation refusal.
+The actual on-disk journal is exported and its completion marker is mandatory.
+Scoped compileClientJava and shell syntax passed. Full CI remains required;
+there is no new functional pass, production route, sampler or recovery.

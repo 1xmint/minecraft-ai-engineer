@@ -110,3 +110,10 @@ It records the actual pair after the native call and stops on failure or lost
 authority. Stop never emits a restoration pulse. Cleanup releases only its own
 reservation. No command or conversation starts this driver yet; it supplies no
 settled sampler, functional pass or recovery. Connected-player proof is pending.
+
+The dedicated-player fixture now exercises four native edges with connected Alice,
+rejects a competing driver, reloads the recorded file without execution authority,
+and checks cancellation before an edge after selection loss or Bob's BUILD grant
+revocation. It exports the read-back journal. This fixture is written and compiles;
+its runtime proof is pending. Native CI42054794918 passed all205 required tests,
+including disconnected-owner refusal, but does not replace connected-player proof.
