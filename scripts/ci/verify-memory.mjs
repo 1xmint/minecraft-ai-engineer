@@ -786,12 +786,13 @@ try {
       },
       {
         file: "conversation-design-project",
-        starts: 17,
+        starts: 18,
         actions: [
           "design",
           "design",
           "build",
           "test",
+          "test", // The separately requested repeated native trial.
           "design",
           "design",
           "test",
