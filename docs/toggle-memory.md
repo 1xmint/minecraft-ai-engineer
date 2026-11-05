@@ -165,3 +165,13 @@ the last recorded state (or a prepared edge's exact before/after alternatives),
 and refuses unexplained changes. It describes at most three fresh edges toward
 the original pair. A plan is data, not permission or a replay instruction; new
 recovery authority, durable recovery progress and actual execution remain pending.
+
+Plan CI42064151962 passed209 native tests; independent replay checked32 plans
+covering all supported rotations and input/bit combinations. A separate recovery
+recorder now saves PREPARED before a newly derived edge and OBSERVED after its
+actual paired result. It accepts zero to three edges, keeps the original input
+journal unchanged, and records RESTORED only at the original target pair. It has
+its own64-file/4MiB per-project namespace,64KiB/file and9-event caps. Failed saves
+freeze recording; externally changed bytes are never overwritten. Readers remain
+permanently unable to resume actions. Native runtime proof is pending. A current
+recovery checkpoint and fresh action driver are still needed before use in play.

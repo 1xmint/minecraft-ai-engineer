@@ -273,3 +273,17 @@ pointer zero-movement coverage. Scope is the current pointer only; proposed
 edges are freshly derived from actual state and cannot execute. Native CI and
 connected pointer execution remain required. A durable latest-recovery record,
 fresh action driver and normal memory-test routing are still unfinished.
+
+Plan sourceaf9e115/native42064151962 passed all209 required tests. Inspected
+independent replay:32 plans cover two initial bits/four rotations/four current
+states; executionAuthority=false and functionalPass=false. PR93's full CI
+42064271802 remains live. Do not change that head while its player proof runs.
+
+Separate work/memory-recovery-journal adds a bounded NEW/PREPARED/OBSERVED
+recovery log for0..3 freshly derived edges. Loads are frozen, unexpected results
+are UNCERTAIN, and RESTORED requires the actual original target pair, including
+zero-edge cases. No origin journal is overwritten. Native fixtures write/read
+around real recovery lever edges; independent replay checks32 logs/48 proposed
+native recovery edges. Scoped Java compilation and script syntax/format passed;
+native CI remains required. This recorder grants no recovery authority: latest-
+recovery checkpoint binding, fresh execution and normal routing are unfinished.
