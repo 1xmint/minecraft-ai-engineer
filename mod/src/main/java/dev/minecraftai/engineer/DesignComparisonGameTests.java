@@ -134,7 +134,7 @@ public final class DesignComparisonGameTests {
                 && has(both,"passed its game test at revision 3") && has(both,"Reliability: unavailable — no repeated-trial record exists"),"A recorded pass alone gives intended timing, never a measurement: "+all(both));
         var historical=passed(b);historical.lastPassedScope.addProperty("blueprintRevision",2);
         var old=DesignComparison.compare(DesignComparison.measure("a",a,passed(a),List.of(at(passed(a),passing(a,100)))),DesignComparison.measure("b",b,historical,List.of(at(historical,passing(b,100)))));
-        helper.assertTrue(has(old,"Measured timing: unavailable — b does not have") && has(old,"retained historical pass") && has(old,"b: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision; 1 from an earlier design scope not counted"),"An earlier revision's trial is not current timing: "+all(old));
+        helper.assertTrue(has(old,"Measured timing from validated trial records: a on after 4 game ticks, off after 6 (observed in 1 passed attempt, sampled every game tick); b unavailable — no validated passing trial record for its current revision. With only one side measured, there is no timing difference to report.") && has(old,"retained historical pass") && has(old,"b: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision; 1 from an earlier design scope not counted"),"An earlier revision's trial is not current timing: "+all(old));
         var stale=new ComponentAssignments.Task("root","");stale.verified="stale: component basis migrated; retest required";
         helper.assertTrue(DesignComparison.status(a,stale).contains("stale") && DesignComparison.measure("a",a,stale,List.of(at(passed(a),passing(a,100)))).observedTiming()==null,"Stale evidence reports no measured timing");
         helper.succeed();
@@ -161,7 +161,7 @@ public final class DesignComparisonGameTests {
         helper.assertTrue(t.passed()==3 && t.failed()==1 && t.interrupted()==1 && t.stale()==1 && t.duplicates()==2 && t.rejected()==4 && t.truncated()==0,"Each attempt is counted once in its own class: "+t);
         var lines=DesignComparison.compare(m,DesignComparison.measure("b",b,passed(b)));
         helper.assertTrue(has(lines,"Intended timing (configured in the design, not measured): a on after 4 game ticks, off after 6")
-                && has(lines,"Measured timing: unavailable — b does not have a validated passing trial record for its current revision.")
+                && has(lines,"Measured timing from validated trial records: a on after 4 game ticks, off after 6 (observed in 3 passed attempts, sampled every game tick); b unavailable — no validated passing trial record for its current revision.")
                 && has(lines,"Reliability: unavailable as a rate — attempt counts only ("+TrialEvidenceTally.SAMPLE_UNIT+")")
                 && has(lines,"a: 3 passed, 1 failed, 1 interrupted of 5 attempts for the current revision; 1 from an earlier design scope not counted; 2 repeated checkpoint or replay records counted once; 4 records rejected as invalid")
                 && has(lines,"b: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision")
@@ -284,6 +284,33 @@ public final class DesignComparisonGameTests {
                 "Comparison never labels imported geometry as tested or verified: "+all(lines));
         var twin=DesignComparison.compare(m,DesignComparison.measure("copy",imported,null));
         helper.assertTrue(has(twin,"Measured differences: none") && has(twin,"Recommendation: none — I cannot confirm"),"Identical imports still get no pick: "+all(twin));
+        helper.succeed();
+    }
+
+    @GameTest public void asymmetricEvidenceKeepsTheKnownSideAndInventsNothing(GameTestHelper helper){
+        var a=timed();var b=timed();var ta=passed(a);var tb=passed(b);
+        var measuredA=DesignComparison.measure("a",a,ta,List.of(at(ta,passing(a,100)),at(ta,passing(a,100))));
+        // b has only a failed and an interrupted attempt: observations exist, but no validated pass.
+        var missing=DesignComparison.measure("b",b,tb,List.of(at(tb,attempt(b,400,5,13,-1,false)),at(tb,attempt(b,500,4,13,7,false))));
+        for(var lines:List.of(DesignComparison.compare(measuredA,missing),DesignComparison.compare(missing,measuredA))){
+            helper.assertTrue(has(lines,"a on after 4 game ticks, off after 6 (observed in 1 passed attempt, sampled every game tick)")
+                    && has(lines,"b unavailable — no validated passing trial record for its current revision")
+                    && has(lines,"With only one side measured, there is no timing difference to report.")
+                    && !has(lines,"Measured timing: unavailable — neither"),"The known measurement stays visible beside an unknown one, in either order: "+all(lines));
+            helper.assertTrue(has(lines,"a: 1 passed, 0 failed, 0 interrupted of 1 attempt for the current revision; 1 repeated checkpoint or replay record counted once")
+                    && has(lines,"b: 0 passed, 1 failed, 1 interrupted of 2 attempts for the current revision"),"Duplicates and missing observations are counted as what they are: "+all(lines));
+            String measuredLine=lines.stream().filter(line->line.startsWith("Measured timing")).findFirst().orElse("");
+            helper.assertTrue(has(lines,"Intended timing (configured in the design, not measured): a on after 4 game ticks, off after 6; b on after 4 game ticks, off after 6")
+                    && !measuredLine.contains("b on after"),"Configured delay never fills in a missing measurement: "+measuredLine);
+            helper.assertTrue(lines.stream().noneMatch(line->line.contains("%") || line.contains("Recommendation: a") || line.contains("Recommendation: b")
+                    || line.toLowerCase(Locale.ROOT).contains("winner") || line.toLowerCase(Locale.ROOT).contains("latency") || line.toLowerCase(Locale.ROOT).contains("verified")),
+                    "No pick, winner, percentage, latency or verification is invented: "+all(lines));
+        }
+        // A new revision of a: its old pass is stale, so its measurement is no longer current.
+        var revised=ta.lastPassedScope.deepCopy();revised.addProperty("blueprintRevision",2);var older=passed(a);older.lastPassedScope=revised;
+        var stale=DesignComparison.compare(DesignComparison.measure("a",a,ta,List.of(at(older,passing(a,100)))),missing);
+        helper.assertTrue(has(stale,"Measured timing: unavailable — neither design has") && has(stale,"a: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision; 1 from an earlier design scope not counted"),
+                "An earlier revision's measurement is not shown as current: "+all(stale));
         helper.succeed();
     }
 

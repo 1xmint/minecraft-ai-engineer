@@ -150,14 +150,15 @@ final class DesignComparison {
         lines.add(MATERIALS_COLLECTED);
         if(a.intendedTiming() != null || b.intendedTiming() != null)
             lines.add("Intended timing (configured in the design, not measured): " + a.label() + " " + orNone(a.intendedTiming()) + "; " + b.label() + " " + orNone(b.intendedTiming()) + ".");
-        if(a.observedTiming() != null && b.observedTiming() != null)
-            lines.add("Measured timing from validated trial records: " + a.label() + " " + a.observedTiming() + "; " + b.label() + " " + b.observedTiming() + ".");
-        else lines.add("Measured timing: unavailable — " + (a.observedTiming() == null && b.observedTiming() == null ? "neither design has" : (a.observedTiming() == null ? a.label() : b.label()) + " does not have")
-                + " a validated passing trial record for its current revision.");
+        // A known measurement stays visible beside an unknown counterpart; the two are never subtracted or ranked.
+        if(a.observedTiming() == null && b.observedTiming() == null)
+            lines.add("Measured timing: unavailable — neither design has a validated passing trial record for its current revision.");
+        else lines.add("Measured timing from validated trial records: " + a.label() + " " + measured(a) + "; " + b.label() + " " + measured(b)
+                + (a.observedTiming() == null || b.observedTiming() == null ? ". With only one side measured, there is no timing difference to report." : "."));
         if(a.trials().equals(TrialEvidenceTally.Tally.NONE) && b.trials().equals(TrialEvidenceTally.Tally.NONE))
             lines.add("Reliability: unavailable — no repeated-trial record exists, and one passing test is not a reliability measurement (" + TrialEvidenceTally.SAMPLE_UNIT + ").");
         else lines.add("Reliability: unavailable as a rate — attempt counts only (" + TrialEvidenceTally.SAMPLE_UNIT + "). "
-                + a.trials().counts(a.label()) + ". " + b.trials().counts(b.label()) + ".");
+                + counts(a) + ". " + counts(b) + ".");
         lines.add(recommend(a, b, sameMeasures));
         lines.add(ComparisonEvidence.basis(a, b));
         lines.add("This comparison changed nothing.");
@@ -166,6 +167,14 @@ final class DesignComparison {
 
     static final String MATERIALS_COLLECTED="Materials collected: not shown. The material counts above are what each design calls for, not what anyone has gathered or has in storage.";
     private static String orNone(String timing) { return timing == null ? "has no configured timing" : timing; }
+    /** Observed timing, or why this side has none. Configured timing is never substituted. */
+    private static String measured(Measure m) {
+        if(m.observedTiming() != null) return m.observedTiming();
+        return m.imported() ? "unavailable — imported geometry; trial records are not read" : "unavailable — no validated passing trial record for its current revision";
+    }
+    private static String counts(Measure m) {
+        return m.imported() ? m.label() + ": trial records are not read for imported geometry" : m.trials().counts(m.label());
+    }
 
     static String recommend(Measure a, Measure b, boolean sameMeasures) {
         if(a.behaviorKey() == null || b.behaviorKey() == null)
