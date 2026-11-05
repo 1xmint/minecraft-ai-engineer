@@ -201,3 +201,20 @@ reload, selection-loss cancellation and connected Bob BUILD-revocation refusal.
 The actual on-disk journal is exported and its completion marker is mandatory.
 Scoped compileClientJava and shell syntax passed. Full CI remains required;
 there is no new functional pass, production route, sampler or recovery.
+
+PR85 merged566a2f7 after exacte7a6c89/full42051307049 passed all five checks.
+Inspected actual Alice memory preview/teaching/build/refusal chat, independent
+memory-proof.json and successful dedicated launcher completion. Its mandatory
+memory build/restart receipts enforce the persisted eight-cell geometry, lit
+player bulb, seven assistant-owned cells, untested status and no test authority.
+This supersedes earlier pending M1 proof. PR86 exact0edcb02/full42055427604 is
+still live; keep that source stable until terminal before retargeting to main.
+
+Read-only MemoryStateSampler development is separate from driver authority:
+96 exact-tick actual observations over six phases, terminal failure on gaps,
+duplicates or conflicts, original pair observation and bounded detached evidence.
+The native fixture preserves its independent original trace and emits a second
+sampler trace; JavaScript hand-works all values and compares both traces plus
+canonical source. It does not grant pass, mutate blocks or resume old authority.
+Scoped compileJava passed for the sampler and duplicate-tick refusal fixture;
+script syntax/format checks passed. Native CI remains required for this slice.

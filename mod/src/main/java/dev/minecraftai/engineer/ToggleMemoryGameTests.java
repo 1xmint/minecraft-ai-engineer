@@ -30,9 +30,11 @@ public final class ToggleMemoryGameTests {
         var intention=ToggleMemoryIntention.create(identity,1,identity,"test","minecraft:overworld",at(new BlockPos(4,2,4),rotation),angle);
         var blueprint=intention.blueprint();
         for(var cell:blueprint.blocks())h.setBlock(cell.pos(),cell.state().is(memory.getBlock())?cell.state().setValue(BlockStateProperties.LIT,initial):cell.state());
+        var samplerBlueprint=ToggleMemoryIntention.create(identity,1,identity,"test","minecraft:overworld",h.absolutePos(blueprint.anchor()),angle).blueprint();
         MemoryInputJournal journal;
         try{journal=MemoryInputJournal.create(java.nio.file.Files.createTempDirectory("engineer-memory-input-"),blueprint,new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb)),h.getLevel().getGameTime());}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
-        var samples=new JsonArray();var edges=new JsonArray();long[] previous={-1};
+        var samples=new JsonArray();var edges=new JsonArray();long[] previous={-1};MemoryStateSampler[] sampler={null};
+        h.runAtTickTime(8,()->sampler[0]=new MemoryStateSampler(h.getLevel(),samplerBlueprint,h.getLevel().getGameTime()));
         // The same unpowered input appears with two different stored outputs. Holding
         // a high input or returning it low must never produce a second toggle.
         for(int phase=0;phase<6;phase++){
@@ -65,11 +67,13 @@ public final class ToggleMemoryGameTests {
                     h.assertTrue(actualComparator.is(Blocks.COMPARATOR) && actualComparator.getValue(BlockStateProperties.POWERED)==bit,"Comparator reads the actual stored bulb bit");
                     int strength=actualOutput.getValue(BlockStateProperties.POWER);h.assertTrue(actualOutput.is(Blocks.REDSTONE_WIRE) && strength==(bit?15:0),"Stored bit has the correct independent redstone output");
                     var row=new JsonObject();row.addProperty("phase",step);row.addProperty("elapsedTicks",within);row.addProperty("gameTick",tick);row.addProperty("input",actualLever.getValue(BlockStateProperties.POWERED));row.addProperty("stored",actualBulb.getValue(BlockStateProperties.LIT));row.addProperty("signal",strength);samples.add(row);
+                    sampler[0].sample();
                 });
             }
         }
         h.runAtTickTime(154,()->{
             h.assertTrue(samples.size()==96 && !h.getBlockState(lever).getValue(BlockStateProperties.POWERED) && h.getBlockState(bulb).getValue(BlockStateProperties.LIT)==initial,"Two native pulses restore the original stored bit and original unpowered input");
+            System.out.println("ENGINEER_MEMORY_STATE_SAMPLES "+sampler[0].complete());
             journal.restored(new MemoryInputTransition.Frame(h.getBlockState(lever),h.getBlockState(bulb)),h.getLevel().getGameTime());
             h.assertTrue(MemoryInputJournal.read(journal.file(),blueprint).stage().equals("RESTORED"),"A complete two-pulse log observes its original pair, never a functional pass");
             var record=new JsonObject();record.add("inputJournal",storedMemoryRecord(journal.file()));record.addProperty("kind","toggle-memory-native-feasibility");record.addProperty("rotation",rotation.name());record.addProperty("initial",initial);record.add("samples",samples);record.add("edges",edges);
@@ -77,6 +81,21 @@ public final class ToggleMemoryGameTests {
         });
     }
     private static JsonObject storedMemoryRecord(java.nio.file.Path file){try{return JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void stateSamplerFreezesOnDuplicateTick(GameTestHelper h){
+        var id=java.util.UUID.randomUUID();var anchor=h.absolutePos(new BlockPos(8,2,8));
+        var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",anchor,0).blueprint();
+        for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state());
+        var sampler=new MemoryStateSampler(h.getLevel(),blueprint,h.getLevel().getGameTime());
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+        var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
+        var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+        h.runAtTickTime(8,()->{
+            sampler.sample();boolean duplicateRefused=false;try{sampler.sample();}catch(IllegalStateException expected){duplicateRefused=true;}
+            boolean terminalRefused=false;try{sampler.complete();}catch(IllegalStateException expected){terminalRefused=true;}
+            var after=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+            h.assertTrue(duplicateRefused && terminalRefused && before.matches(after),"A duplicate tick freezes read-only sampling and cannot change the real memory pair");h.succeed();
+        });
+    }
     @GameTest public void preparedMemoryLogsStayFrozenAndRejectExternalChanges(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
         var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().state();var frame=new MemoryInputTransition.Frame(lever,Blueprint.state("minecraft:waxed_copper_bulb"));

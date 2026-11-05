@@ -117,3 +117,14 @@ and checks cancellation before an edge after selection loss or Bob's BUILD grant
 revocation. It exports the read-back journal. This fixture is written and compiles;
 its runtime proof is pending. Native CI42054794918 passed all205 required tests,
 including disconnected-owner refusal, but does not replace connected-player proof.
+
+Read-only sampling development binds a canonical absolute blueprint to one native
+server level and its current game tick. It reads 16 consecutive settled samples
+in each of six 24-tick phases:96 samples total. Every sample checks loaded
+geometry, paired lever/bulb state, comparator power and output strength. Gaps,
+duplicates, conflicting state or changed source make the sampler terminal. Its
+initial and final pairs are actual observations. The native fixture still uses
+its own lever actions; this sampler is not yet joined to the fresh-authority
+driver. Independent JavaScript replay checks the emitted trace against canonical
+TypeScript geometry, hand-worked expected states and the original native trace.
+No sampled trace grants a functional pass by itself. Runtime proof is pending.
