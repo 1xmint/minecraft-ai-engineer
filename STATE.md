@@ -319,3 +319,21 @@ and independent NBT plus journal/SHA256 verification. Recovery loader/acknowledg
 and normal conversation still require implementation after native proof. PR73
 remains unchanged while its original full CI finishes; formatting fixc3ac69f
 is ready separately, not pushed over the live candidate.
+
+Recovery execution sourcedff7f30 passed focused41943972746. Inspected actual
+recovery receipt and independent NBT/SHA256/journal proof: all4resource shapes
+were stored through native moves, no result0 was taken or crafting statistic
+awarded, original craft bytes stayed unchanged, and the sixth boot retained
+the recovered stacks without authority.
+
+Prepared strict acknowledgment reader on a separate branch: validate original
+full/partial native history first; require a separately scoped COMPLETE recovery
+record bound to exact original SHA256, source/revisions and canonical native
+resource frames. Re-derive the allowed0/1/2storage moves and require every saved
+observation/event and final frame. Incomplete/altered records never acknowledge.
+No resources or execution authority are restored. GPT-6-Luna found no concrete
+unblocking/resource flaw. Scoped compilation passed before final partial-history
+fixture refinements; actual native CI remains required. Fixture covers8forgeries
+for each recovered case, valid partial intent and cleanup-uncertainty histories,
+saved-world acknowledgment reload, and explicit fresh conversational crafting
+of recovered logs without duplicating already-crafted planks.

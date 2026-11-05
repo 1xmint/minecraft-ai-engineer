@@ -272,3 +272,25 @@ console.log(
     savedWorldRestart: true,
   }),
 );
+
+for (let stopped = 1; stopped <= 4; stopped++) {
+  const bytes = await readFile(
+    join(directory, `worker-menu-craft-after-recovery-${stopped}.dat`),
+  );
+  assert.ok(bytes.length > 0 && bytes.length < 1024 * 1024);
+  const player = nbt.simplify((await nbt.parse(bytes)).parsed);
+  assert.deepEqual(player.Inventory, [
+    { Slot: record.sourceHotbar, ...planks },
+  ]);
+  assert.deepEqual(player.engineer_worker_menu, expected[4].menu);
+  for (const stack of Object.values(player.equipment ?? {}))
+    assert.deepEqual(stack, {});
+}
+console.log(
+  JSON.stringify({
+    kind: "acknowledged-native-recovery",
+    cases: 4,
+    explicitFreshRequest: true,
+    retainedPlanks: 4,
+  }),
+);
