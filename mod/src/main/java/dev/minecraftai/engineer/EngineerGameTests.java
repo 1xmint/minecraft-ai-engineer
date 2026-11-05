@@ -9,6 +9,25 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void oakRecoveryPlansOnlyNativeResourceMovement(GameTestHelper helper){
+        var items=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));items.set(3,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));
+        var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);
+        var initial=new PhysicalCraftFrame(items,empty,net.minecraft.world.item.ItemStack.EMPTY,7);var recipe=OakCraftingPlan.inspect(helper.getLevel(),items.get(3));var sequence=OakCraftingSequence.predict(initial,3,recipe);
+        int[] clicks={1,2,1,0};
+        for(int stopped=1;stopped<=4;stopped++){
+            var original=sequence.after(stopped);var recovery=OakCraftRecoveryPlan.inspect(original,3);helper.assertTrue(recovery.clicks()==clicks[stopped-1],"Each interrupted resource shape has its hand-worked movement count");
+            for(int step=1;step<=recovery.clicks();step++)helper.assertTrue(recovery.slot(step)==1 || recovery.slot(step)==39,"Recovery never takes native result slot0 or unrelated inventory slots");
+            helper.assertTrue(recovery.settled().matches(stopped<3?initial:sequence.after(4)),"Recovery preserves the actual log or actual four planks and selected slot");
+            helper.assertTrue(original.matches(sequence.after(stopped)),"Prediction never mutates the interrupted resource frame");
+        }
+        helper.assertTrue(OakCraftRecoveryPlan.inspect(initial,3).clicks()==0,"Already settled original log requires no native action");
+        var unavailable=new PhysicalCraftFrame(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY),empty,net.minecraft.world.item.ItemStack.EMPTY,7);
+        rejectsOakRecovery(helper,unavailable,"Missing resources never become a manufactured replacement");
+        var unrelated=new java.util.ArrayList<>(sequence.after(1).inventory());unrelated.set(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));rejectsOakRecovery(helper,new PhysicalCraftFrame(unrelated,sequence.after(1).menu(),net.minecraft.world.item.ItemStack.EMPTY,7),"Other items remain untouched for explicit inspection");
+        var named=recipe.input();named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,net.minecraft.network.chat.Component.literal("changed"));rejectsOakRecovery(helper,new PhysicalCraftFrame(unavailable.inventory(),new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),named),net.minecraft.world.item.ItemStack.EMPTY,7),"Changed stack components are preserved rather than normalized");
+        helper.succeed();
+    }
+    private static void rejectsOakRecovery(GameTestHelper helper,PhysicalCraftFrame frame,String message){boolean refused=false;try{OakCraftRecoveryPlan.inspect(frame,3);}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,message);}
     @GameTest public void oakClickProtocolKeepsEveryResourcePositionExact(GameTestHelper helper){
         var items=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));var log=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG);items.set(3,log);
         var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);var initial=new PhysicalCraftFrame(items,empty,net.minecraft.world.item.ItemStack.EMPTY,7);

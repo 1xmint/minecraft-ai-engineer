@@ -16,6 +16,8 @@ final class OakCraftingPlan {
     private OakCraftingPlan(ItemStack input,ItemStack output){this.input=input.copy();this.output=output.copy();}
     ItemStack input(){return input.copy();}
     ItemStack output(){return output.copy();}
+    /** Historical schema comparison only; never native recipe/action authority. */
+    static OakCraftingPlan recordedContract(){return new OakCraftingPlan(new ItemStack(Items.OAK_LOG),new ItemStack(Items.OAK_PLANKS,4));}
     static OakCraftingPlan inspect(ServerLevel level,ItemStack retained){
         var original=new ItemStack(Items.OAK_LOG);
         if(!ItemStack.matches(retained,original))throw new IllegalStateException("Crafting needs exactly one unchanged retained oak log; other resources are preserved");
