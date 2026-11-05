@@ -125,3 +125,9 @@ held/falling input, comparator output and original-bit restoration. Outcomes and
 next production slice are in docs/toggle-memory.md. Pinned vanilla bytecode was
 inspected; physical feasibility is not yet proven. No player-facing memory
 contract or functional pass is claimed.
+
+First native memory run41957728945 failed before any circuit was placed: the
+new SNBT fixture omitted its required palette. Corrected fixture adds the same
+air palette as the existing native labs; runtime memory behavior remains unproven.
+Combined physical source3a6523e/41957260041 passed and its independent NBT/crafting
+artifact was inspected, including four native plank placements and saved restart.
