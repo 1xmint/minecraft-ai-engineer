@@ -139,6 +139,7 @@ const server = createCompanionServer({
                       "CI build selected lamp.",
                       "CI build selected comparator.",
                       "CI build selected half-adder.",
+                      "Build this full adder.",
                       "CI build imported design.",
                     ].includes(input.message)
                   ? "build"
@@ -146,13 +147,18 @@ const server = createCompanionServer({
                         "CI test selected lamp.",
                         "CI test selected comparator.",
                         "CI test selected half-adder.",
+                        "Test this full adder.",
                       ].includes(input.message)
                     ? "test"
-                    : input.message === "CI resume selected lamp."
+                    : [
+                          "CI resume selected lamp.",
+                          "Resume this full adder.",
+                        ].includes(input.message)
                       ? "resume"
                       : [
                             "CI undo selected lamp.",
                             "CI undo selected comparator.",
+                            "Undo this full adder.",
                           ].includes(input.message)
                         ? "undo"
                         : null;

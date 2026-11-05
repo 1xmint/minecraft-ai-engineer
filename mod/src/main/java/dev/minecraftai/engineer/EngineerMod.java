@@ -132,7 +132,7 @@ public final class EngineerMod implements ModInitializer {
                 .then(Commands.literal("previous").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->s.moveStage(-1))))
                 .then(Commands.literal("repeat").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,EngineeringSession::explain)))
                 .then(Commands.literal("pause").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{s.cursor(s.actor()).teaching=false;s.save();s.tell("Your tutorial is paused; stop pauses project execution");})))
-                .then(Commands.literal("stop").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,s->{cancelPlan(s);s.pause("Project stopped by an authorized player");})))
+                .then(Commands.literal("stop").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.VIEW,s->{s.requireStopPermission();cancelPlan(s);s.pause("Project stopped by an authorized player");})))
                 .then(Commands.literal("build").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::build)))
                 .then(Commands.literal("resume").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::resume)))
                 .then(Commands.literal("release").executes(ctx->run(ctx.getSource(),ProjectAccess.Permission.BUILD,EngineeringSession::releaseShutter)))

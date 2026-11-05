@@ -1,0 +1,52 @@
+name: Connected circuit physical feedback
+on:
+  push:
+    branches: [work/connected-circuit-feedback]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: connected-circuit-feedback-${{ github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  native-circuits:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - run: chmod +x gradlew
+      - name: Exercise actual native circuit geometry and input windows
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          ./gradlew --console=plain --no-daemon --max-workers=2 runGameTest 2>&1 | tee build/native-gametest.log
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.0.1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Check companion source contracts against this run's native geometry
+        working-directory: .
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          node --test dist/tests/full-adder-intention.test.js dist/tests/connected-intention.test.js
+          node scripts/ci/verify-full-adder-native.mjs mod/build/native-gametest.log | tee mod/build/full-adder-native-replay.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: connected-circuit-physical-evidence
+          path: |
+            mod/build/native-gametest.log
+            mod/build/full-adder-native-replay.json
+            mod/run/gametest/logs/latest.log
+          if-no-files-found: warn
+          retention-days: 7

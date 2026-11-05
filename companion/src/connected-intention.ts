@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { readFullAdderIntention } from "./full-adder-intention.js";
 import definition from "../../catalog/half-adder-definition.json" with { type: "json" };
 import recipe from "../../catalog/half-adder.json" with { type: "json" };
 import { rotatePosition } from "./geometry.js";
@@ -162,6 +163,8 @@ export function readConnectedIntention(
   context: { worldId: string; dimension: string; projectId: string },
 ) {
   const source = object(value);
+  if (object(source.connected).function === "full-adder")
+    return readFullAdderIntention(value, context);
   const expected = createConnectedIntention({
     id: uuid(source.id),
     projectId: uuid(source.projectId),

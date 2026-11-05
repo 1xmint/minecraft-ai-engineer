@@ -74,17 +74,16 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Active integration candidates
 
-- Full-adder PR64 head69845d0: full PR CI41947347153 is live. Gameplay code matches
-  combined1a265c6, which passed dedicated player41947057332; final source differs
-  only in STATE. Prior6204521/player41943360761 also passed and independent SQLite
-  proof was inspected:3544cells,35pins,16cases with8samples each, two epochs with
-  fresh clocks, conflict/revocation/stop/restart and zero remaining changes after
-  undo. Bounded undo uses at most4durable entries/tick and fresh UNDO checks.
-  UNDO-only controllers can stop their own undo. No latency/reliability claim.
-  Merge reconciliation with newly squashed main is required; do not disturb live CI.
-- Native resource recovery PR74: priorfb0e87a passed all5checks41947647607. This
-  branch reconciles it with main d76e832 without changing runtime code. Require
-  new exact-head full CI before merge. Actual recoverydff7f30/41943972746,
+- Full-adder PR64: exactec5e826/full41953618308 is still running; four jobs
+  passed and the dedicated multiplayer job is live. Prior69845d0/full41947347153
+  passed all five jobs. Actual combined player1a265c6/41947057332 passed and its
+  independent SQLite proof was inspected:3544cells,35pins,16cases with8samples,
+  two epochs with fresh clocks, conflict/revocation/stop/restart and zero changes
+  after bounded undo. This branch reconciles main's landed recovery without
+  changing the full-adder implementation. New exact-head CI is required before
+  merge; do not interrupt the live prior run. No timing/reliability claim.
+- Native resource recovery PR74 merged cd1188f after exact39dd3da passed all
+  five checks41951701598. Dedicated memory/restart evidence was inspected. Actual recoverydff7f30/41943972746,
   acknowledgmentb1312e6/41945127313 and conversation65b8f1e/41946354513 passed
   six saved-world boots and independent NBT/journal/SHA256 proof. Four interrupted
   shapes are stored without result clicks or extra crafting awards; original
