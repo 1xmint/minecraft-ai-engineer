@@ -542,6 +542,22 @@ not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
 
+### Compare two designs (development source)
+
+Ask `compare this design with <project or catalog design>` in addressed chat.
+The answer is read-only and changes nothing. Every number carries its unit:
+blocks, blocks² for footprint, blocks³ for the bounding-box volume, and items
+for materials. Material counts are what each design calls for, not what anyone
+has collected or stored. A generated design's configured delay is shown as
+intended timing and is never called a measurement. Measured timing and
+reliability stay "unavailable" unless validated trial records exist for the
+current revision. When records exist, the answer gives separate counts of
+passed, failed and interrupted attempts, never a rate. One sample is one
+off/on/off attempt at one revision, so checkpoints and replays of the same
+attempt count once, and records from an earlier revision are not counted.
+The game does not store trial records yet, so in-game comparisons currently
+always show measured timing and reliability as unavailable.
+
 ### Mechanical control handoff (development source)
 
 For an accepted sticky-shutter project, `/engineer release` returns mechanical
@@ -704,3 +720,15 @@ your question come first, then the newest.
 Captured from [the verified multiplayer run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41367933778).
 The notes remain owner-authored requirements; the chat does not imply a new model
 request, world inspection or functional test.
+
+Native generated-buffer comparisons can use the most recent64 observed trial
+attempts saved with each project. The server captures the real off/on/off samples
+when it checkpoints the native test. Repeated saves update one attempt rather
+than counting as more trials. Observations survive reload but restore no input
+journal, permissions, actions or functional pass. Older archived evidence files
+remain untouched; the comparison window is limited to recent history.
+
+Only validated passing traces supply observed timing. Failed and interrupted
+attempts are counted separately, never as a reliability percentage. Other circuit
+families and imported geometry still have no repeated-trial timing producer.
+Project view permission is required for both sides of a comparison.

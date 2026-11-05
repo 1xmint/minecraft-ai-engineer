@@ -5,22 +5,31 @@ import java.util.*;
 
 /**
  * Read-only measurement of saved designs. Every number comes from the planned blocks or the
- * saved material list; timing and reliability are reported only from recorded game evidence.
- * Nothing here changes a project, its evidence or the world.
+ * saved material list and carries its unit. A design's configured timing is intent and is labelled
+ * that way; measured timing and attempt counts come only from validated trial records
+ * ({@link TrialEvidenceTally}). Nothing here changes a project, its evidence or the world.
  */
 final class DesignComparison {
     private DesignComparison() { }
 
     /** Orientation-independent measurements. Length is the longer horizontal side. */
     record Measure(String label, int blocks, int length, int width, int height, SortedMap<String,Integer> materials,
-                   String behaviorKey, String behavior, String status, String timing, boolean currentPass, boolean imported) {
+                   String behaviorKey, String behavior, String status, String intendedTiming, TrialEvidenceTally.Tally trials,
+                   boolean currentPass, boolean imported) {
         Measure { materials = Collections.unmodifiableSortedMap(new TreeMap<>(materials)); }
         int volume() { return length * width * height; }
         int footprint() { return length * width; }
         int items() { return materials.values().stream().mapToInt(Integer::intValue).sum(); }
+        /** Timing observed in validated passing attempts of the current revision, or null. */
+        String observedTiming() { return trials.observed(); }
     }
 
     static Measure measure(String label, Blueprint b, ComponentAssignments.Task task) {
+        return measure(label, b, task, List.of());
+    }
+
+    /** Measures a design and tallies any stored trial attempts supplied for it (none are stored in game yet). */
+    static Measure measure(String label, Blueprint b, ComponentAssignments.Task task, List<TrialEvidenceTally.Attempt> attempts) {
         if(b == null || b.blocks().isEmpty()) throw new IllegalArgumentException(label + " has no planned blocks to measure.");
         int minX=Integer.MAX_VALUE,minY=Integer.MAX_VALUE,minZ=Integer.MAX_VALUE,maxX=Integer.MIN_VALUE,maxY=Integer.MIN_VALUE,maxZ=Integer.MIN_VALUE;
         for(var block : b.blocks()) {
@@ -30,7 +39,8 @@ final class DesignComparison {
         }
         int dx=maxX-minX+1, dy=maxY-minY+1, dz=maxZ-minZ+1;
         return new Measure(label, b.blocks().size(), Math.max(dx,dz), Math.min(dx,dz), dy, materials(b),
-                behaviorKey(b), behavior(b), status(b, task), timing(b, task), passedAt(b, task), ComparisonEvidence.imported(b));
+                behaviorKey(b), behavior(b), status(b, task), intendedTiming(b), TrialEvidenceTally.tally(b, task, attempts),
+                passedAt(b, task), ComparisonEvidence.imported(b));
     }
 
     static SortedMap<String,Integer> materials(Blueprint b) {
@@ -93,9 +103,9 @@ final class DesignComparison {
         return !ComparisonEvidence.imported(b) && task != null && task.verified != null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(b,task);
     }
 
-    /** Timing only from a confirmed buffer behavior whose current revision passed in game. */
-    static String timing(Blueprint b, ComponentAssignments.Task task) {
-        if(task == null || !passedAt(b, task)) return null;
+    /** The timing a generated buffer design is configured to have. This is intent, never a measurement. */
+    static String intendedTiming(Blueprint b) {
+        if(b == null || ComparisonEvidence.imported(b)) return null;
         var source=b.source();
         if(source == null || !source.has("behavior") || !source.get("behavior").isJsonObject()) return null;
         var behavior=source.getAsJsonObject("behavior");
@@ -106,7 +116,8 @@ final class DesignComparison {
 
     private static String describe(Measure m) {
         return m.label() + ": " + m.blocks() + " blocks, " + m.length() + "×" + m.width() + "×" + m.height()
-                + " (length×width×height; " + m.footprint() + " footprint, " + m.volume() + " volume), materials "
+                + " blocks (length×width×height; footprint " + m.footprint() + " blocks², bounding-box volume " + m.volume() + " blocks³), planned materials "
+                + m.items() + " items: "
                 + m.materials().entrySet().stream().map(e -> e.getValue() + " " + e.getKey().replace("minecraft:", "")).reduce((x, y) -> x + ", " + y).orElse("none")
                 + "; " + m.behavior() + "; " + m.status() + ".";
     }
@@ -125,26 +136,36 @@ final class DesignComparison {
         for(var d : new String[]{
                 delta("Blocks", a.blocks(), b.blocks(), a.label(), b.label()),
                 delta("Items", a.items(), b.items(), a.label(), b.label()),
-                delta("Footprint", a.footprint(), b.footprint(), a.label(), b.label()),
-                delta("Volume", a.volume(), b.volume(), a.label(), b.label())}) if(d != null) differences.add(d);
+                delta("Footprint (blocks²)", a.footprint(), b.footprint(), a.label(), b.label()),
+                delta("Volume (blocks³)", a.volume(), b.volume(), a.label(), b.label())}) if(d != null) differences.add(d);
         var items=new TreeSet<String>(a.materials().keySet()); items.addAll(b.materials().keySet());
         for(String item : items) {
             int x=a.materials().getOrDefault(item, 0), y=b.materials().getOrDefault(item, 0);
-            if(x != y) differences.add(item.replace("minecraft:", "") + ": " + a.label() + " " + x + ", " + b.label() + " " + y);
+            if(x != y) differences.add(item.replace("minecraft:", "") + " (items): " + a.label() + " " + x + ", " + b.label() + " " + y);
         }
-        if(a.height() != b.height()) differences.add("Height: " + a.label() + " " + a.height() + ", " + b.label() + " " + b.height());
+        if(a.height() != b.height()) differences.add("Height (blocks): " + a.label() + " " + a.height() + ", " + b.label() + " " + b.height());
         boolean sameMeasures=differences.isEmpty();
         lines.add(sameMeasures ? "Measured differences: none. Size and materials are identical." : "Measured differences: " + String.join("; ", differences) + ".");
         if(!Objects.equals(a.behavior(), b.behavior())) lines.add("Intended behavior differs: " + a.label() + " is " + a.behavior() + ", " + b.label() + " is " + b.behavior() + ".");
-        if(a.timing() != null && b.timing() != null) lines.add("Timing from passed game tests: " + a.label() + " " + a.timing() + "; " + b.label() + " " + b.timing() + ".");
-        else lines.add("Timing: unavailable — " + (a.timing() == null && b.timing() == null ? "neither design has" : (a.timing() == null ? a.label() : b.label()) + " does not have")
-                + " a passed game test of its current revision with a recorded timing behavior.");
-        lines.add("Reliability: unavailable — one passing test is not a reliability measurement and no repeated-trial record exists.");
+        lines.add(MATERIALS_COLLECTED);
+        if(a.intendedTiming() != null || b.intendedTiming() != null)
+            lines.add("Intended timing (configured in the design, not measured): " + a.label() + " " + orNone(a.intendedTiming()) + "; " + b.label() + " " + orNone(b.intendedTiming()) + ".");
+        if(a.observedTiming() != null && b.observedTiming() != null)
+            lines.add("Measured timing from validated trial records: " + a.label() + " " + a.observedTiming() + "; " + b.label() + " " + b.observedTiming() + ".");
+        else lines.add("Measured timing: unavailable — " + (a.observedTiming() == null && b.observedTiming() == null ? "neither design has" : (a.observedTiming() == null ? a.label() : b.label()) + " does not have")
+                + " a validated passing trial record for its current revision.");
+        if(a.trials().equals(TrialEvidenceTally.Tally.NONE) && b.trials().equals(TrialEvidenceTally.Tally.NONE))
+            lines.add("Reliability: unavailable — no repeated-trial record exists, and one passing test is not a reliability measurement (" + TrialEvidenceTally.SAMPLE_UNIT + ").");
+        else lines.add("Reliability: unavailable as a rate — attempt counts only (" + TrialEvidenceTally.SAMPLE_UNIT + "). "
+                + a.trials().counts(a.label()) + ". " + b.trials().counts(b.label()) + ".");
         lines.add(recommend(a, b, sameMeasures));
         lines.add(ComparisonEvidence.basis(a, b));
         lines.add("This comparison changed nothing.");
         return List.copyOf(lines);
     }
+
+    static final String MATERIALS_COLLECTED="Materials collected: not shown. The material counts above are what each design calls for, not what anyone has gathered or has in storage.";
+    private static String orNone(String timing) { return timing == null ? "has no configured timing" : timing; }
 
     static String recommend(Measure a, Measure b, boolean sameMeasures) {
         if(a.behaviorKey() == null || b.behaviorKey() == null)
