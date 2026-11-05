@@ -239,6 +239,7 @@ public final class VoiceClientGameTests implements FabricClientGameTest {
             var genuine = speaker.heard();
             check(!replies.isEmpty() && replies.containsAll(genuine) && genuine.size() <= replies.size() && genuine.stream().distinct().count() == genuine.size(),
                     "A real addressed-chat reply is shown in chat and spoken once: chat " + replies + ", spoken " + genuine);
+            clear(context); // The typed request above is not part of the playback checks that follow.
             int before = genuine.size();
             server.runOnServer(s -> player(s).sendSystemMessage(Component.literal("Engineer: raw system lookalike")));
             server.runCommand("tellraw @a \"Engineer: tellraw lookalike\"");
