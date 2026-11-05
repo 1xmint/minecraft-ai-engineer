@@ -14,6 +14,9 @@ final class MemoryRecoveryJournal {
     private final MemoryPendingInput root;
     private final Path file;
     private final UUID id,controller;
+    private final String originKind;
+    private final UUID originId;
+    private final int schemaVersion;
     private final long startedTick;
     private final JsonObject plan,record;
     private final MemoryInputTransition.Frame initial,target;
@@ -27,8 +30,9 @@ final class MemoryRecoveryJournal {
     private byte[] saved;
 
     private MemoryRecoveryJournal(Path file,Blueprint blueprint,MemoryPendingInput root,UUID id,UUID controller,
-            long startedTick,PlanSnapshot snapshot) {
+            long startedTick,PlanSnapshot snapshot,int schemaVersion) {
         this.file=file;this.blueprint=blueprint;this.root=root;this.id=id;this.controller=controller;this.startedTick=startedTick;
+        this.schemaVersion=schemaVersion;this.originKind=snapshot.originKind();this.originId=snapshot.originId();
         this.plan=snapshot.plan().deepCopy();this.initial=snapshot.current();this.target=snapshot.target();
         this.requested=List.copyOf(snapshot.requested());this.expectedFrames=List.copyOf(snapshot.expectedFrames());
         this.last=initial;this.tick=startedTick;
@@ -40,10 +44,16 @@ final class MemoryRecoveryJournal {
             MemoryRecoveryPlan plan,UUID controller,long tick) {
         Objects.requireNonNull(directory);Objects.requireNonNull(blueprint);Objects.requireNonNull(root);Objects.requireNonNull(plan);Objects.requireNonNull(controller);
         directory=directory.toAbsolutePath().normalize();bounds(directory,blueprint,true);
-        var snapshot=validatePlan(plan.data(),plan.originRecord(),blueprint,root,directory);
-        if(tick<root.startedTick() || tick>MAX_SAFE_INTEGER)throw new IllegalArgumentException("Recovery journal tick is outside supported bounds");
+        var planData=plan.data();var origin=plan.originRecord();String originKind=string(origin.get("kind"));UUID originId=uuid(planData.get("originJournalId"));
+        JsonObject strictOrigin;
+        if(originKind.equals("memory-input-journal"))strictOrigin=MemoryInputJournal.read(root.journalFile(directory),blueprint).json();
+        else if(originKind.equals("memory-recovery-journal"))strictOrigin=read(directory.resolve(blueprint.projectId()+".memory-recovery-"+originId+".json"),blueprint,root).json();
+        else throw new IllegalArgumentException("Unknown recovery plan origin kind");
+        if(!strictOrigin.equals(origin))throw new IllegalArgumentException("Recovery plan origin changed after observation");origin=strictOrigin;
+        var snapshot=validatePlan(planData,origin,blueprint,root,directory,originKind,originId);
+        if(tick<latestTick(origin) || tick<root.startedTick() || tick>MAX_SAFE_INTEGER)throw new IllegalArgumentException("Recovery journal tick is outside causal bounds");
         UUID id=UUID.randomUUID();Path file=directory.resolve(blueprint.projectId()+".memory-recovery-"+id+".json");
-        var journal=new MemoryRecoveryJournal(file,blueprint,root,id,controller,tick,snapshot);
+        var journal=new MemoryRecoveryJournal(file,blueprint,root,id,controller,tick,snapshot,2);
         try {
             Files.createDirectories(directory);Files.createFile(file);journal.saved=new byte[0];journal.recording=true;journal.save();return journal;
         } catch(java.io.IOException failure) { throw new IllegalStateException("Cannot exclusively create memory recovery journal",failure); }
@@ -114,15 +124,29 @@ final class MemoryRecoveryJournal {
     }
 
     static MemoryRecoveryJournal read(Path file,Blueprint blueprint,MemoryPendingInput root) {
+        return read(file,blueprint,root,new HashSet<>(),0);
+    }
+    private static MemoryRecoveryJournal read(Path file,Blueprint blueprint,MemoryPendingInput root,Set<UUID> ancestors,int depth) {
         try {
             var value=JsonParser.parseString(new String(bytes(file),StandardCharsets.UTF_8)).getAsJsonObject();
             Path normalized=file.toAbsolutePath().normalize(),directory=normalized.getParent();
             if(directory==null || Files.isSymbolicLink(directory))throw new IllegalArgumentException("Recovery journal directory is invalid");
             UUID id=uuid(value.get("id"));if(!normalized.getFileName().toString().equals(blueprint.projectId()+".memory-recovery-"+id+".json"))throw new IllegalArgumentException("Recovery journal filename identity differs");
-            var origin=MemoryInputJournal.read(root.journalFile(directory),blueprint).json();
-            var snapshot=validatePlan(value.getAsJsonObject("plan"),origin,blueprint,root,directory);
-            long started=integer(value.get("startedTick"));if(started<root.startedTick() || started>MAX_SAFE_INTEGER)throw new IllegalArgumentException("Recovery journal clock is outside bounds");
-            var journal=new MemoryRecoveryJournal(normalized,blueprint,root,id,uuid(value.get("controllerId")),started,snapshot);
+            int schema=intExact(value.get("schemaVersion"));if(schema!=1 && schema!=2)throw new IllegalArgumentException("Unsupported recovery journal version");
+            if(depth>=64 || !ancestors.add(id))throw new IllegalArgumentException("Recovery journal origin chain cycles or exceeds its bound");
+            String originKind=schema==1?"memory-input-journal":string(value.get("originKind"));
+            UUID originId=uuid(value.get("originJournalId"));JsonObject origin;
+            if(originKind.equals("memory-input-journal")) {
+                if(!originId.equals(root.journalId()))throw new IllegalArgumentException("Recovery journal points outside the current root input record");
+                origin=MemoryInputJournal.read(root.journalFile(directory),blueprint).json();
+            } else if(originKind.equals("memory-recovery-journal")) {
+                if(originId.equals(id))throw new IllegalArgumentException("Recovery journal cannot originate from itself");
+                Path parent=directory.resolve(blueprint.projectId()+".memory-recovery-"+originId+".json");
+                origin=read(parent,blueprint,root,ancestors,depth+1).json();
+            } else throw new IllegalArgumentException("Unknown recovery origin journal kind");
+            var snapshot=validatePlan(value.getAsJsonObject("plan"),origin,blueprint,root,directory,originKind,originId);
+            long started=integer(value.get("startedTick"));if(started<latestTick(origin) || started<root.startedTick() || started>MAX_SAFE_INTEGER)throw new IllegalArgumentException("Recovery journal clock is outside causal bounds");
+            var journal=new MemoryRecoveryJournal(normalized,blueprint,root,id,uuid(value.get("controllerId")),started,snapshot,schema);
             var header=value.deepCopy();header.remove("stage");header.remove("events");header.remove("birthDigest");
             if(!header.equals(journal.birthJson()) || !journal.birthDigest().equals(string(value.get("birthDigest"))))throw new IllegalArgumentException("Recovery journal birth header is not canonical");
             var events=value.getAsJsonArray("events");if(events.size()>MAX_EVENTS)throw new IllegalArgumentException("Too many recovery journal events");
@@ -144,9 +168,11 @@ final class MemoryRecoveryJournal {
     }
 
     private JsonObject birthJson() {
-        var out=new JsonObject();out.addProperty("schemaVersion",1);out.addProperty("kind","memory-recovery-journal");
+        var out=new JsonObject();out.addProperty("schemaVersion",schemaVersion);out.addProperty("kind","memory-recovery-journal");
         out.addProperty("id",id.toString());out.addProperty("projectId",blueprint.projectId());out.addProperty("controllerId",controller.toString());
-        out.addProperty("startedTick",startedTick);out.addProperty("rootBirthDigest",root.birthDigest());out.addProperty("originJournalId",root.journalId().toString());
+        out.addProperty("startedTick",startedTick);out.addProperty("rootBirthDigest",root.birthDigest());
+        if(schemaVersion>=2)out.addProperty("originKind",originKind);
+        out.addProperty("originJournalId",originId.toString());
         out.addProperty("originRecordDigest",plan.get("originRecordDigest").getAsString());out.add("intention",blueprint.source().deepCopy());
         out.add("plan",plan.deepCopy());out.add("initial",initial.json());out.add("target",target.json());
         var inputs=new JsonArray();requested.forEach(inputs::add);out.add("requestedInputs",inputs);
@@ -156,23 +182,43 @@ final class MemoryRecoveryJournal {
     Path file(){return file;}
     String stage(){return record.get("stage").getAsString();}
     String birthDigest(){return record.get("birthDigest").getAsString();}
+    UUID id(){return id;}
+    UUID originJournalId(){return originId;}
+    String originKind(){return originKind;}
+    String originRecordDigest(){return string(record.get("originRecordDigest"));}
+    MemoryInputTransition.Frame initial(){return initial;}
+    MemoryInputTransition.Frame target(){return target;}
+    void requireRoot(MemoryPendingInput expected,Blueprint accepted) {
+        if(!root.same(expected) || !blueprint.source().equals(accepted.source()) || !root.birthDigest().equals(string(record.get("rootBirthDigest"))))
+            throw new IllegalStateException("Recovery journal belongs to another current root scope");
+        var strict=read(file,accepted,expected);
+        if(!strict.json().equals(record))throw new IllegalStateException("Recovery journal record changed after loading");
+    }
 
     private record PlanSnapshot(JsonObject plan,MemoryInputTransition.Frame current,MemoryInputTransition.Frame target,
+                                String originKind,UUID originId,
                                 List<Boolean> requested,List<MemoryInputTransition.Frame> expectedFrames){}
     private static PlanSnapshot validatePlan(JsonObject plan,JsonObject origin,Blueprint blueprint,
-            MemoryPendingInput root,Path directory) {
+            MemoryPendingInput root,Path directory,String originKind,UUID originId) {
         if(plan==null || plan.toString().length()>32768)throw new IllegalArgumentException("Recovery plan is missing or oversized");
         if(intExact(plan.get("schemaVersion"))!=1 || !"memory-recovery-plan".equals(string(plan.get("kind"))))throw new IllegalArgumentException("Unsupported read-only memory plan");
         if(booleanValue(plan.get("executionAuthority")) || !plan.has("functionalPass")
                 || booleanValue(plan.get("functionalPass")))throw new IllegalArgumentException("Recovery plan cannot contain action or verification claims");
-        if(!root.birthDigest().equals(string(plan.get("pendingBirthDigest"))) || !root.journalId().toString().equals(string(plan.get("originJournalId"))))throw new IllegalArgumentException("Recovery plan differs from the current pending birth scope");
+        if(!root.birthDigest().equals(string(plan.get("pendingBirthDigest"))) || !originId.toString().equals(string(plan.get("originJournalId"))))throw new IllegalArgumentException("Recovery plan differs from the current pending birth scope");
         if(!blueprint.source().equals(plan.getAsJsonObject("intention")))throw new IllegalArgumentException("Recovery plan intention differs from the accepted source");
-        var originStrict=MemoryInputJournal.read(root.journalFile(directory),blueprint).json();
+        JsonObject originStrict;
+        if(originKind.equals("memory-input-journal"))originStrict=MemoryInputJournal.read(root.journalFile(directory),blueprint).json();
+        else if(originKind.equals("memory-recovery-journal"))originStrict=origin;
+        else throw new IllegalArgumentException("Unknown recovery plan origin kind");
         if(!originStrict.equals(origin) || !digest(originStrict).equals(string(plan.get("originRecordDigest")))
                 || !string(originStrict.get("stage")).equals(string(plan.get("originStage"))))throw new IllegalArgumentException("Recovery plan does not bind the exact strict original journal");
+        if(!originKind.equals(string(originStrict.get("kind"))) || !originId.toString().equals(string(originStrict.get("id"))))
+            throw new IllegalArgumentException("Recovery origin kind or immutable journal identity differs");
         if(!root.initial().json().equals(plan.getAsJsonObject("initialTarget")))throw new IllegalArgumentException("Recovery target differs from the original paired frame");
         var current=frame(plan.getAsJsonObject("current"));var target=frame(plan.getAsJsonObject("initialTarget"));
-        if(!root.initial().matches(target) || !originCandidate(originStrict,blueprint,root.initial(),current))throw new IllegalArgumentException("Recovery plan current frame is not an allowed origin-journal candidate");
+        var originInitial=originKind.equals("memory-input-journal")?root.initial():frame(originStrict.getAsJsonObject("initial"));
+        var originTarget=originKind.equals("memory-input-journal")?root.initial():frame(originStrict.getAsJsonObject("target"));
+        if(!root.initial().matches(target) || !originCandidate(originStrict,blueprint,originInitial,originTarget,current))throw new IllegalArgumentException("Recovery plan current frame is not an allowed origin-journal candidate");
         boolean currentInput=current.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED);
         MemoryInputTransition.predict(blueprint,current,!currentInput);
         List<Boolean> expectedRequests=derive(current,target);
@@ -185,14 +231,14 @@ final class MemoryRecoveryJournal {
         var frameJson=plan.getAsJsonArray("expectedFrames");if(frameJson.size()!=expected.size())throw new IllegalArgumentException("Recovery plan frame count differs from its edge list");
         for(int index=0;index<frameJson.size();index++)if(!expected.get(index).json().equals(frameJson.get(index).getAsJsonObject()))throw new IllegalArgumentException("Recovery plan expected frame differs from native transition algebra");
         var canonical=new JsonObject();canonical.addProperty("schemaVersion",1);canonical.addProperty("kind","memory-recovery-plan");
-        canonical.addProperty("pendingBirthDigest",root.birthDigest());canonical.addProperty("originJournalId",root.journalId().toString());
+        canonical.addProperty("pendingBirthDigest",root.birthDigest());canonical.addProperty("originJournalId",originId.toString());
         canonical.addProperty("originStage",originStrict.get("stage").getAsString());canonical.addProperty("originRecordDigest",digest(originStrict));
         canonical.add("intention",blueprint.source().deepCopy());canonical.add("initialTarget",target.json());canonical.add("current",current.json());
         var requestsJson=new JsonArray();inputs.forEach(requestsJson::add);canonical.add("requestedInputs",requestsJson);
         var framesJson=new JsonArray();expected.forEach(value->framesJson.add(value.json()));canonical.add("expectedFrames",framesJson);
         canonical.addProperty("executionAuthority",false);canonical.addProperty("functionalPass",false);
         if(!plan.equals(canonical))throw new IllegalArgumentException("Recovery plan contains extra, missing or relabelled fields");
-        return new PlanSnapshot(canonical,current,target,List.copyOf(inputs),List.copyOf(expected));
+        return new PlanSnapshot(canonical,current,target,originKind,originId,List.copyOf(inputs),List.copyOf(expected));
     }
     private static List<Boolean> derive(MemoryInputTransition.Frame current,MemoryInputTransition.Frame target) {
         boolean input=current.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED);
@@ -201,13 +247,13 @@ final class MemoryRecoveryJournal {
         if(input){return bit==targetBit?List.of(false):List.of(false,true,false);}
         return bit==targetBit?List.of():List.of(true,false);
     }
-    private static boolean originCandidate(JsonObject origin,Blueprint blueprint,MemoryInputTransition.Frame initial,MemoryInputTransition.Frame current) {
+    private static boolean originCandidate(JsonObject origin,Blueprint blueprint,MemoryInputTransition.Frame initial,MemoryInputTransition.Frame target,MemoryInputTransition.Frame current) {
         var events=origin.getAsJsonArray("events");String stage=origin.get("stage").getAsString();
         if(stage.equals("NEW"))return events.isEmpty() && initial.matches(current);
         if(events.isEmpty())return false;var last=events.get(events.size()-1).getAsJsonObject();
         if(!last.get("stage").getAsString().equals(stage))return false;
         if(stage.equals("OBSERVED") || stage.equals("INTERRUPTED"))return frame(last.getAsJsonObject("observed")).matches(current);
-        if(stage.equals("RESTORED"))return initial.matches(current) && initial.matches(frame(last.getAsJsonObject("observed")));
+        if(stage.equals("RESTORED"))return target.matches(current) && target.matches(frame(last.getAsJsonObject("observed")));
         if(stage.equals("PREPARED")) {
             var transition=MemoryInputTransition.read(last.getAsJsonObject("transition"),blueprint);
             return transition.before().matches(current) || transition.after().matches(current);
@@ -240,6 +286,12 @@ final class MemoryRecoveryJournal {
     private static String digest(JsonObject json){
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(json.toString().getBytes(StandardCharsets.UTF_8)));}
         catch(java.security.NoSuchAlgorithmException impossible){throw new AssertionError(impossible);}
+    }
+    static String recordDigest(JsonObject json){return digest(json);}
+    private static long latestTick(JsonObject record){
+        long latest=integer(record.get("startedTick"));var events=record.getAsJsonArray("events");
+        if(events!=null && !events.isEmpty())latest=Math.max(latest,integer(events.get(events.size()-1).getAsJsonObject().get("tick")));
+        return latest;
     }
     private static int intExact(JsonElement value){return Math.toIntExact(integer(value));}
     private static long integer(JsonElement value){if(value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException("Expected recovery integer");return value.getAsBigDecimal().longValueExact();}

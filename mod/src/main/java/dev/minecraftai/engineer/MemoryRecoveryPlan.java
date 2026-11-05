@@ -22,6 +22,16 @@ final class MemoryRecoveryPlan {
         if(pending==null)throw new IllegalStateException("No current pending memory input scope exists");
         session.requirePersistedPendingMemoryInput(pending);
         if(session.pendingMemoryInput==null || !session.pendingMemoryInput.same(pending))throw new IllegalStateException("Current pending memory scope identity changed");
+        MemoryRecoveryCheckpoint recovery=session.pendingMemoryRecovery;
+        JsonObject record;UUID originId;
+        if(recovery!=null) {
+            session.requirePersistedPendingMemoryRecovery(pending,recovery);
+            var latest=MemoryRecoveryJournal.read(recovery.journalFile(session.manager.directory),session.blueprint,pending);
+            record=latest.json();originId=latest.id();
+            if(!pending.initial().matches(latest.target()))throw new IllegalStateException("Current recovery chain no longer targets the original input pair");
+        } else {
+            record=MemoryInputJournal.read(pending.journalFile(session.manager.directory),session.blueprint).json();originId=pending.journalId();
+        }
         var blueprint=session.blueprint;
         if(session.testTick>=0 || session.trial.pending())throw new IllegalStateException("Active or pending generic test work blocks memory recovery inspection");
         var intention=ToggleMemoryIntention.validated(blueprint);
@@ -35,9 +45,10 @@ final class MemoryRecoveryPlan {
         BlockPos lever=design.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
         BlockPos bulb=design.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
         var current=new MemoryInputTransition.Frame(level.getBlockState(lever),level.getBlockState(bulb));
-        MemoryInputJournal journal=MemoryInputJournal.read(pending.journalFile(session.manager.directory),blueprint);
-        JsonObject record=journal.json();String originStage=record.get("stage").getAsString();
-        List<MemoryInputTransition.Frame> candidates=knownCandidates(record,blueprint,originStage,pending.initial());
+        String originStage=record.get("stage").getAsString();
+        var originInitial=record.get("kind").getAsString().equals("memory-recovery-journal")?frame(record.getAsJsonObject("initial")):pending.initial();
+        var originTarget=record.get("kind").getAsString().equals("memory-recovery-journal")?frame(record.getAsJsonObject("target")):pending.initial();
+        List<MemoryInputTransition.Frame> candidates=knownCandidates(record,blueprint,originStage,originInitial,originTarget);
         if(candidates.stream().noneMatch(candidate->candidate.matches(current)))throw new IllegalStateException("Actual memory pair is not a known frame of the current interrupted transaction");
 
         var target=pending.initial();boolean input=current.lever().getValue(BlockStateProperties.POWERED);
@@ -54,7 +65,7 @@ final class MemoryRecoveryPlan {
         }
         if(!expected.matches(target))throw new IllegalStateException("Derived recovery movement does not return to the original input pair");
         JsonObject data=new JsonObject();data.addProperty("schemaVersion",1);data.addProperty("kind","memory-recovery-plan");
-        data.addProperty("pendingBirthDigest",pending.birthDigest());data.addProperty("originJournalId",pending.journalId().toString());
+        data.addProperty("pendingBirthDigest",pending.birthDigest());data.addProperty("originJournalId",originId.toString());
         data.addProperty("originStage",originStage);data.addProperty("originRecordDigest",digest(record));data.add("intention",blueprint.source().deepCopy());
         data.add("initialTarget",target.json());data.add("current",current.json());data.add("requestedInputs",requestedInputs);
         data.add("expectedFrames",expectedFrames);data.addProperty("executionAuthority",false);data.addProperty("functionalPass",false);
@@ -65,7 +76,7 @@ final class MemoryRecoveryPlan {
     JsonObject originRecord(){return originRecord.deepCopy();}
 
     private static List<MemoryInputTransition.Frame> knownCandidates(JsonObject record,Blueprint blueprint,String stage,
-            MemoryInputTransition.Frame initial) {
+            MemoryInputTransition.Frame initial,MemoryInputTransition.Frame target) {
         var events=record.getAsJsonArray("events");
         if(stage.equals("NEW")) {
             if(!events.isEmpty())throw new IllegalArgumentException("NEW memory record unexpectedly contains events");
@@ -85,8 +96,8 @@ final class MemoryRecoveryPlan {
         }
         if(stage.equals("RESTORED")) {
             var actual=frame(last.getAsJsonObject("observed"));
-            if(!initial.matches(actual))throw new IllegalArgumentException("Restored memory journal does not prove its exact initial frame");
-            return List.of(initial);
+            if(!target.matches(actual))throw new IllegalArgumentException("Restored memory journal does not prove its exact root target frame");
+            return List.of(target);
         }
         if(stage.equals("PREPARED")) {
             var transition=MemoryInputTransition.read(last.getAsJsonObject("transition"),blueprint);

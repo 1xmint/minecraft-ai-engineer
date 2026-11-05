@@ -293,3 +293,5 @@ Exact3427a80/native42068459471 passed all211 required tests. Inspected replay:
 original pairs; loadedExecution=false and functionalPass=false. Original input
 histories remain unchanged. This proves the recorder around fixture actions,
 not a connected fresh-authority recovery driver or interrupted-recovery resume.
+
+Recovery checkpoint candidate (2026-11-05): bounded schema-2 recovery chains bind the latest saved attempt without granting execution authority; legacy schema-1 logs remain readable. New native fixture covers interrupted recovery, checkpoint reload, stale CAS, orphan logs, and original-pair restoration. Local compileJava/compileClientJava and verifier syntax passed; native CI is pending. No connected recovery action route is enabled. Claude now owns broader physical/builders, experience, engineering and acceptance batches; Codex retains active recovery and final publishing.

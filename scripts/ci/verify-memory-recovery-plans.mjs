@@ -167,15 +167,63 @@ assert.equal(recoveryRecords.length, 32);
 const recoveryIdentities = new Set();
 let recoveryEdges = 0;
 for (const wrapper of recoveryRecords) {
-  const { source, phase, initial, frame, lever } = verifyPlan(
-    wrapper,
-    recoveryIdentities,
-  );
+  const context = verifyPlan(wrapper, recoveryIdentities);
   const { recovery, plan, pending, originRecord } = wrapper;
+  recoveryEdges += verifyRecovery(
+    recovery,
+    plan,
+    pending,
+    originRecord,
+    context,
+  );
+}
+function verifyRecovery(
+  recovery,
+  plan,
+  pending,
+  originRecord,
+  context,
+  terminalStage = "RESTORED",
+  observedCount = plan.requestedInputs.length,
+) {
+  const { source, initial, frame, lever } = context;
+  const phases = [
+    frame(false, initial),
+    frame(true, !initial),
+    frame(false, !initial),
+    frame(true, initial),
+  ];
+  const phase = phases.findIndex((value) =>
+    isDeepStrictEqual(value, plan.current),
+  );
+  assert.ok(phase >= 0);
+  const proposedInputs = [[], [false, true, false], [true, false], [false]][
+    phase
+  ];
+  assert.deepEqual(plan.requestedInputs, proposedInputs);
+  let proposedInput = phase === 1 || phase === 3,
+    proposedBit = phase === 1 || phase === 2 ? !initial : initial;
+  const proposedFrames = [];
+  for (const requested of proposedInputs) {
+    if (requested) proposedBit = !proposedBit;
+    proposedInput = requested;
+    proposedFrames.push(frame(proposedInput, proposedBit));
+  }
+  assert.deepEqual(plan.expectedFrames, proposedFrames);
+  assert.deepEqual(frame(proposedInput, proposedBit), plan.initialTarget);
+  assert.equal(plan.executionAuthority, false);
+  assert.equal(plan.functionalPass, false);
+  assert.equal(plan.pendingBirthDigest, pending.birthDigest);
+  assert.equal(plan.originJournalId, originRecord.id);
+  assert.equal(plan.originRecordDigest, hash(originRecord));
+  assert.equal(plan.originStage, originRecord.stage);
+  assert.deepEqual(plan.initialTarget, pending.initial);
+  assert.deepEqual(plan.intention, source);
   const { birthDigest, stage, events, ...birth } = recovery;
   assert.equal(hash(birth), birthDigest);
-  assert.equal(recovery.schemaVersion, 1);
+  assert.equal(recovery.schemaVersion, 2);
   assert.equal(recovery.kind, "memory-recovery-journal");
+  assert.equal(recovery.originKind, originRecord.kind);
   assert.match(
     recovery.id,
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
@@ -194,16 +242,17 @@ for (const wrapper of recoveryRecords) {
   assert.deepEqual(recovery.target, plan.initialTarget);
   assert.deepEqual(recovery.requestedInputs, plan.requestedInputs);
   assert.deepEqual(recovery.expectedFrames, plan.expectedFrames);
-  assert.equal(stage, "RESTORED");
+  assert.equal(stage, terminalStage);
   assert.ok(
     Number.isSafeInteger(recovery.startedTick) &&
       recovery.startedTick >= originRecord.startedTick,
   );
-  assert.equal(events.length, plan.requestedInputs.length * 2 + 1);
+  assert.ok(observedCount >= 0 && observedCount <= plan.requestedInputs.length);
+  assert.equal(events.length, observedCount * 2 + 1);
   let input = phase === 1 || phase === 3,
     bit = phase === 1 || phase === 2 ? !initial : initial;
   let previousTick = recovery.startedTick;
-  plan.requestedInputs.forEach((requested, index) => {
+  plan.requestedInputs.slice(0, observedCount).forEach((requested, index) => {
     const prepared = events[index * 2],
       observed = events[index * 2 + 1];
     assert.ok(
@@ -240,17 +289,18 @@ for (const wrapper of recoveryRecords) {
     input = requested;
     bit = nextBit;
     previousTick = prepared.tick;
-    recoveryEdges++;
   });
   const final = events.at(-1);
   assert.ok(Number.isSafeInteger(final.tick) && final.tick >= previousTick);
   assert.deepEqual(final, {
-    stage: "RESTORED",
-    step: plan.requestedInputs.length,
+    stage: terminalStage,
+    step: observedCount,
     tick: final.tick,
-    observed: plan.initialTarget,
+    observed: frame(input, bit),
   });
-  assert.deepEqual(frame(input, bit), plan.initialTarget);
+  if (terminalStage === "RESTORED")
+    assert.deepEqual(frame(input, bit), plan.initialTarget);
+  return observedCount;
 }
 assert.equal(recoveryEdges, 48);
 console.log(
@@ -259,6 +309,78 @@ console.log(
     journals: 32,
     nativeRecoveryEdges: 48,
     originalPairsRestored: 32,
+    loadedExecution: false,
+    functionalPass: false,
+  }),
+);
+
+const chainMarker = "ENGINEER_MEMORY_RECOVERY_CHAIN ";
+const chains = lines
+  .filter((line) => line.includes(chainMarker))
+  .map((line) =>
+    JSON.parse(line.slice(line.indexOf(chainMarker) + chainMarker.length)),
+  );
+assert.ok(chains.length > 0, "Native recovery checkpoint chain proof must run");
+for (const chain of chains) {
+  const {
+    pendingRoot,
+    originRecord,
+    firstRecovery,
+    firstRecoveryCheckpoint,
+    recoveryCheckpoint,
+    secondPlan,
+    secondRecovery,
+  } = chain;
+  const context = verifyPlan(
+    { pending: pendingRoot, originRecord, plan: firstRecovery.plan },
+    new Set(),
+  );
+  assert.equal(
+    verifyRecovery(
+      firstRecovery,
+      firstRecovery.plan,
+      pendingRoot,
+      originRecord,
+      context,
+      "INTERRUPTED",
+      1,
+    ),
+    1,
+  );
+  for (const [checkpoint, journal] of [
+    [firstRecoveryCheckpoint, firstRecovery],
+    [recoveryCheckpoint, secondRecovery],
+  ]) {
+    assert.deepEqual(checkpoint, {
+      schemaVersion: 1,
+      kind: "pending-memory-recovery",
+      projectId: context.source.projectId,
+      rootBirthDigest: pendingRoot.birthDigest,
+      journalId: journal.id,
+      journalBirthDigest: journal.birthDigest,
+    });
+  }
+  assert.deepEqual(secondPlan.current, firstRecovery.events.at(-1).observed);
+  assert.deepEqual(secondPlan.requestedInputs, [true, false]);
+  assert.equal(secondPlan.originJournalId, firstRecovery.id);
+  assert.equal(secondPlan.originRecordDigest, hash(firstRecovery));
+  assert.notEqual(secondRecovery.id, firstRecovery.id);
+  assert.equal(
+    verifyRecovery(
+      secondRecovery,
+      secondPlan,
+      pendingRoot,
+      firstRecovery,
+      context,
+    ),
+    2,
+  );
+}
+console.log(
+  JSON.stringify({
+    kind: "memory-recovery-checkpoint-native-replay",
+    chains: chains.length,
+    latestProgressSelected: true,
     loadedExecution: false,
     functionalPass: false,
   }),

@@ -79,6 +79,7 @@ final class EngineeringSession implements BuildExecutor {
     final FunctionalTrial trial = new FunctionalTrial(this);
     MemoryInputDriver memoryInputDriver;
     MemoryPendingInput pendingMemoryInput;
+    MemoryRecoveryCheckpoint pendingMemoryRecovery;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
     final ShutterTrial shutterTrial = new ShutterTrial(this);
     ShutterJournal shutterMotion;
@@ -1559,6 +1560,7 @@ final class EngineeringSession implements BuildExecutor {
     }
     void save() {
         if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
+        if(pendingMemoryRecovery!=null){if(pendingMemoryInput==null)throw new IllegalStateException("Recovery checkpoint cannot outlive its original pending input scope");pendingMemoryRecovery.requireMatches(this);}
         long timing="true".equals(System.getenv("CI")) && state.equals("EXECUTING") && blueprint!=null && ConnectedIntention.fullAdder(blueprint.source())?System.nanoTime():0;
         if(timing!=0 && constructionTimingStart==0)constructionTimingStart=timing;
         if(shutterMotion!=null){shutterMotion.requireScope(level(),acceptedMotionScope());shutterOwned=true;}
@@ -1567,6 +1569,7 @@ final class EngineeringSession implements BuildExecutor {
         pruneOperationScopes();validateOperationScopes();
         if(blueprint!=null){assignments.reconcile(blueprint);var task=assignments.task(blueprint,activeComponent);task.status=state;task.verified=verified;}
         if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
+        if(pendingMemoryRecovery!=null)pendingMemoryRecovery.requireMatches(this);
         JsonObject json=new JsonObject(); json.addProperty("schemaVersion",2); json.addProperty("worldId",worldId); json.addProperty("dimension",dimension);
         json.addProperty("projectId",projectId.toString());json.addProperty("projectRevision",projectRevision);json.add("access",access.json());
         json.addProperty("memoryStatus",memoryStatus);
@@ -1579,6 +1582,7 @@ final class EngineeringSession implements BuildExecutor {
         if(shutterMotion!=null)json.add("shutterMotion",shutterMotion.json());
         json.addProperty("shutterOwned",shutterOwned);
         if(pendingMemoryInput!=null)json.add("pendingMemoryInput",pendingMemoryInput.json());
+        if(pendingMemoryRecovery!=null)json.add("pendingMemoryRecovery",pendingMemoryRecovery.json());
         if(operationKind.equals("STRUCTURAL"))json.addProperty("structuralCursor",structuralCursor);
         if(originDiagnosis!=null)json.addProperty("originDiagnosis",originDiagnosis.toString());
         if(undoOperation!=null)json.addProperty("undoOperation",undoOperation);
@@ -1595,7 +1599,9 @@ final class EngineeringSession implements BuildExecutor {
     }
     void persistPendingMemoryInput(MemoryPendingInput pending) {
         if(!server.isSameThread())throw new IllegalStateException("Pending memory scope belongs to the server thread");
+        if(pendingMemoryRecovery!=null)throw new IllegalStateException("A recovery checkpoint must be cleared before starting another root input transaction");
         if(pendingMemoryInput!=null)throw new IllegalStateException("Another memory input transaction is already pending");
+        if(Files.exists(file) && readBoundedCheckpoint().has("pendingMemoryRecovery"))throw new IllegalStateException("An unresolved recovery checkpoint must be explicitly inspected before starting new work");
         pending.requireMatches(this);pendingMemoryInput=pending;
         try {
             save();requirePersistedPendingMemoryInput(pending);
@@ -1608,14 +1614,25 @@ final class EngineeringSession implements BuildExecutor {
         }
     }
     void clearPendingMemoryInput(MemoryPendingInput expected) {
+        if(pendingMemoryRecovery!=null)throw new IllegalStateException("A current recovery checkpoint needs its own restored receipt before clearing the root scope");
+        clearPendingMemoryInput(expected,null);
+    }
+    void clearPendingMemoryInput(MemoryPendingInput expected,MemoryRecoveryCheckpoint expectedRecovery) {
         if(!server.isSameThread())throw new IllegalStateException("Pending memory scope belongs to the server thread");
         if(pendingMemoryInput==null || !pendingMemoryInput.same(expected))throw new IllegalStateException("Pending memory scope identity changed");
-        expected.requireMatches(this);requirePersistedPendingMemoryInput(expected);pendingMemoryInput=null;
+        if((pendingMemoryRecovery==null)!=(expectedRecovery==null) || pendingMemoryRecovery!=null && !pendingMemoryRecovery.same(expectedRecovery))throw new IllegalStateException("Current recovery checkpoint identity changed");
+        expected.requireMatches(this);requirePersistedPendingMemoryInput(expected);
+        JsonObject beforeClear=readBoundedCheckpoint();
+        if(expectedRecovery==null ? beforeClear.has("pendingMemoryRecovery") : !expectedRecovery.same(MemoryRecoveryCheckpoint.read(beforeClear.getAsJsonObject("pendingMemoryRecovery"),this)))
+            throw new IllegalStateException("Persisted recovery checkpoint differs from the clear compare-and-swap target");
+        if(expectedRecovery!=null){expectedRecovery.requireMatches(this);var recovered=MemoryRecoveryJournal.read(expectedRecovery.journalFile(manager.directory),blueprint,expected);
+            if(!recovered.stage().equals("RESTORED"))throw new IllegalStateException("Recovery checkpoint has no durable original-pair RESTORED receipt");}
+        pendingMemoryInput=null;pendingMemoryRecovery=null;
         try {
             save();JsonObject stored=readBoundedCheckpoint();
-            if(stored.has("pendingMemoryInput"))throw new IllegalStateException("Pending memory scope remains in the checkpoint after clear");
+            if(stored.has("pendingMemoryInput") || stored.has("pendingMemoryRecovery"))throw new IllegalStateException("Memory scope remains in the checkpoint after clear");
         } catch(RuntimeException | Error failure) {
-            pendingMemoryInput=expected;
+            pendingMemoryInput=expected;pendingMemoryRecovery=expectedRecovery;
             if(failure instanceof Error error)throw error;
             throw (RuntimeException)failure;
         }
@@ -1630,6 +1647,47 @@ final class EngineeringSession implements BuildExecutor {
         if(pendingMemoryInput==null || !pendingMemoryInput.same(expected))throw new IllegalStateException("Current pending memory identity changed");
         expected.requireMatches(this);
         if(!expected.same(readCheckpointPendingMemoryInput()))throw new IllegalStateException("Persisted pending memory scope differs from its immutable birth identity");
+    }
+    void persistPendingMemoryRecovery(MemoryPendingInput expectedRoot,MemoryRecoveryCheckpoint expectedPrevious,MemoryRecoveryCheckpoint next) {
+        if(!server.isSameThread())throw new IllegalStateException("Recovery checkpoint belongs to the server thread");
+        if(memoryInputDriver!=null)throw new IllegalStateException("Stop the active memory input driver before changing recovery checkpoints");
+        if(pendingMemoryInput==null || !pendingMemoryInput.same(expectedRoot))throw new IllegalStateException("Current root memory scope identity changed");
+        expectedRoot.requireMatches(this);requirePersistedPendingMemoryInput(expectedRoot);
+        if((pendingMemoryRecovery==null)!=(expectedPrevious==null) || pendingMemoryRecovery!=null && !pendingMemoryRecovery.same(expectedPrevious))throw new IllegalStateException("Current recovery checkpoint compare-and-swap failed");
+        JsonObject stored=readBoundedCheckpoint();MemoryRecoveryCheckpoint persisted=stored.has("pendingMemoryRecovery")?MemoryRecoveryCheckpoint.read(stored.getAsJsonObject("pendingMemoryRecovery"),this):null;
+        if((persisted==null)!=(expectedPrevious==null) || persisted!=null && !persisted.same(expectedPrevious))throw new IllegalStateException("Persisted recovery checkpoint compare-and-swap failed");
+        next.requireMatches(this);var nextJournal=MemoryRecoveryJournal.read(next.journalFile(manager.directory),blueprint,expectedRoot);
+        if(!nextJournal.stage().equals("NEW") || !nextJournal.json().getAsJsonArray("events").isEmpty())throw new IllegalStateException("Recovery pointer must be saved before any recovery intent or native edge");
+        UUID expectedOrigin=expectedPrevious==null?expectedRoot.journalId():expectedPrevious.journalId();
+        String expectedKind=expectedPrevious==null?"memory-input-journal":"memory-recovery-journal";
+        JsonObject origin=expectedPrevious==null?MemoryInputJournal.read(expectedRoot.journalFile(manager.directory),blueprint).json():MemoryRecoveryJournal.read(expectedPrevious.journalFile(manager.directory),blueprint,expectedRoot).json();
+        String originDigest=MemoryRecoveryJournal.recordDigest(origin);
+        if(!nextJournal.originJournalId().equals(expectedOrigin) || !nextJournal.originKind().equals(expectedKind)
+                || !nextJournal.originRecordDigest().equals(originDigest))throw new IllegalStateException("New recovery journal does not extend the exact latest checkpoint record");
+        pendingMemoryRecovery=next;
+        try {
+            save();var readback=readBoundedCheckpoint();if(!readback.has("pendingMemoryRecovery")
+                    || !MemoryRecoveryCheckpoint.read(readback.getAsJsonObject("pendingMemoryRecovery"),this).same(next))
+                throw new IllegalStateException("Recovery checkpoint readback differs from its new immutable pointer");
+        } catch(RuntimeException | Error failure) {
+            try {
+                var latest=readBoundedCheckpoint();
+                pendingMemoryRecovery=latest.has("pendingMemoryRecovery")?MemoryRecoveryCheckpoint.read(latest.getAsJsonObject("pendingMemoryRecovery"),this):null;
+            } catch(Exception unreadable){failure.addSuppressed(unreadable);pendingMemoryRecovery=next;}
+            if(failure instanceof Error error)throw error;
+            throw (RuntimeException)failure;
+        }
+    }
+    void requirePersistedPendingMemoryRecovery(MemoryPendingInput expectedRoot,MemoryRecoveryCheckpoint expected) {
+        if(!server.isSameThread() || pendingMemoryInput==null || !pendingMemoryInput.same(expectedRoot)
+                || pendingMemoryRecovery==null || !pendingMemoryRecovery.same(expected))throw new IllegalStateException("Current recovery checkpoint identity changed");
+        requirePersistedPendingMemoryInput(expectedRoot);expected.requireMatches(this);
+        if(!expected.same(readCheckpointPendingMemoryRecovery()))
+            throw new IllegalStateException("Persisted recovery checkpoint differs from its current pointer");
+    }
+    private MemoryRecoveryCheckpoint readCheckpointPendingMemoryRecovery() {
+        var stored=readBoundedCheckpoint();if(!stored.has("pendingMemoryRecovery"))throw new IllegalStateException("Recovery checkpoint is absent from checkpoint");
+        return MemoryRecoveryCheckpoint.read(stored.getAsJsonObject("pendingMemoryRecovery"),this);
     }
     private JsonObject readBoundedCheckpoint() {
         try {
@@ -1774,6 +1832,10 @@ final class EngineeringSession implements BuildExecutor {
                 shutterMotion.requireScope(level(),acceptedMotionScope());
             }
             if(json.has("pendingMemoryInput"))pendingMemoryInput=MemoryPendingInput.read(json.getAsJsonObject("pendingMemoryInput"),this);
+            if(json.has("pendingMemoryRecovery")){
+                if(pendingMemoryInput==null)throw new IllegalStateException("Recovery checkpoint is missing its original pending input scope");
+                pendingMemoryRecovery=MemoryRecoveryCheckpoint.read(json.getAsJsonObject("pendingMemoryRecovery"),this);
+            }
             state="PAUSED";detail="Checkpoint restored. Inspect the world; explicit resume reconciles before editing.";
         }catch(Exception e){throw new IllegalStateException("Cannot safely load checkpoint; keep it for recovery",e);}
     }
