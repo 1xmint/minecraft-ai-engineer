@@ -3201,7 +3201,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try{record=JsonParser.parseString(Files.readString(project.manager.directory.resolve(project.projectId+".memory-trial-"+id+".json"))).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
             var trace=record.getAsJsonObject("trace");check(record.get("outcome").getAsString().equals("passed") && trace.getAsJsonObject("observations").get("sampleCount").getAsInt()==96
                     && trace.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && trace.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"The player-visible pass has durable native samples and all four observed edges with a restoration receipt");
+            check(MemoryFunctionalEvidence.current(project.blueprint,project.assignments.task(project.blueprint,"root"))
+                    && ProjectGuidance.evidence(project).getFirst().currentPass()
+                    && ProjectSummary.records(project).stream().anyMatch(line->line.contains("every component has an actual recorded pass"))
+                    && !LessonAssistant.evidence(project.assignments.task(project.blueprint,"root"),project.blueprint).contains("current design is untested"),"Status, summary and lesson agree on the exact freshly tested memory scope");
             var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(!MemoryFunctionalEvidence.current(loaded.blueprint,loaded.assignments.task(loaded.blueprint,"root")),"Loading the durable record cannot recreate the ephemeral current-pass binding");
             check(loaded.verified.startsWith("stale:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"Loading past functional evidence never recreates execution authority or a fresh current pass");
             write("toggle-memory-functional-record.json",record.toString());write("toggle-memory-functional.done","passed");
         });

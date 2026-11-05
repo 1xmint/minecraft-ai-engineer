@@ -151,7 +151,7 @@ final class LessonAssistant {
     }
     private static String staleNote(ComponentAssignments.Task task,Blueprint blueprint) {
         if(task==null)return null;
-        if(FunctionalTrial.matchesCurrentScope(blueprint,task))return null;
+        if(MemoryFunctionalEvidence.currentTrial(blueprint,task))return null;
         if(task.lastPassedScope==null)return task.verified!=null && task.verified.startsWith("passed")?"its stored pass has no complete original scope; the current design is untested":null;
         if(task.lastPassedScope.has("blueprintRevision")){
             long passed=task.lastPassedScope.get("blueprintRevision").getAsLong();

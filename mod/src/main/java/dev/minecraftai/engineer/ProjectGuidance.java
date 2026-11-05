@@ -68,7 +68,7 @@ final class ProjectGuidance {
         var out=new ArrayList<Evidence>();
         for(String id:ProjectSummary.components(s.blueprint)){
             var task=s.assignments.tasks.get(id);
-            boolean current=task!=null && task.verified!=null && task.verified.startsWith("passed") && FunctionalTrial.matchesCurrentScope(s.blueprint,task);
+            boolean current=task!=null && task.verified!=null && task.verified.startsWith("passed") && MemoryFunctionalEvidence.currentTrial(s.blueprint,task);
             String history=null;
             if(!current && !ImportedBlueprint.describes(s.blueprint.source()) && task!=null && task.lastPassedScope!=null && task.lastPassedScope.has("blueprintRevision"))
                 history="a pass was recorded at design revision "+task.lastPassedScope.get("blueprintRevision").getAsLong()+"; it does not cover the current design";
@@ -82,7 +82,7 @@ final class ProjectGuidance {
         return untested(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> untested(EngineeringSession s,Function<BlockPos,BlockState> world){
-        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(s.verified.startsWith("passed:toggle-memory:")?"Recorded current memory test: "+s.verified:"No current memory pass is recorded. A fresh test requires 96 live tick samples and restoration of the original pair.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(MemoryFunctionalEvidence.current(s.blueprint,s.assignments.tasks.get("root"))?"Recorded current memory test: "+s.verified:"No current memory pass is recorded. A fresh test requires 96 live tick samples and restoration of the original pair.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint==null){
             out.add("Still untested: unknown. No design is loaded in this project, so there is nothing to test yet.");
@@ -109,7 +109,7 @@ final class ProjectGuidance {
         return next(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> next(EngineeringSession s,Function<BlockPos,BlockState> world){
-        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(s.pendingMemoryInput!=null?"Inspect the interrupted memory state, then explicitly ask to resume recovery of the original pair.":s.verified.startsWith("passed:toggle-memory:")?"The current memory has a recorded functional pass. Ask how its toggle and readout work; this answer did not re-test it.":"Complete the memory construction lesson, then ask me to test the memory with 96 live tick observations.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
+        if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(s.pendingMemoryInput!=null?"Inspect the interrupted memory state, then explicitly ask to resume recovery of the original pair.":MemoryFunctionalEvidence.current(s.blueprint,s.assignments.tasks.get("root"))?"The current memory has a recorded functional pass. Ask how its toggle and readout work; this answer did not re-test it.":"Complete the memory construction lesson, then ask me to test the memory with 96 live tick observations.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint!=null && ImportedBlueprint.describes(s.blueprint.source())){
             out.add("This is imported geometry with no defined behavior contract. Its approved geometry can be built; functional testing needs a separately defined and supported behavior.");

@@ -43,6 +43,7 @@ final class MemoryFunctionalRun {
             record.addProperty("controllerId",player.getUUID().toString());record.addProperty("authorizationRevision",authorization);
             record.addProperty("outcome","passed");record.add("trace",trace);
             persist(record);validate();
+            session.assignments.task(blueprint,"root").memoryPassEvidence=MemoryFunctionalEvidence.capture(blueprint,session.assignments.task(blueprint,"root"),record);
             session.verified="passed:toggle-memory:revision-"+revision+":96-live-samples:"+record.get("id").getAsString();
             session.state="COMPLETED";session.detail="Memory test passed: 96 live tick samples confirmed toggle, hold and readout behavior; the original input and stored bit were restored.";
             closed=true;session.memoryFunctionalRun=null;
