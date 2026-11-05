@@ -81,6 +81,77 @@ public final class ToggleMemoryGameTests {
         });
     }
     private static JsonObject storedMemoryRecord(java.nio.file.Path file){try{return JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=200) public void memoryRecoveryPlansReplayKnownPhasesReadOnly(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());Blueprint previous=null;
+        for(Rotation rotation:java.util.List.of(Rotation.NONE,Rotation.CLOCKWISE_90,Rotation.CLOCKWISE_180,Rotation.COUNTERCLOCKWISE_90))for(boolean initialBit:java.util.List.of(false,true)){
+            var id=java.util.UUID.randomUUID();int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
+            var relativeAnchor=at(new BlockPos(4,2,4),rotation);var anchor=h.absolutePos(relativeAnchor);
+            if(previous!=null)for(var cell:previous.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),Blocks.AIR.defaultBlockState());
+            var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",anchor,angle).blueprint();
+            previous=blueprint;
+            for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock?cell.state().setValue(BlockStateProperties.LIT,initialBit):cell.state());
+            var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
+            var relativeLever=at(new BlockPos(3,2,4),rotation);
+            h.assertTrue(h.absolutePos(relativeLever).equals(lever),"Recovery trace uses the same rotated absolute lever as the canonical blueprint");
+            var session=new EngineeringSession(manager,id,java.util.UUID.randomUUID(),"minecraft:overworld");session.blueprint=blueprint;session.state="READY";session.assignments.reconcile(blueprint);
+            var initial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+            var journal=MemoryInputJournal.create(manager.directory,blueprint,initial,h.getLevel().getGameTime());
+            var pointer=MemoryPendingInput.create(session,session.owner,java.util.UUID.fromString(journal.json().get("id").getAsString()),initial,h.getLevel().getGameTime());
+            session.persistPendingMemoryInput(pointer);
+            for(int phase=0;phase<4;phase++){
+                var plan=MemoryRecoveryPlan.observe(session);var wrapper=new JsonObject();wrapper.add("pending",pointer.json());wrapper.add("originRecord",MemoryInputJournal.read(pointer.journalFile(manager.directory),blueprint).json());wrapper.add("plan",plan.data());
+                System.out.println("ENGINEER_MEMORY_RECOVERY_PLAN "+wrapper);
+                if(phase<3){var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+                    journal.prepare(before,h.getLevel().getGameTime());h.pullLever(relativeLever);
+                    journal.observe(new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb)),h.getLevel().getGameTime());}
+            }
+            h.assertTrue(session.pendingMemoryInput.same(pointer) && session.delegation==null && session.memoryInputDriver==null && session.verified.equals("untested"),"Read-only recovery planning preserves the current pointer and grants neither actions nor a functional claim");
+        }
+        h.succeed();
+    }
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=40) public void memoryRecoveryPlanRejectsUnknownAndPreparedAmbiguousStates(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());var id=java.util.UUID.randomUUID();var anchor=h.absolutePos(new BlockPos(8,2,8));
+        var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",anchor,0).blueprint();
+        for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state());
+        var session=new EngineeringSession(manager,id,java.util.UUID.randomUUID(),"minecraft:overworld");session.blueprint=blueprint;session.state="READY";session.assignments.reconcile(blueprint);
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+        var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
+        var initial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+        var journal=MemoryInputJournal.create(manager.directory,blueprint,initial,h.getLevel().getGameTime());
+        var pointer=MemoryPendingInput.create(session,session.owner,java.util.UUID.fromString(journal.json().get("id").getAsString()),initial,h.getLevel().getGameTime());session.persistPendingMemoryInput(pointer);
+        boolean refused=false;
+        h.getLevel().setBlockAndUpdate(blueprint.blocks().getFirst().pos(),Blocks.DIRT.defaultBlockState());
+        try{MemoryRecoveryPlan.observe(session);}catch(RuntimeException expected){refused=true;}
+        h.assertTrue(refused,"Unknown geometry edits cannot become recovery authority");
+        h.getLevel().setBlockAndUpdate(blueprint.blocks().getFirst().pos(),blueprint.blocks().getFirst().state());
+        journal.prepare(initial,h.getLevel().getGameTime());
+        var beforePlan=MemoryRecoveryPlan.observe(session);h.assertTrue(beforePlan.data().get("originStage").getAsString().equals("PREPARED") && beforePlan.data().getAsJsonArray("requestedInputs").isEmpty(),"A prepared edge with its exact before-frame has a read-only zero-movement plan");
+        var relativeLever=new BlockPos(7,2,8);h.pullLever(relativeLever);
+        var expectedAfter=MemoryInputTransition.predict(blueprint,initial,true).after();
+        var after=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+        h.assertTrue(expectedAfter.matches(after),"Native PREPARED ambiguity probe reached its expected after-frame");
+        var afterPlan=MemoryRecoveryPlan.observe(session);
+        var inputs=afterPlan.data().getAsJsonArray("requestedInputs");
+        h.assertTrue(inputs.size()==3 && !inputs.get(0).getAsBoolean() && inputs.get(1).getAsBoolean() && !inputs.get(2).getAsBoolean(),"A prepared after-frame derives fall/rise/fall to the target bit without replaying the prepared rise");
+        var unsettledLever=h.getLevel().getBlockState(lever).setValue(BlockStateProperties.POWERED,false);h.getLevel().setBlock(lever,unsettledLever,2);
+        refused=false;try{MemoryRecoveryPlan.observe(session);}catch(RuntimeException expected){refused=true;}
+        h.assertTrue(refused,"A mixed lever/bulb pair outside both prepared candidates is refused");h.getLevel().setBlock(lever,after.lever(),2);
+        h.assertTrue(session.delegation==null && session.memoryInputDriver==null && session.verified.equals("untested"),"Recovery plan remains detached from action authority and verification");
+        var restoredId=java.util.UUID.randomUUID();var restoredBlueprint=ToggleMemoryIntention.create(restoredId,1,restoredId,manager.worldId,"minecraft:overworld",anchor,0).blueprint();
+        for(var cell:restoredBlueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state());
+        var restoredSession=new EngineeringSession(manager,restoredId,java.util.UUID.randomUUID(),"minecraft:overworld");restoredSession.blueprint=restoredBlueprint;restoredSession.state="READY";restoredSession.assignments.reconcile(restoredBlueprint);
+        var restoredInitial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+        var restoredJournal=MemoryInputJournal.create(manager.directory,restoredBlueprint,restoredInitial,h.getLevel().getGameTime());
+        var restoredPointer=MemoryPendingInput.create(restoredSession,restoredSession.owner,java.util.UUID.fromString(restoredJournal.json().get("id").getAsString()),restoredInitial,h.getLevel().getGameTime());restoredSession.persistPendingMemoryInput(restoredPointer);
+        for(int edgeIndex=0;edgeIndex<4;edgeIndex++){
+            var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));restoredJournal.prepare(before,h.getLevel().getGameTime());
+            h.pullLever(relativeLever);restoredJournal.observe(new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb)),h.getLevel().getGameTime());
+        }
+        restoredJournal.restored(new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb)),h.getLevel().getGameTime());
+        var alreadyRestored=MemoryRecoveryPlan.observe(restoredSession);
+        h.assertTrue(alreadyRestored.data().get("originStage").getAsString().equals("RESTORED") && alreadyRestored.data().getAsJsonArray("requestedInputs").isEmpty() && restoredSession.pendingMemoryInput.same(restoredPointer),"A retained pointer to a read-back RESTORED origin yields zero movement until its durable clear succeeds");h.succeed();
+    }
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void stateSamplerFreezesOnDuplicateTick(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var anchor=h.absolutePos(new BlockPos(8,2,8));
         var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",anchor,0).blueprint();
