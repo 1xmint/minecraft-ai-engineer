@@ -110,6 +110,7 @@ final class MemoryRecoveryDriver {
         var failure=new IllegalStateException("Recovery stopped without automatic restoration");freeze(failure);
         if(failure.getSuppressed().length>0)throw failure;
     }
+    synchronized int remainingEdges(){return requiredEdges-edges;}
     synchronized boolean closed(){return closed;}
     synchronized JsonObject recordSnapshot(){return journal.json();}
 

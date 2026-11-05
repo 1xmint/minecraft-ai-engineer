@@ -189,3 +189,5 @@ interrupts the first recovery, reloads the session, derives two fresh edges from
 that latest progress and restores the original pair. Orphan logs are not selected,
 stale checkpoint updates and cycles are rejected, and no execution lease or
 functional pass is loaded. Connected recovery execution remains unavailable.
+
+Conversational recovery candidate: an explicitly approved resume request can start a fresh bounded recovery attempt for the current pending memory transaction. It restores the original lever/bulb pair and stops paused; it never starts another test or grants a pass. The runner is ephemeral and never loaded from a checkpoint. Runtime chat/reconnect proof is pending; this is not yet on main.

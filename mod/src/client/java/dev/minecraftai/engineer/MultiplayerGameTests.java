@@ -3153,7 +3153,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
         write("toggle-memory-build.done","passed");
         toggleMemoryDriverProof(server);
+        toggleMemoryConversationRecovery(context,server);
         toggleMemoryTimedProof(server);
+    }
+    private static void toggleMemoryConversationRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var input=MemoryInputDriver.open(project,project.owner);input.pulse();input.stop();
+            check(project.pendingMemoryInput!=null && project.memoryRecoveryRun==null && project.delegation==null,"The conversational fixture starts interrupted with no automatic recovery or lease");
+        });
+        conversationApprove(context,"CI resume selected lamp.");
+        expectChat(context,"Recovering the original memory input and stored bit");
+        expectChat(context,"Original memory input and stored bit restored");
+        server.waitFor(s->session(s,"Alice").memoryRecoveryRun==null && session(s,"Alice").pendingMemoryInput==null);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(project.pendingMemoryRecovery==null && project.memoryRecoveryDriver==null && project.delegation==null && project.verified.equals("untested")
+                    && project.state.equals("PAUSED") && loaded.pendingMemoryInput==null && loaded.pendingMemoryRecovery==null && loaded.delegation==null
+                    && loaded.memoryRecoveryRun==null && project.journal.size()==7,"An approved chat resume restores only the original pair and clears its saved scope; it neither restarts construction nor grants a functional pass");
+            write("toggle-memory-conversation-recovery.done","passed");
+        });
     }
     private static void toggleMemoryTimedProof(TestDedicatedServerContext server) throws Exception {
         var active=new java.util.concurrent.atomic.AtomicReference<MemoryTimedTrial>();

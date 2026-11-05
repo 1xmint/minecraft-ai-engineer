@@ -79,6 +79,7 @@ final class EngineeringSession implements BuildExecutor {
     final FunctionalTrial trial = new FunctionalTrial(this);
     MemoryInputDriver memoryInputDriver;
     MemoryRecoveryDriver memoryRecoveryDriver;
+    MemoryRecoveryRun memoryRecoveryRun;
     MemoryPendingInput pendingMemoryInput;
     MemoryRecoveryCheckpoint pendingMemoryRecovery;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -709,6 +710,12 @@ final class EngineeringSession implements BuildExecutor {
     }
     @Override public void resume() {
         access.require(actor(),ProjectAccess.Permission.BUILD);
+        if(pendingMemoryInput!=null){
+            if(memoryRecoveryRun!=null)throw new IllegalStateException("Memory recovery is already running; stop it before requesting another attempt");
+            memoryRecoveryRun=MemoryRecoveryRun.open(this);
+            detail="Recovering the original memory input and stored bit using a fresh bounded attempt. This does not run a functional test.";
+            tell(detail);return;
+        }
         if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source()) && hasPendingTest())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && hasPendingTest()){
@@ -763,13 +770,14 @@ final class EngineeringSession implements BuildExecutor {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        try{if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        try{if(memoryRecoveryRun!=null)memoryRecoveryRun.stop();if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
         finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
     @Override public String status() { return state + ": " + detail + "; assistant recorded changes=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
         if(testTick<0)connectedTestArea=null;
+        if(memoryRecoveryRun!=null){memoryRecoveryRun.tick();tickTutorials();return;}
         if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
         if (!available()) { if (state.equals("EXECUTING") || testTick>=0) pause("Controller disconnected or changed dimension; explicit resume required"); tickTutorials();return; }
         if (testTick>=0) { tickTest(); return; }
