@@ -96,6 +96,29 @@ public final class ToggleMemoryGameTests {
             h.assertTrue(duplicateRefused && terminalRefused && before.matches(after),"A duplicate tick freezes read-only sampling and cannot change the real memory pair");h.succeed();
         });
     }
+    @GameTest public void pendingMemoryBirthScopeSurvivesRestartWithoutAuthority(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());var id=java.util.UUID.randomUUID();var owner=java.util.UUID.randomUUID();
+        var session=new EngineeringSession(manager,id,owner,"minecraft:overworld");
+        session.blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
+        session.corner1=new BlockPos(-1,79,0);session.corner2=new BlockPos(2,80,0);session.state="READY";session.assignments.reconcile(session.blueprint);
+        var lever=session.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().state();
+        var initial=new MemoryInputTransition.Frame(lever,Blueprint.state("minecraft:waxed_copper_bulb[lit=false,powered=false]"));
+        var journal=MemoryInputJournal.create(manager.directory,session.blueprint,initial,10);
+        var pointer=MemoryPendingInput.create(session,owner,java.util.UUID.fromString(journal.json().get("id").getAsString()),initial,10);
+        session.persistPendingMemoryInput(pointer);
+        var loaded=new EngineeringSession(manager,id,owner,"minecraft:overworld");
+        h.assertTrue(loaded.pendingMemoryInput!=null && loaded.pendingMemoryInput.json().equals(pointer.json()) && loaded.delegation==null && loaded.memoryInputDriver==null && loaded.verified.equals("untested"),"Restart preserves the current unfinished memory scope without any lease, driver or functional pass");
+        boolean refused=false;try{MemoryInputDriver.open(loaded,owner);}catch(IllegalStateException expected){refused=true;}
+        h.assertTrue(refused && loaded.pendingMemoryInput.json().equals(pointer.json()) && loaded.delegation==null,"A pending memory operation blocks a fresh run before any authority can be acquired");
+        var forged=pointer.json();forged.addProperty("connection","forged");refused=false;
+        try{MemoryPendingInput.read(forged,loaded);}catch(RuntimeException expected){refused=true;}
+        h.assertTrue(refused,"Persisted memory scope rejects an extra claimed connection capability");
+        var changed=pointer.json();changed.getAsJsonObject("initial").addProperty("bulb","minecraft:waxed_copper_bulb[lit=true,powered=false]");changed.remove("birthDigest");
+        try{changed.addProperty("birthDigest",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(changed.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))));}catch(java.security.NoSuchAlgorithmException impossible){throw new AssertionError(impossible);}
+        refused=false;try{MemoryPendingInput.read(changed,loaded);}catch(RuntimeException expected){refused=true;}
+        h.assertTrue(refused,"A recomputed digest cannot substitute another initial target for the actual journal's immutable birth frame");
+        h.succeed();
+    }
     @GameTest public void preparedMemoryLogsStayFrozenAndRejectExternalChanges(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
         var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().state();var frame=new MemoryInputTransition.Frame(lever,Blueprint.state("minecraft:waxed_copper_bulb"));

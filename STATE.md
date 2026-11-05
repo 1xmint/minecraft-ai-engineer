@@ -236,3 +236,18 @@ No production route or functional pass is enabled. GPT-6-Luna implemented the
 controller/driver changes; parent review corrected first-callback timing and
 off-thread stop behavior. Java/client compile and script syntax/format passed.
 Full connected-player CI remains required; interruption recovery is unfinished.
+
+PR86 exact0edcb02/full42055427604 passed all five checks. Inspected exported
+on-disk journal: four PREPARED/OBSERVED native edges at tick16104, original
+lit/off pair retained and terminal INTERRUPTED, no pass. This proves action/
+paired logging, not timing. PR86 is ready; PR87 includes its source and is the
+intended combined integration candidate. Exact8f4751a/full42058802843 remains
+live, with four checks passed and dedicated multiplayer running.
+
+Recovery branch work/memory-recovery-assessment implements a durable CURRENT
+unfinished-run birth pointer before any edge, inert/blocking on load. An old
+valid journal alone must not authorize restoring a stale bit. Clear-before-
+release requires persisted original-pair proof or strictly proven zero edges.
+No recovery pulse or normal memory-test route is enabled. Pointer implementation
+and restart/forgery tests are written. Scoped Java/client compilation passed;
+native and connected-player CI remain required for this new pointer slice.
