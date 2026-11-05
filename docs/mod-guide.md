@@ -683,6 +683,12 @@ with authorized project members.
 Ambiguous requests such as `remember that` ask for explicit note text instead
 of silently guessing what to save. Commands remain a fallback.
 
+When the assistant reasons about the project or answers a question, it is
+given at most eight current notes. A note you replaced stays in history (ask
+`what changed` or `show note N`) but is never handed over as a current
+requirement. If more than eight notes are current, notes that share a word with
+your question come first, then the newest.
+
 ![Shared project notes read through actual player chat](images/project-memory.png)
 
 Captured from [the verified multiplayer run](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41367933778).
