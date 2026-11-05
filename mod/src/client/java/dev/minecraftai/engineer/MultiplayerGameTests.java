@@ -1467,6 +1467,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 recoverMemoryRecoveryReconnect(server);
                 recoverConversationReconnect(context,server);
                 prepareConversationRestart(context,server);
+                prepareMemoryRecoveryServerRestart(server);
             }
           }
         }
@@ -1474,6 +1475,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
                 recoverConversationRestart(context,server);
+                recoverMemoryRecoveryServerRestart(context,server);
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
                 shutterConstructionFlow(context,server,connection);
@@ -3315,6 +3317,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         write("toggle-memory-recovery-record.json",proof.toString());write("toggle-memory-recovery.done","passed");
     }
     private static void prepareMemoryRecoveryDisconnect(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
         server.runOnServer(s->{
             var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
             var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
@@ -3331,6 +3334,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         });
     }
     private static void recoverMemoryRecoveryReconnect(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
         server.runOnServer(s->{
             var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
             var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
@@ -3348,6 +3352,50 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             var proof=new JsonObject();proof.add("oldConnection",record);proof.add("freshConnection",completed);
             write("toggle-memory-recovery-reconnect-record.json",proof.toString());write("toggle-memory-recovery-reconnect.done","passed");
         });
+    }
+    private static void loadMemoryRecoveryArea(TestDedicatedServerContext server) {
+        var anchor=server.computeOnServer(s->EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project"))).blueprint.anchor());
+        server.runCommand("tp Alice "+anchor.getX()+" "+(anchor.getY()+4)+" "+anchor.getZ());
+        server.waitFor(s->{var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.dependencyPositions(true).stream().allMatch(project.level()::hasChunkAt);});
+    }
+    private static void prepareMemoryRecoveryServerRestart(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
+        String previous=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return manager.selections.get(player(s,"Alice").getUUID()).toString();});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));manager.selections.put(alice,project.projectId);project.controller=alice;project.test();});
+        server.waitFor(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.memoryInputDriver!=null && project.memoryInputDriver.observedPulses()==1;});
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            project.pause("CI explicitly interrupts memory testing before a full server restart");
+            var recovery=MemoryRecoveryDriver.open(project,alice);recovery.pulse();recovery.stop();project.save();
+            var saved=new JsonObject();saved.addProperty("epoch",manager.epoch.toString());saved.add("root",project.pendingMemoryInput.json());saved.add("checkpoint",project.pendingMemoryRecovery.json());saved.add("recovery",recovery.recordSnapshot());
+            check(project.delegation==null && project.memoryRecoveryDriver==null && project.pendingMemoryRecovery!=null,"Server closes with durable partial recovery and no live authority");
+            write("toggle-memory-recovery-before-server-restart.json",saved.toString());manager.selections.put(alice,java.util.UUID.fromString(previous));
+        });
+    }
+    private static void recoverMemoryRecoveryServerRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project use "+read("toggle-memory-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("toggle-memory-project")));
+        loadMemoryRecoveryArea(server);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var before=JsonParser.parseString(read("toggle-memory-recovery-before-server-restart.json")).getAsJsonObject();
+            check(!project.manager.epoch.toString().equals(before.get("epoch").getAsString()) && project.pendingMemoryInput.json().equals(before.getAsJsonObject("root"))
+                    && project.pendingMemoryRecovery.json().equals(before.getAsJsonObject("checkpoint")) && project.memoryRecoveryDriver==null
+                    && project.memoryRecoveryRun==null && project.memoryFunctionalRun==null && project.delegation==null && !project.verified.startsWith("passed:"),"A full dedicated-server restart retains only exact pending recovery data, never a runner, lease or current pass");
+            check(MemoryRecoveryPlan.observe(project).data().get("originJournalId").getAsString().equals(before.getAsJsonObject("recovery").get("id").getAsString()),"After full restart, inspection follows the latest recovery journal rather than the original input run");
+        });
+        conversationApprove(context,"CI resume selected lamp.");expectChat(context,"Original memory input and stored bit restored");
+        server.waitFor(s->session(s,"Alice").pendingMemoryInput==null && session(s,"Alice").memoryRecoveryRun==null);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var before=JsonParser.parseString(read("toggle-memory-recovery-before-server-restart.json")).getAsJsonObject();
+            var original=MemoryPendingInput.read(before.getAsJsonObject("root"),project);
+            var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(original.initial().matches(actual) && project.pendingMemoryRecovery==null && project.delegation==null && project.state.equals("PAUSED")
+                    && !project.verified.startsWith("passed:"),"An approved fresh recovery after server restart restores the actual original pair and clears pending data without running or passing a functional test");
+            var proof=new JsonObject();proof.add("before",before);proof.addProperty("afterEpoch",project.manager.epoch.toString());proof.add("actual",actual.json());
+            write("toggle-memory-recovery-server-restart-record.json",proof.toString());write("toggle-memory-recovery-server-restart.done","passed");
+        });
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
