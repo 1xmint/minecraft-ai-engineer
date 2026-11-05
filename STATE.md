@@ -72,40 +72,41 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
   statistics, no replay, exact resources across restart. It is one fixed recipe,
   not general survival crafting. Incomplete work requires explicit recovery.
 
-## Active integration candidates
+## Landed integration and active proofs
 
-- phase/56-engineering-integration combines PR64,75,76,77,78,80,81 and the
-  repeated-native-trial proof. Main is held stable at cd1188f until the exact
-  combined head passes required checks. Source PRs stay open until integration
-  lands. GitHub's strict up-to-date rule prevents independent stale-head merges.
-- Full-adder gameplay1a265c6/41947057332 passed independent SQLite proof:
-  3544cells,35pins,16cases×8samples, two epochs/fresh clocks and complete bounded
-  undo. Prior69845d0/full41947347153 passed all5checks. Alignedec5e826/full
-  41953618308 failed after Alice stopped at saved-world shutdown; no assertion
-  failure was present in the captured client log. Preserve this failure and
-  require fresh combined proof; do not label the failed run green.
-- Plank source5b36258/player41955934297 passed; artifact inspected: four actual
-  chat placements consume4actually crafted planks, native NBT remainders3/2/1/0,
-  four persistent blocks after seventh boot and no restored authority/pass.
-  Priorc40bf76 failed solely because dirt completion wording changed; corrected
-  source preserves it. PR80 full41955959964 remains live independently.
-- Claude76/77/78 passed all5checks; Fabric artifacts inspected (180native tests
-  passed for guidance/comparison). Changes retain current notes, check loaded
-  construction before advice and label comparison units/attempts honestly.
-  Voice75 client checks passed; its dedicated job was still live at integration.
-  Human microphone/speaker acceptance remains pending.
-- Native trial history8f6b8bf/PR81/full41956628847 remains live. Producer stores
-  detached recent64buffer attempts, updates same-attempt checkpoints and exposes
-  observations only to authorized comparisons. Older archive files are retained;
-  no grant, input journal or functional pass is restored. Scoped compilation and
-  GPT-6-Luna review passed. aa67e59 adds two separately requested actual tests,
-  exact12/16-game-tick counts, save deduplication and normal-chat comparison.
-  Combined CI must prove this new repeat flow before timing claims are shipped.
+- PR82 merged066923a after exact3a6523e passed all5checks41957252832. Dedicated
+  memory/restart proof was inspected. Source PR64,75,76,77,78,80,81 are superseded
+  and closed, with their exact heads included in the tested integration.
+- Main now includes full-adder construction/native truth tables, bounded undo,
+  real crafted-plank placement, current-note retrieval, grounded build guidance,
+  comparison units/validated trial consumers, persisted buffer observations and
+  one-notice voice failures. These bounded features do not complete E1–E4/P2.
+- Combined actual full-adder41957262960 passed:3544cells/35pins, two test epochs,
+  fresh clocks after restart and zero remaining changes after complete undo.
+  Combined physical41957260041 passed: actual gathered/crafted resources,
+  four native plank placements, NBT remainders3/2/1/0 and saved-world restart.
+  Both independent artifacts were inspected.
+- Proof correction: the new trial-history/repeat assertions were accidentally
+  in optional liveStructuralFlow. Green normal CI did NOT execute them. This
+  branch moves them into default conversationDesignFlow; it must show actual
+  persisted12/16-tick observations and two-request chat counts before that proof
+  is claimed complete. No runtime-feature behavior changes in this correction.
+- This branch also includes PR83's fixed public-guide packaging allowlist.
+  Python syntax and scoped Java/client compilation passed; full CI/extracted
+  runtime and corrected dedicated proof are pending. Latest download is alpha.2.
+- Toggle-memory work remains outside main on work/toggle-memory-contract.
+  Native1be52d3/41958383492 and canonicalcef919e/41959507805 passed inspected
+  source parity and768actual settled observations across both bits/four rotations.
+  No production admission or stateful test authority exists. Typed restoration,
+  normal-chat build/test and data-and-clock registers remain unfinished.
+- Claude's isolated acceptance PR79 remains separate; inspect its latest evidence
+  before integration. Real microphone/speaker and production account acceptance
+  remain unproven. No timing/reliability rate is inferred from these test counts.
 
 ## Next Codex slices
 
-1. Finish green combined integration, inspect exact-source evidence and
-   update this note when they land. Preserve already-proven guards and v1 formats.
+1. Finish corrected repeated-trial proof and release-guide packaging, then
+   publish a verified alpha.3. Preserve proven guards and v1 formats.
 2. Complete native crafted-plank placement: consume1real item per world block,
    retain every remainder, reject detached/wrong-hand stacks and stale authority,
    then prove actual player chat and saved-world recovery in CI.
@@ -118,13 +119,3 @@ Repository: https://github.com/1xmint/minecraft-ai-engineer.
    verified release, then audit every original requirement before goal completion.
 
 Historical investigations and failed runs remain in Git history and CI artifacts.
-
-Integration PR82 merged066923a after exact3a6523e passed all5checks41957252832.
-Dedicated memory/restart artifact was inspected, as were combined physical
-41957260041 and full-adder41957262960 proofs. The source PRs are now integrated.
-Proof correction: native trial-history and two-request assertions were accidentally
-placed in optional liveStructuralFlow, not default conversationDesignFlow. The
-normal CI run therefore did NOT prove those assertions. work/trial-repeat-default-flow
-moves them to the actually-driven generated conversation, with no model calls or
-runtime-feature changes. CI must show actual two-attempt chat counts before that
-specific producer/persistence/repeat proof is claimed complete.
