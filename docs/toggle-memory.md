@@ -133,3 +133,12 @@ Native CI42057336040 on877b906 passed all206 required tests. The inspected
 independent replay matched eight sampler traces/768 settled observations to the
 separate original native traces and canonical source. This proves the read-only
 sampler and duplicate-tick refusal; connected timed driver execution is pending.
+
+Internal timed integration now inspects fresh authority and the exact paired state
+each native server tick, acts at ticks24/48/72/96 and samples through tick143.
+Skipped ticks stop the run without catch-up. It exposes combined observations
+only after the original pair is observed and RESTORED is saved, read back and
+authority is checked again. The dedicated fixture drives it with a test-only
+native tick listener and independently replays its exported data. Compilation
+passed; this connected timed proof still needs CI. Normal testing, verification
+promotion and fresh interruption recovery remain unavailable.

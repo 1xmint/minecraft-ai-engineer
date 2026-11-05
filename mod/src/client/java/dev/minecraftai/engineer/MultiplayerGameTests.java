@@ -3151,6 +3151,35 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
         write("toggle-memory-build.done","passed");
         toggleMemoryDriverProof(server);
+        toggleMemoryTimedProof(server);
+    }
+    private static void toggleMemoryTimedProof(TestDedicatedServerContext server) throws Exception {
+        var active=new java.util.concurrent.atomic.AtomicReference<MemoryTimedTrial>();
+        var result=new java.util.concurrent.atomic.AtomicReference<com.google.gson.JsonObject>();
+        var failure=new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        try{
+            server.runOnServer(s->{
+                var project=session(s,"Alice");
+                net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(current->{
+                    if(current!=s)return;var trial=active.get();if(trial==null)return;
+                    try{
+                        var state=trial.tick();
+                        if(state==MemoryTimedTrial.State.COMPLETE){result.set(trial.data());active.set(null);}
+                        else if(state==MemoryTimedTrial.State.INTERRUPTED){failure.set(new IllegalStateException("Connected memory trial interrupted"));active.set(null);}
+                    }catch(Throwable problem){failure.set(problem);active.set(null);try{trial.stop();}catch(Throwable cleanup){problem.addSuppressed(cleanup);}}
+                });
+                active.set(MemoryTimedTrial.open(project,project.owner));
+            });
+            server.waitFor(s->result.get()!=null || failure.get()!=null);
+            check(failure.get()==null,"The connected memory trial completes on native server ticks: "+failure.get());
+            server.runOnServer(s->{
+                var project=session(s,"Alice");var data=result.get();
+                check(data.get("controller").getAsString().equals(project.owner.toString()) && data.getAsJsonObject("observations").getAsJsonObject("intention").equals(project.blueprint.source()),"Timed evidence belongs to the current connected owner and exact selected blueprint");
+                check(data.getAsJsonObject("observations").get("sampleCount").getAsInt()==96 && data.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && data.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"Connected timed execution retains96 actual samples and a persisted original-pair receipt");
+                check(project.verified.equals("untested") && project.delegation==null && project.memoryInputDriver==null && !project.hasPendingTest(),"Internal timed evidence grants no generic functional pass or saved authority");
+                write("toggle-memory-timed-record.json",data.toString());write("toggle-memory-timed.done","passed");
+            });
+        }finally{server.runOnServer(s->{var trial=active.getAndSet(null);if(trial!=null)trial.stop();});}
     }
     private static void toggleMemoryDriverProof(TestDedicatedServerContext server) throws Exception {
         server.runOnServer(s->{

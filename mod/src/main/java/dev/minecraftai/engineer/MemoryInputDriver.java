@@ -22,18 +22,21 @@ final class MemoryInputDriver {
     private final com.google.gson.JsonObject source;
     private final BlockPos lever,bulb;
     private final MemoryInputJournal journal;
+    private final MemoryInputTransition.Frame initialFrame;
+    private MemoryInputTransition.Frame lastObserved;
     private boolean inPulse,closed,stopRequested;
     private int pulses;
 
     private MemoryInputDriver(EngineeringSession session,UUID controller,ServerPlayer player,
             ServerLevel level,RegionReservations.Fence fence,MemoryInputJournal journal,
-            ToggleMemoryIntention intention) {
+            ToggleMemoryIntention intention,MemoryInputTransition.Frame initialFrame) {
         this.session=session;this.controller=controller;this.player=player;this.connection=player.connection;
         this.level=level;this.fence=fence;this.projectRevision=session.revision();
         this.authorizationRevision=session.access.revision();this.component=session.activeComponent;
         this.basis=session.assignments.task(session.blueprint,component).basis;
         this.generation=session.assignments.task(session.blueprint,component).generation;
         this.source=session.blueprint.source().deepCopy();this.journal=journal;
+        this.initialFrame=initialFrame;this.lastObserved=initialFrame;
         var design=intention.blueprint();
         this.lever=design.blocks().stream().filter(block->block.state().is(net.minecraft.world.level.block.Blocks.LEVER)).findFirst().orElseThrow().pos().immutable();
         this.bulb=design.blocks().stream().filter(block->block.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos().immutable();
@@ -65,7 +68,7 @@ final class MemoryInputDriver {
             if(frame.lever().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED))
                 throw new IllegalStateException("Memory input sampling requires the canonical unpowered starting control");
             journal=MemoryInputJournal.create(session.manager.directory,session.blueprint,frame,level.getGameTime());
-            driver=new MemoryInputDriver(session,controller,player,level,session.delegation,journal,intention);
+            driver=new MemoryInputDriver(session,controller,player,level,session.delegation,journal,intention,frame);
             session.memoryInputDriver=driver;
             driver.validateAuthority();
             return driver;
@@ -87,6 +90,7 @@ final class MemoryInputDriver {
         MemoryInputTransition.Frame before=null;
         try {
             validateAuthority();before=capture(level,lever,bulb);
+            if(!lastObserved.matches(before))throw new IllegalStateException("Memory pair changed since the last native observation");
             var edge=journal.prepare(before,level.getGameTime());
             try {
                 validateAuthority();
@@ -105,6 +109,7 @@ final class MemoryInputDriver {
                 if(nativeFailure!=null)nativeFailure.addSuppressed(unreadable);else nativeFailure=unreadable;
                 freezeWithoutObservation(nativeFailure);throw propagate(nativeFailure);
             }
+            lastObserved=actual;
             try { journal.observe(actual,level.getGameTime());pulses++; }
             catch(RuntimeException | Error observationFailure) {
                 if(nativeFailure!=null)nativeFailure.addSuppressed(observationFailure);else nativeFailure=observationFailure;
@@ -134,10 +139,54 @@ final class MemoryInputDriver {
         if(failure!=null)throw failure;
     }
 
+    /** Revalidate live owner authority and require the exact last native pair. */
+    synchronized MemoryInputTransition.Frame inspect() {
+        requireServerThread();
+        if(closed || session.memoryInputDriver!=this)throw new IllegalStateException("Memory input driver is closed");
+        if(inPulse){stopRequested=true;throw new IllegalStateException("Cannot inspect reentrantly during a native memory edge");}
+        try {
+            validateAuthority();var actual=capture(level,lever,bulb);
+            if(!lastObserved.matches(actual))throw new IllegalStateException("Memory pair changed since its last native observation");
+            return actual;
+        } catch(RuntimeException | Error failure) {
+            freezeOnFailure(failure,null);throw failure;
+        }
+    }
+
+    /** Persist and read back the exact restored pair before releasing fresh authority. */
+    synchronized com.google.gson.JsonObject finishRestored() {
+        requireServerThread();
+        if(closed || session.memoryInputDriver!=this)throw new IllegalStateException("Memory input driver is closed");
+        try {
+            var actual=inspect();
+            if(pulses!=4 || !initialFrame.matches(actual) || !lastObserved.matches(actual))
+                throw new IllegalStateException("Four observed native edges and the exact original pair are required before finishing");
+            journal.restored(actual,level.getGameTime());
+            var persisted=MemoryInputJournal.read(journal.file(),session.blueprint);
+            if(!persisted.stage().equals("RESTORED") || !persisted.json().equals(journal.json()))
+                throw new IllegalStateException("Durable restored memory input history did not verify after save");
+            var finalFrame=inspect();
+            if(!initialFrame.matches(finalFrame))throw new IllegalStateException("Original paired state changed during restored-journal verification");
+            var result=persisted.json();releaseIdentity();return result;
+        } catch(RuntimeException | Error failure) {
+            if(!closed) {
+                try { if(!journal.stage().equals("RESTORED"))journal.interrupt(capture(level,lever,bulb),level.getGameTime()); }
+                catch(RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+                releaseIdentity();
+            }
+            throw failure;
+        }
+    }
+
     /** Read-only detached inspection for native fixtures and recovery reporting. */
     synchronized com.google.gson.JsonObject recordSnapshot(){return journal.json();}
     synchronized java.nio.file.Path recordFile(){return journal.file();}
     synchronized String recordStage(){return journal.stage();}
+    synchronized ServerLevel boundLevel(){return level;}
+    synchronized Blueprint boundBlueprint(){return session.blueprint;}
+    synchronized MemoryInputTransition.Frame initialFrame(){return initialFrame;}
+    synchronized int observedPulses(){return pulses;}
+    synchronized boolean closed(){return closed;}
 
     private void validateAuthority() {
         requireServerThread();

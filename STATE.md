@@ -226,3 +226,13 @@ bits/all four rotations. Duplicate-tick refusal is included. No functional pass
 or connected timed execution is claimed. Next internal MemoryTimedTrial joins
 fresh driver authority to the96 exact-tick observations and durable RESTORED
 record; normal test routing and separate fresh interruption recovery stay pending.
+
+Internal MemoryTimedTrial now joins fresh driver authority and the read-only
+sampler: inspect every native tick, no catch-up, edges24/48/72/96,96 samples and
+completion143 only after durable RESTORED write/readback and fresh authority.
+The connected fixture uses a test-only native server-tick listener, exports the
+combined journal/observations and requires an independent JavaScript replay.
+No production route or functional pass is enabled. GPT-6-Luna implemented the
+controller/driver changes; parent review corrected first-callback timing and
+off-thread stop behavior. Java/client compile and script syntax/format passed.
+Full connected-player CI remains required; interruption recovery is unfinished.
