@@ -268,3 +268,18 @@ diff. Code/scripts match2ee1e52 exactly after reconciliation; no main behavior
 was dropped. Full final-head CI and conversation proof41941120901 remain gates.
 Closed superseded drafts44/46/57/58/61/62/63 after confirming their work is
 in merged integrations49/48/66. The goal and broad remaining scope are unchanged.
+
+Conversation source2ee1e52 passed focused41941120901. Inspected native and
+interruption reports plus conversational-native-crafting NBT proof and actual
+chat/restart receipt. PR73 exact81db7ed now awaits PR-triggered full CI41941499358;
+opening the PR superseded manual41941453630 through existing concurrency rules.
+Do not restart either head. Full-adder1574e88 player41939920429 remains live.
+
+Prepared separate read-only recovery movement planning for interrupted oak
+resources: move the real cursor stack to its original hotbar slot, or remove
+the real grid input and then store it. Already settled log/planks need0clicks.
+The plan never selects result slot0, creates resources or treats missing items
+as empty. Other inventories/components refuse. Hand-worked native tests cover
+all4interrupted frames and rejected resource shapes; scoped Java compile passed.
+Execution tickets, durable recovery acknowledgment and actual native/restart proof
+remain required before recovery is offered to players. PR73 stays unchanged.
