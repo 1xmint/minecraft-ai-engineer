@@ -532,6 +532,22 @@ not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
 
+### Compare two designs (development source)
+
+Ask `compare this design with <project or catalog design>` in addressed chat.
+The answer is read-only and changes nothing. Every number carries its unit:
+blocks, blocks² for footprint, blocks³ for the bounding-box volume, and items
+for materials. Material counts are what each design calls for, not what anyone
+has collected or stored. A generated design's configured delay is shown as
+intended timing and is never called a measurement. Measured timing and
+reliability stay "unavailable" unless validated trial records exist for the
+current revision. When records exist, the answer gives separate counts of
+passed, failed and interrupted attempts, never a rate. One sample is one
+off/on/off attempt at one revision, so checkpoints and replays of the same
+attempt count once, and records from an earlier revision are not counted.
+The game does not store trial records yet, so in-game comparisons currently
+always show measured timing and reliability as unavailable.
+
 ### Mechanical control handoff (development source)
 
 For an accepted sticky-shutter project, `/engineer release` returns mechanical

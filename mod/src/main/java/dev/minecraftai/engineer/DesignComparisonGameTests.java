@@ -1,5 +1,6 @@
 package dev.minecraftai.engineer;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.*;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -38,27 +39,53 @@ public final class DesignComparisonGameTests {
         var lines=DesignComparison.compare(measure("A",catalog("signal-lamp",0,0,2)),measure("B",catalog("signal-lamp",40,90,2)));
         helper.assertTrue(has(lines,"Measured differences: none") && has(lines,"no measured difference; neither design has an advantage")
                 && !has(lines,"Recommendation: A") && !has(lines,"Recommendation: B"),"Moving or turning a design changes no measurement: "+all(lines));
-        helper.assertTrue(has(lines,"Timing: unavailable") && has(lines,"Reliability: unavailable") && has(lines,"This comparison changed nothing"),"Untested designs claim no timing or reliability: "+all(lines));
+        helper.assertTrue(has(lines,"Measured timing: unavailable") && has(lines,"Reliability: unavailable") && has(lines,DesignComparison.MATERIALS_COLLECTED) && has(lines,"This comparison changed nothing"),"Untested designs claim no timing or reliability: "+all(lines));
         helper.succeed();
     }
 
     @GameTest public void repeaterSettingIsStatedWithoutTimingClaims(GameTestHelper helper){
         var lines=DesignComparison.compare(measure("A",catalog("signal-lamp",0,0,1)),measure("B",catalog("signal-lamp",0,0,2)));
         helper.assertTrue(has(lines,"Measured differences: none") && has(lines,"repeater setting 1") && has(lines,"repeater setting 2")
-                && has(lines,"Timing: unavailable") && has(lines,"Recommendation: none"),"Same parts with a different repeater setting is a behavior difference, not a measured speed: "+all(lines));
+                && has(lines,"Measured timing: unavailable") && !has(lines,"Measured timing from") && has(lines,"Recommendation: none"),"Same parts with a different repeater setting is a behavior difference, not a measured speed: "+all(lines));
         helper.succeed();
     }
 
     @GameTest public void differentMechanismsGetExactDifferencesAndNoPick(GameTestHelper helper){
         var lines=DesignComparison.compare(measure("lamp",catalog("signal-lamp",0,0,1)),measure("not",catalog("not-gate",0,0,1)));
         helper.assertTrue(has(lines,"Blocks: lamp 6, not 4 (not uses 2 fewer)") && has(lines,"Items: lamp 6, not 4 (not uses 2 fewer)")
-                && has(lines,"stone: lamp 3, not 1") && has(lines,"repeater: lamp 1, not 0") && has(lines,"redstone_torch: lamp 0, not 1")
-                && !has(lines,"Footprint:") && !has(lines,"Volume:"),"Only real differences are listed: "+all(lines));
+                && has(lines,"stone (items): lamp 3, not 1") && has(lines,"repeater (items): lamp 1, not 0") && has(lines,"redstone_torch (items): lamp 0, not 1")
+                && !has(lines,"Footprint (") && !has(lines,"Volume (") && has(lines,"lamp: 6 blocks, 3×1×2 blocks (length×width×height; footprint 3 blocks², bounding-box volume 6 blocks³), planned materials 6 items:"),"Only real differences are listed: "+all(lines));
         helper.assertTrue(has(lines,"Recommendation: none — they are meant to do different things"),"Different behavior never yields a pick: "+all(lines));
         var wide=DesignComparison.compare(measure("or",catalog("or-gate",0,0,1)),measure("lamp",catalog("signal-lamp",0,0,1)));
-        helper.assertTrue(has(wide,"Footprint: or 9, lamp 3 (lamp uses 6 fewer)") && has(wide,"Volume: or 18, lamp 6 (lamp uses 12 fewer)"),"Footprint and volume differences are exact: "+all(wide));
+        helper.assertTrue(has(wide,"Footprint (blocks²): or 9, lamp 3 (lamp uses 6 fewer)") && has(wide,"Volume (blocks³): or 18, lamp 6 (lamp uses 12 fewer)"),"Footprint and volume differences are exact: "+all(wide));
         helper.succeed();
     }
+
+    private static JsonObject sample(int elapsed,boolean observed){var s=new JsonObject();s.addProperty("elapsedTicks",elapsed);s.addProperty("observed",observed);return s;}
+    private static JsonObject row(int index,long tick,int elapsed,boolean output,String digest){
+        var row=new JsonObject();row.addProperty("case",index);row.addProperty("tick",tick);row.addProperty("elapsedTicks",elapsed);row.addProperty("behaviorDigest",digest);
+        var in=new JsonObject();in.addProperty("input",index==1);row.add("inputs",in);var out=new JsonObject();out.addProperty("output",output);row.add("outputs",out);return row;
+    }
+    /**
+     * A stored off/on/off attempt in the generated-evidence format, built with the real TransitionTrace API for the
+     * 4-tick-on / 6-tick-off design from {@link #timed()}. The lamp turns on onAt ticks after the input; risingSamples
+     * rising samples are kept (13 = the whole window, fewer = a saved checkpoint); skip drops one sample; the falling
+     * edge is appended only when asked.
+     */
+    private static JsonArray attempt(Blueprint b,long start,int onAt,int risingSamples,int skip,boolean falling){
+        String digest=((BehaviorSpec)GeneratedBlueprint.behavior(b)).digest();var rows=new JsonArray();
+        var base=row(0,start+8,8,false,digest);var baseline=new JsonArray();for(int t=0;t<=8;t++)baseline.add(sample(t,false));base.add("baselineSamples",baseline);rows.add(base);
+        var up=new TransitionTrace(false,true,4,8);int last=-1;
+        for(int t=0;t<risingSamples;t++)if(t!=skip){up.sample(t,t>=onAt);last=t;}
+        var rise=row(1,start+8+last,last,last>=onAt,digest);rise.add("trace",up.json());rows.add(rise);
+        if(falling){
+            var down=new TransitionTrace(true,false,6,8);for(int t=0;t<=14;t++)down.sample(t,t<6);
+            var fall=row(2,start+8+last+14,14,false,digest);fall.add("trace",down.json());rows.add(fall);
+        }
+        return rows;
+    }
+    private static JsonArray passing(Blueprint b,long start){return attempt(b,start,4,13,-1,true);}
+    private static TrialEvidenceTally.Attempt at(ComponentAssignments.Task task,JsonArray rows){return new TrialEvidenceTally.Attempt(task.lastPassedScope.deepCopy(),rows);}
 
     private static Blueprint generated(String digest,int revision,List<BlockState> states,JsonObject behavior){
         var blocks=new ArrayList<Blueprint.PlannedBlock>();
@@ -93,31 +120,69 @@ public final class DesignComparisonGameTests {
         var tower=measure("tower",new Blueprint(row.id(),row.projectId(),1,WORLD,DIM,"t",BlockPos.ZERO,0,towerBlocks,row.stages(),row.source()));
         helper.assertTrue(tower.length()==1 && tower.width()==1 && tower.height()==3 && tower.footprint()==1 && tower.volume()==3,"Tower measures 1×1×3: "+tower);
         var trade=DesignComparison.compare(tower,measure("row",row));
-        helper.assertTrue(has(trade,"Recommendation: none — it is a tradeoff") && has(trade,"Height: tower 3, row 1"),"A mixed result names no winner: "+all(trade));
+        helper.assertTrue(has(trade,"Recommendation: none — it is a tradeoff") && has(trade,"Height (blocks): tower 3, row 1"),"A mixed result names no winner: "+all(trade));
         var unknown=DesignComparison.compare(measure("x",generated("d1",1,List.of(stone),null)),measure("y",generated("d2",1,List.of(stone,stone),null)));
         helper.assertTrue(has(unknown,"Recommendation: none — they are meant to do different things"),"Different generated behaviors get no pick: "+all(unknown));
         helper.succeed();
     }
 
-    @GameTest public void timingComesOnlyFromCurrentPassedEvidence(GameTestHelper helper){
-        var behavior=new JsonObject();behavior.addProperty("schemaVersion",1);behavior.addProperty("function","buffer");behavior.addProperty("risingGameTicks",4);behavior.addProperty("fallingGameTicks",6);
-        var stone=Blocks.STONE.defaultBlockState();
+    @GameTest public void configuredTimingIsIntentNotMeasurement(GameTestHelper helper){
         var a=timed();var b=timed();
         var both=DesignComparison.compare(DesignComparison.measure("a",a,passed(a)),DesignComparison.measure("b",b,passed(b)));
-        helper.assertTrue(has(both,"Timing from passed game tests: a on after 4 game ticks, off after 6; b on after 4 game ticks, off after 6")
-                && has(both,"passed its game test at revision 3") && has(both,"Reliability: unavailable"),"Current passes report recorded timing only: "+all(both));
+        helper.assertTrue(has(both,"Intended timing (configured in the design, not measured): a on after 4 game ticks, off after 6; b on after 4 game ticks, off after 6")
+                && has(both,"Measured timing: unavailable — neither design has") && !has(both,"Measured timing from")
+                && has(both,"passed its game test at revision 3") && has(both,"Reliability: unavailable — no repeated-trial record exists"),"A recorded pass alone gives intended timing, never a measurement: "+all(both));
         var historical=passed(b);historical.lastPassedScope.addProperty("blueprintRevision",2);
-        var old=DesignComparison.compare(DesignComparison.measure("a",a,passed(a)),DesignComparison.measure("b",b,historical));
-        helper.assertTrue(has(old,"Timing: unavailable — b does not have") && has(old,"retained historical pass"),"An earlier revision's pass is not current timing: "+all(old));
+        var old=DesignComparison.compare(DesignComparison.measure("a",a,passed(a),List.of(at(passed(a),passing(a,100)))),DesignComparison.measure("b",b,historical,List.of(at(historical,passing(b,100)))));
+        helper.assertTrue(has(old,"Measured timing: unavailable — b does not have") && has(old,"retained historical pass") && has(old,"b: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision; 1 from an earlier design scope not counted"),"An earlier revision's trial is not current timing: "+all(old));
         var stale=new ComponentAssignments.Task("root","");stale.verified="stale: component basis migrated; retest required";
-        helper.assertTrue(DesignComparison.status(a,stale).contains("stale") && DesignComparison.timing(a,stale)==null,"Stale evidence reports no timing");
+        helper.assertTrue(DesignComparison.status(a,stale).contains("stale") && DesignComparison.measure("a",a,stale,List.of(at(passed(a),passing(a,100)))).observedTiming()==null,"Stale evidence reports no measured timing");
+        helper.succeed();
+    }
+
+    @GameTest public void trialRecordsAreCountedOnceAndNeverAsARate(GameTestHelper helper){
+        var a=timed();var b=timed();var task=passed(a);
+        var one=DesignComparison.measure("a",a,task,List.of(at(task,passing(a,100))));
+        helper.assertTrue("on after 4 game ticks, off after 6 (observed in 1 passed attempt, sampled every game tick)".equals(one.observedTiming()),"The fixture is a real validated pass: "+one.observedTiming());
+        var tamperedTick=passing(a,600);tamperedTick.get(1).getAsJsonObject().getAsJsonObject("trace").addProperty("transitionTick",2);
+        var wrongDigest=passing(a,700);for(var r:wrongDigest)r.getAsJsonObject().addProperty("behaviorDigest","0".repeat(64));
+        var oversized=passing(a,800);oversized.get(2).getAsJsonObject().getAsJsonObject("trace").getAsJsonArray("samples").add(sample(15,false));
+        var badScope=at(task,passing(a,900));badScope.scope().remove("basis");
+        var earlier=passed(a);earlier.lastPassedScope.addProperty("blueprintRevision",2);
+        var attempts=List.of(
+                at(task,passing(a,100)),at(task,passing(a,100)),                       // a replay of the same attempt
+                at(task,passing(a,200)),
+                at(task,attempt(a,300,4,6,-1,false)),at(task,passing(a,300)),         // saved checkpoint, then the finished record
+                at(task,attempt(a,400,5,13,-1,false)),                                 // lamp late by one tick: failed
+                at(task,attempt(a,500,4,13,7,false)),                                  // a missing game-tick sample: interrupted
+                at(earlier,passing(a,550)),                                            // an earlier revision's scope
+                at(task,tamperedTick),at(task,wrongDigest),at(task,oversized),badScope);
+        var m=DesignComparison.measure("a",a,task,attempts);var t=m.trials();
+        helper.assertTrue(t.passed()==3 && t.failed()==1 && t.interrupted()==1 && t.stale()==1 && t.duplicates()==2 && t.rejected()==4 && t.truncated()==0,"Each attempt is counted once in its own class: "+t);
+        var lines=DesignComparison.compare(m,DesignComparison.measure("b",b,passed(b)));
+        helper.assertTrue(has(lines,"Intended timing (configured in the design, not measured): a on after 4 game ticks, off after 6")
+                && has(lines,"Measured timing: unavailable — b does not have a validated passing trial record for its current revision.")
+                && has(lines,"Reliability: unavailable as a rate — attempt counts only ("+TrialEvidenceTally.SAMPLE_UNIT+")")
+                && has(lines,"a: 3 passed, 1 failed, 1 interrupted of 5 attempts for the current revision; 1 from an earlier design scope not counted; 2 repeated checkpoint or replay records counted once; 4 records rejected as invalid")
+                && has(lines,"b: 0 passed, 0 failed, 0 interrupted of 0 attempts for the current revision")
+                && lines.stream().noneMatch(line->line.contains("%") || line.toLowerCase(Locale.ROOT).contains("latency") || line.toLowerCase(Locale.ROOT).contains("success rate")),
+                "Counts stay separate, the sample unit is stated and no rate or latency is claimed: "+all(lines));
+        var measured=DesignComparison.compare(m,DesignComparison.measure("b",b,passed(b),List.of(at(passed(b),passing(b,100)))));
+        helper.assertTrue(has(measured,"Measured timing from validated trial records: a on after 4 game ticks, off after 6 (observed in 3 passed attempts, sampled every game tick); b on after 4 game ticks, off after 6 (observed in 1 passed attempt"),
+                "Measured timing appears only when both designs have validated passes: "+all(measured));
+        var reversed=DesignComparison.measure("a",a,task,List.of(at(task,passing(a,300)),at(task,attempt(a,300,4,6,-1,false)))).trials();
+        helper.assertTrue(reversed.passed()==1 && reversed.interrupted()==0 && reversed.duplicates()==1,"A checkpoint read after its finished record does not undo the pass: "+reversed);
+        var many=new ArrayList<TrialEvidenceTally.Attempt>();for(int i=0;i<TrialEvidenceTally.MAX_RECORDS+3;i++)many.add(at(task,passing(a,1000L+i*100)));
+        var capped=DesignComparison.measure("a",a,task,many).trials();
+        helper.assertTrue(capped.passed()==TrialEvidenceTally.MAX_RECORDS && capped.truncated()==3 && capped.counts("a").contains("3 records beyond the 64-record limit not read"),"Reading is bounded and says what it skipped: "+capped);
+        helper.assertTrue(DesignComparison.measure("a",a,null,List.of(at(task,passing(a,100)))).trials().equals(TrialEvidenceTally.Tally.NONE),"No current task means no trial counts");
         helper.succeed();
     }
     @GameTest public void retainedPassCannotBeRelabelledToNewIdentityOrBasis(GameTestHelper helper){
         var original=timed();var task=passed(original);var assignments=new ComponentAssignments();assignments.tasks.put("root",task);assignments.reconcile(original);
         var source=original.source().deepCopy();source.addProperty("id",UUID.randomUUID().toString());var replacement=Blueprint.parse(source,"test",DIM);assignments.reconcile(replacement);
         helper.assertTrue(assignments.tasks.get("root")==task && task.verified.startsWith("passed") && task.basis.equals(ComponentAssignments.basis(replacement,"root")),"Same-shape reconciliation really retains the old pass and basis");
-        helper.assertTrue(!FunctionalTrial.matchesCurrentScope(replacement,task) && DesignComparison.timing(replacement,task)==null && DesignComparison.status(replacement,task).contains("historical"),"Same revision and basis cannot relabel a different blueprint identity's pass as current");
+        helper.assertTrue(!FunctionalTrial.matchesCurrentScope(replacement,task) && DesignComparison.measure("r",replacement,task,List.of(at(task,passing(replacement,100)))).observedTiming()==null && DesignComparison.status(replacement,task).contains("historical"),"Same revision and basis cannot relabel a different blueprint identity's pass as current");
         helper.assertTrue(LessonAssistant.evidence(task,replacement).contains("different or incomplete blueprint/component scope"),"Resume also labels that retained evidence historical");
         for(String field:List.of("projectId","blueprintId","blueprintRevision","component","basis","basisVersion")){
             var altered=passed(original);
@@ -127,7 +192,7 @@ public final class DesignComparisonGameTests {
                 case "component"->altered.lastPassedScope.addProperty(field,"other");
                 default->altered.lastPassedScope.addProperty(field,"0".repeat(64));
             }
-            helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,altered) && DesignComparison.timing(original,altered)==null,"Changing scope field "+field+" refuses current timing");
+            helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,altered) && DesignComparison.measure("o",original,passed(original),List.of(at(altered,passing(original,100)))).observedTiming()==null,"Changing scope field "+field+" refuses current timing");
         }
         var wrongTask=passed(original);wrongTask.basis="0".repeat(64);helper.assertTrue(!FunctionalTrial.matchesCurrentScope(original,wrongTask),"Stored task basis must itself match the current component");
         helper.succeed();
@@ -143,12 +208,14 @@ public final class DesignComparisonGameTests {
         var manager=EngineerMod.managerFor(helper.getLevel().getServer());var session=new EngineeringSession(manager,UUID.fromString(imported.projectId()),UUID.randomUUID(),DIM);session.blueprint=imported;session.assignments.tasks.put("root",cached);
         helper.assertTrue(!ProjectGuidance.evidence(session).getFirst().currentPass() && has(ProjectSummary.records(session),"No actual test pass is recorded for its current scope"),"Summary and next-step guidance keep imported geometry untested even with a fabricated matching cache");
         helper.assertTrue(ProjectGuidance.evidence(session).getFirst().history()==null && !LessonAssistant.evidence(cached,imported).contains("passed") && has(ProjectGuidance.next(session),"no defined behavior contract") && !has(ProjectGuidance.next(session),"component test"),"Imported guidance explains the missing contract instead of recommending an unavailable functional test or repeating a fabricated pass");
-        helper.assertTrue(m.imported() && !m.currentPass() && m.timing()==null && m.status().equals(ComparisonEvidence.IMPORTED_STATUS)
+        var timedRows=timed();
+        helper.assertTrue(DesignComparison.measure("imported",imported,cached,List.of(at(cached,passing(timedRows,100)))).trials().equals(TrialEvidenceTally.Tally.NONE),"Trial records never attach to imported geometry");
+        helper.assertTrue(m.imported() && !m.currentPass() && m.intendedTiming()==null && m.observedTiming()==null && m.status().equals(ComparisonEvidence.IMPORTED_STATUS)
                 && m.behavior().equals(ComparisonEvidence.IMPORTED_BEHAVIOR) && m.behaviorKey()==null && m.blocks()==3 && m.length()==3,"Imported geometry is measured but never tested: "+m);
         var lines=DesignComparison.compare(m,measure("lamp",catalog("signal-lamp",0,0,1)));
         helper.assertTrue(has(lines,"imported schematic geometry with no defined behavior") && has(lines,"Recommendation: none — I cannot confirm")
                 && has(lines,"imported is imported geometry and untested.") && has(lines,"lamp has no passed game test of its current revision.")
-                && !has(lines,"passed its game test") && !has(lines,"Timing from passed") && lines.stream().noneMatch(line->line.toLowerCase(Locale.ROOT).contains("verified")),
+                && !has(lines,"passed its game test") && !has(lines,"Measured timing from") && !has(lines,"Intended timing") && lines.stream().noneMatch(line->line.toLowerCase(Locale.ROOT).contains("verified")),
                 "Comparison never labels imported geometry as tested or verified: "+all(lines));
         var twin=DesignComparison.compare(m,DesignComparison.measure("copy",imported,null));
         helper.assertTrue(has(twin,"Measured differences: none") && has(twin,"Recommendation: none — I cannot confirm"),"Identical imports still get no pick: "+all(twin));

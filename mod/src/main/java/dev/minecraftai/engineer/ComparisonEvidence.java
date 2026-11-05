@@ -10,7 +10,7 @@ final class ComparisonEvidence {
 
     static final String DEFINITIONS="Definitions: blocks = planned block positions; items = the total of the saved material list, or one per planned block when none is saved"
             +" (wall torches count as torches); length and width = the longer and shorter horizontal sides of the box around the planned blocks; height = that box's"
-            +" vertical size; footprint = length×width; volume = length×width×height of that box, empty space included.";
+            +" vertical size, all in blocks; footprint = length×width in blocks²; volume = length×width×height of that box in blocks³, empty space included.";
     static final String IMPORTED_BEHAVIOR="imported schematic geometry with no defined behavior";
     static final String IMPORTED_STATUS="imported geometry, untested; it has no behavior contract, so no game test can show that it works";
 
