@@ -9,6 +9,19 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /** Actual Minecraft semantics; executed by GitHub CI, never substitutes for client acceptance. */
 public final class EngineerGameTests {
+    @GameTest public void retainedPlacementAccountsForEveryPlankWithoutInsertingItems(GameTestHelper helper){
+        var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);
+        for(int count=1;count<=4;count++){
+            var inventory=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));inventory.set(3,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS,count));
+            var original=new PhysicalCraftFrame(inventory,empty,net.minecraft.world.item.ItemStack.EMPTY,7);var plan=PhysicalPlacementInventory.predict(original,PhysicalPlacementInventory.Material.OAK_PLANKS);
+            helper.assertTrue(plan.source()==3 && plan.count()==count && plan.remaining()==count-1 && plan.before().selected()==3 && plan.after().selected()==3,"One native placement uses the selected source and decrements exactly one plank");
+            helper.assertTrue(plan.before().inventory().get(3).getCount()==count && plan.after().inventory().get(3).getCount()==count-1 && original.inventory().get(3).getCount()==count && original.selected()==7,"Predicted source selection and decrement never change actual input data");
+            inventory.get(3).setCount(64);helper.assertTrue(plan.before().inventory().get(3).getCount()==count,"A caller alias cannot rewrite placement accounting");
+        }
+        var inventory=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));inventory.set(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));var dirt=new PhysicalCraftFrame(inventory,empty,net.minecraft.world.item.ItemStack.EMPTY,0);
+        helper.assertTrue(PhysicalPlacementInventory.predict(dirt,PhysicalPlacementInventory.Material.DIRT).after().inventory().stream().allMatch(net.minecraft.world.item.ItemStack::isEmpty),"Existing single-dirt accounting remains exact");
+        boolean refused=false;try{PhysicalPlacementInventory.predict(dirt,PhysicalPlacementInventory.Material.OAK_PLANKS);}catch(IllegalStateException expected){refused=true;}helper.assertTrue(refused,"A dirt stack cannot substitute for crafted planks");helper.succeed();
+    }
     @GameTest public void oakRecoveryPlansOnlyNativeResourceMovement(GameTestHelper helper){
         var items=new java.util.ArrayList<net.minecraft.world.item.ItemStack>(java.util.Collections.nCopies(PhysicalCraftFrame.SLOTS,net.minecraft.world.item.ItemStack.EMPTY));items.set(3,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));
         var empty=new PhysicalMenuSnapshot(java.util.Collections.nCopies(4,net.minecraft.world.item.ItemStack.EMPTY),net.minecraft.world.item.ItemStack.EMPTY);
