@@ -1,148 +1,110 @@
 # Optional physical companion
 
-This development feature has passed native lifecycle and dedicated two-client
-chat proof; full integration checks remain pending. It is not included in alpha.2.
-It currently creates an idle visible companion;
-physical construction, gathering and navigation are not enabled.
+Current source supports a visible survival actor, bounded resource gathering,
+flat navigation, native inventory crafting and retained-item placement. Alpha.2
+predates these features. Check the chosen release notes and use its paired files.
+General survival machine construction, tools, workbench recipes and concurrent
+builders remain unfinished.
 
-![The physical companion received and rendered by the actual Minecraft client](images/physical-companion.png)
+![The companion rendered by the actual client](images/physical-companion.png)
 
-Screenshot from the dedicated offline CI fixture on source `053f358`,
-[run 41576664814](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41576664814).
-The run proves addressed-chat summon/dismiss, denied shared-editor actions and
-owner-disconnect cleanup. It does not establish production account login or the
-full human acceptance workflow.
+## Setup and lifecycle
 
-The [saved-server reboot proof](https://github.com/1xmint/minecraft-ai-engineer/actions/runs/41577467684)
-on source `eb036d1` also passed: same saved world/project, new server epoch, no
-automatic actor or action authority, then explicit chat creates a new actor that
-reaches the reconnected client. This tests idle lifecycle recovery; interrupted
-physical construction and inventory recovery remain unfinished.
+Install the free Carpet 26.3 server mod alongside Engineer:
+`fabric-carpet-26.3+v260915.jar` from the
+[Carpet release](https://github.com/gnembon/fabric-carpet/releases/tag/v26.3).
+Pinned SHA256: `7c40b93e807ed914064176898037117097446c6cc76e6a80a856c8bf7f7659f9`.
+No extra account, API key or client mod is needed. Core Engineer works without Carpet.
 
-The server operator needs the free
-[Carpet 26.3 release](https://github.com/gnembon/fabric-carpet/releases/tag/v26.3),
-specifically `fabric-carpet-26.3+v260915.jar`. Its SHA256 is
-`7c40b93e807ed914064176898037117097446c6cc76e6a80a856c8bf7f7659f9`.
-Install it in the dedicated Fabric server's mods folder. No extra account, API key
-or client mod is needed. The ordinary Engineer works without this optional mod.
+As project owner, select a workspace with a 3x3 stone floor at its minimum corner,
+two clear air blocks above it, and no entities in the pad. Keep that pad clear.
+Say `Engineer, summon my companion`. Ask `Engineer, where is my companion?` or
+`Engineer, dismiss my companion`. Authorized viewers can ask for its location;
+only the owner controls its work.
 
-As project owner:
+The generated `Eng_...` actor starts in survival mode. Idle actors cannot freely
+mine, use items or collect drops/experience. Every action needs a fresh server
+check. Owner connection, dimension, project selection, revision or grant changes
+remove the actor. Stop/shutdown never restore action authority automatically.
 
-1. Select your project and mark a workspace containing a 3×3 stone floor with two
-   clear air blocks above it, at the workspace's minimum corner.
-2. Move players and other entities out of that space.
-3. Say **“Engineer, summon my companion.”**
-4. Say **“Engineer, where is my companion?”** for its position, or
-   **“Engineer, dismiss my companion.”** to remove it.
+A project has a private worker identity. Explicit resummon loads its saved native
+player inventory; missing/invalid data or a conflicting identity refuses the
+request. Saving reads back and compares inventory. Restart does not summon or
+resume work. Inventory/world saves are not an atomic hard-crash transaction.
 
-A new companion starts as an empty survival actor with a generated `Eng_…` name. It has no
-project permissions, cannot use items or mine without a separately checked action
-ticket, and cannot pick up dropped materials or experience orbs while idle. Authorized project
-viewers can ask for its location; only the owner can summon or dismiss it.
+## Gather and move
 
-Changing the owner's connection, dimension, selected project, project revision or
-permissions removes the actor. Moving it out of its idle position also removes
-it. Server shutdown stops and removes it; restart does not automatically summon
-it or grant any action authority. These lifecycle cases still require the stated
-CI and multiplayer proofs before release.
+Say `Engineer, gather dirt at X Y Z` or `Engineer, gather oak log at X Y Z`.
+Each request handles one real source block and its captured native drop. The
+worker can accumulate resources while preserving every pre-existing inventory
+slot; only one plain expected item may be added. Full inventory refuses work.
+Mining by hand requires an empty hand or a supported plain resource stack;
+holding a tool or unsupported item refuses rather than pretending to use it.
 
-Each project keeps a private worker identity. An explicit resummon reuses it and
-loads native player data before joining; missing data or a conflicting connected
-identity refuses the request. Saving reloads and compares inventory contents.
-No permission, connection or action ticket is recovered. A resummoned actor retains its saved inventory. Gathering requires empty inventory; dirt placement requires exactly one retained dirt item. This does not
-provide atomic recovery across inventory and world files after a hard crash.
+Sources and routes must lie inside the loaded workspace with stone-supported
+walking cells, two clear body blocks and inert surroundings. Straight gathering
+uses a bounded three-wide corridor; farther targets can use a bounded flat route
+to a mining stance. Movement uses native input, never teleporting or tunnelling.
+Edits, entities, deviation, lost authority or an unreachable target stop work.
+Oak support is isolated logs; leaves/adjacent logs are refused. This is not tree
+harvesting. Stairs, jumping, hazards, general terrain and tool mining are unsupported.
 
-Bounded dirt gathering (dedicated multiplayer CI proven): an owner can say
-`Engineer, gather dirt at X Y Z`. The target must be two to four blocks from the
-companion on one horizontal axis, at the same height, along a clear three-wide
-stone-supported path entirely in the selected workspace. Only one dirt block is
-handled per request; the inventory must start empty. The companion uses native
-mining and walking, accepts only its captured native drop and verifies the saved
-inventory. Dismissal stops the task; explicit resummon retains saved resources
-without restoring action permission. Construction and general navigation remain
-unfinished. Interrupted or failed records require inspection; no automatic retry,
-creative compensation or atomic hard-crash recovery is provided.
+## Craft retained resources
 
-Say `Engineer, what happened to my gathered resources?` for an owner-only,
-read-only comparison of gather records, saved native inventory and currently
-visible source/drop state. `inspect companion recovery` is an equivalent phrase.
-Missing player data is reported as unavailable, never treated as an empty
-inventory. A missing drop does not prove it was picked up. Inspection grants no
-permission and never creates, removes, retries or compensates resources.
+With an idle summoned companion, request:
 
-Development placement slice: say `Engineer, place retained dirt at X Y Z` as the
-project owner. The companion must hold exactly one dirt item in its hotbar. The
-target must be clear air above stone, within four blocks of its eyes, with its
-neighbor/support reservation inside the workspace and no entity in the target.
-It uses native survival right-click, consumes the retained item and verifies its
-saved inventory. Native return evidence and an empty inventory are required;
-matching geometry alone is insufficient. This is not a blueprint executor,
-functional test, undo mechanism or atomic hard-crash transaction.
+- `Engineer, craft oak planks`: one oak log produces four planks.
+- `Engineer, craft sticks`: two oak planks produce four sticks.
+- `Engineer, craft a crafting table`: four oak planks produce one table.
 
-Development blueprint bridge: `Engineer, build the next blueprint block with
-retained dirt` selects the next missing dirt cell in an accepted single-root
-stone/dirt blueprint. Existing stone supports must already match; composite
-scheduling and other materials remain unsupported. All intended cells must be
-loaded in the workspace and matching or air before work starts. The executor
-reserves the plan reads, rechecks preceding intended cells and the accepted
-assignment, and uses the same native retained-item placement. It does not grant
-ownership of matching preexisting blocks, fabricate creative undo history, mark
-the blueprint completed or grant a functional pass.
+These use Minecraft's native 2x2 inventory crafting menu and actual retained
+ingredients. Native result clicks consume ingredients; no output stack is supplied
+by Engineer. Unrelated inventory stays unchanged. Missing ingredients, unresolved
+history, occupied menus or changed authority refuse the task. Placing a crafting
+table does not enable 3x3 recipes or tools yet.
 
-Development job: say `Engineer, gather dirt and build this blueprint` after
-summoning the companion. It handles up to 32 dirt cells in a single-root
-stone/dirt blueprint whose stone supports already match. It observes candidate
-dirt sources in the selected workspace at request time, gathers one real item,
-places the next planned cell, and repeats. Sources must be reachable through the
-bounded clear three-wide stone corridor near the next cell. One lateral block of
-pickup drift is allowed inside that same reserved corridor. No teleport,
-material supply or creative fallback is used. Dismissal, connection/grant changes,
-plan edits or inaccessible resources stop the job. Matching geometry remains
-untested; unfinished records do not restore actions after restart.
+Say `Engineer, inspect companion recovery` (or ask what happened to gathered
+resources) for owner-only comparison of records, saved inventory and visible
+world state. Missing data is unavailable, never assumed empty. Record claims are
+not proof that a missing drop was collected. Inspection moves nothing.
 
-Say `Engineer, stop` or `Engineer, stop building` to stop physical work as well as
-core work. Only the project owner can stop its active physical companion. The
-worker's current inventory is saved and checked before it becomes idle. Unfinished
-resource records remain available for inspection; stopping never recreates a
-resource or resumes an old action. A new request is required to continue.
+After inspection, `Engineer, recover companion crafting resources` requests a
+fresh bounded recovery of the one valid unfinished craft. Ambiguous or altered
+history refuses. Recovery moves actual retained resources out of the recorded
+menu/cursor state and verifies native saving; it never takes another result,
+replaces missing items or retries the craft. Another craft needs a new request.
 
-Bounded navigation (focused dedicated multiplayer CI proven; combined integration pending): the same gather request can plan a bounded flat route to a valid mining stance when the resource is beyond the straight corridor. The selected workspace must contain stone-supported walking cells, two clear body blocks and inert surroundings. Routes use native forward input, never teleport or cut through obstacles. Movement holds exclusive occupancy, not block-write authority; edits, entities, deviation or owner authority changes stop it. On arrival, a fresh narrow gather lease and native mine/pickup tickets are required. Stairs, jumps, hazards, mechanisms and general terrain remain unsupported. The blueprint travel flow below also uses these routes.
+## Place and build
 
-Bounded blueprint travel (focused dedicated multiplayer CI proven; combined integration pending): the one-request dirt blueprint job can now route to original resources beyond the build area, carry retained items back to an adjacent placement stance, and repeat. Every route reserves the blueprint's observed cells as read dependencies and retains the original owner, connection, plan and assignment checks. A changed intended cell stops the job. Routes close before fresh native mine or placement tickets are issued. The same flat stone-supported inert-terrain and material limits apply; general terrain, tools and crafting remain unfinished.
+Request `Engineer, place retained dirt at X Y Z`,
+`Engineer, place retained oak planks at X Y Z`, or
+`Engineer, place retained crafting table at X Y Z`.
+The supported retained-item contract, clear target, support, reach, loaded
+workspace, inert surroundings and entity checks must all pass. Native survival
+right-click consumes the real held item; saved inventory must match the predicted
+decrement. Keep the summon pad clear for later resummoning.
 
-Development oak resource contract (gameplay CI pending): say 'Engineer, gather oak log at X Y Z'. Only one isolated oak log on the same clear, stone-supported flat path is supported. Logs beside leaves or other logs are refused; this is not yet tree harvesting. The requested source material and exact block state are checked before native mining, and only its one captured native log drop can be collected. Existing dirt records retain version1; oak records use a strict version2 contract for read-only inspection. Retained logs are saved through native player data, never supplied or converted into materials by direct inventory editing. Preloaded inventory refuses another gather. Oak log placement, tools and natural forest navigation remain unfinished. The bounded plank recipe is described below.
+For a supported single-root stone/dirt blueprint, request
+`Engineer, build the next blueprint block with retained dirt` or
+`Engineer, gather dirt and build this blueprint`. Existing stone supports must
+match. The bounded job handles up to 32 dirt cells, gathers real dirt, routes to a
+placement stance, places, and repeats. It reserves observed blueprint dependencies
+and stops on plan/player changes or inaccessible resources. Other blueprint
+materials and composite physical scheduling are unsupported.
 
-Development crafting recovery: 'Engineer, inspect companion recovery' also
-reports this owner's crafting records and whether saved native inventory and
-menu resources match the recorded observation. Record claims are labeled as
-claims. Inspection does not create a worker identity, move items, grant actions
-or retry incomplete crafting. Missing or invalid saved data is reported as
-unavailable, never assumed empty. The four-click oak-to-planks task has passed
-focused native gameplay and saved-world restart proof. Main includes `Engineer, craft oak planks` for an idle companion retaining exactly one
-unchanged oak log. Minecraft consumes the log through its native inventory menu;
-the companion retains four planks and places no blocks. It refuses other items,
-another active task, stale owner authority and unresolved crafting history.
-Native crafting and recovery are integrated through PR73 and PR74, with focused
-conversation, interruption and saved-world proofs. The published alpha.2 download
-predates these changes.
+Matching player blocks do not become assistant-owned. Native placement does not
+fabricate creative undo history or grant a functional pass. This bounded dirt
+executor is not a general redstone machine builder.
 
-Development recovery conversation: say 'Engineer, recover companion crafting
-resources' after inspecting an unfinished transaction. The owner must have the
-current idle companion summoned. Exactly one valid unfinished transaction is
-selected; ambiguous or altered history is refused. Recovery moves only the
-actual retained log or planks into their original hotbar slot and verifies
-native saving. It never takes another recipe result, creates replacement
-items or retries the original craft. Repeating a completed recovery moves
-nothing. Crafting a recovered log requires a separate fresh request. Its conversation and final integration CI passed before PR74 merged.
+## Stop, proof and limits
 
-Development crafted-plank placement: say `Engineer, place retained oak planks at
-X Y Z` to place one item from the companion's existing plain stack of one to four
-planks. The target must be clear, within four blocks, above stone and inside the
-loaded delegated workspace with inert surroundings. Every native placement
-checks current authority, exact main-hand inventory and a one-use commit; its
-saved full inventory must match the predicted one-item decrement. No supplied
-items or creative edits are used. Dirt blueprint jobs still accept only dirt.
-This candidate has compiled and passed focused review; actual four-placement
-and saved-world restart CI is pending. It is not general NPC machine building.
-An interrupted placement requires inspecting the world and saved resources;
-never compensate missing items or automatically replay an old placement.
+Say `Engineer, stop` to stop owner-controlled physical work. Inventory is saved
+and checked; unfinished records remain for inspection. No automatic retry,
+compensation or old action authority is restored after stop, disconnect or restart.
+
+Physical companion CI runs on a dedicated server and retains native gathering,
+crafting, inventory conservation, interruption/recovery, placement and saved-world
+restart evidence. Combined run 42173685916 at 59f4b66 passed and its artifacts were
+inspected, including grid/table restart markers and native conservation receipts.
+This uses offline identities; it does not prove Mojang login, human audio or the
+complete Phase 2 experience. Current integration/release status is in STATE.md.

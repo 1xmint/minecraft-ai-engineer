@@ -2,8 +2,9 @@
 
 ## Multiplayer development branch
 
-The [published multiplayer preview](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2)
-contains the compiled mod and companion. Start with the [installation guide](install.md).
+The [published multiplayer releases](https://github.com/1xmint/minecraft-ai-engineer/releases)
+contain paired compiled mod and companion downloads. Features below describe
+current source; check the release notes before using an older download. Start with the [installation guide](install.md).
 Run one companion beside the Fabric server using the same private `MCE_CONFIG_DIR`.
 For source development, use `./gradlew runServer` from `mod/` and accept
 Minecraft's EULA yourself. Keep `online-mode=true`. Start a matching client and
