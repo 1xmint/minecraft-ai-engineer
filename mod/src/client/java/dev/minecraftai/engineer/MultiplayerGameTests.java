@@ -474,6 +474,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
+        var gridCraft=new GridCraftEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -676,7 +677,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             int craftedBefore=server.computeOnServer(s->s.getPlayerList().getPlayer(conversationCraft.worker()).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS));
             MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log and verified its saved inventory");
             server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(conversationCraft.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty() && worker.getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,net.minecraft.world.item.Items.OAK_PLANKS)==craftedBefore+4,"Ordinary owner conversation crafts the actual retained log using native onTake, without commands or supplied resources");menuReceipt(worker,"craft-conversation");});
-            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"Crafting needs exactly one unchanged retained oak log");
+            MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"needs 1 Oak Log to craft oak planks");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(conversationCraft.worker()),net.minecraft.world.item.Items.OAK_PLANKS)==4,"Repeated natural request creates no additional planks"));
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             for(int step=1;step<=4;step++){
@@ -732,14 +733,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             }
             write("physical-craft-interruptions.done","passed");
+            gridCraft[0]=physicalGridCraftFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            var grid=gridCraft[0];
+            server.runOnServer(s->check(s.getPlayerList().getPlayer(grid.worker())==null,"Grid crafting restart restores no worker automatically"));
+            server.runCommand("tp Alice 2834.5 101 8 180 0");
+            send(context,"engineer project use "+grid.project());server.waitFor(s->grid.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(grid.worker());var project=session(s,"Alice");
+                check(worker!=null && grid.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)) && countItem(worker,net.minecraft.world.item.Items.STICK)==8 && countItem(worker,net.minecraft.world.item.Items.CRAFTING_TABLE)==1 && countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==0,"Actual saved-world restart keeps exactly the natively crafted sticks and crafting table");
+                check(project.delegation==null && !project.access.allows(worker.getUUID(),ProjectAccess.Permission.BUILD),"Grid crafting history restores neither grants nor delegation");
+                GridCraftTask.requireNoUnresolved(EngineerMod.managerFor(s),project,worker);menuReceipt(worker,"grid-craft-restarted");});
+            MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"needs 2 Oak Planks to craft sticks");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(grid.worker());check(grid.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)),"A crafting request after restart without materials changes nothing");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-grid-craft-restarted.done","passed");
             for(var recovery:recoveredCrafts){
                 server.runOnServer(s->check(s.getPlayerList().getPlayer(recovery.worker())==null,"Recovery completion boots without automatically restoring actors"));
                 send(context,"engineer project use "+recovery.project());server.waitFor(s->recovery.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
                 MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
                 server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());check(worker!=null && recovery.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)) && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Actual saved-world restart retains the recovered stacks and restores no authority");PhysicalCraftRecord.requireNoUnresolved(EngineerMod.managerFor(s),session(s,"Alice"),worker,OakCraftingPlan.inspect(worker.level(),new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG)));menuReceipt(worker,"craft-recovered-"+recovery.step()+"-restarted");});
-                MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,recovery.step()<3?"crafted four oak planks from its retained log and verified its saved inventory":"Crafting needs exactly one unchanged retained oak log");
+                MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,recovery.step()<3?"crafted four oak planks from its retained log and verified its saved inventory":"needs 1 Oak Log to craft oak planks; no crafting was started");
                 server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovery.worker());check(countItem(worker,net.minecraft.world.item.Items.OAK_PLANKS)==4 && countItem(worker,net.minecraft.world.item.Items.OAK_LOG)==0 && PhysicalWorkerMenus.capture(worker).empty(),"After validated recovery only a fresh owner request can craft an existing log; existing planks are not duplicated");nativePlacementGateRefusals(s,worker);menuReceipt(worker,"craft-after-recovery-"+recovery.step());});
                 MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             }
@@ -767,6 +782,68 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
+    private record GridCraftEvidence(String project,UUID worker,com.google.gson.JsonObject resources) { }
+    private static int crafted(MinecraftServer s,UUID worker,net.minecraft.world.item.Item item){return s.getPlayerList().getPlayer(worker).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,item);}
+    private static void gridHolds(MinecraftServer s,UUID worker,int logs,int planks,int sticks,int tables,String why){
+        var body=s.getPlayerList().getPlayer(worker);
+        check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==logs && countItem(body,net.minecraft.world.item.Items.OAK_PLANKS)==planks && countItem(body,net.minecraft.world.item.Items.STICK)==sticks && countItem(body,net.minecraft.world.item.Items.CRAFTING_TABLE)==tables && PhysicalWorkerMenus.capture(body).empty(),why);
+    }
+    /** Two gathered logs become planks, sticks and a crafting table through native 2x2 crafting, with an interrupted craft explicitly recovered. */
+    private static GridCraftEvidence physicalGridCraftFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 2824 -16 2856 32");server.runCommand("fill 2830 100 0 2835 100 9 minecraft:stone");server.runCommand("setblock 2831 101 4 minecraft:oak_log[axis=x]");server.runCommand("setblock 2831 101 6 minecraft:oak_log");server.runCommand("tp Alice 2834.5 101 8 180 0");
+        send(context,"engineer select1 2830 100 0");send(context,"engineer select2 2834 102 7");server.waitFor(s->new BlockPos(2834,102,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Grid crafting worker begins without supplied materials or tools"));
+        MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"needs 2 Oak Planks to craft sticks");
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Crafting without materials creates nothing"));
+        for(var log:java.util.List.of("2831 101 4","2831 101 6")){MESSAGES.clear();say(context,"Engineer, gather oak log at "+log);expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);}
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);int occupied=0;for(int slot=0;slot<body.getInventory().getContainerSize();slot++)if(!body.getInventory().getItem(slot).isEmpty())occupied++;
+            check(countItem(body,net.minecraft.world.item.Items.OAK_LOG)==2 && occupied==1,"Two native gathers keep both oak logs in one stack");});
+        int planksBefore=server.computeOnServer(s->crafted(s,worker,net.minecraft.world.item.Items.OAK_PLANKS)),sticksBefore=server.computeOnServer(s->crafted(s,worker,net.minecraft.world.item.Items.STICK)),tablesBefore=server.computeOnServer(s->crafted(s,worker,net.minecraft.world.item.Items.CRAFTING_TABLE));
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted oak planks and verified its saved inventory");
+        server.runOnServer(s->{gridHolds(s,worker,1,4,0,0,"First craft consumes one of two logs for four planks");check(crafted(s,worker,net.minecraft.world.item.Items.OAK_PLANKS)==planksBefore+4,"Native result take awards four crafted planks");menuReceipt(s.getPlayerList().getPlayer(worker),"grid-planks-1");});
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted oak planks and verified its saved inventory");
+        server.runOnServer(s->{gridHolds(s,worker,0,8,0,0,"Second craft consumes the last log");check(crafted(s,worker,net.minecraft.world.item.Items.OAK_PLANKS)==planksBefore+8,"Each native take is counted once");});
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"needs 1 Oak Log to craft oak planks");
+        server.runOnServer(s->gridHolds(s,worker,0,8,0,0,"No log means no planks are invented"));
+        MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"crafted sticks and verified its saved inventory");
+        server.runOnServer(s->{gridHolds(s,worker,0,6,4,0,"Sticks consume exactly two real planks");check(crafted(s,worker,net.minecraft.world.item.Items.STICK)==sticksBefore+4,"Native take awards four sticks");menuReceipt(s.getPlayerList().getPlayer(worker),"grid-sticks");});
+        // Interrupt a crafting table after all four cells are filled with two planks still carried: recovery needs nine native clicks.
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var observed=new java.util.ArrayList<Integer>();boolean refused=false;
+            try{GridCraftTask.craft(EngineerMod.managerFor(s),project,body,GridCraftPlan.Recipe.CRAFTING_TABLE,()->{},step->{observed.add(step);if(step==5){PhysicalCraftGuard.requestStop(body);throw new IllegalStateException("Fixture stop after native grid step 5");}});}catch(IllegalStateException expected){refused=true;}
+            var menu=PhysicalWorkerMenus.capture(body);boolean full=menu.inputs().stream().allMatch(cell->cell.is(net.minecraft.world.item.Items.OAK_PLANKS) && cell.getCount()==1);
+            check(refused && observed.equals(java.util.List.of(1,2,3,4,5)) && full && menu.cursor().is(net.minecraft.world.item.Items.OAK_PLANKS) && menu.cursor().getCount()==2 && countItem(body,net.minecraft.world.item.Items.CRAFTING_TABLE)==0 && crafted(s,worker,net.minecraft.world.item.Items.CRAFTING_TABLE)==tablesBefore,"A stopped table craft leaves four planks in the grid and two on the cursor without crafting");});
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"crafting a crafting table at step 5 of 8; uncertain, needs explicit recovery; current resources match a state this record allows");
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"crafting resources are stored and their saved state was verified. No recipe was retried");
+        server.runOnServer(s->{gridHolds(s,worker,0,6,4,0,"Nine-click recovery returns all six planks from a full grid and cursor");check(crafted(s,worker,net.minecraft.world.item.Items.CRAFTING_TABLE)==tablesBefore,"Recovery never takes the visible crafting table result");menuReceipt(s.getPlayerList().getPlayer(worker),"grid-table-recovered");});
+        MESSAGES.clear();say(context,"Engineer, craft a crafting table");expectChat(context,"crafted a crafting table and verified its saved inventory");
+        server.runOnServer(s->{gridHolds(s,worker,0,2,4,1,"A crafting table consumes exactly four real planks");check(crafted(s,worker,net.minecraft.world.item.Items.CRAFTING_TABLE)==tablesBefore+1,"Native take awards one crafting table");menuReceipt(s.getPlayerList().getPlayer(worker),"grid-table");});
+        MESSAGES.clear();say(context,"Engineer, craft a crafting table");expectChat(context,"needs 4 Oak Planks to craft a crafting table");
+        server.runOnServer(s->gridHolds(s,worker,0,2,4,1,"Too few planks refuses before any native click"));
+        // Interrupt a stick craft after the second native click: one plank in the grid, one on the cursor.
+        var stopped=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);var observed=new java.util.ArrayList<Integer>();boolean refused=false;
+            try{GridCraftTask.craft(manager,project,body,GridCraftPlan.Recipe.STICK,()->{},step->{observed.add(step);if(step==2){PhysicalCraftGuard.requestStop(body);throw new IllegalStateException("Fixture stop after native grid step 2");}});}catch(IllegalStateException expected){refused=true;}
+            var menu=PhysicalWorkerMenus.capture(body);int inGrid=0;for(var cell:menu.inputs())if(cell.is(net.minecraft.world.item.Items.OAK_PLANKS))inGrid+=cell.getCount();
+            check(refused && observed.equals(java.util.List.of(1,2)) && !PhysicalCraftGuard.active(body),"A stopped grid craft performs no later native click");
+            check(inGrid==1 && menu.cursor().is(net.minecraft.world.item.Items.OAK_PLANKS) && menu.cursor().getCount()==1 && countItem(body,net.minecraft.world.item.Items.OAK_PLANKS)==0 && countItem(body,net.minecraft.world.item.Items.STICK)==4 && crafted(s,worker,net.minecraft.world.item.Items.STICK)==sticksBefore+4,"Interruption preserves both planks in the native grid and cursor without crafting");
+            menuReceipt(body,"grid-interrupted");return PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(body),body);});
+        MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"need recovery before new work");
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"crafting sticks at step 2 of 5; uncertain, needs explicit recovery; current resources match a state this record allows");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(stopped.equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(body),body)),"Refusal and inspection move no items");});
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"crafting resources are stored and their saved state was verified. No recipe was retried");
+        server.runOnServer(s->{gridHolds(s,worker,0,2,4,1,"Explicit recovery returns exactly the two interrupted planks");check(crafted(s,worker,net.minecraft.world.item.Items.STICK)==sticksBefore+4,"Recovery never takes a result");menuReceipt(s.getPlayerList().getPlayer(worker),"grid-recovered");});
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"crafting sticks at step 2 of 5; uncertain, resolved by a later recovery");
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"No unfinished crafting resources need recovery. No items were moved");
+        MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"crafted sticks and verified its saved inventory");
+        var finished=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
+            gridHolds(s,worker,0,0,8,1,"Only a fresh owner request crafts the recovered planks");check(crafted(s,worker,net.minecraft.world.item.Items.STICK)==sticksBefore+8 && project.delegation==null,"Two stick crafts award eight sticks and leave no delegation");
+            try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".gridcraft-*.json")){var out=directory().resolve("grid-craft-records");Files.createDirectories(out);int count=0;for(var file:files){Files.copy(file,out.resolve(file.getFileName()));count++;}check(count==9,"Seven crafts and two recoveries each wrote exactly one record; refusals wrote none");}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            return new GridCraftEvidence(project.projectId.toString(),worker,PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(body),body));});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-grid-craft.done","passed");return finished;
+    }
     private static void nativePlacementGateRefusals(MinecraftServer server,ServerPlayer worker){
         var manager=EngineerMod.managerFor(server);var project=session(server,"Alice");var owner=player(server,"Alice");var target=new BlockPos(2633,101,3);
         var initial=PhysicalCraftFrame.capture(worker);var plan=PhysicalPlacementInventory.capture(worker,PhysicalPlacementInventory.Material.OAK_PLANKS);

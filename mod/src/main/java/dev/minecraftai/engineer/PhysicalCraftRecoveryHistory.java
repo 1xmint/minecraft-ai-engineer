@@ -63,7 +63,7 @@ final class PhysicalCraftRecoveryHistory {
         }
         if(!compatible)throw new IllegalStateException("Recovery acknowledgment changes the original resource type or amount");
     }
-    private static PhysicalCraftFrame decode(JsonObject value,ServerPlayer reader){
+    static PhysicalCraftFrame decode(JsonObject value,ServerPlayer reader){
         if(!value.keySet().equals(Set.of("inventory","menu","selected")))throw new IllegalStateException("Recovery resource fields differ");
         var ops=reader.registryAccess().createSerializationContext(JsonOps.INSTANCE);var stacks=new ArrayList<ItemStack>();var inventory=value.getAsJsonArray("inventory");
         if(inventory.size()!=PhysicalCraftFrame.SLOTS)throw new IllegalStateException("Recovery inventory length differs");for(var stack:inventory)stacks.add(ItemStack.OPTIONAL_CODEC.parse(ops,stack).getOrThrow());
