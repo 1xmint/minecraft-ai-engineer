@@ -1,6 +1,6 @@
 # Current state
 
-Updated 2026-11-05 UTC. Goal: **complete all milestones**: the original Phase 1
+Updated 2026-11-06 UTC. Goal: **complete all milestones**: the original Phase 1
 brief and all six Phase 2 extensions. **Incomplete.** Requirements remain in
 docs/product-brief.md and its multiplayer-first amendment. Repository:
 https://github.com/1xmint/minecraft-ai-engineer.
@@ -45,7 +45,7 @@ https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Landed on main
 
-Main is 121e710 (PR95). Latest published download remains **v0.1.0-alpha.2**;
+Main is b394362 (through Claude PR97/101/102). Latest published download remains **v0.1.0-alpha.2**;
 it predates the later engineering features. No alpha.3 is published yet.
 
 - Creative preview/build/test/repair/undo, per-player project access/conflicts,
@@ -57,10 +57,11 @@ it predates the later engineering features. No alpha.3 is published yet.
   buffer transition records and repeat-attempt accounting. Full-adder combined
   player proof41957262960:3544cells/35pins, two epochs, fresh restart clocks and
   zero remaining changes after undo. Configured waits are not measured latency.
-- Visible native actor; bounded flat dirt/oak work, fixed one-log/four-plank
-  native crafting and retained-plank placement. Combined physical41957260041
-  and plank41955934297 evidence inspected: real materials and saved-world
-  remainders. These are not general terrain/tools/crafting or machine builders.
+- Visible native actor and bounded flat dirt/oak work. Claude PR97/101/102 add
+  resource accumulation, native2x2 planks/sticks/table crafting with explicit
+  interrupted-grid recovery, and retained crafting-table placement. Their
+  required checks passed; current combined physical proof is still pending.
+  These are not3x3 tool crafting, general terrain or NPC machine builders.
 - Durable literal notes/reasons/replacement history, read-only guidance and
   evidence consumers, optional editable unsent voice drafts. Human audio is
   unproven. Repeated counts are not a demonstrated reliability rate.
@@ -120,45 +121,39 @@ history and the feature guides. No full milestone-completion claim is made.
 
 Current combined memory candidate (PR100; not merged):
 
-- Durable latest-recovery pointers, bounded strict schema2 origin chains and
-  schema1 compatibility; stale checkpoint-free sessions refuse to plan.
-- Fresh connected recovery authority, journal-before-edge ordering, event-time
-  selection/connection/grant/reservation checks and no automatic compensation.
-- Explicit chat resume restores the original pair, clears both pointers and
-  stops paused. Normal test requires96 live samples/four native edges,
-  original-pair restoration, durable evidence and fresh authority before a pass.
-- Live pass bindings pin exact source/revision/root basis/generation/record ID
-  and are shared by summaries, guidance and lessons. They never load from disk;
-  saved passes become stale. Failure clears task/session pass and binding before
-  rollback I/O, including when both checkpoint saves fail. Reassignment also
-  marks raw status stale. Offline replay cannot grant a current pass.
-- Player fixtures cover partial recovery/session reload, revocation/selection,
-  real same-UUID reconnect, chat resume/test and full dedicated-server restart.
-  The last three flows and final pass-scope fixes still need combined runtime
-  proof. These fixtures do not prove human audio or Mojang login.
-- Reviewed by GPT-6.1-sol: recovery authority/routing had no implementation
-  blocker; identified scope-status and double-save defects were fixed and the
-  fixes reviewed. Native scope/source/generation/load/save-failure regressions
-  passed215 required tests at52441db/42120494863 and e992df0/42120882739;
-  artifacts inspected. Local Java compile passed for restart fixture774049e.
-- Foundation exact3d7eec8/full42115690389 and separate acceptance42115690549
-  passed; artifacts inspected:96 samples/four edges/original pair restored,
-  persisted engineering proof, unchanged52-block acceptance fixture/inventories.
-- Connected recovery exactfb08670/full42116822093 passed. Inspected record:
-  INTERRUPTED first attempt, RESTORED second following its ID, revocation and
-  selection-loss attempts each had one interruption event/no native edge, final
-  fresh restoration succeeded. No functional pass came from recovery.
-- Superseded runs42117395903/42117840340/42119500629 are being explicitly
-  cancelled because reviewed fixes and full-restart coverage replace their code,
-  not because observation expired. Confirm terminal before updating PR100 head;
-  then run all required checks and inspect exact-head artifacts before merging.
+- Native96-sample/four-edge testing with original-pair restoration, durable
+  evidence, fresh actor/source/grant checks and live-only pass bindings shared
+  by summary/guidance/lessons. Failed saves clear task/session bindings before
+  rollback I/O. Source/assignment changes invalidate raw status too.
+- Durable latest-recovery pointers and bounded strict journal chains. Explicit
+  resume acquires fresh authority, restores the original pair and stops paused;
+  no automatic retry, test, compensation or loaded execution authority.
+- Fixed two reviewed evidence defects (scope/status disagreement and double-save
+  rollback). GPT-6.1-sol reviewed those fixes and the recovery authority/routing.
+- Full030db48/42121757231 failed at immediate post-pass load. Fixf6493b3 made
+  that load succeed; full42125493607 then failed at later whole-server boot.
+  Its artifacts prove actual approved chat testing:96 samples,9-event RESTORED,
+  functional.done; chat recovery also matched the original pair. Reconnect and
+  final full-recovery restart were not yet reached, so remain unproven.
+- Root issue: generic stale display text was still interpreted as generic trial
+  state. Storage fix599765f keeps generic verified=untested and stores bounded
+  memoryVerificationStatus history separately. The unchanged generic loader
+  rejects any generic scope/input/evidence; loaded history never creates a live
+  binding, pass or runner. Narrow old native labels remain quarantined.
+- Exact599765f/native42169765332 passed215 required tests; artifact inspected.
+  Regressions cover general stale roundtrip, malformed/pass-looking history,
+  valid generic-scope rejection, failed saves, source/generation/load invalidation.
+  GPT-6.1-sol found no concrete authority/status/storage defect.
+- Restart fixture now expects fixed non-current history, checks all runners are
+  absent and retains pre-reboot field diagnostics. Merged mainb394362 cleanly
+  at8deb70d; compileJava/compileClientJava passed. Final combined runtime checks
+  and current physical companion compatibility are the next gate.
 
-2026-11-05 provider documentation check (E4; no authentication/code change): official OpenAI documentation now describes ChatGPT-plan usage for eligible open-source locally hosted apps and self-hosted VMs through Sign in with ChatGPT. Registrations are scoped to an authenticated user/workspace; the pages do not establish entitlement for multiple Minecraft players sharing one operator's plan. Shared-server model access therefore remains unresolved, and existing operator-only admission stays in place. No API key, credentials, paid service or live model request was used. Sources read: https://developers.openai.com/siwc/token-sharing-open-source ; https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms ; https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations . A supported technical OAuth route is not proof of multi-user eligibility. Keep current PR100 CI head unchanged.
-
-PR100 exact030db48/full42121757231 failed at the new post-pass session reload: FunctionalTrial.load rejects every stale memory status, including the legitimate native test label. The player log reached the96-sample pass, but loading then failed. Inspected earlier chat-recovery artifact:7-event RESTORED receipt, actual pair equals target and original root pair. Reconnect/full-reboot portions did not run and remain unproven. Fix candidate recognizes only the native status namespace/own stale labels, quarantines them as non-current status while the unchanged generic loader still rejects input journals/scopes/evidence, and restores no live binding/runner. Native regressions cover valid native labels plus rejection of generic scope/foreign pass labels. Java compilation passed; focused CI/review pending. The functional trace is now retained before its reload assertion for better failure evidence.
-
-Native status-load fix exact9a34c15/42125003287 passed215 required tests; replay artifact inspected. GPT-6.1-sol found no current-pass forgery and, after rechecking the exact source, confirmed the unchanged generic memory guard rejects any functionalScope before parsing. The fixture now supplies a valid canonical current-project scope and asserts that specific memory-guard cause, so malformed data cannot mask the invariant. Scoped compileJava passed. Full PR100 retry is needed for player reload/reconnect/full server-restart evidence; no main merge yet.
-
-2026-11-06: f6493b3/full42125493607 failed on the next full server boot after its immediate post-pass reload succeeded. Artifact proves actual chat testing passed (96 samples,9-event RESTORED journal,functional.done) and chat recovery restored the original pair. Later generic stale invalidation text still enters the generic loader and is rejected. Storage fix separates bounded memoryVerificationStatus history from generic verified=untested, preserving strict generic scope/input/evidence rejection and no loaded pass/runner. Known old native labels remain quarantined for compatibility. Native regressions cover general stale labels, pass-looking/malformed history and valid generic-scope rejection. Before-reboot fixture now retains status/field diagnostics and checks reloadability after movement. Local Java compile passed; focused native CI and review pending. Main/release remain unchanged.
-
-Storage fix599765f/native42169765332 passed215 required tests; artifact inspected. GPT-6.1-sol found no authority/status/storage defect. Restart fixture now expects non-current historical memory status and explicitly checks all input/test/recovery runners are absent; compileClientJava passed. Current main has advanced through Claude PR97/101/102 (b394362); integrate that baseline before final full validation.
+2026-11-05 provider documentation check (E4; no auth/code change): official
+OpenAI docs describe eligible open-source/local and self-hosted ChatGPT-plan
+usage, with registration scoped to a user/workspace. They do not establish
+several Minecraft players sharing one operator's plan. Keep operator-only model
+admission; no API keys/paid fallback or credential sharing. Sources read:
+https://developers.openai.com/siwc/token-sharing-open-source and its
+self-hosted-vms and preview-limitations pages. Technical support is not proof of
+shared-subscription eligibility. Human audio/Mojang/provider gates remain open.
