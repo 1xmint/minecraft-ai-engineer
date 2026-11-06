@@ -81,8 +81,8 @@ Memory-circuit foundation on main:
   recovery plans follow that pointer, reject unexplained edits and derive at
   most three new edges. PR93 exactaf9e115/full42064271802 passed all five checks;
   timed/pointer/restart artifact inspected. Native42064151962 passed209tests
-  and32 independent plan cases. **No recovery action or normal memory-test
-  route is enabled; generic stateful testing still explicitly refuses.**
+  and32 independent plan cases. Dedicated native testing and recovery are now
+  enabled through PR100; generic stateful testing still explicitly refuses.
 
 ## Latest integrated work
 
