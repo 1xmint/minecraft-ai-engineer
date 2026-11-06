@@ -1,7 +1,7 @@
 # One-bit toggle memory
 
-This guide describes the implementation merged through PR100. It is not in the
-latest published alpha.2 download. Current release and proof status are in STATE.md.
+This guide describes the implementation merged through PR100. The alpha.2 download
+predates this feature. Current release and proof status are in STATE.md.
 
 ## Playing with memory
 

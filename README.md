@@ -67,8 +67,10 @@ After following the server/operator setup in the installation guide:
 
 Codex reasoning uses the configured account-owning operator's ChatGPT sign-in and
 subscription quota. No API key or separately billed API service is used. Other
-members never receive that login or direct model access. Survival construction,
-voice and a physical NPC remain unfinished.
+members never receive that login or direct model access. Current source adds
+offline voice drafts/private spoken replies and bounded physical survival work.
+General survival machine construction and multiple builders remain unfinished;
+alpha.2 predates these additions.
 
 The [companion guide](docs/companion-guide.md) covers configuration and memory.
 The [mod guide](docs/mod-guide.md) covers sharing, lessons, conflict protection,
