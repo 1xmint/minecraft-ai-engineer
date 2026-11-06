@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-/** Native feasibility for a stored bit. This is not a production memory/register contract. */
+/** Native stored-bit tests; these do not establish general data/clock registers. */
 public final class ToggleMemoryGameTests {
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void memoryPassBindingDoesNotSurviveLoadOrReassignment(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),0).blueprint();

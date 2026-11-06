@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Fixture-only owner-authorized timing run; its detached trace is never a functional pass. */
+/** Fresh-authority timing run; its detached trace alone never grants a functional pass. */
 final class MemoryTimedTrial {
     enum State { RUNNING,COMPLETE,INTERRUPTED }
     private final MemoryInputDriver driver;
