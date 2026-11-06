@@ -147,3 +147,66 @@ admission; no API keys/paid fallback or credential sharing. Sources read:
 https://developers.openai.com/siwc/token-sharing-open-source and its
 self-hosted-vms and preview-limitations pages. Technical support is not proof of
 shared-subscription eligibility. Human audio/Mojang/provider gates remain open.
+
+## Remaining-requirement audit — 2026-11-06
+
+Decision: retain Claude's implementation ownership and use actual end-to-end
+proof as the completion gate. No architecture rewrite or duplicate implementation
+lane is warranted by this audit. A delegation brief is not evidence of progress;
+at this check no new feature PR is open. Codex's release-link PR105 is in CI.
+
+Outcomes for the next work:
+
+- A player obtains materials, crafts useful tools and visibly builds a working
+  machine through normal conversation; prove conservation and interrupted recovery.
+- A larger project recalls relevant older decisions and supports measured design
+  choices; prove relevance/privacy/restart and report unknown measurements honestly.
+- The signed-in human ten-step workflow and real voice hardware are demonstrated;
+  offline CI and recorded audio cannot substitute for them.
+
+Requirement mapping (partial evidence is not overall completion):
+
+- Original1/natural language and5/teaching: addressed chat, grounded explanations,
+  staged lessons and optional overlays exist. Full signed-in human/model ten-step
+  handoff, detailed orientation teaching and safe out-of-order construction still
+  need requirement-matched acceptance rather than command-only fixtures.
+- Original2/inspection and3/blueprints: bounded loaded snapshots, exact native
+  states, component scopes, geometry imports and revisions exist. General existing
+  structure understanding, interface inference and wider environment adaptation
+  remain incomplete; source templates alone do not prove arbitrary mechanisms.
+- Original4/design and8/debugging: native reference/adder/toggle tests and bounded
+  diagnosis/repair exist. Registers, data/clock memory, displays/computers and wider
+  timing/interference diagnosis remain open. catalog/toggle-memory.json explicitly
+  describes a toggle bit, not a data/clock register. Measured optimization must use
+  actual transition/trial records, not phase waits or geometry.
+- Original6/building and7/collaboration: creative bounded assignments, conflicts,
+  undo and restart have CI evidence. PhysicalBlueprintJob still caps32 dirt cells;
+  GridCraftPlan supports only planks/sticks/table in2x2. General tools, terrain,
+  redstone-machine physical execution and overlapping workers are not implemented
+  by those foundations. Prove separate inventories/reservations and human conflicts.
+- Original9/interruption and10/safety: current native test/recovery uses fresh
+  authority, durable journals and explicit resume. Full product acceptance still
+  needs the same guarantees across new executors and larger compositions. Before-
+  state journals are not automatically proof of all requested large/destructive
+  backup behavior; audit that requirement before claiming completion.
+- Durable knowledge: reasons/replacement history/relevant selection are integrated.
+  GatewayMemory.knowledge defaults to newest32 before currentNotes ranks entries;
+  older relevant requirements can be absent from planning. Whole-history explicit
+  show/find exists, but that does not finish automatic later-session relevance.
+- Phase2 voice: offline drafts/authenticated speech are integrated; human mic,
+  speaker, interruption and quit acceptance remain unproven.
+- Phase2 schematics: codecs/transforms/library/imported creative construction are
+  integrated. Practical resource-aware physical reuse remains incomplete.
+- Phase2 NPC/resources/multiple builders: bounded actor/resource work is proven;
+  complete tool/crafting/navigation/machine and true concurrent-builder flows remain.
+- Phase2 optimization: consumers show available observations and unknowns; actual
+  comparable measured alternatives and repeated-trial evidence remain required.
+- Feasibility: private operator-owned model admission remains. Signed-in Mojang
+  login and official shared-subscription eligibility are unproven; no paid/API-key
+  fallback or credential sharing is authorized.
+
+Now: PR105 documents published alpha.3. Codex awaits its exact-head CI and the
+human account/audio availability answer. Claude's next implementation gate is the
+complete native survival crafting/tool chain, then a visible functionally tested
+machine. Broader batches remain as assigned; require merged commits, exact CI,
+retained evidence and limits before updating their completion status.
