@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.Blocks;
 /** Detached accounting for one placement, after the producer selects the source. */
 final class PhysicalPlacementInventory {
     enum Material {
-        DIRT(Items.DIRT,Blocks.DIRT,1),OAK_PLANKS(Items.OAK_PLANKS,Blocks.OAK_PLANKS,4);
+        DIRT(Items.DIRT,Blocks.DIRT,1),OAK_PLANKS(Items.OAK_PLANKS,Blocks.OAK_PLANKS,4),CRAFTING_TABLE(Items.CRAFTING_TABLE,Blocks.CRAFTING_TABLE,1);
         final Item item;final Block block;final int maximum;
         Material(Item item,Block block,int maximum){this.item=item;this.block=block;this.maximum=maximum;}
     }

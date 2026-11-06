@@ -474,7 +474,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
-        var gridCraft=new GridCraftEvidence[1];
+        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -734,6 +734,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             }
             write("physical-craft-interruptions.done","passed");
             gridCraft[0]=physicalGridCraftFlow(context,server);
+            tablePlacement[0]=physicalTablePlacementFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
             var grid=gridCraft[0];
@@ -779,9 +780,18 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(recovered.worker());check(worker.getInventory().isEmpty() && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Restart retains the consumed inventory and restores no construction delegation");menuReceipt(worker,"plank-placement-restarted");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             write("physical-plank-placement.done","passed");
+            var table=tablePlacement[0];
+            server.runOnServer(s->{check(s.getPlayerList().getPlayer(table.worker())==null,"Table placement restart restores no worker automatically");check(s.overworld().getBlockState(table.target()).is(Blocks.CRAFTING_TABLE),"The natively placed crafting table survives the actual saved-world restart");});
+            server.runCommand("tp Alice 3034.5 101 8 180 0");
+            send(context,"engineer project use "+table.project());server.waitFor(s->table.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(table.worker());check(worker.getInventory().isEmpty() && PhysicalWorkerMenus.capture(worker).empty() && session(s,"Alice").delegation==null,"Restart keeps the placed table consumed and restores no delegation");menuReceipt(worker,"table-placement-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            write("physical-table-placement-restarted.done","passed");
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
+    private record TablePlacementEvidence(String project,UUID worker,BlockPos target) { }
     private record GridCraftEvidence(String project,UUID worker,com.google.gson.JsonObject resources) { }
     private static int crafted(MinecraftServer s,UUID worker,net.minecraft.world.item.Item item){return s.getPlayerList().getPlayer(worker).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,item);}
     private static void gridHolds(MinecraftServer s,UUID worker,int logs,int planks,int sticks,int tables,String why){
@@ -843,6 +853,34 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             return new GridCraftEvidence(project.projectId.toString(),worker,PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(body),body));});
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-grid-craft.done","passed");return finished;
+    }
+    /** One gathered log becomes planks and a crafting table, and the companion places that table natively. */
+    private static TablePlacementEvidence physicalTablePlacementFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3024 -16 3056 32");server.runCommand("fill 3030 100 0 3035 100 9 minecraft:stone");server.runCommand("setblock 3031 101 4 minecraft:oak_log[axis=x]");server.runCommand("tp Alice 3034.5 101 8 180 0");
+        send(context,"engineer select1 3030 100 0");send(context,"engineer select2 3034 102 7");server.waitFor(s->new BlockPos(3034,102,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Table placement worker begins without supplied materials"));
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 3031 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log");
+        // Pick a clear cell inside the workspace, away from the worker body and within reach of its eyes.
+        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            for(int x=3031;x<=3033;x++)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
+                if(s.overworld().getBlockState(cell).isAir() && Math.hypot(body.getX()-(x+.5),body.getZ()-(z+.5))>=1.6 && body.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(cell))<=3.5)return cell;}
+            throw new IllegalStateException("No clear table placement cell near the companion");});
+        String place="Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ();
+        MESSAGES.clear();say(context,place);expectChat(context,"Placement needs one supported unchanged retained material stack in its hotbar");
+        server.runOnServer(s->{gridHolds(s,worker,0,4,0,0,"Asking to place a table while holding only planks moves nothing");check(s.overworld().getBlockState(target).isAir(),"A refused table placement writes no block");});
+        MESSAGES.clear();say(context,"Engineer, craft a crafting table");expectChat(context,"crafted a crafting table and verified its saved inventory");
+        server.runOnServer(s->gridHolds(s,worker,0,0,0,1,"Four real planks became one crafting table"));
+        MESSAGES.clear();say(context,place);expectChat(context,"placed its crafted crafting table and verified its saved inventory");
+        var evidence=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE) && body.getInventory().isEmpty() && PhysicalWorkerMenus.capture(body).empty(),"Native placement consumes exactly the crafted table and writes one crafting table block");
+            menuReceipt(body,"table-placement");return new TablePlacementEvidence(session(s,"Alice").projectId.toString(),worker,target);});
+        MESSAGES.clear();say(context,place);expectChat(context,"in clear air above stone");
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-table-placement.done","passed");return evidence;
     }
     private static void nativePlacementGateRefusals(MinecraftServer server,ServerPlayer worker){
         var manager=EngineerMod.managerFor(server);var project=session(server,"Alice");var owner=player(server,"Alice");var target=new BlockPos(2633,101,3);

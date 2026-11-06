@@ -33,7 +33,7 @@ final class PhysicalCompanions {
         String text=request.trim().toLowerCase(Locale.ROOT).replaceFirst("[.!?]+$","");
         var gather=java.util.regex.Pattern.compile("gather (dirt|oak log) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
-        var place=java.util.regex.Pattern.compile("place retained (dirt|oak planks) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
+        var place=java.util.regex.Pattern.compile("place retained (dirt|oak planks|crafting table) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
@@ -93,7 +93,7 @@ final class PhysicalCompanions {
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
             var target=new BlockPos(Integer.parseInt(place.group(2)),Integer.parseInt(place.group(3)),Integer.parseInt(place.group(4)));
-            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target,Set.of(),()->{},place.group(1).equals("dirt")?PhysicalPlacementInventory.Material.DIRT:PhysicalPlacementInventory.Material.OAK_PLANKS));
+            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target,Set.of(),()->{},switch(place.group(1)){case "dirt"->PhysicalPlacementInventory.Material.DIRT;case "oak planks"->PhysicalPlacementInventory.Material.OAK_PLANKS;default->PhysicalPlacementInventory.Material.CRAFTING_TABLE;}));
             project.tell("Your companion is placing one retained item through a native survival action.");return true;
         }
         if(gatherRequest){
