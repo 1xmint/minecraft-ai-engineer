@@ -157,3 +157,5 @@ admission; no API keys/paid fallback or credential sharing. Sources read:
 https://developers.openai.com/siwc/token-sharing-open-source and its
 self-hosted-vms and preview-limitations pages. Technical support is not proof of
 shared-subscription eligibility. Human audio/Mojang/provider gates remain open.
+
+Combined physical42170313148 failed in Claude's table-placement restart fixture: it selected3031,101,1 inside the required3x3 clear summon pad, so the unchanged production guard correctly refused re-summon. Native craft/table placement itself completed. Fixture fix excludes the pad while preserving reach/inventory/block/restart assertions; compileClientJava passed. Physical workflow now triggers automatically for relevant main PR paths and AGENTS.md requires its actual evidence for physical changes, since default multiplayer skips that mode. Separate branch preserves live PR100 memory CI; corrected physical proof pending.

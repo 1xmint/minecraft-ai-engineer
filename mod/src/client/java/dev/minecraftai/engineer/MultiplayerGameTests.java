@@ -865,11 +865,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Table placement worker begins without supplied materials"));
         MESSAGES.clear();say(context,"Engineer, gather oak log at 3031 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log");
-        // Pick a clear cell inside the workspace, away from the worker body and within reach of its eyes.
-        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+        // Keep the required future summon pad clear while placing a retained table nearby.
+        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var base=session(s,"Alice").anchor();
             for(int x=3031;x<=3033;x++)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
+                if(x>=base.getX() && x<base.getX()+3 && z>=base.getZ() && z<base.getZ()+3)continue;
                 if(s.overworld().getBlockState(cell).isAir() && Math.hypot(body.getX()-(x+.5),body.getZ()-(z+.5))>=1.6 && body.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(cell))<=3.5)return cell;}
-            throw new IllegalStateException("No clear table placement cell near the companion");});
+            throw new IllegalStateException("No clear table placement cell outside the summon pad near the companion");});
+        server.runOnServer(s->{var base=session(s,"Alice").anchor();check(target.getX()>=base.getX()+3 || target.getZ()>=base.getZ()+3,"The retained table cannot occupy the clear 3x3 pad needed for a safe later summon");});
         String place="Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ();
         MESSAGES.clear();say(context,place);expectChat(context,"Placement needs one supported unchanged retained material stack in its hotbar");
         server.runOnServer(s->{gridHolds(s,worker,0,4,0,0,"Asking to place a table while holding only planks moves nothing");check(s.overworld().getBlockState(target).isAir(),"A refused table placement writes no block");});
