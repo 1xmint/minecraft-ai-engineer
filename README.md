@@ -42,7 +42,7 @@ exact main run that passed all five required checks.
 
 ## Try it
 
-Download the [multiplayer development preview v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2).
+Download the [multiplayer development preview v0.1.0-alpha.3](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.3).
 Get its companion zip, matching mod jar, `BUILD.json` and `SHA256SUMS`, then follow
 `START-HERE.md` inside the zip or the [installation guide](docs/install.md).
 The companion contains compiled JavaScript: install its pinned runtime dependencies
@@ -70,7 +70,8 @@ subscription quota. No API key or separately billed API service is used. Other
 members never receive that login or direct model access. Current source adds
 offline voice drafts/private spoken replies and bounded physical survival work.
 General survival machine construction and multiple builders remain unfinished;
-alpha.2 predates these additions.
+The alpha.3 download includes these bounded additions; it does not complete all
+Phase 1 or Phase 2 milestones.
 
 The [companion guide](docs/companion-guide.md) covers configuration and memory.
 The [mod guide](docs/mod-guide.md) covers sharing, lessons, conflict protection,

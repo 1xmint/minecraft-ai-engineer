@@ -45,8 +45,16 @@ https://github.com/1xmint/minecraft-ai-engineer.
 
 ## Landed on main
 
-Main is45a4b24 (PR100, including Claude PR97/101/102). Latest published download remains **v0.1.0-alpha.2**;
-it predates the later engineering features. No alpha.3 is published yet.
+Main is d9c9c46 (PR100/103/104). Published download:
+[v0.1.0-alpha.3](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.3),
+tagged to d9c9c462e0d16fe0b4aa0ce0aa52a77b0e650771 on2026-11-06.
+Final main CI42286129105 passed all five checks. Native log:215 required tests;
+inspected multiplayer:96 samples/four edges/original-pair restoration, all nine
+memory markers, old reconnect authority refused and fresh recovery after distinct
+server epochs. Both outer artifact hashes and106 inner file hashes match;
+no unlisted files. GitHub asset digests match. The release has paired ZIP/JAR,
+BUILD.json and SHA256SUMS, with corrected bundled guides. This remains a bounded
+prerelease and does not complete the overall goal.
 
 - Creative preview/build/test/repair/undo, per-player project access/conflicts,
   optional overlays, component assignments and durable attributed project notes.
@@ -110,15 +118,16 @@ current notes. Full-adder, schematic and earlier proof details remain in Git/CI.
 
 ## Active work
 
-Main CI42276076117 is validating merged45a4b24 and building the paired artifacts.
-Do not publish PR test-merge artifacts as main. Latest download remains alpha.2.
-Codex owns final artifact inspection/publication; Claude owns the broader
-survival/builders/engineering/acceptance batches described in the current brief.
+Alpha.3 publication is complete. Codex retains final integration and the overall
+requirements audit; Claude owns the broader survival/builders/engineering and
+acceptance batches. No current implementation PR is owned by Codex in this lane.
+Human audio/Mojang/provider feasibility remain unproven; broader features below
+still require implementation and actual evidence.
 
 ## Next slices
 
-1. Inspect merged-main CI and paired artifacts; publish an accurately bounded
-   alpha.3 after exact-source checks pass and release guides are reconciled.
+1. Exercise the published alpha.3 through the remaining human acceptance and
+   account/provider gates without treating offline CI as that proof.
 2. Continue real tools/3x3 crafting, terrain, visible machine construction and
    concurrent workers through Claude's ownership batches.
 3. Continue registers/data-clock memory, displays/computers, measured timing,
