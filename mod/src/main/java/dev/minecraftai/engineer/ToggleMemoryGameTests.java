@@ -44,11 +44,22 @@ public final class ToggleMemoryGameTests {
                 && !MemoryFunctionalEvidence.current(blueprint,reloaded.assignments.task(blueprint,"root")),"A saved native stale label reloads only as non-current status, never a generic trial or live pass");
         JsonObject nativeDocument;
         try{nativeDocument=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
-        nativeDocument.addProperty("verified",task.verified);
+        nativeDocument.remove("memoryVerificationStatus");nativeDocument.addProperty("verified",task.verified);
         var savedNative=new EngineeringSession(manager,id,id,"minecraft:overworld",nativeDocument);
         h.assertTrue(savedNative.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && savedNative.delegation==null,"A saved native pass-looking label is quarantined on load, not promoted to current evidence");
+        session.verified="stale: circuit changed or chunks unloaded since test";session.save();
         try {
-            var forged=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+            var staleDocument=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+            h.assertTrue(staleDocument.get("verified").getAsString().equals("untested") && staleDocument.get("memoryVerificationStatus").getAsString().equals(session.verified),"General invalidation text is stored separately from generic functional claims");
+            var staleReload=new EngineeringSession(manager,id,id,"minecraft:overworld");
+            h.assertTrue(staleReload.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && staleReload.delegation==null && staleReload.memoryFunctionalRun==null,"A legitimate general stale status loads as history without a runner or current pass");
+            var nativeHistory=staleDocument.deepCopy();nativeHistory.addProperty("memoryVerificationStatus",task.verified);
+            var historyOnly=new EngineeringSession(manager,id,id,"minecraft:overworld",nativeHistory);
+            h.assertTrue(historyOnly.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && !MemoryFunctionalEvidence.current(blueprint,historyOnly.assignments.task(blueprint,"root")),"A pass-looking memory history field cannot recreate a current pass binding");
+            var malformedHistory=staleDocument.deepCopy();malformedHistory.add("memoryVerificationStatus",new JsonObject());boolean malformedRefused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",malformedHistory);}catch(IllegalStateException expected){malformedRefused=true;}
+            h.assertTrue(malformedRefused,"Memory display history must be a bounded status string");
+            var forged=staleDocument.deepCopy();
             var scope=new JsonObject();scope.addProperty("projectId",id.toString());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",blueprint.revision());scope.addProperty("component","root");scope.addProperty("basis",held.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);
             h.assertTrue(FunctionalTrial.validateHistoricalScope(scope).equals(scope),"The rejection fixture contains a structurally valid current-project generic scope");
             forged.add("functionalScope",scope);boolean refused=false;
@@ -56,7 +67,7 @@ public final class ToggleMemoryGameTests {
                 for(Throwable cause=expected;cause!=null;cause=cause.getCause())if(cause.getMessage()!=null && cause.getMessage().startsWith("Memory cannot restore a generic functional claim"))refused=true;
             }
             h.assertTrue(refused,"Native status quarantine still reaches the explicit memory guard for a valid generic scope, not merely schema validation");
-            forged.remove("functionalScope");forged.addProperty("verified","passed:signal-lamp:forged");refused=false;
+            forged.remove("functionalScope");forged.remove("memoryVerificationStatus");forged.addProperty("verified","passed:signal-lamp:forged");refused=false;
             try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
             h.assertTrue(refused,"A foreign generic pass label remains rejected for memory");
         }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}

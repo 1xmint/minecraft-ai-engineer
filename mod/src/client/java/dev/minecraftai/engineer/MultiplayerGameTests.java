@@ -1423,7 +1423,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
-            if(!LIVE_ACCEPTANCE)prepareNaturalRestart(context,server);
+            if(!LIVE_ACCEPTANCE){recordMemoryCheckpointBeforeRestart(server);prepareNaturalRestart(context,server);}
         }
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
@@ -3352,6 +3352,17 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.pendingMemoryInput==null && project.pendingMemoryRecovery==null && project.delegation==null && project.verified.equals("untested"),"Only freshly authorized recovery after reconnect clears the pending scope, without a pass");
             var proof=new JsonObject();proof.add("oldConnection",record);proof.add("freshConnection",completed);
             write("toggle-memory-recovery-reconnect-record.json",proof.toString());write("toggle-memory-recovery-reconnect.done","passed");
+        });
+    }
+    private static void recordMemoryCheckpointBeforeRestart(TestDedicatedServerContext server) {
+        server.runOnServer(s->{
+            var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project")));var document=saved(project);
+            var diagnostic=new JsonObject();diagnostic.addProperty("projectId",project.projectId.toString());diagnostic.add("storedVerified",document.get("verified"));
+            if(document.has("memoryVerificationStatus"))diagnostic.add("memoryVerificationStatus",document.get("memoryVerificationStatus"));
+            diagnostic.addProperty("genericScopePresent",document.has("functionalScope"));diagnostic.addProperty("genericInputs",document.getAsJsonArray("testInputs").size());diagnostic.addProperty("genericEvidence",document.getAsJsonArray("functionalEvidence").size());
+            write("toggle-memory-status-before-server-restart.json",diagnostic.toString());
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(!loaded.verified.startsWith("passed:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"The actual final memory checkpoint remains loadable after player movement and stale invalidation, before the full server reboot");
         });
     }
     private static void loadMemoryRecoveryArea(TestDedicatedServerContext server) {

@@ -1612,6 +1612,15 @@ final class EngineeringSession implements BuildExecutor {
         json.addProperty("projectId",projectId.toString());json.addProperty("projectRevision",projectRevision);json.add("access",access.json());
         json.addProperty("memoryStatus",memoryStatus);
         json.addProperty("controller",controller.toString());json.addProperty("owner",owner.toString()); json.addProperty("status",state); json.addProperty("detail",detail); json.addProperty("stage",cursor(controller).stage); json.addProperty("verified",verified);
+        if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())) {
+            // Generic trial state stays untested. Memory display status is history only
+            // and must never be interpreted by the generic input-restoration protocol.
+            json.addProperty("verified","untested");
+            if(!verified.equals("untested")) {
+                if(!MemoryFunctionalEvidence.historicalStatus(verified))throw new IllegalStateException("Unsupported native memory display status; checkpoint was not overwritten");
+                json.addProperty("memoryVerificationStatus",verified);
+            }
+        }
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
         json.addProperty("pendingPlacement",pendingPlacement);json.addProperty("undoRequested",undoRequested);
         json.addProperty("journalVersion",4);json.add("operationScopes",operationScopes.json());json.addProperty("activeComponent",activeComponent);json.addProperty("activeOperation",activeOperation);json.addProperty("operationKind",operationKind);
@@ -1803,7 +1812,14 @@ final class EngineeringSession implements BuildExecutor {
                 // baseline never authorizes a new diagnosis or repair operation.
                 activeOperation="legacy";operationKind="BUILD";originDiagnosis=null;undoOperation=undoRequested?"legacy":null;repairTargets.clear();
             }
-            if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())
+            if(json.has("memoryVerificationStatus")) {
+                var status=json.get("memoryVerificationStatus");
+                if(blueprint==null || !ToggleMemoryIntention.describes(blueprint.source()) || !json.get("verified").getAsString().equals("untested")
+                        || !status.isJsonPrimitive() || !status.getAsJsonPrimitive().isString()
+                        || !MemoryFunctionalEvidence.historicalStatus(status.getAsString()))
+                    throw new IllegalStateException("Invalid historical memory status; no current evidence or generic test state can load from it");
+                trial.load(json);verified=MemoryFunctionalEvidence.HISTORICAL_STATUS;
+            } else if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())
                     && MemoryFunctionalEvidence.nativeStatus(json.get("verified").getAsString())) {
                 // A saved native status is not a generic trial claim. Quarantine its
                 // label while the generic loader still rejects every input/evidence field.
