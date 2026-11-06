@@ -61,6 +61,8 @@ actions. His request authorizes this public repository and implementation.
 - Multiplayer proof must boot a dedicated server, drive two players and a denied
   third, exercise revocation/conflicts/restart, and cover a client without the
   overlay. Retain the integrated-server compatibility and actual redstone tests.
+- Physical changes must pass the Physical companion workflow and its retained
+  native evidence; the default multiplayer flow does not exercise that mode.
 - Small focused PRs, protected main, pinned dependencies, no secrets in CI.
   Push working branches regularly. Merge when required checks pass.
 

@@ -36,6 +36,7 @@ import java.util.List;
  * CI deliberately uses offline identities and does not prove production login.
  */
 public final class MultiplayerGameTests implements FabricClientGameTest {
+    private static final java.util.concurrent.atomic.AtomicReference<MemoryRecoveryDriver> DISCONNECTED_MEMORY_RECOVERY=new java.util.concurrent.atomic.AtomicReference<>();
     /** Synthetic accepted intention/physical fixture; no model call or player construction is claimed. */
     private static void prepareShutterRecovery(TestDedicatedServerContext server){
         server.runCommand("forceload add 318 -2 325 2");
@@ -864,11 +865,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Table placement worker begins without supplied materials"));
         MESSAGES.clear();say(context,"Engineer, gather oak log at 3031 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"crafted four oak planks from its retained log");
-        // Pick a clear cell inside the workspace, away from the worker body and within reach of its eyes.
-        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+        // Keep the required future summon pad clear while placing a retained table nearby.
+        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var base=session(s,"Alice").anchor();
             for(int x=3031;x<=3033;x++)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
+                if(x>=base.getX() && x<base.getX()+3 && z>=base.getZ() && z<base.getZ()+3)continue;
                 if(s.overworld().getBlockState(cell).isAir() && Math.hypot(body.getX()-(x+.5),body.getZ()-(z+.5))>=1.6 && body.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(cell))<=3.5)return cell;}
-            throw new IllegalStateException("No clear table placement cell near the companion");});
+            throw new IllegalStateException("No clear table placement cell outside the summon pad near the companion");});
+        server.runOnServer(s->{var base=session(s,"Alice").anchor();check(target.getX()>=base.getX()+3 || target.getZ()>=base.getZ()+3,"The retained table cannot occupy the clear 3x3 pad needed for a safe later summon");});
         String place="Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ();
         MESSAGES.clear();say(context,place);expectChat(context,"Placement needs one supported unchanged retained material stack in its hotbar");
         server.runOnServer(s->{gridHolds(s,worker,0,4,0,0,"Asking to place a table while holding only planks moves nothing");check(s.overworld().getBlockState(target).isAir(),"A refused table placement writes no block");});
@@ -1581,7 +1584,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             connection.waitForClientboundPackets();
             context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
             context.takeScreenshot("engineer-multiplayer-restarted-tested-build");
-            if(!LIVE_ACCEPTANCE)prepareNaturalRestart(context,server);
+            if(!LIVE_ACCEPTANCE){recordMemoryCheckpointBeforeRestart(server);prepareNaturalRestart(context,server);}
         }
         // Fault injection models a crash after the last selected undo entry was
         // flushed, before its completion flag. Boot the actual saved server again.
@@ -1617,13 +1620,15 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runCommand("tp Alice 1 102 6 180 20");connection.waitForClientboundPackets();
             server.waitFor(s->session(s,"Alice").blueprint.blocks().stream().allMatch(block->session(s,"Alice").level().hasChunkAt(block.pos())));
             inspectPersisted(context,server);
-            if(!LIVE_ACCEPTANCE)prepareConversationDisconnect(context,server);
+            if(!LIVE_ACCEPTANCE){prepareConversationDisconnect(context,server);prepareMemoryRecoveryDisconnect(server);}
           }
           if(!LIVE_ACCEPTANCE){
             server.waitFor(s->s.getPlayerList().getPlayerCount()==0);
             try(TestDedicatedServerConnection reconnected=server.connect()){
+                recoverMemoryRecoveryReconnect(server);
                 recoverConversationReconnect(context,server);
                 prepareConversationRestart(context,server);
+                prepareMemoryRecoveryServerRestart(server);
             }
           }
         }
@@ -1631,6 +1636,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
                 recoverConversationRestart(context,server);
+                recoverMemoryRecoveryServerRestart(context,server);
                 structuralReplanRecovery(context,server);
                 shutterManualHandoff(context,server,true);
                 shutterConstructionFlow(context,server,connection);
@@ -3305,12 +3311,69 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, explain this part");expectChat(context,"One-bit toggle memory");
         conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");var blueprint=project.blueprint;check(blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))) && project.level().getBlockState(blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Actual native construction keeps the player's existing stored bit and completes only matching geometry");check(project.journal.size()==7 && project.verified.equals("untested") && project.delegation==null,"Only seven missing cells are assistant-owned; memory remains untested");write("toggle-memory-project",project.projectId.toString());});
-        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Automated stateful memory testing is not available yet");
-        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"Automated stateful memory testing is not available yet");
-        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Refused test and read-only advice preserve the stored bit, journal and absent authority");});
+        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"96 live tick observations");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.verified.equals("untested") && !project.hasPendingTest() && project.delegation==null && project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"Read-only memory advice preserves the stored bit and creates no execution authority");});
         write("toggle-memory-build.done","passed");
         toggleMemoryDriverProof(server);
+        toggleMemoryConversationRecovery(context,server);
         toggleMemoryTimedProof(server);
+        toggleMemoryFunctionalProof(context,server);
+    }
+    private static void toggleMemoryConversationRecovery(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var pending=new java.util.concurrent.atomic.AtomicReference<MemoryPendingInput>();
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var input=MemoryInputDriver.open(project,project.owner);input.pulse();input.stop();
+            check(project.pendingMemoryInput!=null && project.memoryRecoveryRun==null && project.delegation==null,"The conversational fixture starts interrupted with no automatic recovery or lease");
+            pending.set(project.pendingMemoryInput);
+        });
+        conversationApprove(context,"CI resume selected lamp.");
+        expectChat(context,"Recovering the original memory input and stored bit");
+        expectChat(context,"Original memory input and stored bit restored");
+        server.waitFor(s->session(s,"Alice").memoryRecoveryRun==null && session(s,"Alice").pendingMemoryInput==null);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(project.pendingMemoryRecovery==null && project.memoryRecoveryDriver==null && project.delegation==null && project.verified.equals("untested")
+                    && project.state.equals("PAUSED") && loaded.pendingMemoryInput==null && loaded.pendingMemoryRecovery==null && loaded.delegation==null
+                    && loaded.memoryRecoveryRun==null && project.journal.size()==7,"An approved chat resume restores only the original pair and clears its saved scope; it neither restarts construction nor grants a functional pass");
+            var root=pending.get();var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(root.initial().matches(actual),"The conversational completion restores the actual original lever and stored bulb bit");
+            java.util.List<JsonObject> receipts=new java.util.ArrayList<>();
+            try(var paths=Files.list(project.manager.directory)) {
+                for(var path:paths.filter(path->path.getFileName().toString().startsWith(project.projectId+".memory-recovery-") && path.getFileName().toString().endsWith(".json")).toList()) {
+                    var header=JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+                    if(root.birthDigest().equals(header.get("rootBirthDigest").getAsString()))receipts.add(MemoryRecoveryJournal.read(path,project.blueprint,root).json());
+                }
+            }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            check(receipts.size()==1 && receipts.get(0).get("stage").getAsString().equals("RESTORED")
+                    && receipts.get(0).getAsJsonArray("events").size()==7 && receipts.get(0).getAsJsonObject("target").equals(actual.json()),"The chat route has one strict durable recovery receipt for all three newly observed edges and the exact paired target");
+            var evidence=new JsonObject();evidence.add("pendingRoot",root.json());evidence.add("receipt",receipts.get(0));evidence.add("actual",actual.json());
+            write("toggle-memory-conversation-recovery-record.json",evidence.toString());
+            write("toggle-memory-conversation-recovery.done","passed");
+        });
+    }
+    private static void toggleMemoryFunctionalProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var original=server.computeOnServer(s->{var project=session(s,"Alice");var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();return new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));});
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Testing memory with 96 live tick observations");expectChat(context,"Memory test passed: 96 live tick samples");
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:toggle-memory:"));
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            check(original.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor())))
+                    && project.memoryFunctionalRun==null && project.memoryInputDriver==null && project.pendingMemoryInput==null && project.delegation==null,"A real approved chat test restores the original pair and relinquishes input authority before granting a current pass");
+            String id=project.verified.substring(project.verified.lastIndexOf(':')+1);JsonObject record;
+            try{record=JsonParser.parseString(Files.readString(project.manager.directory.resolve(project.projectId+".memory-trial-"+id+".json"))).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            var trace=record.getAsJsonObject("trace");check(record.get("outcome").getAsString().equals("passed") && trace.getAsJsonObject("observations").get("sampleCount").getAsInt()==96
+                    && trace.getAsJsonObject("inputJournal").get("stage").getAsString().equals("RESTORED") && trace.getAsJsonObject("inputJournal").getAsJsonArray("events").size()==9,"The player-visible pass has durable native samples and all four observed edges with a restoration receipt");
+            check(MemoryFunctionalEvidence.current(project.blueprint,project.assignments.task(project.blueprint,"root"))
+                    && ProjectGuidance.evidence(project).getFirst().currentPass()
+                    && ProjectSummary.records(project).stream().anyMatch(line->line.contains("every component has an actual recorded pass"))
+                    && !LessonAssistant.evidence(project.assignments.task(project.blueprint,"root"),project.blueprint).contains("current design is untested"),"Status, summary and lesson agree on the exact freshly tested memory scope");
+            write("toggle-memory-functional-record.json",record.toString()); // Retain the trace even if the following reload assertion fails.
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(!MemoryFunctionalEvidence.current(loaded.blueprint,loaded.assignments.task(loaded.blueprint,"root")),"Loading the durable record cannot recreate the ephemeral current-pass binding");
+            check(loaded.verified.startsWith("stale:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"Loading past functional evidence never recreates execution authority or a fresh current pass");
+            write("toggle-memory-functional-record.json",record.toString());write("toggle-memory-functional.done","passed");
+        });
     }
     private static void toggleMemoryTimedProof(TestDedicatedServerContext server) throws Exception {
         var active=new java.util.concurrent.atomic.AtomicReference<MemoryTimedTrial>();
@@ -3372,12 +3435,147 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 check(refused && revoked.recordStage().equals("INTERRUPTED") && revoked.recordSnapshot().getAsJsonArray("events").size()==1 && project.delegation==null && project.pendingMemoryInput==null && initial.matches(new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(bulb))),"A connected editor's revoked BUILD grant cancels before another lever edge and clears only the proven no-edge operation");
             }finally{project.commandActor=null;project.controller=alice;project.access.member(alice,bob,ProjectAccess.Role.VIEWER);}
             project.save();write("toggle-memory-driver.done","passed");
+            toggleMemoryRecoveryProof(project,bob);
         });
+    }
+    private static void toggleMemoryRecoveryProof(EngineeringSession project,java.util.UUID bob) {
+        var alice=project.owner;var manager=project.manager;
+        var input=MemoryInputDriver.open(project,alice);input.pulse();input.stop();
+        var root=project.pendingMemoryInput;var origin=input.recordSnapshot();
+        check(root!=null && project.delegation==null,"An interrupted real input edge retains recovery scope without authority");
+        var first=MemoryRecoveryDriver.open(project,alice);first.pulse();first.stop();
+        var firstRecord=first.recordSnapshot();var pointer=project.pendingMemoryRecovery;
+        check(first.closed() && firstRecord.get("stage").getAsString().equals("INTERRUPTED") && pointer!=null && project.delegation==null,"Stopping recovery keeps its observed falling edge and current checkpoint without another pulse");
+        var loaded=new EngineeringSession(manager,project.projectId,alice,project.dimension);
+        check(loaded.pendingMemoryRecovery.same(pointer) && loaded.memoryRecoveryDriver==null && loaded.delegation==null && loaded.verified.equals("untested"),"Reload restores recovery data but never authority or a pass");
+        manager.projects.put(project.projectId,loaded);
+        var second=MemoryRecoveryDriver.open(loaded,alice);second.pulse();second.pulse();var restored=second.finishRestored();
+        check(restored.get("stage").getAsString().equals("RESTORED") && restored.get("originJournalId").getAsString().equals(firstRecord.get("id").getAsString())
+                && loaded.pendingMemoryInput==null && loaded.pendingMemoryRecovery==null && loaded.delegation==null && loaded.memoryRecoveryDriver==null
+                && MemoryInputJournal.read(root.journalFile(manager.directory),loaded.blueprint).json().equals(origin),"Fresh connected recovery follows the latest observed attempt, restores the original pair and leaves original history intact");
+        var interrupted=MemoryInputDriver.open(loaded,alice);interrupted.pulse();interrupted.stop();
+        var before=new MemoryInputTransition.Frame(loaded.level().getBlockState(loaded.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos()),loaded.level().getBlockState(loaded.blueprint.anchor()));
+        var previousSelection=manager.selections.put(bob,loaded.projectId);
+        loaded.access.member(alice,bob,ProjectAccess.Role.EDITOR);loaded.commandActor=bob;
+        com.google.gson.JsonObject revokedRecord;
+        try {
+            var revoked=MemoryRecoveryDriver.open(loaded,bob);loaded.access.permission(alice,bob,ProjectAccess.Permission.BUILD,false);boolean refused=false;
+            try{revoked.pulse();}catch(IllegalStateException expected){refused=true;}
+            revokedRecord=revoked.recordSnapshot();
+            check(refused && revoked.closed() && revokedRecord.getAsJsonArray("events").size()==1 && revokedRecord.get("stage").getAsString().equals("INTERRUPTED")
+                    && loaded.pendingMemoryRecovery!=null && loaded.delegation==null,"Revoking a connected recovery builder prevents its first native edge and retains the recovery checkpoint");
+        } finally {
+            loaded.commandActor=null;loaded.controller=alice;loaded.access.member(alice,bob,ProjectAccess.Role.VIEWER);
+            if(previousSelection==null)manager.selections.remove(bob);else manager.selections.put(bob,previousSelection);
+        }
+        var selected=MemoryRecoveryDriver.open(loaded,alice);manager.selections.remove(alice);boolean refused=false;
+        try{selected.pulse();}catch(IllegalStateException expected){refused=true;}
+        manager.selections.put(alice,loaded.projectId);
+        check(refused && selected.closed() && selected.recordSnapshot().getAsJsonArray("events").size()==1 && before.matches(new MemoryInputTransition.Frame(loaded.level().getBlockState(loaded.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos()),loaded.level().getBlockState(loaded.blueprint.anchor()))),"Selection loss cancels recovery without pulsing the actual pair");
+        var finalRecovery=MemoryRecoveryDriver.open(loaded,alice);for(int edge=0;edge<3;edge++)finalRecovery.pulse();var finalRecord=finalRecovery.finishRestored();
+        loaded.save();var clean=new EngineeringSession(manager,loaded.projectId,alice,loaded.dimension);
+        check(clean.pendingMemoryInput==null && clean.pendingMemoryRecovery==null && clean.delegation==null && clean.verified.equals("untested"),"Restored recovery clears both saved pointers without a functional-pass claim");
+        var proof=new com.google.gson.JsonObject();proof.add("origin",origin);proof.add("first",firstRecord);proof.add("second",restored);proof.add("revoked",revokedRecord);proof.add("selectionLost",selected.recordSnapshot());proof.add("final",finalRecord);
+        write("toggle-memory-recovery-record.json",proof.toString());write("toggle-memory-recovery.done","passed");
+    }
+    private static void prepareMemoryRecoveryDisconnect(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
+            var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            manager.selections.put(alice,project.projectId);project.controller=alice;
+            project.test();
+        });
+        server.waitFor(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.memoryInputDriver!=null && project.memoryInputDriver.observedPulses()==1;});
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            project.pause("CI explicitly interrupts the functional test after its first native edge");
+            var recovery=MemoryRecoveryDriver.open(project,alice);
+            check(DISCONNECTED_MEMORY_RECOVERY.compareAndSet(null,recovery),"Only one recovery reconnect fixture may be active");
+            write("toggle-memory-recovery-connection",manager.connectionId(player(s,"Alice")));
+        });
+    }
+    private static void recoverMemoryRecoveryReconnect(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();
+            var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            manager.selections.put(alice,project.projectId);project.controller=alice;
+            var old=DISCONNECTED_MEMORY_RECOVERY.getAndSet(null);check(old!=null,"The old live recovery is retained only by this test, never loaded as authority");
+            boolean refused=false;try{old.pulse();}catch(IllegalStateException expected){refused=true;}
+            var record=old.recordSnapshot();var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(refused && old.closed() && project.delegation==null && project.memoryRecoveryDriver==null && project.pendingMemoryRecovery!=null
+                    && record.get("stage").getAsString().equals("INTERRUPTED") && record.getAsJsonArray("events").size()==1
+                    && actual.json().equals(record.getAsJsonObject("initial"))
+                    && !manager.connectionId(player(s,"Alice")).equals(read("toggle-memory-recovery-connection")),"A genuine same-UUID reconnect cannot reuse the old recovery lease, pulse the pair or clear its checkpoint");
+            var fresh=MemoryRecoveryDriver.open(project,alice);for(int edge=0;edge<3;edge++)fresh.pulse();var completed=fresh.finishRestored();
+            check(project.pendingMemoryInput==null && project.pendingMemoryRecovery==null && project.delegation==null && project.verified.equals("untested"),"Only freshly authorized recovery after reconnect clears the pending scope, without a pass");
+            var proof=new JsonObject();proof.add("oldConnection",record);proof.add("freshConnection",completed);
+            write("toggle-memory-recovery-reconnect-record.json",proof.toString());write("toggle-memory-recovery-reconnect.done","passed");
+        });
+    }
+    private static void recordMemoryCheckpointBeforeRestart(TestDedicatedServerContext server) {
+        server.runOnServer(s->{
+            var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project")));var document=saved(project);
+            var diagnostic=new JsonObject();diagnostic.addProperty("projectId",project.projectId.toString());diagnostic.add("storedVerified",document.get("verified"));
+            if(document.has("memoryVerificationStatus"))diagnostic.add("memoryVerificationStatus",document.get("memoryVerificationStatus"));
+            diagnostic.addProperty("genericScopePresent",document.has("functionalScope"));diagnostic.addProperty("genericInputs",document.getAsJsonArray("testInputs").size());diagnostic.addProperty("genericEvidence",document.getAsJsonArray("functionalEvidence").size());
+            write("toggle-memory-status-before-server-restart.json",diagnostic.toString());
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);
+            check(!loaded.verified.startsWith("passed:") && loaded.memoryFunctionalRun==null && loaded.delegation==null,"The actual final memory checkpoint remains loadable after player movement and stale invalidation, before the full server reboot");
+        });
+    }
+    private static void loadMemoryRecoveryArea(TestDedicatedServerContext server) {
+        var anchor=server.computeOnServer(s->EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project"))).blueprint.anchor());
+        server.runCommand("tp Alice "+anchor.getX()+" "+(anchor.getY()+4)+" "+anchor.getZ());
+        server.waitFor(s->{var project=EngineerMod.managerFor(s).projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.dependencyPositions(true).stream().allMatch(project.level()::hasChunkAt);});
+    }
+    private static void prepareMemoryRecoveryServerRestart(TestDedicatedServerContext server) {
+        loadMemoryRecoveryArea(server);
+        String previous=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);return manager.selections.get(player(s,"Alice").getUUID()).toString();});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));manager.selections.put(alice,project.projectId);project.controller=alice;project.test();});
+        server.waitFor(s->{var manager=EngineerMod.managerFor(s);var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));return project.memoryInputDriver!=null && project.memoryInputDriver.observedPulses()==1;});
+        server.runOnServer(s->{
+            var manager=EngineerMod.managerFor(s);var alice=player(s,"Alice").getUUID();var project=manager.projects.get(java.util.UUID.fromString(read("toggle-memory-project")));
+            project.pause("CI explicitly interrupts memory testing before a full server restart");
+            var recovery=MemoryRecoveryDriver.open(project,alice);recovery.pulse();recovery.stop();project.save();
+            var saved=new JsonObject();saved.addProperty("epoch",manager.epoch.toString());saved.add("root",project.pendingMemoryInput.json());saved.add("checkpoint",project.pendingMemoryRecovery.json());saved.add("recovery",recovery.recordSnapshot());
+            check(project.delegation==null && project.memoryRecoveryDriver==null && project.pendingMemoryRecovery!=null,"Server closes with durable partial recovery and no live authority");
+            write("toggle-memory-recovery-before-server-restart.json",saved.toString());manager.selections.put(alice,java.util.UUID.fromString(previous));
+        });
+    }
+    private static void recoverMemoryRecoveryServerRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project use "+read("toggle-memory-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("toggle-memory-project")));
+        loadMemoryRecoveryArea(server);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var before=JsonParser.parseString(read("toggle-memory-recovery-before-server-restart.json")).getAsJsonObject();
+            check(!project.manager.epoch.toString().equals(before.get("epoch").getAsString()) && project.pendingMemoryInput.json().equals(before.getAsJsonObject("root"))
+                    && project.pendingMemoryRecovery.json().equals(before.getAsJsonObject("checkpoint")) && project.memoryRecoveryDriver==null
+                    && project.memoryRecoveryRun==null && project.memoryFunctionalRun==null && project.delegation==null && !project.verified.startsWith("passed:"),"A full dedicated-server restart retains only exact pending recovery data, never a runner, lease or current pass");
+            check(MemoryRecoveryPlan.observe(project).data().get("originJournalId").getAsString().equals(before.getAsJsonObject("recovery").get("id").getAsString()),"After full restart, inspection follows the latest recovery journal rather than the original input run");
+        });
+        conversationApprove(context,"CI resume selected lamp.");expectChat(context,"Original memory input and stored bit restored");
+        server.waitFor(s->session(s,"Alice").pendingMemoryInput==null && session(s,"Alice").memoryRecoveryRun==null);
+        server.runOnServer(s->{
+            var project=session(s,"Alice");var before=JsonParser.parseString(read("toggle-memory-recovery-before-server-restart.json")).getAsJsonObject();
+            var original=MemoryPendingInput.read(before.getAsJsonObject("root"),project);
+            var lever=project.blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var actual=new MemoryInputTransition.Frame(project.level().getBlockState(lever),project.level().getBlockState(project.blueprint.anchor()));
+            check(original.initial().matches(actual) && project.pendingMemoryRecovery==null && project.delegation==null && project.state.equals("PAUSED")
+                    && !project.verified.startsWith("passed:"),"An approved fresh recovery after server restart restores the actual original pair and clears pending data without running or passing a functional test");
+            var proof=new JsonObject();proof.add("before",before);proof.addProperty("afterEpoch",project.manager.epoch.toString());proof.add("actual",actual.json());
+            write("toggle-memory-recovery-server-restart-record.json",proof.toString());write("toggle-memory-recovery-server-restart.done","passed");
+        });
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void toggleMemoryRestartProof(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
         send(context,"engineer project use "+read("toggle-memory-project"));server.waitFor(s->session(s,"Alice").projectId.toString().equals(read("toggle-memory-project")));
-        server.runOnServer(s->{var project=session(s,"Alice");check(ToggleMemoryIntention.describes(project.blueprint.source()) && project.blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))),"Saved-world restart retains all actual memory construction");check(project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT) && project.journal.size()==7 && project.verified.equals("untested") && project.delegation==null && !project.hasPendingTest(),"Reload preserves the player's stored bit and assistant journal, never restores test authority or a functional claim");});
+        server.runOnServer(s->{var project=session(s,"Alice");check(ToggleMemoryIntention.describes(project.blueprint.source()) && project.blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))),"Saved-world restart retains all actual memory construction");check(project.level().getBlockState(project.blueprint.anchor()).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT) && project.journal.size()==7 && project.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && project.delegation==null && !project.hasPendingTest()
+                && project.memoryFunctionalRun==null && project.memoryRecoveryRun==null && project.memoryInputDriver==null && project.memoryRecoveryDriver==null,
+                "Reload preserves the stored bit and assistant journal while keeping the recorded test historical, with no restored runner, authority or current pass");});
         write("toggle-memory-restarted.done","passed");send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     private static void conversationDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
