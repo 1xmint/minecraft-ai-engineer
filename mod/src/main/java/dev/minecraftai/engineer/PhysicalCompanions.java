@@ -34,7 +34,7 @@ final class PhysicalCompanions {
         var gather=java.util.regex.Pattern.compile("gather (dirt|oak log) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
         var place=java.util.regex.Pattern.compile("place retained (dirt|oak planks|crafting table) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
-        var aimed=java.util.regex.Pattern.compile("place retained (stone|cobblestone|dirt|lever|redstone torch|redstone lamp) on the (top|north|south|east|west) (?:face|side) of (-?\d+) (-?\d+) (-?\d+)(?: facing (north|south|east|west))?").matcher(text);boolean aimRequest=aimed.matches();
+        var aimed=java.util.regex.Pattern.compile("place retained (stone|cobblestone|dirt|lever|redstone torch|redstone lamp) on the (top|north|south|east|west) (?:face|side) of (-?\\d+) (-?\\d+) (-?\\d+)(?: facing (north|south|east|west))?").matcher(text);boolean aimRequest=aimed.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
