@@ -876,24 +876,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static GridCraftEvidence physicalTableCraftFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         server.runCommand("forceload add 3224 -16 3256 32");server.runCommand("fill 3230 100 0 3235 100 9 minecraft:stone");
-        for(var log:java.util.List.of("3231 101 4","3231 101 6","3233 101 2"))server.runCommand("setblock "+log+" minecraft:oak_log");
+        for(var log:java.util.List.of("3231 101 4","3231 101 6","3231 101 2"))server.runCommand("setblock "+log+" minecraft:oak_log");
         server.runCommand("tp Alice 3234.5 101 8 180 0");
         send(context,"engineer select1 3230 100 0");send(context,"engineer select2 3234 102 7");server.waitFor(s->new BlockPos(3234,102,7).equals(session(s,"Alice").corner2));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
         server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Table crafting worker begins without supplied materials or tools"));
-        for(var log:java.util.List.of("3231 101 4","3231 101 6","3233 101 2")){MESSAGES.clear();say(context,"Engineer, gather oak log at "+log);expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);}
+        // Placement holds only the table, so one log becomes the table before the other two are gathered.
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 3231 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         MESSAGES.clear();say(context,"Engineer, craft a wooden pickaxe");expectChat(context,"needs a placed crafting table within reach inside this workspace; no crafting was started");
-        server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.OAK_LOG)==3,"Asking for a pickaxe without a placed table moves nothing"));
-        for(int craft=0;craft<3;craft++){MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"verified its saved inventory");}
-        server.runOnServer(s->tableHolds(s,worker,12,0,0,"Three real logs became twelve planks"));
+        server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.OAK_LOG)==1,"Asking for a pickaxe without a placed table moves nothing"));
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"verified its saved inventory");
         MESSAGES.clear();say(context,"Engineer, craft a crafting table");expectChat(context,"crafted a crafting table and verified its saved inventory");
+        // Prefer the column away from the remaining logs so their walking routes stay clear.
         BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
-            for(int x=3231;x<=3233;x++)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
+            for(int x=3233;x>=3231;x--)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
                 if(s.overworld().getBlockState(cell).isAir() && Math.hypot(body.getX()-(x+.5),body.getZ()-(z+.5))>=1.6 && body.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(cell))<=3.5)return cell;}
             throw new IllegalStateException("No clear table placement cell near the companion");});
         MESSAGES.clear();say(context,"Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ());expectChat(context,"placed its crafted crafting table and verified its saved inventory");
-        server.runOnServer(s->{tableHolds(s,worker,8,0,0,"The crafted table is placed and eight planks remain");check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"The companion's own table stands in the workspace");});
+        server.runOnServer(s->{tableHolds(s,worker,0,0,0,"The crafted table is placed and the companion holds nothing");check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"The companion's own table stands in the workspace");});
+        for(var log:java.util.List.of("3231 101 6","3231 101 2")){MESSAGES.clear();say(context,"Engineer, gather oak log at "+log);expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);}
+        for(int craft=0;craft<2;craft++){MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"verified its saved inventory");}
+        server.runOnServer(s->tableHolds(s,worker,8,0,0,"Two more real logs became eight planks"));
         MESSAGES.clear();say(context,"Engineer, craft a wooden pickaxe");expectChat(context,"to craft a wooden pickaxe; no crafting was started");
         server.runOnServer(s->tableHolds(s,worker,8,0,0,"A pickaxe request without sticks opens nothing and moves nothing"));
         MESSAGES.clear();say(context,"Engineer, craft sticks");expectChat(context,"crafted sticks and verified its saved inventory");
