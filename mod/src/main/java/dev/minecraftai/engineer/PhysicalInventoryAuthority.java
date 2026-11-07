@@ -17,10 +17,14 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
     private final PhysicalWorkLease lease;
     private final Runnable exclusive;
     private final BlockPos table;
-    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive){this(manager,project,worker,exclusive,null);}
+    private final net.minecraft.world.level.block.Block expected;
+    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive){this(manager,project,worker,exclusive,null,Blocks.CRAFTING_TABLE,false);}
     /** The table form also leases the one placed crafting table the worker will open, so any edit to it stops the work. */
-    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table){
-        this.worker=worker;this.table=table==null?null:table.immutable();this.exclusive=java.util.Objects.requireNonNull(exclusive);
+    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table){this(manager,project,worker,exclusive,table,Blocks.CRAFTING_TABLE,false);}
+    /** The chest form leases the one chest as exclusive occupancy, so no other worker lease may read, write or occupy it meanwhile. */
+    static PhysicalInventoryAuthority chest(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos chest){return new PhysicalInventoryAuthority(manager,project,worker,exclusive,java.util.Objects.requireNonNull(chest),Blocks.CHEST,true);}
+    private PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table,net.minecraft.world.level.block.Block expected,boolean occupy){
+        this.worker=worker;this.table=table==null?null:table.immutable();this.expected=expected;this.exclusive=java.util.Objects.requireNonNull(exclusive);
         if(!manager.server.isSameThread() || !project.owner.equals(project.actor()))throw new IllegalStateException("Only the current owner may request native inventory work");
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);PhysicalWorkLease.requireIdle(project);exclusive.run();
         var identity=PhysicalWorkerIdentity.existing(manager,project);if(!identity.restore() || !identity.id().equals(worker.getUUID()))throw new IllegalStateException("Inventory work needs this project's initialized companion");
@@ -33,8 +37,9 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
         for(var pos:BlockPos.betweenClosed(new BlockPos(minX,minY,minZ),new BlockPos(maxX,maxY,maxZ))){if(!level.hasChunkAt(pos) || !level.getBlockState(pos).isAir())throw new IllegalStateException("Inventory work needs a clear loaded companion body");occupied.add(pos.immutable());}
         for(int x=minX;x<=maxX;x++)for(int z=minZ;z<=maxZ;z++){var floor=new BlockPos(x,minY-1,z);if(!level.hasChunkAt(floor) || !level.getBlockState(floor).is(Blocks.STONE))throw new IllegalStateException("Inventory work needs the supported stone floor");reads.add(floor);}
         if(this.table!=null){
-            if(!project.contains(this.table) || !level.hasChunkAt(this.table) || !level.getBlockState(this.table).is(Blocks.CRAFTING_TABLE) || occupied.contains(this.table))throw new IllegalStateException("Table crafting needs a loaded crafting table inside this workspace");
-            reads.add(this.table);
+            if(!project.contains(this.table) || !level.hasChunkAt(this.table) || !level.getBlockState(this.table).is(expected) || occupied.contains(this.table))
+                throw new IllegalStateException(occupy?"Chest take needs a loaded chest inside this workspace":"Table crafting needs a loaded crafting table inside this workspace");
+            if(occupy)occupied.add(this.table);else reads.add(this.table);
         }
         occupancy=Set.copyOf(occupied);reads.addAll(occupancy);lease=PhysicalWorkLease.movement(manager,project,human,occupancy,reads);
     }
@@ -42,7 +47,7 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
         PhysicalCraftGuard.requireRunning(worker);lease.validateMovement(occupancy);exclusive.run();
         if(worker.level()!=level || worker.connection!=connection || !PhysicalActionGate.exactConnection(worker) || !worker.isAlive()
             || !worker.position().equals(origin) || !worker.getBoundingBox().equals(box) || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL)throw new IllegalStateException("Physical inventory body or connection changed");
-        if(table!=null && (!level.hasChunkAt(table) || !level.getBlockState(table).is(Blocks.CRAFTING_TABLE)))throw new IllegalStateException("The companion's crafting table changed; stop and preserve resources");
+        if(table!=null && (!level.hasChunkAt(table) || !level.getBlockState(table).is(expected)))throw new IllegalStateException("The block the companion is using changed; stop and preserve resources");
     }
     @Override public void close(){lease.close();}
 }
