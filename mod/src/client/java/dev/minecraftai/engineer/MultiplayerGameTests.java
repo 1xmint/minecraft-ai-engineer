@@ -1122,7 +1122,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static void physicalTerrainNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
         server.runCommand("forceload add 3328 -16 3360 32");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(3330,100,0)) && s.overworld().hasChunkAt(new BlockPos(3346,100,12)));server.runCommand("fill 3330 100 0 3346 100 12 minecraft:grass_block");server.runCommand("fill 3330 100 0 3332 100 2 minecraft:stone");
-        server.runCommand("fill 3335 101 0 3336 101 12 minecraft:grass_block");server.runCommand("fill 3339 100 4 3343 100 8 minecraft:stone");server.runCommand("setblock 3342 101 6 minecraft:dirt");
+        server.runCommand("fill 3335 100 0 3336 100 12 minecraft:dirt");server.runCommand("fill 3335 101 0 3336 101 12 minecraft:grass_block");server.runCommand("fill 3339 100 4 3343 100 8 minecraft:stone");server.runCommand("setblock 3342 101 6 minecraft:dirt");
         server.runCommand("tp Alice 3345.5 101 11 180 0");
         send(context,"engineer select1 3330 100 0");send(context,"engineer select2 3346 104 12");server.waitFor(s->new BlockPos(3346,104,12).equals(session(s,"Alice").corner2));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
