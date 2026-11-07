@@ -582,6 +582,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-restart.done","passed");
             physicalGatherStopFlow(context,server);
             physicalNavigationFlow(context,server);
+            physicalTerrainNavigationFlow(context,server);
             UUID beforeGatherProject=server.computeOnServer(s->session(s,"Alice").projectId);
             send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(beforeGatherProject));
             server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
@@ -644,7 +645,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 6");expectChat(context,"Requested resource does not match");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A refused request after restart leaves the restored resources and source unchanged"));
             server.runCommand("tp Alice 2631.5 101 5.5");
-            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
+            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved walking route");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A player standing in the path refuses a second gather without changing the restored resources"));
             server.runCommand("tp Alice 2634.5 101 8 180 0");
             server.runOnServer(s->nativeOakCraftingProof(s,oakRecovery.worker()));
@@ -1010,7 +1011,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");PhysicalWorkerStorage.save(body);checkAdvancementOwner(body);check(PhysicalWorkerStorage.savedInventory(body,body.nameAndId()).equals(PhysicalWorkerStorage.inventory(body)),"Read-only native decoding matches the active body");checkAdvancementOwner(body);var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
         MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 4");expectChat(context,"Requested resource does not match");
         server.runCommand("setblock 2631 102 4 minecraft:oak_leaves[persistent=true]");
-        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved flat walking route");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved walking route");
         server.runCommand("setblock 2631 102 4 minecraft:air");
         MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         var recovery=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
@@ -1116,6 +1117,32 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.verified.equals("untested") && project.journal.isEmpty(),"Navigation and geometry create no functional evidence or creative undo ownership");
         });
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-build-navigation.done","passed");
+    }
+    /** The companion walks over a natural grass ridge, one block up and one block down, to gather; a hazard in the only way is refused by name. */
+    private static void physicalTerrainNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
+        server.runCommand("forceload add 3328 -16 3360 32");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(3330,100,0)) && s.overworld().hasChunkAt(new BlockPos(3346,100,12)));server.runCommand("fill 3330 100 0 3346 100 12 minecraft:grass_block");server.runCommand("fill 3330 100 0 3332 100 2 minecraft:stone");
+        server.runCommand("fill 3335 100 0 3336 100 12 minecraft:dirt");server.runCommand("fill 3335 101 0 3336 101 12 minecraft:grass_block");server.runCommand("fill 3339 100 4 3343 100 8 minecraft:stone");server.runCommand("setblock 3342 101 6 minecraft:dirt");
+        server.runCommand("tp Alice 3345.5 101 11 180 0");
+        send(context,"engineer select1 3330 100 0");send(context,"engineer select2 3346 104 12");server.waitFor(s->new BlockPos(3346,104,12).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL));
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 3342 101 6");expectChat(context,"gathering one dirt block");
+        server.waitFor(s->{var body=s.getPlayerList().getPlayer(worker);return body!=null && body.getY()>101.99;},1_200);
+        expectChat(context,"verified its saved inventory",90_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && countDirt(body)==1 && body.getX()>3338 && Math.abs(body.getY()-101)<1.0e-3 && s.overworld().getBlockState(new BlockPos(3342,101,6)).isAir(),"Actual owner chat walks up and down a natural grass ridge, mines the real resource and saves its exact drop");
+            for(int z=0;z<=12;z++)for(int x=3335;x<=3336;x++)check(s.overworld().getBlockState(new BlockPos(x,101,z)).is(Blocks.GRASS_BLOCK),"Walking over the ridge never edits it");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        // A magma trench across the only way is refused with the hazard named; nothing moves or is mined.
+        server.runCommand("fill 3333 100 0 3333 100 12 minecraft:magma_block");server.runCommand("setblock 3342 101 6 minecraft:dirt");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 3342 101 6");expectChat(context,"Dangerous minecraft:magma_block");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && body.blockPosition().equals(new BlockPos(3331,101,1)) && s.overworld().getBlockState(new BlockPos(3342,101,6)).is(Blocks.DIRT),"A hazard refusal moves nothing and mines nothing");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-terrain-navigation.done","passed");
     }
     private static void physicalNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));

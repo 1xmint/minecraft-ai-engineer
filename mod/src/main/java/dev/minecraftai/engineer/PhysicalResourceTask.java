@@ -32,16 +32,19 @@ final class PhysicalResourceTask implements AutoCloseable {
     }
     static BlockPos stance(EngineeringSession project,ServerPlayer worker,BlockPos source){
         try{PhysicalGatherTask.readFootprint(project,worker,source);return worker.blockPosition().immutable();}catch(IllegalStateException notAdjacent){/* Search reachable original stances, never edit a path. */}
-        BlockPos best=null;int length=Integer.MAX_VALUE;
+        BlockPos best=null;int length=Integer.MAX_VALUE;String blocked=null;
         for(int distance=2;distance<=4;distance++)for(var direction:List.of(net.minecraft.core.Direction.NORTH,net.minecraft.core.Direction.EAST,net.minecraft.core.Direction.SOUTH,net.minecraft.core.Direction.WEST)){
             var candidate=source.relative(direction,distance);
             try{
                 PhysicalGatherTask.readFootprint(project,worker,source,candidate);
-                var route=PhysicalMoveTask.plan(project,worker,candidate);
-                if(route.cells().size()<length){best=candidate;length=route.cells().size();}
+                try{
+                    var route=PhysicalMoveTask.plan(project,worker,candidate);
+                    if(route.cells().size()<length){best=candidate;length=route.cells().size();}
+                }catch(IllegalStateException unreachable){if(blocked==null)blocked=unreachable.getMessage();}
             }catch(IllegalStateException inaccessible){/* Try another bounded stance. */}
         }
-        if(best==null)throw new IllegalStateException("No reserved flat walking route reaches a clear gather stance for this resource");
+        // Name the first real walking obstacle so the player can see what to clear.
+        if(best==null)throw new IllegalStateException("No reserved walking route reaches a clear gather stance for this resource"+(blocked==null?"":" ("+blocked+")"));
         return best;
     }
     boolean tick(){
