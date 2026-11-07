@@ -54,7 +54,8 @@ final class TableCraftTask {
             PhysicalWorkerStorage.save(worker);authority.run();journal.complete();
         }catch(RuntimeException failure){
             PhysicalActionGate.cancel(worker);close(worker,failure);
-            if(record!=null){try{PhysicalWorkerStorage.saveResources(worker);}catch(RuntimeException save){failure.addSuppressed(save);}try{record.uncertain();}catch(RuntimeException save){failure.addSuppressed(save);}}
+            // A table that failed to close keeps the record NEW; requireSettled then refuses everything until the menu settles.
+            if(record!=null && worker.containerMenu==worker.inventoryMenu){try{PhysicalWorkerStorage.saveResources(worker);}catch(RuntimeException save){failure.addSuppressed(save);}try{record.uncertain();}catch(RuntimeException save){failure.addSuppressed(save);}}
             reported=new IllegalStateException("Table crafting stopped. Inspect companion recovery before another request; nothing will retry automatically",failure);throw reported;
         }finally{
             PhysicalActionGate.cancel(worker);

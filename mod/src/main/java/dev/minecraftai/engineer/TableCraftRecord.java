@@ -170,8 +170,8 @@ final class TableCraftRecord {
         var table=record.getAsJsonArray("table");
         if(table.size()!=3)throw new IllegalStateException("Table crafting record position is invalid");
         for(var axis:table)if(!axis.isJsonPrimitive() || !axis.getAsJsonPrimitive().isNumber())throw new IllegalStateException("Table crafting record position is invalid");
-        if(!project.contains(new BlockPos(table.get(0).getAsBigDecimal().intValueExact(),table.get(1).getAsBigDecimal().intValueExact(),table.get(2).getAsBigDecimal().intValueExact())))
-            throw new IllegalStateException("Table crafting record position is outside this workspace");
+        // The position is history only; recovery never uses the table, so a later workspace reselection must not block this project.
+        for(var axis:table)axis.getAsBigDecimal().intValueExact();
         String recovers=record.get("recovers").getAsString();
         if(kind.equals(CRAFT)?!recovers.isEmpty():!recovers.matches("[0-9a-f]{64}"))throw new IllegalStateException("Table crafting record target differs");
         var initial=record.getAsJsonObject("initialTotals");var last=record.getAsJsonObject("finalTotals");
