@@ -38,7 +38,9 @@ final class PhysicalCompanions {
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
         var gridRecipe=Set.of("craft sticks","craft a crafting table").contains(text)?(text.equals("craft sticks")?GridCraftPlan.Recipe.STICK:GridCraftPlan.Recipe.CRAFTING_TABLE):null;
-        boolean craftRequest=oakRequest || gridRecipe!=null;
+        var tableRecipe=Set.of("craft a wooden pickaxe","craft a wooden pickaxe at your crafting table").contains(text)?TableCraftSequence.Recipe.WOODEN_PICKAXE:null;
+        var chestTake=java.util.regex.Pattern.compile("take (\\d{1,2}) ([a-z_]+(?: [a-z_]+)*) from the chest at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean chestRequest=chestTake.matches();
+        boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null || chestRequest;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
         if(!gatherRequest && !placeRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
@@ -48,7 +50,7 @@ final class PhysicalCompanions {
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
-        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null)GridCraftRecord.show(manager,project,shown.actor);return true;}
+        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null){GridCraftRecord.show(manager,project,shown.actor);TableCraftRecord.show(manager,project,shown.actor);ChestTakeRecord.show(manager,project,shown.actor);}return true;}
         if(gatherRequest || placeRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
         if(craftRequest || recoveryRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
@@ -61,12 +63,24 @@ final class PhysicalCompanions {
                     throw new IllegalStateException("Inventory work needs your current idle companion; stop other work and request it again");
             };
             if(recoveryRequest){
-                exclusive.run();var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);
-                if(original!=null && grid!=null)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");
-                if(original==null && grid==null){project.tell("No unfinished crafting resources need recovery. No items were moved.");return true;}
-                if(grid!=null)GridCraftTask.recover(manager,project,binding.actor,grid,exclusive);
+                exclusive.run();var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var table=TableCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var chest=ChestTakeRecord.unresolvedForRecovery(manager,project,binding.actor);
+                if((original!=null?1:0)+(grid!=null?1:0)+(table!=null?1:0)+(chest!=null?1:0)>1)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");
+                if(original==null && grid==null && table==null && chest==null){project.tell("No unfinished crafting resources need recovery. No items were moved.");return true;}
+                if(chest!=null)ChestTakeTask.recover(manager,project,binding.actor,chest,exclusive);
+                else if(table!=null)TableCraftTask.recover(manager,project,binding.actor,table,exclusive);
+                else if(grid!=null)GridCraftTask.recover(manager,project,binding.actor,grid,exclusive);
                 else PhysicalCraftRecoveryTask.execute(manager,project,binding.actor,original,exclusive);
                 project.tell("Your companion's crafting resources are stored and their saved state was verified. No recipe was retried. Ask separately if you want to craft.");return true;
+            }
+            if(chestRequest){
+                var item=chestItem(chestTake.group(2));int count=Integer.parseInt(chestTake.group(1));
+                var at=new BlockPos(Integer.parseInt(chestTake.group(3)),Integer.parseInt(chestTake.group(4)),Integer.parseInt(chestTake.group(5)));
+                ChestTakeTask.take(manager,project,binding.actor,at,item,count,exclusive);
+                project.tell("Your companion took "+count+" "+new net.minecraft.world.item.ItemStack(item).getHoverName().getString()+" from the chest and verified its saved inventory. Nothing was placed.");return true;
+            }
+            if(tableRecipe!=null){
+                TableCraftTask.craft(manager,project,binding.actor,tableRecipe,exclusive);
+                project.tell("Your companion crafted "+tableRecipe.label+" at its crafting table and verified its saved inventory. No blocks were placed.");return true;
             }
             var recipe=gridRecipe!=null?gridRecipe:oakPath(binding.actor)?null:GridCraftPlan.Recipe.OAK_PLANKS;
             if(recipe==null){
@@ -108,6 +122,14 @@ final class PhysicalCompanions {
         }
         if(text.equals("dismiss my companion")){boolean removed=dismiss(project.projectId);project.tell(removed?"Physical companion dismissed. No new work was delegated.":"Companion dismissal is pending until the current native action returns and its resources are saved.");return true;}
         summon(project);project.tell("Your physical companion is here. It is a survival actor, currently idle. Saved resources are retained. Say 'dismiss my companion' to remove it.");return true;
+    }
+    /** A plain item id spoken with spaces, such as "cobblestone" or "oak planks"; unknown names are refused before any action. */
+    private static net.minecraft.world.item.Item chestItem(String name){
+        var id=net.minecraft.resources.Identifier.tryParse("minecraft:"+name.replace(' ','_'));
+        if(id==null || !net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(id))throw new IllegalStateException("Your companion does not know an item called "+name+"; nothing was taken");
+        var item=net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+        if(item==net.minecraft.world.item.Items.AIR)throw new IllegalStateException("Your companion does not know an item called "+name+"; nothing was taken");
+        return item;
     }
     private static void compatible(){
         var carpet=FabricLoader.getInstance().getModContainer("carpet");
