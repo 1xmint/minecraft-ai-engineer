@@ -41,7 +41,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
         this.worker=worker;level=worker.level();connection=worker.connection;this.pack=pack;this.target=target.immutable();start=worker.blockPosition();
         var support=aim==null?target.below():aim.support();
         if(level!=project.level() || !project.contains(target) || !project.contains(support) || !level.hasChunkAt(target) || !level.hasChunkAt(support) || worker.getEyePosition().distanceTo(Vec3.atCenterOf(target))>4
-            || !level.getBlockState(target).isAir())throw new IllegalStateException("Place retained material within four blocks, in clear air inside this workspace");
+            || !level.getBlockState(target).isAir())throw new IllegalStateException(aim==null?"Place retained material within four blocks, in clear air above stone":"Place retained material within four blocks, in clear air inside this workspace");
         if(aim==null && !level.getBlockState(support).is(Blocks.STONE))throw new IllegalStateException("Place retained material within four blocks, in clear air above stone");
         if(aim!=null && (!level.getBlockState(support).equals(aim.supportState()) || !PhysicalActionGate.inertSupport(aim.supportState())))
             throw new IllegalStateException("The planned support at "+support.toShortString()+" must be unchanged stone, cobblestone or dirt; nothing was placed");
