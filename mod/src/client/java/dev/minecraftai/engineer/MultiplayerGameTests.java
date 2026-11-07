@@ -792,7 +792,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-table-placement-restarted.done","passed");
             var tableEvidence=tableCraft[0];
             server.runOnServer(s->check(s.getPlayerList().getPlayer(tableEvidence.worker())==null,"Table crafting restart restores no worker automatically"));
-            server.runCommand("tp Alice 3234.5 101 8 180 0");
+            server.runCommand("tp Alice 3236.5 101 10 180 0");
             send(context,"engineer project use "+tableEvidence.project());server.waitFor(s->tableEvidence.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
             MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
             server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(tableEvidence.worker());var project=session(s,"Alice");
@@ -876,10 +876,10 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     /** Three gathered logs become planks, a placed table and sticks, and the companion crafts a wooden pickaxe at that table. */
     private static GridCraftEvidence physicalTableCraftFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
-        server.runCommand("forceload add 3224 -16 3256 32");server.runCommand("fill 3230 100 0 3235 100 9 minecraft:stone");
-        for(var log:java.util.List.of("3231 101 4","3231 101 6","3231 101 2"))server.runCommand("setblock "+log+" minecraft:oak_log");
-        server.runCommand("tp Alice 3234.5 101 8 180 0");
-        send(context,"engineer select1 3230 100 0");send(context,"engineer select2 3234 102 7");server.waitFor(s->new BlockPos(3234,102,7).equals(session(s,"Alice").corner2));
+        server.runCommand("forceload add 3224 -16 3256 32");server.runCommand("fill 3230 100 0 3237 100 10 minecraft:stone");
+        for(var log:java.util.List.of("3231 101 4","3231 101 6","3231 101 8"))server.runCommand("setblock "+log+" minecraft:oak_log");
+        server.runCommand("tp Alice 3236.5 101 10 180 0");
+        send(context,"engineer select1 3230 100 0");send(context,"engineer select2 3234 102 9");server.waitFor(s->new BlockPos(3234,102,9).equals(session(s,"Alice").corner2));
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
         server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Table crafting worker begins without supplied materials or tools"));
@@ -896,7 +896,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             throw new IllegalStateException("No clear table placement cell near the companion");});
         MESSAGES.clear();say(context,"Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ());expectChat(context,"placed its crafted crafting table and verified its saved inventory");
         server.runOnServer(s->{tableHolds(s,worker,0,0,0,"The crafted table is placed and the companion holds nothing");check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"The companion's own table stands in the workspace");});
-        for(var log:java.util.List.of("3231 101 6","3231 101 2")){MESSAGES.clear();say(context,"Engineer, gather oak log at "+log);expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);}
+        for(var log:java.util.List.of("3231 101 6","3231 101 8")){MESSAGES.clear();say(context,"Engineer, gather oak log at "+log);expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);}
         for(int craft=0;craft<2;craft++){MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"verified its saved inventory");}
         server.runOnServer(s->tableHolds(s,worker,8,0,0,"Two more real logs became eight planks"));
         MESSAGES.clear();say(context,"Engineer, craft a wooden pickaxe");expectChat(context,"to craft a wooden pickaxe; no crafting was started");
