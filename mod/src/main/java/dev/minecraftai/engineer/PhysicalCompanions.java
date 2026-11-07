@@ -21,6 +21,12 @@ final class PhysicalCompanions {
     private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
     private final Map<UUID,PhysicalBlueprintJob> jobs=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
+    /** The bounded table recipe a request names, accepting an optional "at your crafting table". */
+    static TableCraftSequence.Recipe tableRecipe(String text){
+        var named=text.endsWith(" at your crafting table")?text.substring(0,text.length()-" at your crafting table".length()):text;
+        for(var recipe:TableCraftSequence.Recipe.values())if(named.equals("craft "+recipe.label))return recipe;
+        return null;
+    }
     /** The original one-log hotbar craft keeps its exact contract; any other oak log layout uses the bounded grid protocol. */
     private static boolean oakPath(ServerPlayer worker){
         var inventory=worker.getInventory();int logs=0,occupied=0;boolean single=false;
@@ -38,7 +44,8 @@ final class PhysicalCompanions {
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
         var gridRecipe=Set.of("craft sticks","craft a crafting table").contains(text)?(text.equals("craft sticks")?GridCraftPlan.Recipe.STICK:GridCraftPlan.Recipe.CRAFTING_TABLE):null;
-        boolean craftRequest=oakRequest || gridRecipe!=null;
+        var tableRecipe=tableRecipe(text);
+        boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
         if(!gatherRequest && !placeRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
@@ -48,7 +55,7 @@ final class PhysicalCompanions {
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
-        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null)GridCraftRecord.show(manager,project,shown.actor);return true;}
+        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null){GridCraftRecord.show(manager,project,shown.actor);TableCraftRecord.show(manager,project,shown.actor);}return true;}
         if(gatherRequest || placeRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
         if(craftRequest || recoveryRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
@@ -61,12 +68,17 @@ final class PhysicalCompanions {
                     throw new IllegalStateException("Inventory work needs your current idle companion; stop other work and request it again");
             };
             if(recoveryRequest){
-                exclusive.run();var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);
-                if(original!=null && grid!=null)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");
-                if(original==null && grid==null){project.tell("No unfinished crafting resources need recovery. No items were moved.");return true;}
-                if(grid!=null)GridCraftTask.recover(manager,project,binding.actor,grid,exclusive);
+                exclusive.run();var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var table=TableCraftRecord.unresolvedForRecovery(manager,project,binding.actor);
+                if((original!=null?1:0)+(grid!=null?1:0)+(table!=null?1:0)>1)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");
+                if(original==null && grid==null && table==null){project.tell("No unfinished crafting resources need recovery. No items were moved.");return true;}
+                if(table!=null)TableCraftTask.recover(manager,project,binding.actor,table,exclusive);
+                else if(grid!=null)GridCraftTask.recover(manager,project,binding.actor,grid,exclusive);
                 else PhysicalCraftRecoveryTask.execute(manager,project,binding.actor,original,exclusive);
                 project.tell("Your companion's crafting resources are stored and their saved state was verified. No recipe was retried. Ask separately if you want to craft.");return true;
+            }
+            if(tableRecipe!=null){
+                TableCraftTask.craft(manager,project,binding.actor,tableRecipe,exclusive);
+                project.tell("Your companion crafted "+tableRecipe.label+" at its crafting table and verified its saved inventory. No blocks were placed.");return true;
             }
             var recipe=gridRecipe!=null?gridRecipe:oakPath(binding.actor)?null:GridCraftPlan.Recipe.OAK_PLANKS;
             if(recipe==null){
