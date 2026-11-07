@@ -58,10 +58,12 @@ final class ChestTakeTask {
             worker.level().getChunkSource().save(true);PhysicalWorkerStorage.save(worker);authority.run();journal.complete();
         }catch(RuntimeException failure){
             PhysicalActionGate.cancel(worker);close(worker,failure);
-            // A chest that failed to close keeps the record NEW; requireSettled then refuses everything until the menu settles.
-            if(record!=null && worker.containerMenu==worker.inventoryMenu){
-                try{worker.level().getChunkSource().save(true);PhysicalWorkerStorage.saveResources(worker);}catch(RuntimeException save){failure.addSuppressed(save);}
-                try{record.uncertain();}catch(RuntimeException save){failure.addSuppressed(save);}
+            // Save the chest chunk before the companion even when the chest failed to close. Only a closed menu with both saves done
+            // may mark the record uncertain; otherwise it stays NEW and requireSettled or the record refuses everything until inspected.
+            if(record!=null){
+                boolean saved=false;
+                try{worker.level().getChunkSource().save(true);PhysicalWorkerStorage.saveResources(worker);saved=true;}catch(RuntimeException save){failure.addSuppressed(save);}
+                if(saved && worker.containerMenu==worker.inventoryMenu)try{record.uncertain();}catch(RuntimeException save){failure.addSuppressed(save);}
             }
             reported=new IllegalStateException("Chest take stopped. Inspect companion recovery before another request; nothing will retry automatically",failure);throw reported;
         }finally{
@@ -88,6 +90,8 @@ final class ChestTakeTask {
     private static void permitted(ProjectManager manager,EngineeringSession project,ServerPlayer worker,BlockPos chest){
         if(!project.contains(chest))throw new IllegalStateException("Your companion only takes from chests inside this workspace; nothing was taken");
         if(!worker.level().hasChunkAt(chest) || !worker.isWithinBlockInteractionRange(chest,1.0))throw new IllegalStateException("That chest is out of your companion's reach; nothing was taken");
+        // The native use call below skips the packet handler's checks, so apply them here: world border and spawn protection.
+        if(!worker.level().getWorldBorder().isWithinBounds(chest) || !worker.level().mayInteract(worker,chest))throw new IllegalStateException("That chest is protected from your companion here; nothing was taken");
         for(var other:manager.projects.values())
             if(other!=project && other.dimension.equals(project.dimension) && other.contains(chest) && !other.access.allows(project.actor(),ProjectAccess.Permission.BUILD))
                 throw new IllegalStateException("Another project protects that chest; nothing was taken");

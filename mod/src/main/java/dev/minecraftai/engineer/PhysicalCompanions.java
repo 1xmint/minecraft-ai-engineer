@@ -39,7 +39,7 @@ final class PhysicalCompanions {
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
         var gridRecipe=Set.of("craft sticks","craft a crafting table").contains(text)?(text.equals("craft sticks")?GridCraftPlan.Recipe.STICK:GridCraftPlan.Recipe.CRAFTING_TABLE):null;
         var tableRecipe=Set.of("craft a wooden pickaxe","craft a wooden pickaxe at your crafting table").contains(text)?TableCraftSequence.Recipe.WOODEN_PICKAXE:null;
-        var chestTake=java.util.regex.Pattern.compile("take (\\d{1,2}) ([a-z_]+(?: [a-z_]+)*) from the chest at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean chestRequest=chestTake.matches();
+        var chestTake=java.util.regex.Pattern.compile("take (\\d{1,2}) ([a-z_]+(?: [a-z_]+)*) from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean chestRequest=chestTake.matches();
         boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null || chestRequest;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
         if(!gatherRequest && !placeRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
