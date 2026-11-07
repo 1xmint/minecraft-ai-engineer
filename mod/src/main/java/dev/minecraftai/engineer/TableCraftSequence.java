@@ -23,21 +23,25 @@ import net.minecraft.world.level.block.Blocks;
  * rules; nothing here mutates a player or inserts a stack.
  */
 final class TableCraftSequence implements PhysicalMenuProtocol {
-    /** Placing two inputs, two put-backs, the result take and the stow need at most 11 clicks. */
+    /** Two inputs need at most two pickups, five single placements, two put-backs, the result take and the stow: 11 clicks. */
     static final int MAX_CLICKS=12;
     static final int MAIN_SLOTS=36;
     static final int GRID=9;
 
-    /** The single bounded table recipe. Cells are 3x3 grid indexes (row-major, menu slot = 1 + cell). */
+    /** One plain input item and the 3x3 grid cells it fills (row-major, menu slot = 1 + cell). */
+    record Input(net.minecraft.world.item.Item item,List<Integer> cells){}
+    /** The bounded table recipes, each with exactly two plain inputs, one output and no remainders. */
     enum Recipe {
-        WOODEN_PICKAXE("minecraft:wooden_pickaxe",List.of(0,1,2),List.of(4,7),Items.WOODEN_PICKAXE,"a wooden pickaxe");
-        final String id;final List<Integer> planks,sticks;final net.minecraft.world.item.Item output;final String label;
-        Recipe(String id,List<Integer> planks,List<Integer> sticks,net.minecraft.world.item.Item output,String label){this.id=id;this.planks=planks;this.sticks=sticks;this.output=output;this.label=label;}
+        WOODEN_PICKAXE("minecraft:wooden_pickaxe",List.of(new Input(Items.OAK_PLANKS,List.of(0,1,2)),new Input(Items.STICK,List.of(4,7))),Items.WOODEN_PICKAXE,"a wooden pickaxe"),
+        LEVER("minecraft:lever",List.of(new Input(Items.STICK,List.of(1)),new Input(Items.COBBLESTONE,List.of(4))),Items.LEVER,"a lever"),
+        REDSTONE_TORCH("minecraft:redstone_torch",List.of(new Input(Items.REDSTONE,List.of(1)),new Input(Items.STICK,List.of(4))),Items.REDSTONE_TORCH,"a redstone torch"),
+        REDSTONE_LAMP("minecraft:redstone_lamp",List.of(new Input(Items.REDSTONE,List.of(1,3,5,7)),new Input(Items.GLOWSTONE,List.of(4))),Items.REDSTONE_LAMP,"a redstone lamp");
+        final String id;final List<Input> inputs;final net.minecraft.world.item.Item output;final String label;
+        Recipe(String id,List<Input> inputs,net.minecraft.world.item.Item output,String label){this.id=id;this.inputs=inputs;this.output=output;this.label=label;}
         ItemStack output(){return new ItemStack(output);}
         List<ItemStack> grid(){
             var grid=new ArrayList<ItemStack>(Collections.nCopies(GRID,ItemStack.EMPTY));
-            for(int cell:planks)grid.set(cell,new ItemStack(Items.OAK_PLANKS));
-            for(int cell:sticks)grid.set(cell,new ItemStack(Items.STICK));
+            for(var input:inputs)for(int cell:input.cells())grid.set(cell,new ItemStack(input.item()));
             return grid;
         }
     }
@@ -175,16 +179,16 @@ final class TableCraftSequence implements PhysicalMenuProtocol {
         if(!initial.menuEmpty())throw new IllegalStateException("Table crafting must begin with an empty native grid and cursor");
         verify(level,recipe);
         var inventory=initial.inventory();
-        int planks=source(inventory,Items.OAK_PLANKS,recipe.planks.size(),recipe),sticks=source(inventory,Items.STICK,recipe.sticks.size(),recipe);
+        var sources=new ArrayList<Integer>();for(var input:recipe.inputs)sources.add(source(inventory,input.item(),input.cells().size(),recipe));
         var model=new Model(level,initial);var frames=new ArrayList<Frame>(List.of(model.frame()));var slots=new ArrayList<Integer>();var buttons=new ArrayList<Integer>();
         java.util.function.BiConsumer<Integer,Integer> click=(slot,button)->{
             if(slots.size()>=MAX_CLICKS)throw new IllegalStateException("Table protocol exceeds its bounded native actions");
             model.click(slot,button);slots.add(slot);buttons.add(button);frames.add(model.frame());
         };
-        for(var input:List.of(java.util.Map.entry(planks,recipe.planks),java.util.Map.entry(sticks,recipe.sticks))){
-            int from=menuSlot(input.getKey());
+        for(int i=0;i<recipe.inputs.size();i++){
+            int from=menuSlot(sources.get(i));
             click.accept(from,0);
-            for(int cell:input.getValue())click.accept(1+cell,1);
+            for(int cell:recipe.inputs.get(i).cells())click.accept(1+cell,1);
             if(!model.cursor.isEmpty())click.accept(from,0);
         }
         if(!ItemStack.matches(preview(level,model.grid),recipe.output()))throw new IllegalStateException("Native preview does not match "+recipe.label+"; no crafting was started");
