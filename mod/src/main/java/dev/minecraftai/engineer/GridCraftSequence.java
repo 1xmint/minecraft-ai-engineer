@@ -155,6 +155,8 @@ final class GridCraftSequence implements PhysicalMenuProtocol {
     public int button(int step){requireStep(step);return buttons.get(step-1);}
     public PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
     public PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    @Override public boolean beforeMatches(int step,ServerPlayer actor){return before(step).matches(PhysicalCraftFrame.capture(actor));}
+    @Override public boolean afterMatches(int step,ServerPlayer actor){return after(step).matches(PhysicalCraftFrame.capture(actor));}
     PhysicalCraftFrame initial(){return frames.getFirst();}
     PhysicalCraftFrame settled(){return frames.getLast();}
     /** Every frame this protocol can leave behind: before step 1 through after the last step. */

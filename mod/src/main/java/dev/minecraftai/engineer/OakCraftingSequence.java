@@ -33,6 +33,8 @@ final class OakCraftingSequence implements PhysicalMenuProtocol {
     public void validateNative(ServerPlayer actor){OakCraftingPlan.inspect(actor.level(),before(1).inventory().get(source));}
     public PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
     public PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    @Override public boolean beforeMatches(int step,ServerPlayer actor){return before(step).matches(PhysicalCraftFrame.capture(actor));}
+    @Override public boolean afterMatches(int step,ServerPlayer actor){return after(step).matches(PhysicalCraftFrame.capture(actor));}
     public int slot(int step){requireStep(step);return switch(step){case 1,4->36+source;case 2->1;case 3->0;default->throw new AssertionError();};}
     private static void requireStep(int step){if(step<1 || step>4)throw new IllegalArgumentException("Unsupported native crafting step");}
 }

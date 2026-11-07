@@ -37,6 +37,8 @@ final class OakCraftRecoveryPlan implements PhysicalMenuProtocol {
     public int slot(int step){requireStep(step);return slots.get(step-1);}
     public PhysicalCraftFrame before(int step){requireStep(step);return frames.get(step-1);}
     public PhysicalCraftFrame after(int step){requireStep(step);return frames.get(step);}
+    @Override public boolean beforeMatches(int step,net.minecraft.server.level.ServerPlayer actor){return before(step).matches(PhysicalCraftFrame.capture(actor));}
+    @Override public boolean afterMatches(int step,net.minecraft.server.level.ServerPlayer actor){return after(step).matches(PhysicalCraftFrame.capture(actor));}
     public boolean needsSettledStart(){return false;}
     public void validateNative(net.minecraft.server.level.ServerPlayer actor){
         // Resource movement must remain available if the recipe was removed or

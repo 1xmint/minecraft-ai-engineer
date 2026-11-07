@@ -18,7 +18,7 @@ final class PhysicalCraftTask {
         int source=-1;for(int slot=0;slot<9;slot++)if(!worker.getInventory().getItem(slot).isEmpty()){if(source!=-1)throw new IllegalStateException("Crafting needs only its one retained oak log");source=slot;}
         if(source<0)throw new IllegalStateException("Your companion needs one retained oak log in its hotbar");
         var plan=OakCraftingPlan.inspect(worker.level(),worker.getInventory().getItem(source));var sequence=OakCraftingSequence.capture(worker,source);
-        PhysicalCraftRecord.requireNoUnresolved(manager,project,worker,plan);GridCraftRecord.requireNoUnresolved(manager,project,worker);
+        PhysicalCraftRecord.requireNoUnresolved(manager,project,worker,plan);GridCraftRecord.requireNoUnresolved(manager,project,worker);TableCraftRecord.requireNoUnresolved(manager,project,worker);
         PhysicalCraftRecord record=null;
         RuntimeException reported=null;PhysicalCraftGuard.begin(worker);
         try(var work=new PhysicalInventoryAuthority(manager,project,worker,exclusive)){
