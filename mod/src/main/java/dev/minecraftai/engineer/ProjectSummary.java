@@ -56,7 +56,7 @@ final class ProjectSummary {
         var untested=new ArrayList<String>();
         for(String id:components){
             var task=s.assignments.tasks.get(id);
-            if(task==null || task.verified==null || !task.verified.startsWith("passed") || !FunctionalTrial.matchesCurrentScope(s.blueprint,task))untested.add(id);
+            if(task==null || task.verified==null || !task.verified.startsWith("passed") || !MemoryFunctionalEvidence.currentTrial(s.blueprint,task))untested.add(id);
         }
         for(String id:components.stream().limit(COMPONENT_LINES).toList()){
             var task=s.assignments.tasks.get(id);

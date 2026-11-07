@@ -10,8 +10,71 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-/** Native feasibility for a stored bit. This is not a production memory/register contract. */
+/** Native stored-bit tests; these do not establish general data/clock registers. */
 public final class ToggleMemoryGameTests {
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void memoryPassBindingDoesNotSurviveLoadOrReassignment(GameTestHelper h){
+        var id=java.util.UUID.randomUUID();var manager=EngineerMod.managerFor(h.getLevel().getServer());var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),0).blueprint();
+        var assignments=new ComponentAssignments();assignments.reconcile(blueprint);var task=assignments.task(blueprint,"root");var trialId=java.util.UUID.randomUUID();
+        // Synthetic metadata isolates scope invalidation; this test claims no live functional run.
+        var record=new JsonObject();record.addProperty("id",trialId.toString());record.addProperty("kind","native-memory-functional-trial");record.addProperty("outcome","passed");record.addProperty("projectId",id.toString());record.addProperty("revision",1);record.addProperty("assignmentBasis",task.basis);record.addProperty("assignmentGeneration",task.generation);
+        var observations=new JsonObject();observations.add("intention",blueprint.source().deepCopy());var trace=new JsonObject();trace.add("observations",observations);record.add("trace",trace);
+        task.memoryPassEvidence=MemoryFunctionalEvidence.capture(blueprint,task,record);task.verified="passed:toggle-memory:revision-1:96-live-samples:"+trialId;
+        h.assertTrue(MemoryFunctionalEvidence.current(blueprint,task),"Synthetic scope starts matched; this does not exercise or certify the native test");
+        var saved=assignments.json();h.assertTrue(!saved.toString().contains("memoryPassEvidence"),"Live memory pass bindings are not serialized with task progress");
+        var restored=new ComponentAssignments();restored.load(blueprint,saved);var loaded=restored.task(blueprint,"root");
+        h.assertTrue(loaded.memoryPassEvidence==null && loaded.verified.startsWith("stale:") && !MemoryFunctionalEvidence.current(blueprint,loaded),"Saved task data cannot restore a live current pass");
+        loaded.verified=task.verified;h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,loaded),"A pass-looking string alone cannot replace the missing live scope binding");
+        var session=new EngineeringSession(manager,id,id,"minecraft:overworld");session.blueprint=blueprint;session.assignments.reconcile(blueprint);
+        var held=session.assignments.task(blueprint,"root");held.memoryPassEvidence=task.memoryPassEvidence;held.verified=task.verified;session.verified=task.verified;
+        boolean saveFailed=false,rollbackFailed=false;
+        try {
+            java.nio.file.Files.createDirectory(session.file); // A real blocked checkpoint target, not a mocked save.
+            try{session.save();}catch(RuntimeException expected){saveFailed=true;}
+            try{MemoryFunctionalRun.recordFailure(session,held,new IllegalStateException("Forced checkpoint failure"));}catch(RuntimeException expected){rollbackFailed=true;}
+            h.assertTrue(saveFailed && rollbackFailed && held.memoryPassEvidence==null && held.verified.equals("untested")
+                    && session.verified.equals("untested") && !MemoryFunctionalEvidence.current(blueprint,held),"Both saves can fail without leaving any in-memory current pass or binding");
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        finally{try{java.nio.file.Files.deleteIfExists(session.file);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
+        held.memoryPassEvidence=task.memoryPassEvidence;held.verified=task.verified;session.verified=task.verified;
+        held.assign(java.util.UUID.randomUUID(),"player");session.save();
+        h.assertTrue(session.verified.startsWith("stale:") && held.verified.startsWith("stale:")
+                && !ProjectGuidance.evidence(session).getFirst().currentPass(),"Saving a reassigned memory scope labels both raw status and guidance stale rather than repeating the old pass text");
+        var reloaded=new EngineeringSession(manager,id,id,"minecraft:overworld");
+        h.assertTrue(reloaded.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && reloaded.memoryFunctionalRun==null
+                && !MemoryFunctionalEvidence.current(blueprint,reloaded.assignments.task(blueprint,"root")),"A saved native stale label reloads only as non-current status, never a generic trial or live pass");
+        JsonObject nativeDocument;
+        try{nativeDocument=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        nativeDocument.remove("memoryVerificationStatus");nativeDocument.addProperty("verified",task.verified);
+        var savedNative=new EngineeringSession(manager,id,id,"minecraft:overworld",nativeDocument);
+        h.assertTrue(savedNative.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && savedNative.delegation==null,"A saved native pass-looking label is quarantined on load, not promoted to current evidence");
+        session.verified="stale: circuit changed or chunks unloaded since test";session.save();
+        try {
+            var staleDocument=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(session.file)).getAsJsonObject();
+            h.assertTrue(staleDocument.get("verified").getAsString().equals("untested") && staleDocument.get("memoryVerificationStatus").getAsString().equals(session.verified),"General invalidation text is stored separately from generic functional claims");
+            var staleReload=new EngineeringSession(manager,id,id,"minecraft:overworld");
+            h.assertTrue(staleReload.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && staleReload.delegation==null && staleReload.memoryFunctionalRun==null,"A legitimate general stale status loads as history without a runner or current pass");
+            var nativeHistory=staleDocument.deepCopy();nativeHistory.addProperty("memoryVerificationStatus",task.verified);
+            var historyOnly=new EngineeringSession(manager,id,id,"minecraft:overworld",nativeHistory);
+            h.assertTrue(historyOnly.verified.equals(MemoryFunctionalEvidence.HISTORICAL_STATUS) && !MemoryFunctionalEvidence.current(blueprint,historyOnly.assignments.task(blueprint,"root")),"A pass-looking memory history field cannot recreate a current pass binding");
+            var malformedHistory=staleDocument.deepCopy();malformedHistory.add("memoryVerificationStatus",new JsonObject());boolean malformedRefused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",malformedHistory);}catch(IllegalStateException expected){malformedRefused=true;}
+            h.assertTrue(malformedRefused,"Memory display history must be a bounded status string");
+            var forged=staleDocument.deepCopy();
+            var scope=new JsonObject();scope.addProperty("projectId",id.toString());scope.addProperty("blueprintId",blueprint.id());scope.addProperty("blueprintRevision",blueprint.revision());scope.addProperty("component","root");scope.addProperty("basis",held.basis);scope.addProperty("basisVersion",ComponentAssignments.BASIS_VERSION);
+            h.assertTrue(FunctionalTrial.validateHistoricalScope(scope).equals(scope),"The rejection fixture contains a structurally valid current-project generic scope");
+            forged.add("functionalScope",scope);boolean refused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){
+                for(Throwable cause=expected;cause!=null;cause=cause.getCause())if(cause.getMessage()!=null && cause.getMessage().startsWith("Memory cannot restore a generic functional claim"))refused=true;
+            }
+            h.assertTrue(refused,"Native status quarantine still reaches the explicit memory guard for a valid generic scope, not merely schema validation");
+            forged.remove("functionalScope");forged.remove("memoryVerificationStatus");forged.addProperty("verified","passed:signal-lamp:forged");refused=false;
+            try{new EngineeringSession(manager,id,id,"minecraft:overworld",forged);}catch(IllegalStateException expected){refused=true;}
+            h.assertTrue(refused,"A foreign generic pass label remains rejected for memory");
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        var rotated=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(8,2,8),90).blueprint();
+        h.assertTrue(!MemoryFunctionalEvidence.current(rotated,task),"A different canonical source cannot reuse the pass binding");
+        task.assign(java.util.UUID.randomUUID(),"assistant");h.assertTrue(!MemoryFunctionalEvidence.current(blueprint,task),"A new assignment generation invalidates the old binding even with the same geometry and pass text");h.succeed();
+    }
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOffEast(GameTestHelper h){probe(h,false,Rotation.NONE);}
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOnEast(GameTestHelper h){probe(h,true,Rotation.NONE);}
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=180) public void initiallyOffSouth(GameTestHelper h){probe(h,false,Rotation.CLOCKWISE_90);}
@@ -152,6 +215,98 @@ public final class ToggleMemoryGameTests {
         var alreadyRestored=MemoryRecoveryPlan.observe(restoredSession);
         h.assertTrue(alreadyRestored.data().get("originStage").getAsString().equals("RESTORED") && alreadyRestored.data().getAsJsonArray("requestedInputs").isEmpty() && restoredSession.pendingMemoryInput.same(restoredPointer),"A retained pointer to a read-back RESTORED origin yields zero movement until its durable clear succeeds");h.succeed();
     }
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=200) public void memoryRecoveryJournalRecordsFreshNativeEdges(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());Blueprint previous=null;
+        for(Rotation rotation:java.util.List.of(Rotation.NONE,Rotation.CLOCKWISE_90,Rotation.CLOCKWISE_180,Rotation.COUNTERCLOCKWISE_90))for(boolean initialBit:java.util.List.of(false,true))for(int phase=0;phase<4;phase++){
+            var id=java.util.UUID.randomUUID();int angle=switch(rotation){case NONE->0;case CLOCKWISE_90->90;case CLOCKWISE_180->180;case COUNTERCLOCKWISE_90->270;};
+            var anchor=h.absolutePos(at(new BlockPos(4,2,4),rotation));if(previous!=null)for(var cell:previous.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),Blocks.AIR.defaultBlockState());
+            var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",anchor,angle).blueprint();previous=blueprint;
+            for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock?cell.state().setValue(BlockStateProperties.LIT,initialBit):cell.state());
+            var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();
+            var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
+            var relativeLever=at(new BlockPos(3,2,4),rotation);var session=new EngineeringSession(manager,id,java.util.UUID.randomUUID(),"minecraft:overworld");session.blueprint=blueprint;session.state="READY";session.assignments.reconcile(blueprint);
+            var initial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));var started=h.getLevel().getGameTime();
+            var origin=MemoryInputJournal.create(manager.directory,blueprint,initial,started);var pointer=MemoryPendingInput.create(session,session.owner,java.util.UUID.fromString(origin.json().get("id").getAsString()),initial,started);session.persistPendingMemoryInput(pointer);
+            for(int edge=0;edge<phase;edge++){var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));origin.prepare(before,h.getLevel().getGameTime());h.pullLever(relativeLever);origin.observe(new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb)),h.getLevel().getGameTime());}
+            var plan=MemoryRecoveryPlan.observe(session);var originBefore=MemoryInputJournal.read(pointer.journalFile(manager.directory),blueprint).json();
+            var recovery=MemoryRecoveryJournal.create(manager.directory,blueprint,pointer,plan,session.owner,h.getLevel().getGameTime());
+            var request=plan.data().getAsJsonArray("requestedInputs");
+            for(int edge=0;edge<request.size();edge++){
+                var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));var prepared=recovery.prepare(before,h.getLevel().getGameTime());
+                var frozen=MemoryRecoveryJournal.read(recovery.file(),blueprint,pointer);boolean replayRefused=false;try{frozen.prepare(before,h.getLevel().getGameTime());}catch(IllegalStateException expected){replayRefused=true;}
+                h.assertTrue(replayRefused && frozen.stage().equals("PREPARED"),"Reloading a prepared recovery record grants no replay writer");
+                h.pullLever(relativeLever);var after=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));h.assertTrue(prepared.after().matches(after),"A fresh recovery edge follows its durable write-ahead transition");recovery.observe(after,h.getLevel().getGameTime());
+            }
+            var actual=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));recovery.restored(actual,h.getLevel().getGameTime());
+            var readback=MemoryRecoveryJournal.read(recovery.file(),blueprint,pointer);var originAfter=MemoryInputJournal.read(pointer.journalFile(manager.directory),blueprint).json();
+            h.assertTrue(readback.stage().equals("RESTORED") && pointer.initial().matches(actual) && originBefore.equals(originAfter),"Recovery persists the original paired state while leaving the source journal byte-meaning unchanged");
+            var wrapper=new JsonObject();wrapper.add("pending",pointer.json());wrapper.add("originRecord",originBefore);wrapper.add("plan",plan.data());wrapper.add("recovery",readback.json());System.out.println("ENGINEER_MEMORY_RECOVERY_JOURNAL "+wrapper);
+        }
+        h.succeed();
+    }
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=40) public void memoryRecoveryJournalRejectsExternalChanges(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());var id=java.util.UUID.randomUUID();var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",h.absolutePos(new BlockPos(8,2,8)),0).blueprint();
+        for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state());var session=new EngineeringSession(manager,id,java.util.UUID.randomUUID(),"minecraft:overworld");session.blueprint=blueprint;session.state="READY";session.assignments.reconcile(blueprint);
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();var initial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));
+        var origin=MemoryInputJournal.create(manager.directory,blueprint,initial,h.getLevel().getGameTime());var pointer=MemoryPendingInput.create(session,session.owner,java.util.UUID.fromString(origin.json().get("id").getAsString()),initial,h.getLevel().getGameTime());session.persistPendingMemoryInput(pointer);var plan=MemoryRecoveryPlan.observe(session);var recovery=MemoryRecoveryJournal.create(manager.directory,blueprint,pointer,plan,session.owner,h.getLevel().getGameTime());
+        try{java.nio.file.Files.writeString(recovery.file(),"tampered",java.nio.file.StandardOpenOption.APPEND);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        boolean refused=false;try{recovery.restored(initial,h.getLevel().getGameTime());}catch(IllegalStateException expected){refused=true;}
+        h.assertTrue(refused && recovery.stage().equals("NEW") && session.pendingMemoryInput.same(pointer) && session.verified.equals("untested"),"External edits prevent a recovery journal write and cannot clear the original pending scope or claim success");h.succeed();
+    }
+    @GameTest(structure="engineer:toggle_memory_lab",maxTicks=200) public void memoryRecoveryCheckpointChainsLatestInterruptedProgress(GameTestHelper h){
+        var manager=EngineerMod.managerFor(h.getLevel().getServer());var id=java.util.UUID.randomUUID();var anchor=h.absolutePos(new BlockPos(8,2,8));
+        var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",anchor,0).blueprint();
+        for(var cell:blueprint.blocks())h.getLevel().setBlockAndUpdate(cell.pos(),cell.state());
+        var session=new EngineeringSession(manager,id,java.util.UUID.randomUUID(),"minecraft:overworld");session.blueprint=blueprint;session.state="READY";session.assignments.reconcile(blueprint);
+        var lever=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.LEVER)).findFirst().orElseThrow().pos();var bulb=blueprint.blocks().stream().filter(cell->cell.state().getBlock() instanceof net.minecraft.world.level.block.CopperBulbBlock).findFirst().orElseThrow().pos();
+        var relativeLever=new BlockPos(7,2,8);var initial=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));var rootJournal=MemoryInputJournal.create(manager.directory,blueprint,initial,h.getLevel().getGameTime());
+        var root=MemoryPendingInput.create(session,session.owner,java.util.UUID.fromString(rootJournal.json().get("id").getAsString()),initial,h.getLevel().getGameTime());session.persistPendingMemoryInput(root);
+        rootJournal.prepare(initial,h.getLevel().getGameTime());h.pullLever(relativeLever);var highWrong=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));rootJournal.observe(highWrong,h.getLevel().getGameTime());
+        var originalRecord=MemoryInputJournal.read(root.journalFile(manager.directory),blueprint).json();var firstPlan=MemoryRecoveryPlan.observe(session);
+        var orphan=MemoryRecoveryJournal.create(manager.directory,blueprint,root,firstPlan,session.owner,h.getLevel().getGameTime());
+        h.assertTrue(MemoryRecoveryPlan.observe(session).data().get("originJournalId").getAsString().equals(root.journalId().toString()),"An uncheckpointed NEW recovery file cannot become the latest operation or authorize another plan");
+        var first=MemoryRecoveryJournal.create(manager.directory,blueprint,root,firstPlan,session.owner,h.getLevel().getGameTime());
+        var staleSession=new EngineeringSession(manager,id,session.owner,"minecraft:overworld");
+        var firstCheckpoint=MemoryRecoveryCheckpoint.create(session,first);session.persistPendingMemoryRecovery(root,null,firstCheckpoint);
+        boolean stalePlanRefused=false;try{MemoryRecoveryPlan.observe(staleSession);}catch(IllegalStateException expected){stalePlanRefused=true;}
+        h.assertTrue(stalePlanRefused,"A stale live session cannot ignore the newer persisted recovery pointer and plan from the root journal");
+        boolean staleRefused=false;try{session.persistPendingMemoryRecovery(root,null,firstCheckpoint);}catch(IllegalStateException expected){staleRefused=true;}
+        var forgedCheckpoint=firstCheckpoint.json();forgedCheckpoint.addProperty("connection","forged");boolean forgedRefused=false;
+        try{MemoryRecoveryCheckpoint.read(forgedCheckpoint,session);}catch(RuntimeException expected){forgedRefused=true;}
+        var reloaded=new EngineeringSession(manager,id,session.owner,"minecraft:overworld");
+        h.assertTrue(staleRefused && forgedRefused && reloaded.pendingMemoryInput.same(root) && reloaded.pendingMemoryRecovery.same(firstCheckpoint)
+                && reloaded.delegation==null && reloaded.memoryInputDriver==null && reloaded.verified.equals("untested"),"The root-to-first-recovery checkpoint survives reload, rejects stale CAS and grants no authority");
+        var firstBefore=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));var firstEdge=first.prepare(firstBefore,h.getLevel().getGameTime());
+        h.assertTrue(!firstPlan.data().getAsJsonArray("requestedInputs").get(0).getAsBoolean() && firstEdge.after().lever().getValue(BlockStateProperties.POWERED)==false,"The first recovery begins with its newly recorded falling edge");
+        h.pullLever(relativeLever);var lowWrong=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));first.observe(lowWrong,h.getLevel().getGameTime());first.interrupt(lowWrong,h.getLevel().getGameTime());
+        var firstRead=MemoryRecoveryJournal.read(first.file(),blueprint,root);var secondPlan=MemoryRecoveryPlan.observe(reloaded);
+        var second=MemoryRecoveryJournal.create(manager.directory,blueprint,root,secondPlan,reloaded.owner,h.getLevel().getGameTime());var secondCheckpoint=MemoryRecoveryCheckpoint.create(reloaded,second);
+        reloaded.persistPendingMemoryRecovery(root,firstCheckpoint,secondCheckpoint);
+        h.assertTrue(secondPlan.data().get("originJournalId").getAsString().equals(first.id().toString())
+                && secondPlan.data().getAsJsonArray("requestedInputs").size()==2
+                && secondCheckpoint.journalId().equals(second.id()),"The next plan follows the latest interrupted recovery log instead of replanning from the stale root record");
+        for(int index=0;index<2;index++){
+            var before=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));var edge=second.prepare(before,h.getLevel().getGameTime());
+            h.pullLever(relativeLever);var actual=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));h.assertTrue(edge.after().matches(actual),"Fresh recovery edge matches its persisted intent");second.observe(actual,h.getLevel().getGameTime());
+        }
+        var finalPair=new MemoryInputTransition.Frame(h.getLevel().getBlockState(lever),h.getLevel().getBlockState(bulb));second.restored(finalPair,h.getLevel().getGameTime());
+        var secondRead=MemoryRecoveryJournal.read(second.file(),blueprint,root);var recoveryCheckpoint=MemoryRecoveryCheckpoint.read(secondCheckpoint.json(),reloaded);
+        h.assertTrue(secondRead.stage().equals("RESTORED") && root.initial().matches(finalPair)
+                && MemoryInputJournal.read(root.journalFile(manager.directory),blueprint).json().equals(originalRecord),"The chain restores the original paired frame and leaves the original root journal unchanged");
+        var wrapper=new JsonObject();wrapper.add("pendingRoot",root.json());wrapper.add("originRecord",originalRecord);wrapper.add("firstPlan",firstPlan.data());wrapper.add("firstRecovery",firstRead.json());wrapper.add("firstRecoveryCheckpoint",firstCheckpoint.json());wrapper.add("secondPlan",secondPlan.data());wrapper.add("secondRecovery",secondRead.json());wrapper.add("recoveryCheckpoint",recoveryCheckpoint.json());
+        System.out.println("ENGINEER_MEMORY_RECOVERY_CHAIN "+wrapper);
+        var legacy=orphan.json();var legacyBirth=legacy.deepCopy();legacyBirth.remove("birthDigest");legacyBirth.remove("stage");legacyBirth.remove("events");legacyBirth.remove("originKind");legacyBirth.addProperty("schemaVersion",1);
+        legacy.addProperty("schemaVersion",1);legacy.remove("originKind");
+        try{legacy.addProperty("birthDigest",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(legacyBirth.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))));java.nio.file.Files.writeString(orphan.file(),LocalFiles.GSON.toJson(legacy));}
+        catch(java.security.NoSuchAlgorithmException impossible){throw new AssertionError(impossible);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        boolean legacyRead=MemoryRecoveryJournal.read(orphan.file(),blueprint,root).stage().equals("NEW");
+        var cyclic=MemoryRecoveryJournal.create(manager.directory,blueprint,root,firstPlan,session.owner,h.getLevel().getGameTime());var cyclicJson=cyclic.json();cyclicJson.addProperty("originKind","memory-recovery-journal");cyclicJson.addProperty("originJournalId",cyclic.id().toString());
+        try{java.nio.file.Files.writeString(cyclic.file(),LocalFiles.GSON.toJson(cyclicJson));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        boolean cycleRefused=false;try{MemoryRecoveryJournal.read(cyclic.file(),blueprint,root);}catch(RuntimeException expected){cycleRefused=true;}
+        h.assertTrue(legacyRead && cycleRefused,"Legacy root-origin recovery records remain readable, and a self-referential new origin is rejected");
+        reloaded.clearPendingMemoryInput(root,recoveryCheckpoint);var afterClear=new EngineeringSession(manager,id,reloaded.owner,"minecraft:overworld");
+        h.assertTrue(afterClear.pendingMemoryInput==null && afterClear.pendingMemoryRecovery==null && afterClear.verified.equals("untested"),"Only a durable final RECOVERY receipt clears both current pointers, with no functional pass");h.succeed();
+    }
     @GameTest(structure="engineer:toggle_memory_lab",maxTicks=24) public void stateSamplerFreezesOnDuplicateTick(GameTestHelper h){
         var id=java.util.UUID.randomUUID();var anchor=h.absolutePos(new BlockPos(8,2,8));
         var blueprint=ToggleMemoryIntention.create(id,1,id,"test","minecraft:overworld",anchor,0).blueprint();
@@ -242,8 +397,8 @@ public final class ToggleMemoryGameTests {
         var blueprint=ToggleMemoryIntention.create(id,1,id,manager.worldId,"minecraft:overworld",new BlockPos(0,80,0),0).blueprint();
         var session=new EngineeringSession(manager,id,owner,"minecraft:overworld");session.blueprint=blueprint;session.commandActor=owner;
         ComponentTree.validate(Blueprint.parse(blueprint.source(),manager.worldId,"minecraft:overworld"));
-        boolean refused=false;try{session.test();}catch(IllegalStateException expected){refused=expected.getMessage().contains("Automated stateful memory testing");}
-        h.assertTrue(refused && session.delegation==null && !session.trial.pending(),"An admitted memory preview cannot claim generic test authority");
+        boolean refused=false;try{session.test();}catch(IllegalStateException expected){refused=true;}
+        h.assertTrue(refused && session.memoryFunctionalRun==null && session.memoryInputDriver==null && session.delegation==null && !session.trial.pending(),"An admitted preview without a selected live controller cannot acquire native or generic test authority");
         refused=false;try{session.trial.start();}catch(IllegalStateException expected){refused=expected.getMessage().contains("Automated stateful memory testing");}h.assertTrue(refused && session.delegation==null,"Direct generic trial entry also refuses before claiming authority");
         var empty=new JsonObject();empty.add("functionalEvidence",new JsonArray());empty.add("testInputs",new JsonArray());session.trial.load(empty);
         for(String field:java.util.List.of("testOriginal","testLast","functionalScope","shutterOriginalInput","functionalEvidence","testInputs")){
@@ -251,7 +406,7 @@ public final class ToggleMemoryGameTests {
             refused=false;try{session.trial.load(forged);}catch(RuntimeException expected){refused=true;}
             h.assertTrue(refused && !session.trial.pending() && session.delegation==null,"A memory source cannot restore a generic test journal or claim: "+field);
         }
-        h.assertTrue(ProjectGuidance.next(session).stream().noneMatch(line->line.contains("/engineer component test")) && LessonAssistant.evidence(null,blueprint).contains("untested memory"),"Memory advice does not suggest unavailable automated testing or invent a pass");
+        h.assertTrue(ProjectGuidance.next(session).stream().anyMatch(line->line.contains("96 live tick observations")) && LessonAssistant.evidence(null,blueprint).equals("untested"),"Memory advice explains the native live test contract without inventing a pass");
         var comparator=blueprint.blocks().stream().filter(cell->cell.state().is(Blocks.COMPARATOR)).findFirst().orElseThrow();
         h.assertTrue(AnalogSafety.journalAfter(blueprint,comparator.pos(),Blocks.AIR.defaultBlockState(),comparator.state()),"Exact air-to-canonical-comparator ownership is supported");
         h.assertTrue(!AnalogSafety.journalAfter(blueprint,comparator.pos(),Blocks.CHEST.defaultBlockState(),comparator.state()) && !AnalogSafety.canonicalAfter(blueprint,comparator.pos().above(),comparator.state()),"Memory cannot import entity data or authorize another comparator cell");

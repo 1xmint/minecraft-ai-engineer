@@ -1,6 +1,8 @@
 # Install the multiplayer development preview
 
-[Download v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2).
+Choose the matching paired download from [GitHub releases](https://github.com/1xmint/minecraft-ai-engineer/releases).
+When reading this guide inside a companion zip, use the mod jar and manifests
+from that same release. Earlier releases do not contain every source feature.
 
 This preview uses one dedicated Fabric server and one private companion on the
 server owner's computer, even when playing alone. The older `alpha.1` download

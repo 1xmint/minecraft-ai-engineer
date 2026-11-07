@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-/** Read-only, tick-indexed observations for the native toggle-memory feasibility trace. */
+/** Read-only, tick-indexed observations for native toggle-memory trials. */
 final class MemoryStateSampler {
     private static final int PHASES=6,SAMPLES_PER_PHASE=16,TICKS_PER_PHASE=24,FIRST_SAMPLE=8;
     private static final boolean[] INPUTS={false,true,false,true,false,false};

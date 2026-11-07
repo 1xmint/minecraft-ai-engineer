@@ -3,7 +3,50 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { readToggleMemoryIntention } from "../../dist/companion/src/toggle-memory-intention.js";
 
-const record = JSON.parse(await readFile(process.argv[2], "utf8"));
+const document = JSON.parse(await readFile(process.argv[2], "utf8"));
+assert.ok(
+  process.argv[3] === undefined || process.argv[3] === "--functional-record",
+);
+const functional = process.argv[3] === "--functional-record";
+const record = functional ? document.trace : document;
+if (functional) {
+  assert.deepEqual(
+    Object.keys(document).sort(),
+    [
+      "schemaVersion",
+      "kind",
+      "id",
+      "projectId",
+      "revision",
+      "component",
+      "assignmentBasis",
+      "assignmentGeneration",
+      "controllerId",
+      "authorizationRevision",
+      "outcome",
+      "trace",
+    ].sort(),
+  );
+  assert.equal(document.schemaVersion, 1);
+  assert.equal(document.kind, "native-memory-functional-trial");
+  assert.match(
+    document.id,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
+  );
+  assert.equal(document.component, "root");
+  assert.equal(document.outcome, "passed");
+  assert.equal(document.controllerId, record.controller);
+  assert.equal(document.projectId, record.observations.intention.projectId);
+  assert.equal(document.revision, record.observations.intention.revision);
+  assert.ok(Number.isSafeInteger(document.revision) && document.revision > 0);
+  assert.match(document.assignmentBasis, /^[0-9a-f]{64}$/u);
+  for (const value of [
+    document.assignmentGeneration,
+    document.authorizationRevision,
+  ]) {
+    assert.ok(Number.isSafeInteger(value) && value >= 0);
+  }
+}
 assert.deepEqual(
   Object.keys(record).sort(),
   [
@@ -127,10 +170,22 @@ assert.deepEqual(journal.events[8], {
 });
 console.log(
   JSON.stringify({
-    kind: "memory-timed-native-replay",
+    kind: functional
+      ? "memory-functional-native-replay"
+      : "memory-timed-native-replay",
     settledSamples: 96,
     nativeEdges: 4,
     restoredOriginalPair: true,
     functionalPass: false,
   }),
 );
+
+if (functional) {
+  console.log(
+    JSON.stringify({
+      recordedOutcome: "passed",
+      grantsCurrentPass: false,
+      note: "Offline replay checks saved observations; current authority is established only by the live server run.",
+    }),
+  );
+}

@@ -1,6 +1,6 @@
 # Current state
 
-Updated 2026-11-05 UTC. Goal: **complete all milestones**: the original Phase 1
+Updated 2026-11-06 UTC. Goal: **complete all milestones**: the original Phase 1
 brief and all six Phase 2 extensions. **Incomplete.** Requirements remain in
 docs/product-brief.md and its multiplayer-first amendment. Repository:
 https://github.com/1xmint/minecraft-ai-engineer.
@@ -39,12 +39,13 @@ https://github.com/1xmint/minecraft-ai-engineer.
   no check bypass. Merge green PRs without another approval.
 - Production quotas remain4/minute and24/hour; CI fixtures alone use24/96.
 - Claude owns memory/guidance/comparison/voice experience and isolated acceptance.
-  Codex owns execution, circuits, resources/builders, integration and release.
+  Claude now also owns broader physical/builders, engineering and acceptance
+  batches. Codex retains active toggle-memory recovery and final publishing.
   Project memory stays in AGENTS.md and STATE.md; no other handoff files.
 
 ## Landed on main
 
-Main is cea719d (PR93). Latest published download remains **v0.1.0-alpha.2**;
+Main is45a4b24 (PR100, including Claude PR97/101/102). Latest published download remains **v0.1.0-alpha.2**;
 it predates the later engineering features. No alpha.3 is published yet.
 
 - Creative preview/build/test/repair/undo, per-player project access/conflicts,
@@ -56,10 +57,11 @@ it predates the later engineering features. No alpha.3 is published yet.
   buffer transition records and repeat-attempt accounting. Full-adder combined
   player proof41957262960:3544cells/35pins, two epochs, fresh restart clocks and
   zero remaining changes after undo. Configured waits are not measured latency.
-- Visible native actor; bounded flat dirt/oak work, fixed one-log/four-plank
-  native crafting and retained-plank placement. Combined physical41957260041
-  and plank41955934297 evidence inspected: real materials and saved-world
-  remainders. These are not general terrain/tools/crafting or machine builders.
+- Visible native actor and bounded flat dirt/oak work. Claude PR97/101/102 add
+  resource accumulation, native2x2 planks/sticks/table crafting with explicit
+  interrupted-grid recovery, and retained crafting-table placement. Their
+  required checks and combined physical42173685916 passed; artifact inspected.
+  These are not3x3 tool crafting, general terrain or NPC machine builders.
 - Durable literal notes/reasons/replacement history, read-only guidance and
   evidence consumers, optional editable unsent voice drafts. Human audio is
   unproven. Repeated counts are not a demonstrated reliability rate.
@@ -79,57 +81,60 @@ Memory-circuit foundation on main:
   recovery plans follow that pointer, reject unexplained edits and derive at
   most three new edges. PR93 exactaf9e115/full42064271802 passed all five checks;
   timed/pointer/restart artifact inspected. Native42064151962 passed209tests
-  and32 independent plan cases. **No recovery action or normal memory-test
-  route is enabled; generic stateful testing still explicitly refuses.**
+  and32 independent plan cases. Dedicated native testing and recovery are now
+  enabled through PR100; generic stateful testing still explicitly refuses.
 
-## Active work, not yet integrated
+## Latest integrated work
 
-Player experience, branch phase/57-player-experience-integration:
+PR100 merged at45a4b24. Exact candidate59f4b66 passed all seven checks:
+full42173686075, acceptance42173685772 and physical42173685916.
+Artifacts were downloaded and inspected, including215 required native tests,
+96-sample/four-edge memory testing, actual original-pair restoration, refused
+old reconnect authority, and fresh recovery after a distinct server epoch.
+Recovery clears pending data and stays paused without granting a pass.
+Loaded history never creates a runner, lease or current functional evidence.
+Failed saves and changed source/assignment invalidate live pass bindings.
 
-- Outcomes E1/E3/P2/E4: integrate79/27cedf8,88/a5a6eae,89/7473067,
-  90/8dba429,91/b472af1,92/9845de4 and94/0ca75a7. Source branches remain untouched.
-- Trusted recipient-specific spoken replies; bounded owned-recording cleanup;
-  literal relevant note selection; grounded full-adder lessons; comparisons
-  retain each side's actual measurements without invented differences/rates.
-- Codex also passes the validated build request into planning note selection:
-  eight current notes from the newest32, replacements excluded, current grants
-  retained. Empty-note planning contexts remain byte-identical.
-- GPT-6-Luna reviewed voice provenance/cleanup: no concrete blocker. Hardware
-  acceptance remains pending. PR92's failed reversed-order assertion is fixed;
-  final Claude9845de4 is included, preserving the same stricter check.
-- PR94 adds speech-boundary capture to the actual dedicated-server acceptance:
-  real private payload/receiver/playback, lookalike rejection, late reply privacy
-  and restart. GPT-6-Luna reviewed the three new test/recorder files: no concrete
-  blocker; standalone42064544775/full and42064545106/acceptance are green on
-  exact0ca75a7. Real audio hardware/login remain unproven.
-- Pre-alignment sourceb84a9b0/focused42067282168 passed208native tests and
-  note-selection/project-knowledge tests, including restarted planning relevance
-  and denied access. Combined final full/client/isolated acceptance proof is
-  still required after alignment with current main.
+Physical evidence retains real inventory conservation, native grid crafting,
+interrupted explicit recoveries, table placement and saved-world restart.
+The table fixture excludes the required summon pad; production guards are
+unchanged. Relevant PRs now automatically run the Physical companion workflow.
+Acceptance retains52 unchanged blocks/inventories, two owner-attributed notes,
+revoked access and an actual companion process restart. Human audio and Mojang
+login are not established. Source PR96/98/99 were confirmed included and closed
+as superseded after merge.
 
-Recovery recorder, branch work/memory-recovery-journal:
+Player experience previously landed through PR95 at121e710. Source
+79/88/89/90/91/92/94 are already closed as superseded. Planning uses relevant
+current notes. Full-adder, schematic and earlier proof details remain in Git/CI.
 
-- Exact3427a80/native42068459471 passed211required tests. Inspected independent
-  replay:32saved recovery logs,48native fixture recovery edges,32original-pair
-  restorations, frozen reloads and unchanged original histories. No pass.
-- Recorder is data only. It is not a connected fresh-authority recovery driver
-  and does not safely resume an interrupted recovery. Latest-recovery checkpoint
-  binding and fresh event-time execution remain to build.
+## Active work
+
+Main CI42276076117 is validating merged45a4b24 and building the paired artifacts.
+Do not publish PR test-merge artifacts as main. Latest download remains alpha.2.
+Codex owns final artifact inspection/publication; Claude owns the broader
+survival/builders/engineering/acceptance batches described in the current brief.
 
 ## Next slices
 
-1. Finish combined player-experience full CI and separate offline dedicated
-   acceptance on the exact current-main candidate; integrate green source heads.
-2. Bind latest recovery progress durably, implement fresh-authority recovery,
-   prove interruption/revocation/restart and then enable normal conversation
-   memory testing with scope-valid evidence. Never replay an old pulse.
-3. Prepare accurate alpha.3 guides and publish the verified paired main artifacts.
-   Do not replace exact-source manifests or claim human acceptance from CI.
-4. Continue registers/data-clock memory, displays/computers, interference/timing
-   and existing-structure adaptation. Broaden real resources, tools, crafting,
-   terrain, NPC machine construction and conflict-safe multiple builders.
-5. Complete provider/account feasibility, human mic/speaker and signed-in
+1. Inspect merged-main CI and paired artifacts; publish an accurately bounded
+   alpha.3 after exact-source checks pass and release guides are reconciled.
+2. Continue real tools/3x3 crafting, terrain, visible machine construction and
+   concurrent workers through Claude's ownership batches.
+3. Continue registers/data-clock memory, displays/computers, measured timing,
+   interference and adaptation of existing structures; the toggle bit is not
+   completion of general memory or engineering.
+4. Complete provider/account feasibility, human mic/speaker and signed-in
    acceptance, then audit every original requirement before goal completion.
 
 Historical failures, superseded notes and detailed proofs remain in Git/PR/CI
 history and the feature guides. No full milestone-completion claim is made.
+
+2026-11-05 provider documentation check (E4; no auth/code change): official
+OpenAI docs describe eligible open-source/local and self-hosted ChatGPT-plan
+usage, with registration scoped to a user/workspace. They do not establish
+several Minecraft players sharing one operator's plan. Keep operator-only model
+admission; no API keys/paid fallback or credential sharing. Sources read:
+https://developers.openai.com/siwc/token-sharing-open-source and its
+self-hosted-vms and preview-limitations pages. Technical support is not proof of
+shared-subscription eligibility. Human audio/Mojang/provider gates remain open.
