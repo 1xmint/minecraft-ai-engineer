@@ -473,6 +473,8 @@ try {
       "conversation-reconnect.done",
       "conversation-restart-prepared.done",
       "conversation-restart.done",
+      "diagnosis-states.done",
+      "diagnosis-text.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

@@ -43,6 +43,10 @@ final class Diagnosis {
             messages = List.copyOf(messages);
         }
 
+        Proposal withMessages(List<String> replacement){
+            return new Proposal(snapshotId,actor,connection,epoch,projectId,revision,authorization,component,assignmentGeneration,componentBasis,componentBasisVersion,expiresAtTick,observed,targets,replacement,repairable);
+        }
+
         void validate(EngineeringSession s) {
             Objects.requireNonNull(s);
             if (!s.server.isSameThread()) throw new IllegalStateException("Diagnosis validation belongs to the server thread");
@@ -85,6 +89,49 @@ final class Diagnosis {
     }
 
     static Proposal inspect(EngineeringSession s,String componentId) {
+        Proposal proposal=snapshot(s,componentId);
+        var messages=new ArrayList<>(stateSummary(s,proposal));messages.addAll(proposal.messages());
+        return proposal.withMessages(messages);
+    }
+
+    /** Keeps the plan, this snapshot, what was not read and earlier test evidence apart for the player. */
+    private static List<String> stateSummary(EngineeringSession s,Proposal proposal){
+        Blueprint selected=ComponentTree.component(s.blueprint,proposal.component());
+        boolean mechanical=ShutterDesign.describes(selected.source());
+        int differ=0,unread=0;
+        for(var block:selected.blocks()){var actual=proposal.observed().get(block.pos());if(actual==null || !Blueprint.matches(block.state(),actual))differ++;}
+        for(var entry:proposal.observed().entrySet()){var entity=s.level().getBlockEntity(entry.getKey());if(entity!=null && !AnalogSafety.observedComparator(selected,entry.getKey(),entry.getValue(),entity))unread++;}
+        String evidence=s.assignments.task(s.blueprint,proposal.component()).verified;
+        var lines=new ArrayList<String>();
+        lines.add("Intended (the plan, not a world fact): component '"+proposal.component()+"' has "+selected.blocks().size()+" planned blocks.");
+        lines.add("Observed (server snapshot at tick "+s.server.getTickCount()+"): "+(mechanical?proposal.targets().size()+" static correction(s); pose details follow.":differ+" of "+selected.blocks().size()+" planned blocks differ from the plan; "+proposal.observed().size()+" cells read."));
+        lines.add("Unknown: "+(unread>0?unread+" protected block entities were not opened. ":"")+"How it behaves cannot be known from block positions alone.");
+        if(evidence.startsWith("passed:") && (mechanical || differ==0))lines.add("Verified (an earlier functional test, not this diagnosis): "+evidence);
+        else if(evidence.startsWith("passed:") || evidence.startsWith("stale:"))lines.add("Stale: earlier test evidence no longer counts ("+evidence+").");
+        else lines.add("Verified: nothing. No current functional test result exists for this component.");
+        return lines;
+    }
+
+    /** Cells to tint for one recipient's own live diagnosis. Display only: repair re-reads its server snapshot. */
+    static Set<BlockPos> highlight(EngineeringSession s,ServerPlayer player){
+        Proposal proposal=s.diagnoses.get(player.getUUID());
+        if(proposal==null || player.connection!=proposal.connection() || !proposal.epoch().equals(s.manager.epoch) || !proposal.projectId().equals(s.projectId)
+                || proposal.revision()!=s.revision() || proposal.authorization()!=s.access.revision() || s.server.getTickCount()>=proposal.expiresAtTick()
+                || !s.access.allows(player.getUUID(),ProjectAccess.Permission.VIEW) || s.blueprint==null)return Set.of();
+        Blueprint selected;
+        try{selected=ComponentTree.component(s.blueprint,proposal.component());}catch(RuntimeException changed){return Set.of();}
+        var cells=new LinkedHashSet<BlockPos>();
+        if(ShutterDesign.describes(selected.source()))for(Target target:proposal.targets())cells.add(target.pos());
+        else for(var block:selected.blocks()){var seen=proposal.observed().get(block.pos());if(seen==null || !Blueprint.matches(block.state(),seen))cells.add(block.pos());}
+        var level=s.level();
+        for(BlockPos cell:cells){
+            var seen=proposal.observed().get(cell);
+            if(seen==null || !level.hasChunkAt(cell) || !level.getBlockState(cell).equals(seen))return Set.of();
+        }
+        return cells;
+    }
+
+    private static Proposal snapshot(EngineeringSession s,String componentId) {
         Objects.requireNonNull(s);
         Objects.requireNonNull(componentId);
         if (!s.server.isSameThread()) throw new IllegalStateException("World diagnosis belongs to the server thread");

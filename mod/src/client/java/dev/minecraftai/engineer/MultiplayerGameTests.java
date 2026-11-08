@@ -1696,6 +1696,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 if(!LIVE_ACCEPTANCE)server.runOnServer(s->{
                     String original=session(s,"Alice").projectId.toString();commandAs(s,"Alice","engineer project new");
                     commandAs(s,"Alice","engineer select1 1300 100 0");commandAs(s,"Alice","engineer select2 1302 101 0");commandAs(s,"Alice","engineer reference observer-pulse");commandAs(s,"Alice","engineer project share Eve viewer");
+                    s.getCommands().performPrefixedCommand(s.createCommandSourceStack().withSuppressedOutput(),"forceload add 1296 -4 1306 4");
                     write("observer-text-project",session(s,"Alice").projectId.toString());commandAs(s,"Alice","engineer project use "+original);
                 });
                 write("text-viewer", "ready");
@@ -2370,6 +2371,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
             say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
+            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");expectChat(context,"Repair proposal ready");
+            check(view(context)==null,"Diagnosis guidance arrives as ordinary text with no overlay");write("diagnosis-text.done","passed");
             say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
             say(context,"I told Engineer, wait for me.");
             write("conversation-broadcast-sent","ready");awaitFile(context,"conversation-broadcast-received.done");
@@ -2555,10 +2558,41 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         throw new AssertionError("Expected native command response: "+text+"; received "+MESSAGES);
     }
     private static void diagnoseReady(ClientGameTestContext context){MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");}
+    /** Everything a read-only question must leave alone. */
+    private static String diagnosisFingerprint(TestDedicatedServerContext server){
+        return server.computeOnServer(s->{var project=session(s,"Alice");var out=new StringBuilder();
+            for(var block:project.blueprint.blocks())for(var cell:BlockPos.betweenClosed(block.pos().offset(-2,-2,-2),block.pos().offset(2,2,2)))out.append(project.level().getBlockState(cell)).append(';');
+            for(var online:s.getPlayerList().getPlayers()){var inventory=online.getInventory();out.append(online.getUUID());for(int slot=0;slot<inventory.getContainerSize();slot++)out.append(inventory.getItem(slot)).append(',');}
+            for(var task:project.assignments.tasks.values())out.append(task.id).append(task.status).append(task.verified);
+            return out.append(project.verified).append(project.state).append(project.journal.size()).append(project.delegation).append(saved(project).getAsJsonArray("functionalEvidence")).toString();});
+    }
+    private static void diagnosisStates(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        context.waitTicks(25);String before=diagnosisFingerprint(server);
+        if(!LIVE_ACCEPTANCE){
+            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Repair proposal ready");
+            check(before.equals(diagnosisFingerprint(server)),"A natural diagnosis question changes no blocks, inventory, task or verification");
+        }
+        diagnoseReady(context);expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Unknown:");expectChat(context,"Verified: nothing.");
+        check(before.equals(diagnosisFingerprint(server)),"A diagnosis command changes no blocks, inventory, task or verification");
+        await(context,()->view(context)!=null && view(context).blocks().stream().anyMatch(ProjectView.Ghost::diagnosed),"The requesting player's overlay tints the diagnosed cells");
+        check(view(context).blocks().stream().filter(ProjectView.Ghost::diagnosed).noneMatch(ProjectView.Ghost::matches),"Only differing cells are tinted");
+        await(context,()->dev.minecraftai.engineer.client.GhostPreviewRenderer.extractedDiagnosedCount()>0,"The tint reaches the native renderer");
+        context.takeScreenshot("engineer-diagnosis-highlight");
+        server.runOnServer(s->{var project=session(s,"Alice");var alice=player(s,"Alice");
+            for(var other:s.getPlayerList().getPlayers())if(!other.getUUID().equals(alice.getUUID())){var seen=project.manager.view(project,other);check(seen==null || seen.blocks().stream().noneMatch(ProjectView.Ghost::diagnosed),"One player's diagnosis tint never reaches another player");}
+            var live=project.diagnoses.get(alice.getUUID());check(!Diagnosis.highlight(project,alice).isEmpty(),"The tint starts live");
+            project.diagnoses.put(alice.getUUID(),new Diagnosis.Proposal(live.snapshotId(),live.actor(),live.connection(),live.epoch(),live.projectId(),live.revision(),live.authorization()-1,live.component(),live.assignmentGeneration(),live.componentBasis(),live.componentBasisVersion(),live.expiresAtTick(),live.observed(),live.targets(),live.messages(),live.repairable()));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A permission change retires the tint");project.diagnoses.put(alice.getUUID(),live);
+            var target=live.targets().getFirst();project.level().setBlock(target.pos(),Blocks.GLASS.defaultBlockState(),2);check(Diagnosis.highlight(project,alice).isEmpty(),"A world change retires the tint");project.level().setBlock(target.pos(),target.before(),2);});
+        await(context,()->view(context)!=null,"Overlay stays connected after the tint checks");
+        check(before.equals(diagnosisFingerprint(server)),"The tint checks restored the world");
+        write("diagnosis-states.done","passed");
+    }
     private static RepairRecovery repairFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         final var relay=new BlockPos(21,101,0);final var input=new BlockPos(20,101,0);
         server.runCommand("tp Alice 21 102 3 180 20");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.hasBuiltStructure(),"Player construction constrains revisions even without any assistant journal");});
+        diagnosisStates(context,server);
         diagnoseReady(context);
         server.runCommand("setblock 21 100 0 minecraft:glass");
         MESSAGES.clear();send(context,"engineer repair");expectChat(context,"World changed");
