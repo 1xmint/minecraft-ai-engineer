@@ -172,7 +172,8 @@ final class ProjectManager {
     boolean mayMutate(EngineeringSession project) {
         try { validate(project); return true; } catch (RuntimeException revoked) { return false; }
     }
-    void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
+    /** Pause, completion and failure all come through here. Workers run only while the project is idle, so any of these stops them too. */
+    void release(EngineeringSession project) { reservations.revokeWorkers(scope(project)); reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
         project.clearDiagnoses();project.clearStructuralPreview();
