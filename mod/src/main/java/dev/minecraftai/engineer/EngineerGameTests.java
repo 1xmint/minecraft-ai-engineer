@@ -355,6 +355,18 @@ public final class EngineerGameTests {
         reject(helper,()->leases.validate(c,walking,owner,1,1,4),"Project revocation stops a worker that is only walking");
         leases.validate(unrelated,kept,owner,1,1,4);
         reject(helper,()->new RegionReservations(java.util.UUID.randomUUID()).validate(unrelated,kept,owner,1,1,5),"A restart never restores a worker's lease");
+        // The project's own lease: a live one refuses workers, pausing stops workers only, and revoking stops it too. Another dimension is a separate lease.
+        var own=leases.acquire(whole,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5);
+        reject(helper,()->leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5),"A worker is refused against the project's own live lease");
+        var running=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        var nether=new RegionReservations.Scope("world","minecraft:the_nether",project,a.worker());
+        var elsewhere=leases.acquire(nether,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        leases.revokeWorkers(whole);
+        reject(helper,()->leases.validate(a,running,owner,1,1,6),"Pausing a project stops its workers");
+        leases.validate(whole,own,owner,1,1,6);leases.validate(nether,elsewhere,owner,1,1,6);
+        leases.revoke(whole);
+        reject(helper,()->leases.validate(whole,own,owner,1,1,7),"Project revocation removes the project's own lease");
+        leases.validate(nether,elsewhere,owner,1,1,7);
         helper.succeed();
     }
     private static void reject(GameTestHelper helper,Runnable action,String message){

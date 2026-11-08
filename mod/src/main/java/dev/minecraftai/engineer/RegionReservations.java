@@ -89,6 +89,11 @@ final class RegionReservations {
         Lease current = leases.get(scope);
         if (current != null && current.fence.equals(fence)) leases.remove(scope);
     }
+    /** Stops every worker of this project and leaves the project's own lease to its fenced release. */
+    void revokeWorkers(Scope scope) {
+        leases.keySet().removeIf(other -> other.worker() != null && other.project().equals(scope.project()) && other.world().equals(scope.world()) && other.dimension().equals(scope.dimension()));
+    }
+
     /** Revoking a project's lease stops every worker of that project; revoking a worker's lease stops only that worker. */
     void revoke(Scope scope) {
         if (scope.worker() != null) { leases.remove(scope); return; }
