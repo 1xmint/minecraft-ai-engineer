@@ -475,7 +475,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
-        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];
+        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];var machineBuild=new MachineEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -741,6 +741,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             tableCraft[0]=physicalTableCraftFlow(context,server);
             chestTake[0]=physicalChestTakeFlow(context,server);
             physicalMachinePartsFlow(context,server);
+            machineBuild[0]=physicalMachineBuildFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
             var grid=gridCraft[0];
@@ -818,6 +819,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 GridCraftTask.requireNoUnresolved(EngineerMod.managerFor(s),project,worker);menuReceipt(worker,"chest-take-restarted");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-chest-take-restarted.done","passed");
+            physicalMachineRestartFlow(context,server,machineBuild[0]);
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
@@ -1005,6 +1007,86 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-table-craft.done","passed");return finished;
     }
     /** At its own placed table the companion crafts a lever, a redstone torch and a redstone lamp, consuming exactly their recipes; a missing input moves nothing. */
+    private record MachineEvidence(String project,UUID worker) { }
+    private static final BlockPos MACHINE_STONE=new BlockPos(3646,101,5),MACHINE_LEVER=new BlockPos(3646,102,5),MACHINE_TORCH=new BlockPos(3647,101,5),MACHINE_LAMP=new BlockPos(3648,101,5),MACHINE_CHEST=new BlockPos(3644,101,1);
+    /** Every fixture item is either still in the chest, held by the companion, or standing in the machine: none lost, none invented. */
+    private static void assertMachineConserved(net.minecraft.server.MinecraftServer s,UUID worker,String phase){
+        var body=s.getPlayerList().getPlayer(worker);var world=s.overworld();
+        var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)world.getBlockEntity(MACHINE_CHEST);
+        check(chest.isEmpty(),"The machine chest was fully and exactly drawn: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.STONE)+(world.getBlockState(MACHINE_STONE).is(net.minecraft.world.level.block.Blocks.STONE)?1:0)==5,"Five stone are conserved: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.LEVER)+(world.getBlockState(MACHINE_LEVER).is(net.minecraft.world.level.block.Blocks.LEVER)?1:0)==1,"The lever is conserved: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)+(world.getBlockState(MACHINE_TORCH).is(net.minecraft.world.level.block.Blocks.REDSTONE_WALL_TORCH)?1:0)==1,"The torch is conserved: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)+(world.getBlockState(MACHINE_LAMP).is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?1:0)==1,"The lamp is conserved: "+phase);
+    }
+    /** Starts a real NOT gate from a chest, proves a player's block stops it, resumes, and leaves the job running so the server restart cuts it off. */
+    private static MachineEvidence physicalMachineBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3632 -16 3664 32");server.runCommand("fill 3640 100 0 3654 100 14 minecraft:stone");
+        server.runCommand("tp Alice 3647.5 101 13 180 0");
+        send(context,"engineer select1 3640 100 0");send(context,"engineer select2 3654 103 10");server.waitFor(s->new BlockPos(3654,103,10).equals(session(s,"Alice").corner2));
+        server.runCommand("setblock 3644 101 1 minecraft:chest");
+        server.runCommand("item replace block 3644 101 1 container.0 with minecraft:stone 5");
+        server.runCommand("item replace block 3644 101 1 container.1 with minecraft:lever 1");
+        server.runCommand("item replace block 3644 101 1 container.2 with minecraft:redstone_torch 1");
+        server.runCommand("item replace block 3644 101 1 container.3 with minecraft:redstone_lamp 1");
+        server.runOnServer(s->{var project=session(s,"Alice");project.accept(MechanismCatalog.create("not-gate",project.worldId,project.dimension,MACHINE_STONE,0,1));});
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        MESSAGES.clear();say(context,"Engineer, build this machine");expectChat(context,"Your companion is missing");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(MACHINE_CHEST);
+            check(body.getInventory().isEmpty() && chest.getItem(0).getCount()==5 && s.overworld().getBlockState(MACHINE_STONE).isAir(),"A build with nothing to build from takes nothing and places nothing");});
+        // Slow the world so a player's block lands while the companion is genuinely mid-build.
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        MESSAGES.clear();say(context,"Engineer, build this machine from the chest at 3644 101 1");
+        server.waitFor(s->s.overworld().getBlockState(MACHINE_STONE).is(net.minecraft.world.level.block.Blocks.STONE));
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(((net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(MACHINE_CHEST)).isEmpty() && countItem(body,net.minecraft.world.item.Items.STONE)==4,"The companion really drew the stack of five and used one; the other four stay with it");});
+        server.runCommand("setblock 3648 101 5 minecraft:cobblestone");
+        expectChat(context,"the machine job paused and left it alone");
+        server.runOnServer(s->{s.tickRateManager().setTickRate(20f);check(s.overworld().getBlockState(MACHINE_LAMP).is(net.minecraft.world.level.block.Blocks.COBBLESTONE),"The player's block is exactly where the player put it");});
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        server.runOnServer(s->assertMachineConserved(s,worker,"after a player's block stopped the build"));
+        MESSAGES.clear();say(context,"Engineer, build this machine");expectChat(context,"is in the way of this machine. It was left alone");
+        server.runOnServer(s->{check(s.overworld().getBlockState(MACHINE_LAMP).is(net.minecraft.world.level.block.Blocks.COBBLESTONE),"A fresh request does not replace a player's block");assertMachineConserved(s,worker,"after the refused resume");});
+        server.runCommand("setblock 3648 101 5 minecraft:air");
+        // Resume with what the companion already holds, and let the shared restart cut the job off after the lever.
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        MESSAGES.clear();say(context,"Engineer, build this machine");
+        server.waitFor(s->s.overworld().getBlockState(MACHINE_LEVER).is(net.minecraft.world.level.block.Blocks.LEVER));
+        server.runOnServer(s->{check(s.overworld().getBlockState(MACHINE_TORCH).isAir() && s.overworld().getBlockState(MACHINE_LAMP).isAir(),"The restart interrupts a partly built machine");assertMachineConserved(s,worker,"mid-build before the restart");});
+        var project=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        write("physical-machine-stopped.done","passed");
+        return new MachineEvidence(project,worker);
+    }
+    /** After a real restart: nothing resumes by itself, a fresh request finishes the machine, the real levers prove it, and two broken machines are reported as broken. */
+    private static void physicalMachineRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,MachineEvidence evidence){
+        UUID worker=evidence.worker();
+        server.runOnServer(s->{s.tickRateManager().setTickRate(20f);check(s.getPlayerList().getPlayer(worker)==null,"Machine building restart restores no worker automatically");});
+        server.runCommand("forceload add 3632 -16 3664 32");server.runCommand("tp Alice 3647.5 101 13 180 0");
+        send(context,"engineer project use "+evidence.project());server.waitFor(s->evidence.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        context.waitTicks(40);
+        server.runOnServer(s->check(s.overworld().getBlockState(MACHINE_LEVER).is(net.minecraft.world.level.block.Blocks.LEVER) && s.overworld().getBlockState(MACHINE_TORCH).isAir() && s.overworld().getBlockState(MACHINE_LAMP).isAir(),"The saved world keeps what was built and nothing resumes on its own"));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        server.runOnServer(s->{assertMachineConserved(s,worker,"after the restart");var project=session(s,"Alice");check(project.delegation==null && !project.access.allows(worker,ProjectAccess.Permission.BUILD),"Machine history restores neither grants nor delegation");});
+        MESSAGES.clear();say(context,"Engineer, build this machine");expectChat(context,"every cell now matches the plan",120_000);expectChat(context,"Machine test passed 3 of 3 cases",120_000);
+        server.runOnServer(s->{var world=s.overworld();var body=s.getPlayerList().getPlayer(worker);var lever=world.getBlockState(MACHINE_LEVER);var torch=world.getBlockState(MACHINE_TORCH);var lamp=world.getBlockState(MACHINE_LAMP);
+            check(lever.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST && lever.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE)==net.minecraft.world.level.block.state.properties.AttachFace.FLOOR && !lever.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"The lever stands on the stone, faces east and is back off");
+            check(torch.is(net.minecraft.world.level.block.Blocks.REDSTONE_WALL_TORCH) && torch.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST && lamp.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"The torch hangs on the east face of the stone and lights the lamp");
+            assertMachineConserved(s,worker,"after the finished build");check(countItem(body,net.minecraft.world.item.Items.STONE)==4,"Four stone remain with the companion");
+            check(body.getStats().getValue(net.minecraft.stats.Stats.ITEM_USED,net.minecraft.world.item.Items.REDSTONE_LAMP)==1 && body.getStats().getValue(net.minecraft.stats.Stats.ITEM_USED,net.minecraft.world.item.Items.REDSTONE_TORCH)==1,"The lamp and torch were placed by native survival item use");});
+        // A missing part is reported cell by cell and no lever moves.
+        server.runCommand("setblock 3647 101 5 minecraft:air");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled. 3647, 101, 5 should be");
+        server.runOnServer(s->check(!s.overworld().getBlockState(MACHINE_LEVER).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"A machine that does not match its plan has no lever pulled"));
+        // A real circuit fault: the shape is right, but one case is wrong, and the test must say so.
+        server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east,lit=false]");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Machine test failed: passed 2 of 3 cases",60_000);
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var stages=new java.util.ArrayList<String>();
+            try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));stages.add(com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("stage").getAsString());}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            java.util.Collections.sort(stages);check(stages.equals(java.util.List.of("FAILED","FAILED","PASSED")),"The pass and both failures each leave exactly one record, got "+stages);});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-machine-build.done","passed");
+    }
     private static void physicalMachinePartsFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         server.runCommand("forceload add 3524 -16 3556 32");server.runCommand("fill 3530 100 0 3537 100 10 minecraft:stone");server.runCommand("fill 3530 101 0 3537 104 10 minecraft:air");

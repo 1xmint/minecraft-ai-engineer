@@ -74,6 +74,13 @@ public final class PhysicalActionGate {
         if(entry==null || entry.actor!=actor || !menuIdle(entry) || !actor.getMainHandItem().isEmpty() || !actor.level().hasChunkAt(chest) || !actor.level().getBlockState(chest).is(Blocks.CHEST))throw new IllegalStateException("No idle empty-handed bound actor beside a chest");
         entry.tableOpen=new TableOpen(chest.immutable(),Blocks.CHEST,actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
     }
+    /** One-call capability to flip exactly one lever with an empty main hand; never a placement. */
+    static void armLever(ServerPlayer actor,BlockPos lever,long expires,Runnable authority,Runnable writeAhead){
+        PhysicalWorkerMenus.requireSettled(actor);
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        if(entry==null || entry.actor!=actor || !menuIdle(entry) || !actor.getMainHandItem().isEmpty() || !actor.level().hasChunkAt(lever) || !actor.level().getBlockState(lever).is(Blocks.LEVER))throw new IllegalStateException("No idle empty-handed bound actor beside a lever");
+        entry.tableOpen=new TableOpen(lever.immutable(),Blocks.LEVER,actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
+    }
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
