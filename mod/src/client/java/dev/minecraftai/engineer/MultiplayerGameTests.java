@@ -475,7 +475,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
-        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];var machineBuild=new MachineEvidence[1];
+        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];var machineBuild=new MachineEvidence[1];var designBuild=new DesignEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -741,6 +741,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             tableCraft[0]=physicalTableCraftFlow(context,server);
             chestTake[0]=physicalChestTakeFlow(context,server);
             physicalMachinePartsFlow(context,server);
+            designBuild[0]=physicalDesignFlow(context,server);
             machineBuild[0]=physicalMachineBuildFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
@@ -820,6 +821,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-chest-take-restarted.done","passed");
             physicalMachineRestartFlow(context,server,machineBuild[0]);
+            physicalDesignRestartFlow(context,server,designBuild[0]);
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
@@ -1036,6 +1038,80 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         try{return com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("stage").getAsString();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
     }
     /** Starts a real NOT gate from a chest, proves a player's block stops it, resumes, and leaves the job running so the server restart cuts it off. */
+    private record DesignEvidence(String project,UUID worker,List<BlockPos> cells) { }
+    private static final BlockPos DESIGN_CHEST=new BlockPos(5204,101,1);
+    private static List<Integer> designChest(MinecraftServer s){
+        var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(DESIGN_CHEST);
+        return List.of(chest.getItem(0).getCount(),chest.getItem(1).getCount(),chest.getItem(2).getCount());
+    }
+    /** From a real file in the companion's library to real blocks placed by hand from a real chest. */
+    private static DesignEvidence physicalDesignFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 5184 -16 5232 32");server.runCommand("fill 5200 100 0 5214 100 14 minecraft:stone");server.runCommand("tp Alice 5207.5 101 13 180 0");
+        send(context,"engineer select1 5200 100 0");send(context,"engineer select2 5214 103 10");server.waitFor(s->new BlockPos(5214,103,10).equals(session(s,"Alice").corner2));
+        server.runCommand("setblock 5204 101 1 minecraft:chest");
+        server.runCommand("item replace block 5204 101 1 container.0 with minecraft:stone 3");
+        server.runCommand("item replace block 5204 101 1 container.1 with minecraft:lever 1");
+        server.runCommand("item replace block 5204 101 1 container.2 with minecraft:redstone_lamp 1");
+        var full=List.of(3,1,1);
+        MESSAGES.clear();memorySay(context,"Engineer, list schematics");expectChat(context,"Schematic library (2): relay, slab.");
+        MESSAGES.clear();memorySay(context,"Engineer, inspect schematic slab");expectChat(context,"slab: 3x2x1, 5 blocks");
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic relay");expectChat(context,"Untrusted and untested.");int relay=storedDesign();
+        MESSAGES.clear();memorySay(context,"Engineer, import schematic slab");expectChat(context,"Untrusted and untested.");int slab=storedDesign();
+        MESSAGES.clear();memorySay(context,"Engineer, rotate design "+slab+" by 90");expectChat(context,"(rotate-90)");int turned=storedDesign();
+        server.runOnServer(s->{var project=session(s,"Alice");var before=project.commandActor;
+            try{project.commandActor=UUID.randomUUID();boolean denied=false;
+                try{project.manager.schematics.handle(project,SchematicText.parse("preview design "+turned));}catch(IllegalStateException expected){denied=true;}
+                check(denied && project.blueprint==null,"A stranger cannot preview a stored design");
+                denied=false;
+                try{project.manager.physical.handle(project,"build this design");}catch(IllegalStateException expected){denied=true;}
+                check(denied && designChest(s).equals(List.of(3,1,1)),"A stranger cannot ask for a physical build");
+            }finally{project.commandActor=before;}});
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+turned+" at 5300 101 5");expectChat(context,"Schematic request refused");
+        server.runOnServer(s->check(session(s,"Alice").blueprint==null,"A position outside the workspace previews nothing"));
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+relay+" at 5207 101 5");expectChat(context,"Your companion cannot build it by hand: no hand-placement rule for repeater");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        MESSAGES.clear();say(context,"Engineer, build this design from the chest at 5204 101 1");expectChat(context,"The companion cannot build this design by hand: no hand-placement rule for repeater");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty() && designChest(s).equals(full) && s.overworld().getBlockState(new BlockPos(5207,101,5)).isAir(),"A refused design takes nothing and places nothing");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        // The stored design is what was imported: editing the library file afterwards cannot change it.
+        var library=Path.of(System.getenv("MCE_CONFIG_DIR"),"schematics","library");
+        Files.copy(library.resolve("relay.schem"),library.resolve("slab.schem"),StandardCopyOption.REPLACE_EXISTING);
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+turned+" at 5207 101 5");expectChat(context,"Your companion can build it from real items");
+        check(MESSAGES.stream().anyMatch(message->message.contains("Materials: ") && message.contains("stone x3") && message.contains("lever x1") && message.contains("redstone_lamp x1")),"The preview reports exact materials before approval: "+MESSAGES);
+        var cells=server.computeOnServer(s->{var project=session(s,"Alice");
+            check(ImportedBlueprint.describes(project.blueprint.source()) && project.blueprint.blocks().size()==5 && project.blueprint.blocks().stream().noneMatch(block->block.state().is(Blocks.REPEATER)),"The stored design ignores the later library edit");
+            check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested") && designChest(s).equals(List.of(3,1,1)),"A preview builds, grants and takes nothing");
+            check(project.blueprint.blocks().stream().allMatch(block->s.overworld().getBlockState(block.pos()).isAir()),"A preview places nothing");
+            return project.blueprint.blocks().stream().map(block->block.pos().immutable()).toList();});
+        BlockPos collision=cells.getFirst();
+        server.runCommand("setblock "+collision.getX()+" "+collision.getY()+" "+collision.getZ()+" minecraft:cobblestone");
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+turned+" at 5207 101 5");expectChat(context,"In the way: cobblestone at");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, build this design from the chest at 5204 101 1");expectChat(context,"is in the way of this machine. It was left alone");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty() && designChest(s).equals(full) && s.overworld().getBlockState(collision).is(Blocks.COBBLESTONE),"A collision takes nothing and leaves the player's block");});
+        server.runCommand("setblock "+collision.getX()+" "+collision.getY()+" "+collision.getZ()+" minecraft:air");
+        MESSAGES.clear();say(context,"Engineer, build this design from the chest at 5204 101 1");expectChat(context,"every cell now matches the imported design",120_000);
+        server.runOnServer(s->{var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+            check(project.blueprint.blocks().stream().allMatch(block->Blueprint.matches(block.state(),s.overworld().getBlockState(block.pos()))),"Every imported block was really placed");
+            check(designChest(s).equals(List.of(0,0,0)) && countItem(body,net.minecraft.world.item.Items.STONE)==0 && countItem(body,net.minecraft.world.item.Items.LEVER)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==0,"Exactly the chest's items became the five blocks");
+            check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"A physical import build records no test, pass or grant");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        return new DesignEvidence(server.computeOnServer(s->session(s,"Alice").projectId.toString()),worker,cells);
+    }
+    private static void physicalDesignRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,DesignEvidence evidence){
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(evidence.worker())==null,"Design building restart restores no worker automatically"));
+        server.runCommand("forceload add 5184 -16 5232 32");server.runCommand("tp Alice 5207.5 101 13 180 0");
+        send(context,"engineer project use "+evidence.project());server.waitFor(s->evidence.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        context.waitTicks(40);
+        MESSAGES.clear();say(context,"Engineer, where is my companion");expectChat(context,"No physical companion is present");
+        server.runOnServer(s->{var project=session(s,"Alice");
+            check(project.blueprint!=null && ImportedBlueprint.describes(project.blueprint.source()) && evidence.cells().stream().noneMatch(cell->s.overworld().getBlockState(cell).isAir()),"The saved world keeps the built design");
+            check(project.verified.equals("untested") && project.delegation==null && !project.access.allows(evidence.worker(),ProjectAccess.Permission.BUILD),"Restart gains no pass, grant or delegation");});
+        MESSAGES.clear();memorySay(context,"Engineer, list designs");expectChat(context,"All untested.");
+        write("physical-design.done","passed");
+    }
     private static MachineEvidence physicalMachineBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
         server.runCommand("forceload add 3632 -16 3664 32");server.runCommand("fill 3640 100 0 3654 100 14 minecraft:stone");

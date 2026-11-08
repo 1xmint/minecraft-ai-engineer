@@ -31,6 +31,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     private final long authorization,generation,expires;
     private final String basis,component;
     private final PhysicalMachinePlan plan;
+    /** Null only for an imported design, which has no functional contract: it is placed and never tested. */
     private final MechanismCatalog.Contract contract;
     /** What each machine cell must hold right now: its planned state once built, air until then. */
     private final Map<BlockPos,BlockState> expected=new LinkedHashMap<>();
@@ -41,7 +42,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     private boolean closed,announced;
     private int placed;
 
-    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack){
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,boolean geometryOnly){
         this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;blueprint=project.blueprint;
         if(blueprint==null)throw new IllegalStateException("There is no machine plan in this project yet; nothing was taken or placed");
         owner=manager.server.getPlayerList().getPlayer(project.owner);ownerConnection=owner==null?null:owner.connection;workerConnection=worker.connection;
@@ -52,7 +53,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         long x=Math.abs((long)a.getX()-b.getX())+1,y=Math.abs((long)a.getY()-b.getY())+1,z=Math.abs((long)a.getZ()-b.getZ())+1;
         if(x>128 || y>128 || z>128 || x*y*z>4096)throw new IllegalStateException("Workspace exceeds the bounded job limit; nothing was taken or placed");
         plan=PhysicalMachinePlan.of(blueprint.blocks());
-        contract=testable(EngineeringContracts.contract(blueprint),plan);
+        contract=geometryOnly?null:testable(EngineeringContracts.contract(blueprint),plan);
     }
     /** The contract this companion can prove with levers and lamps, or a refusal before anything is taken. */
     private static MechanismCatalog.Contract testable(MechanismCatalog.Contract contract,PhysicalMachinePlan plan){
@@ -71,7 +72,18 @@ final class PhysicalMachineJob implements PhysicalJob {
     /** Takes what is missing from the chest (or uses what is held) and returns the running job. Refuses before any take when the build cannot start. */
     static PhysicalMachineJob build(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos chest,Runnable exclusive){
         exclusive.run();
-        var job=new PhysicalMachineJob(manager,project,worker,pack);
+        var job=new PhysicalMachineJob(manager,project,worker,pack,false);
+        PhysicalPlacementRecovery.requireNone(manager,project,worker);
+        job.observe();job.fence();job.stock(chest,exclusive);
+        return job;
+    }
+    /** Builds the previewed imported design from real items and stops at geometry: no lever is pulled and no test or pass is recorded. */
+    static PhysicalMachineJob geometry(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos chest,Runnable exclusive){
+        exclusive.run();
+        if(project.blueprint==null || !ImportedBlueprint.describes(project.blueprint.source()))throw new IllegalStateException("Preview an imported design first; nothing was taken or placed");
+        var blockers=ImportedBuildReport.blockers(project.blueprint.blocks(),project.level());
+        if(!blockers.isEmpty())throw new IllegalStateException("The companion cannot build this design by hand: "+String.join("; ",blockers)+". Nothing was taken or placed");
+        var job=new PhysicalMachineJob(manager,project,worker,pack,true);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
         job.observe();job.fence();job.stock(chest,exclusive);
         return job;
@@ -79,7 +91,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     /** Tests a finished machine. When the machine does not match its plan it reports which cells differ, records the failure and returns null without moving a lever. */
     static PhysicalMachineJob test(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,Runnable exclusive){
         exclusive.run();
-        var job=new PhysicalMachineJob(manager,project,worker,pack);
+        var job=new PhysicalMachineJob(manager,project,worker,pack,false);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
         var mismatches=new ArrayList<String>();
         for(var cell:job.plan.cells()){
@@ -207,6 +219,10 @@ final class PhysicalMachineJob implements PhysicalJob {
             return false;
         }
         building=null;
+        if(contract==null){
+            close();owner.sendSystemMessage(Component.literal("Engineer: Companion placed "+placed+" blocks; every cell now matches the imported design. Geometry only: it is untested, no lever was pulled and no test was recorded."));
+            return true;
+        }
         if(!announced){
             announced=true;
             owner.sendSystemMessage(Component.literal("Engineer: Companion placed "+placed+" blocks; every cell now matches the plan. Testing the machine by pulling its real levers."));

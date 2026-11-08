@@ -9,6 +9,7 @@ mkdir -p "$coord" "$evidence"
 pids=()
 cleanup() {
   for pid in "${pids[@]}"; do kill -- "-$pid" 2>/dev/null || true; done
+  [[ -z "${companion_pid:-}" ]] || kill -- "-$companion_pid" 2>/dev/null || true
   cp -a "$coord" "$evidence/" 2>/dev/null || true
   for role in physical-alice physical-bob; do
     checkout="$repo"; [[ "$role" == physical-bob ]] && checkout="$temporary/bob"
@@ -29,20 +30,32 @@ GRADLE
 for checkout in "$repo" "$temporary/bob"; do
   (cd "$checkout/mod"; chmod +x gradlew; ./gradlew --init-script "$temporary/carpet.gradle" --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m compileClientJava downloadAssets)
 done
+# The schematic-reuse flow talks to a real companion that reads real files from its library folder.
+mkdir -p -m 700 "$temporary/config-physical-alice/schematics/library"
+node "$repo/scripts/ci/physical-design-fixtures.mjs" "$temporary/config-physical-alice/schematics/library"
+: >"$evidence/companion.log"
+setsid node "$repo/scripts/ci/companion.mjs" "$temporary/config-physical-alice" >>"$evidence/companion.log" 2>&1 &
+companion_pid=$!
+for attempt in {1..50}; do
+  grep -q 'Companion ready' "$evidence/companion.log" && break
+  kill -0 "$companion_pid" 2>/dev/null || { cat "$evidence/companion.log" >&2; exit 1; }
+  sleep 0.2
+done
+grep -q 'Companion ready' "$evidence/companion.log" || { echo 'CI companion did not become ready' >&2; exit 1; }
 launch() {
   local checkout="$1" role="$2" username="$3"
   setsid bash -c '
     set -euo pipefail
     cd "$1/mod"
     export MCE_MP_ROLE="$2" MCE_MP_COORD="$3" MCE_CONFIG_DIR="$3/../config-$2"
-    timeout 10m xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --init-script "$4" --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$5" -PmceTestRunDir="build/run/mp-$2" runClientGameTest -x downloadAssets
+    timeout 16m xvfb-run -a -s "-screen 0 854x480x24" ./gradlew --init-script "$4" --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx512m -PmceClientName="$5" -PmceTestRunDir="build/run/mp-$2" runClientGameTest -x downloadAssets
   ' _ "$checkout" "$role" "$coord" "$temporary/carpet.gradle" "$username" >"$evidence/$role.log" 2>&1 &
   pids+=("$!")
 }
 launch "$repo" physical-alice Alice
 launch "$temporary/bob" physical-bob Bob
 for pid in "${pids[@]}"; do wait "$pid"; done
-for marker in physical-machine-stopped.done physical-machine-build.done physical-plank-placement.done physical-placement-gate.done physical-craft-recovery.done physical-craft-conversation.done physical-craft-interruptions.done physical-craft-inspection.done physical-craft.done physical-craft-restarted.done physical-craft-lifetime.done physical-menu-malformed.done physical-menu-grid-fault.done physical-menu-cursor-fault.done physical-menu-grid-saved.done physical-menu-grid-restarted.done physical-menu-cursor-restarted.done physical-oak.done physical-accumulate.done physical-grid-craft.done physical-grid-craft-restarted.done physical-table-placement.done physical-table-placement-restarted.done physical-table-craft.done physical-table-craft-restarted.done physical-oak-restarted.done physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done physical-terrain-navigation.done physical-machine-parts.done physical-oriented-placement.done physical-chest-take.done physical-chest-take-restarted.done physical-chest-take-restarted.done; do
+for marker in physical-design.done physical-machine-stopped.done physical-machine-build.done physical-plank-placement.done physical-placement-gate.done physical-craft-recovery.done physical-craft-conversation.done physical-craft-interruptions.done physical-craft-inspection.done physical-craft.done physical-craft-restarted.done physical-craft-lifetime.done physical-menu-malformed.done physical-menu-grid-fault.done physical-menu-cursor-fault.done physical-menu-grid-saved.done physical-menu-grid-restarted.done physical-menu-cursor-restarted.done physical-oak.done physical-accumulate.done physical-grid-craft.done physical-grid-craft-restarted.done physical-table-placement.done physical-table-placement-restarted.done physical-table-craft.done physical-table-craft-restarted.done physical-oak-restarted.done physical-build-navigation.done physical-navigation.done physical-gather-stop.done physical-blueprint-stop.done physical-blueprint-job.done physical-blueprint.done physical-placement.done physical-gather.done physical-chat.done physical-peer-denied.done physical-disconnect.done physical-restart.done physical-inventory-saved.done physical-inventory-restarted.done physical-alice.done physical-bob.done physical-terrain-navigation.done physical-machine-parts.done physical-oriented-placement.done physical-chest-take.done physical-chest-take-restarted.done physical-chest-take-restarted.done; do
   [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing native receipt: $marker" >&2; exit 1; }
 done
 node scripts/ci/verify-physical-gather.mjs "$coord/gather-records"
