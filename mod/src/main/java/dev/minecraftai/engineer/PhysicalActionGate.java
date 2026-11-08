@@ -18,9 +18,10 @@ public final class PhysicalActionGate {
     private static final class MenuRun {
         final UUID operation;final PhysicalMenuProtocol sequence;final Object connection;final net.minecraft.world.inventory.AbstractContainerMenu menu;final Runnable authority;
         int next=1;boolean inFlight;MenuTicket ticket;
-        MenuRun(UUID operation,PhysicalMenuProtocol sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=actor.inventoryMenu;this.authority=authority;}
+        MenuRun(UUID operation,PhysicalMenuProtocol sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=sequence.menu(actor);this.authority=authority;}
     }
     private record Ticket(String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead) { }
+    private record TableOpen(BlockPos table,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
     private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,List<ItemStack> baseline,long expires,Runnable authority,Runnable writeAhead) { }
     private static final class Entry {
         final ServerPlayer actor;
@@ -34,6 +35,7 @@ public final class PhysicalActionGate {
         net.minecraft.world.entity.item.ItemEntity minedDrop;
         net.minecraft.world.item.Item minedItem;
         BlockPos pendingPlace,observedPlace;
+        TableOpen tableOpen;
         Entry(ServerPlayer actor){this.actor=actor;connection=actor.connection;}
     }
     private static final Map<UUID,Entry> ACTORS=new java.util.concurrent.ConcurrentHashMap<>();
@@ -53,15 +55,22 @@ public final class PhysicalActionGate {
     private static void armNative(ServerPlayer actor,String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead,PhysicalPlacementInventory placement){
         PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
-        if(entry==null || entry.actor!=actor || entry.ticket!=null || entry.pickup!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null || entry.minedTarget!=null || entry.minedDrop!=null || entry.minedItem!=null)throw new IllegalStateException("No idle bound actor");
+        if(entry==null || entry.actor!=actor || entry.ticket!=null || entry.pickup!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null || entry.minedTarget!=null || entry.minedDrop!=null || entry.minedItem!=null || entry.tableOpen!=null)throw new IllegalStateException("No idle bound actor");
         if(!Set.of("place","mine").contains(operation))throw new IllegalArgumentException("Unsupported action");
         entry.ticket=new Ticket(operation,target.immutable(),before,expires,authority,writeAhead);
         if(operation.equals("place")){if(placement==null || !placement.beforeMatches(actor)){entry.ticket=null;throw new IllegalStateException("Placement source is not the exact selected retained stack");}entry.placement=placement;}
     }
+    /** One-call capability to open exactly one placed crafting table with an empty-hand interaction; never a placement. */
+    static void armTable(ServerPlayer actor,BlockPos table,long expires,Runnable authority,Runnable writeAhead){
+        PhysicalWorkerMenus.requireSettled(actor);
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        if(entry==null || entry.actor!=actor || !menuIdle(entry) || !actor.level().hasChunkAt(table) || !actor.level().getBlockState(table).is(Blocks.CRAFTING_TABLE))throw new IllegalStateException("No idle bound actor beside a placed crafting table");
+        entry.tableOpen=new TableOpen(table.immutable(),actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
+    }
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
-        if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null
+        if(entry==null || entry.actor!=actor || entry.pickup!=null || entry.ticket!=null || entry.menuRun!=null || entry.placement!=null || entry.placementCommit!=null || entry.pendingPlace!=null || entry.observedPlace!=null || entry.tableOpen!=null
             || entry.minedDrop!=drop || entry.minedItem==null || drop.level()!=actor.level() || !drop.isAlive() || !drop.getItem().is(entry.minedItem) || drop.getItem().getCount()!=1
             || !PhysicalGatherInventory.hasRoom(actor,entry.minedItem))
             throw new IllegalStateException("Pickup requires the exact expected native resource drop and room in the bound inventory");
@@ -73,7 +82,7 @@ public final class PhysicalActionGate {
         return entry!=null && entry.actor==actor && entry.connection==actor.connection && entry.minedDrop==drop && drop.isAlive();
     }
     static net.minecraft.world.entity.item.ItemEntity capturedDrop(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor?entry.minedDrop:null;}
-    static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.menuRun=null;entry.placement=null;entry.placementCommit=null;entry.minedTarget=null;entry.minedDrop=null;entry.minedItem=null;entry.pendingPlace=null;entry.observedPlace=null;}}
+    static void cancel(ServerPlayer actor){thread(actor);var entry=ACTORS.get(actor.getUUID());if(entry!=null && entry.actor==actor){entry.ticket=null;entry.pickup=null;entry.menuRun=null;entry.placement=null;entry.placementCommit=null;entry.minedTarget=null;entry.minedDrop=null;entry.minedItem=null;entry.pendingPlace=null;entry.observedPlace=null;entry.tableOpen=null;}}
     private static Entry menuActor(ServerPlayer actor){
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor || !exactConnection(actor) || actor.level().getServer().getPlayerList().getPlayer(actor.getUUID())!=actor
@@ -82,13 +91,13 @@ public final class PhysicalActionGate {
     }
     static void beginMenu(ServerPlayer actor,UUID operation,PhysicalMenuProtocol sequence,Runnable authority){
         var entry=menuActor(actor);java.util.Objects.requireNonNull(sequence);if(sequence.needsSettledStart())PhysicalWorkerMenus.requireSettled(actor);java.util.Objects.requireNonNull(operation);java.util.Objects.requireNonNull(authority);
-        if(sequence.clicks()<1 || sequence.clicks()>GridCraftSequence.MAX_CLICKS)throw new IllegalStateException("Menu protocol has no bounded native actions");
+        if(sequence.clicks()<1 || sequence.clicks()>sequence.maxClicks())throw new IllegalStateException("Menu protocol has no bounded native actions");
         if(!menuIdle(entry))throw new IllegalStateException("Worker already has an action or resource phase");
         authority.run();
-        if(menuActor(actor)!=entry || !menuIdle(entry) || !sequence.before(1).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Worker changed before crafting admission");
+        if(menuActor(actor)!=entry || !menuIdle(entry) || !sequence.ownsMenu(actor,sequence.menu(actor)) || actor.containerMenu!=sequence.menu(actor) || !sequence.beforeMatches(1,actor))throw new IllegalStateException("Worker changed before crafting admission");
         entry.menuRun=new MenuRun(operation,sequence,actor,authority);
     }
-    private static boolean menuIdle(Entry entry){return entry.ticket==null && entry.pickup==null && entry.menuRun==null && entry.placement==null && entry.placementCommit==null && entry.minedTarget==null && entry.minedDrop==null && entry.minedItem==null && entry.pendingPlace==null && entry.observedPlace==null;}
+    private static boolean menuIdle(Entry entry){return entry.ticket==null && entry.pickup==null && entry.menuRun==null && entry.placement==null && entry.placementCommit==null && entry.minedTarget==null && entry.minedDrop==null && entry.minedItem==null && entry.pendingPlace==null && entry.observedPlace==null && entry.tableOpen==null;}
     static void armMenu(ServerPlayer actor,UUID operation,int step,long expires,Runnable writeAhead){
         var entry=menuActor(actor);var run=entry.menuRun;
         if(run==null || !run.operation.equals(operation) || run.next!=step || run.inFlight || run.ticket!=null || expires!=(long)actor.level().getServer().getTickCount()+1)throw new IllegalStateException("No exact same-tick crafting step");
@@ -97,13 +106,13 @@ public final class PhysicalActionGate {
         run.ticket=new MenuTicket(step,run.sequence.slot(step),button,expires,java.util.Objects.requireNonNull(writeAhead));
     }
     private static void validateMenu(ServerPlayer actor,Entry entry,MenuRun run,int step){
-        if(menuActor(actor)!=entry || entry.menuRun!=run || actor.connection!=run.connection || actor.inventoryMenu!=run.menu || actor.containerMenu!=run.menu
-            || !run.sequence.before(step).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Native crafting resource frame changed");
+        if(menuActor(actor)!=entry || entry.menuRun!=run || actor.connection!=run.connection || !run.sequence.ownsMenu(actor,run.menu) || actor.containerMenu!=run.menu
+            || !run.sequence.beforeMatches(step,actor))throw new IllegalStateException("Native crafting resource frame changed");
         // Recipes may reload independently of inventory. Recheck current native
         // behavior using a prediction copy, never by inserting assembled output.
         run.sequence.validateNative(actor);
         run.authority.run();
-        if(entry.menuRun!=run || !exactConnection(actor) || actor.connection!=run.connection || !run.sequence.before(step).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Crafting authority changed during validation");
+        if(entry.menuRun!=run || !exactConnection(actor) || actor.connection!=run.connection || !run.sequence.ownsMenu(actor,run.menu) || actor.containerMenu!=run.menu || !run.sequence.beforeMatches(step,actor))throw new IllegalStateException("Crafting authority changed during validation");
     }
     /** Event-time one-call capability; native clicked/onTake still performs the work. */
     public static boolean menuClick(net.minecraft.world.inventory.AbstractContainerMenu menu,int slot,int button,net.minecraft.world.inventory.ContainerInput input,Player player){
@@ -124,13 +133,13 @@ public final class PhysicalActionGate {
     static void observeMenu(ServerPlayer actor,UUID operation,int step){
         thread(actor);var entry=ACTORS.get(actor.getUUID());var run=entry==null?null:entry.menuRun;
         if(entry==null || entry.actor!=actor || run==null || !run.operation.equals(operation) || run.next!=step || !run.inFlight || actor.connection!=run.connection
-            || actor.inventoryMenu!=run.menu || !run.sequence.after(step).matches(PhysicalCraftFrame.capture(actor))){if(entry!=null && entry.actor==actor)entry.menuRun=null;throw new IllegalStateException("Native crafting outcome is uncertain; preserve resources and do not retry");}
+            || !run.sequence.ownsMenu(actor,run.menu) || actor.containerMenu!=run.menu || !run.sequence.afterMatches(step,actor)){if(entry!=null && entry.actor==actor)entry.menuRun=null;throw new IllegalStateException("Native crafting outcome is uncertain; preserve resources and do not retry");}
         run.inFlight=false;run.next++;
     }
     static void finishMenu(ServerPlayer actor,UUID operation){
         thread(actor);var entry=ACTORS.get(actor.getUUID());var run=entry==null?null:entry.menuRun;
         if(entry==null || entry.actor!=actor || run==null || !run.operation.equals(operation) || run.next!=run.sequence.clicks()+1 || run.inFlight || run.ticket!=null
-            || actor.connection!=run.connection || actor.inventoryMenu!=run.menu || !run.sequence.after(run.sequence.clicks()).matches(PhysicalCraftFrame.capture(actor)))throw new IllegalStateException("Crafting sequence is incomplete or its final resource frame changed");
+            || actor.connection!=run.connection || !run.sequence.ownsMenu(actor,run.menu) || actor.containerMenu!=run.menu || !run.sequence.afterMatches(run.sequence.clicks(),actor))throw new IllegalStateException("Crafting sequence is incomplete or its final resource frame changed");
         entry.menuRun=null;
     }
     public static boolean pickup(Player player,net.minecraft.world.entity.item.ItemEntity drop){
@@ -165,7 +174,18 @@ public final class PhysicalActionGate {
     public static boolean use(ServerPlayer actor,Level level,ItemStack stack,BlockHitResult hit){
         if(!managed(actor))return true;
         var bound=ACTORS.get(actor.getUUID());if(bound==null || bound.actor!=actor)return false;
-        // No containers, secondary block interactions, buckets, fire or spawn eggs.
+        var open=bound.tableOpen;
+        if(open!=null){
+            // A table ticket only opens that table; it never falls through to placement.
+            bound.tableOpen=null;
+            try{
+                if(level!=actor.level() || bound.connection!=actor.connection || actor.hasDisconnected() || !hit.getBlockPos().equals(open.table()) || !level.hasChunkAt(open.table())
+                    || !level.getBlockState(open.table()).is(Blocks.CRAFTING_TABLE) || stack!=open.stack() || stack!=actor.getMainHandItem() || actor.isSecondaryUseActive()
+                    || actor.level().getServer().getTickCount()>=open.expires())return false;
+                open.authority().run();open.writeAhead().run();return true;
+            }catch(RuntimeException refused){return false;}
+        }
+        // No other containers, secondary block interactions, buckets, fire or spawn eggs.
         if(level!=actor.level() || !heldPlacement(bound,actor,stack,net.minecraft.world.InteractionHand.MAIN_HAND) || !level.hasChunkAt(hit.getBlockPos()) || !level.getBlockState(hit.getBlockPos()).is(Blocks.STONE)){
             ACTORS.get(actor.getUUID()).ticket=null;return false;
         }
