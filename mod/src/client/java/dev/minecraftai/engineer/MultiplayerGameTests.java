@@ -2371,7 +2371,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
             say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
-            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");
+            MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");
             check(view(context)==null,"Diagnosis guidance arrives as ordinary text with no overlay");write("diagnosis-text.done","passed");
             say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
             say(context,"I told Engineer, wait for me.");
