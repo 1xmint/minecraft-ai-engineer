@@ -106,7 +106,7 @@ final class ChestTakeSequence implements PhysicalMenuProtocol {
         if(count<1 || count>new ItemStack(item).getMaxStackSize())throw new IllegalStateException("Your companion takes one whole stack of at most "+new ItemStack(item).getMaxStackSize()+"; nothing was taken");
         if(!initial.inventory.get(initial.selected).isEmpty())throw new IllegalStateException("Your companion needs an empty main hand to open a chest; nothing was taken");
         int from=source(initial.chest,item,count),to=emptyMain(initial.inventory,initial.selected);
-        var chest=initial.chest();var inventory=initial.inventory();var stack=chest.get(from);
+        var chest=new ArrayList<>(initial.chest());var inventory=new ArrayList<>(initial.inventory());var stack=chest.get(from);
         chest.set(from,ItemStack.EMPTY);var carried=new Frame(inventory,chest,stack,initial.selected);
         inventory.set(to,stack.copy());var settled=new Frame(inventory,chest,ItemStack.EMPTY,initial.selected);
         return new ChestTakeSequence(item,count,from,to,initial,carried,settled,null,null,null,-1,-1);
