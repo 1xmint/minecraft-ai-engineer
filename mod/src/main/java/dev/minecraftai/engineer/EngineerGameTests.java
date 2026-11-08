@@ -130,6 +130,46 @@ public final class EngineerGameTests {
         helper.assertTrue(copied.cells().getLast().equals(new BlockPos(1,0,0)),"Mutable Minecraft positions cannot change a captured route");
         helper.succeed();
     }
+    @GameTest public void walkingRouteClimbsAndDropsOneBlockAndNamesEveryRefusal(GameTestHelper helper){
+        var inside=new java.util.HashSet<BlockPos>();
+        for(int x=0;x<8;x++)for(int y=0;y<8;y++)for(int z=0;z<8;z++)inside.add(helper.absolutePos(new BlockPos(x,y,z)));
+        var terrain=new PhysicalTerrain(helper.getLevel(),inside::contains);
+        java.util.function.BiFunction<BlockPos,BlockPos,PhysicalRoutePlan> walk=(a,b)->PhysicalRoutePlan.walking(helper.absolutePos(a),helper.absolutePos(b),terrain);
+        var start=new BlockPos(1,1,3);var goal=new BlockPos(6,1,3);
+        // A two-wide ridge one block high across the whole area: the only way over is up one and down one.
+        scene(helper,Blocks.STONE);for(int z=0;z<8;z++)for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,1,z),Blocks.STONE);
+        var route=walk.apply(start,goal);
+        helper.assertTrue(route.cells().getLast().equals(helper.absolutePos(goal)) && route.cells().stream().anyMatch(cell->cell.getY()==helper.absolutePos(goal).getY()+1),"The route climbs one block onto the ridge and drops one block back down");
+        for(int i=1;i<route.cells().size();i++)helper.assertTrue(Math.abs(route.cells().get(i).getY()-route.cells().get(i-1).getY())<=1,"No step rises or falls more than one block");
+        // Make the ridge two high: too tall to climb.
+        for(int z=0;z<8;z++)for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,2,z),Blocks.STONE);
+        refuses(helper,()->walk.apply(start,goal),"A climb taller than one block","A two-block wall is refused by name");
+        // A one-high ridge under a low ceiling over the lower stance: no room to jump.
+        for(int z=0;z<8;z++){for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,2,z),Blocks.AIR);helper.setBlock(new BlockPos(2,3,z),Blocks.STONE);}
+        refuses(helper,()->walk.apply(start,goal),"No headroom to step","A ceiling over the climb is refused by name");
+        // A raised platform two blocks above the floor: stepping off it is a two-block drop.
+        scene(helper,Blocks.STONE);for(int z=0;z<8;z++)for(int x=0;x<=3;x++)for(int y=1;y<=2;y++)helper.setBlock(new BlockPos(x,y,z),Blocks.STONE);
+        refuses(helper,()->walk.apply(new BlockPos(1,3,3),goal),"A drop deeper than one block","A two-block drop is refused by name");
+        // Lava or water in the floor ahead is refused before any route is planned through it.
+        for(var fluid:java.util.List.of(Blocks.LAVA,Blocks.WATER)){
+            scene(helper,Blocks.STONE);for(int z=0;z<8;z++)helper.setBlock(new BlockPos(3,0,z),fluid);
+            refuses(helper,()->walk.apply(start,goal),"Dangerous "+net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(fluid),"A fluid trench is refused as a named hazard");
+        }
+        // Natural grass ground with short grass in the way is ordinary walking terrain.
+        scene(helper,Blocks.GRASS_BLOCK);for(int x=1;x<=6;x++)helper.setBlock(new BlockPos(x,1,3),Blocks.SHORT_GRASS);
+        helper.assertTrue(walk.apply(start,goal).cells().size()==6,"Grass ground and short grass give the direct six-cell route");
+        refuses(helper,()->walk.apply(start,new BlockPos(6,1,9)),"not walkable","A stance outside the workspace is refused");
+        reject(helper,()->new PhysicalRoutePlan(java.util.List.of(start,start.east().above(2))),"An assembled route cannot skip two blocks of height");
+        helper.succeed();
+    }
+    /** Clears the 8x8x8 test area and lays one floor layer at y=0. */
+    private static void scene(GameTestHelper helper,net.minecraft.world.level.block.Block floor){
+        for(int x=0;x<8;x++)for(int y=0;y<8;y++)for(int z=0;z<8;z++)helper.setBlock(new BlockPos(x,y,z),y==0?floor:Blocks.AIR);
+    }
+    private static void refuses(GameTestHelper helper,Runnable action,String reason,String message){
+        String seen=null;try{action.run();}catch(IllegalStateException expected){seen=expected.getMessage();}
+        helper.assertTrue(seen!=null && seen.contains(reason),message+" (got: "+seen+")");
+    }
     @GameTest public void movementOccupancyNeverGrantsMutation(GameTestHelper helper){
         var leases=new RegionReservations(java.util.UUID.randomUUID());var owner=java.util.UUID.randomUUID();
         var a=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
