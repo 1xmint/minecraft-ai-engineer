@@ -1075,6 +1075,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         return new MachineEvidence(project,worker);
     }
     /** After a real restart: nothing resumes by itself, a fresh request finishes the machine, the real levers prove it, and two broken machines are reported as broken. */
+    /** A freshly summoned companion walks to the lever after the announcement; interference must wait until its test has really begun. */
+    private static boolean machineTrialRunning(MinecraftServer s){var manager=EngineerMod.managerFor(s);try(var files=Files.newDirectoryStream(manager.directory,session(s,"Alice").projectId+".machine-trial-*.json")){for(var file:files)if(com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("stage").getAsString().equals("RUNNING"))return true;return false;}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}
     private static void physicalMachineRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,MachineEvidence evidence){
         UUID worker=evidence.worker();
         server.runOnServer(s->{s.tickRateManager().setTickRate(20f);check(s.getPlayerList().getPlayer(worker)==null,"Machine building restart restores no worker automatically");});
@@ -1095,7 +1097,13 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled. 3647, 101, 5 should be");
         server.runOnServer(s->check(!s.overworld().getBlockState(MACHINE_LEVER).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"A machine that does not match its plan has no lever pulled"));
         // Interference after the test has begun must end it with no verdict: a stray power source beside the machine, then a change to the machine itself. The slow clock keeps each ahead of the later cases.
-        server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east]");
+        server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east]");context.waitTicks(10);
+        // A real wrong result, while the companion still stands within reach of the lever: it runs the real machine against a contract with one case deliberately reversed, and the mismatch is reported as a failure.
+        var wrongTrial=server.computeOnServer(s->{var project=session(s,"Alice");var contract=EngineeringContracts.contract(project.blueprint);var cases=new java.util.ArrayList<>(contract.cases());var first=cases.getFirst();var reversed=new java.util.HashMap<String,Boolean>();first.outputs().forEach((name,lit)->reversed.put(name,!lit));cases.set(0,new MechanismCatalog.Vector(first.inputs(),reversed));
+            return new PhysicalMachineTrial(EngineerMod.managerFor(s),project,s.getPlayerList().getPlayer(worker),PhysicalMachinePlan.of(project.blueprint.blocks()),new MechanismCatalog.Contract(contract.template(),contract.ports(),cases,contract.settleTicks(),contract.pulse(),contract.analogMode()),()->{});});
+        try{boolean done=false;for(int step=0;step<400 && !done;step++){context.waitTicks(3);done=server.computeOnServer(s->wrongTrial.tick());}
+            var verdict=server.computeOnServer(s->wrongTrial.summary());check(!wrongTrial.succeeded() && verdict.startsWith("Machine test failed: passed 2 of 3 cases"),"A real mismatch is reported as a failed case, got "+verdict);
+        }finally{server.runOnServer(s->wrongTrial.close());}
         server.runOnServer(s->s.tickRateManager().setTickRate(5f));
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Testing the machine by pulling its real levers",60_000);
         server.runCommand("setblock 3649 101 5 minecraft:redstone_block");expectChat(context,"Physical support or path was edited",60_000);
@@ -1103,16 +1111,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // A stopped job always sends the companion away, so the next request begins by summoning it again.
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Testing the machine by pulling its real levers",60_000);
-        server.runCommand("setblock 3648 101 5 minecraft:stone");expectChat(context,"The machine changed at 3648, 101, 5 during the test; no result was recorded",60_000);
+        server.waitFor(s->machineTrialRunning(s));
+        server.runCommand("setblock 3648 101 5 minecraft:stone");expectChat(context,"A player or world update changed 3648, 101, 5; the machine job paused",60_000);
         server.runCommand("setblock 3648 101 5 minecraft:redstone_lamp");
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         server.runOnServer(s->s.tickRateManager().setTickRate(20f));
-        // A real wrong result: the companion runs the real machine against a contract with one case deliberately reversed, and the mismatch is reported as a failure.
-        var wrongTrial=server.computeOnServer(s->{var project=session(s,"Alice");var contract=EngineeringContracts.contract(project.blueprint);var cases=new java.util.ArrayList<>(contract.cases());var first=cases.getFirst();var reversed=new java.util.HashMap<String,Boolean>();first.outputs().forEach((name,lit)->reversed.put(name,!lit));cases.set(0,new MechanismCatalog.Vector(first.inputs(),reversed));
-            return new PhysicalMachineTrial(EngineerMod.managerFor(s),project,s.getPlayerList().getPlayer(worker),PhysicalMachinePlan.of(project.blueprint.blocks()),new MechanismCatalog.Contract(contract.template(),contract.ports(),cases,contract.settleTicks(),contract.pulse(),contract.analogMode()),()->{});});
-        try{boolean done=false;for(int step=0;step<400 && !done;step++){context.waitTicks(3);done=server.computeOnServer(s->wrongTrial.tick());}
-            var verdict=server.computeOnServer(s->wrongTrial.summary());check(!wrongTrial.succeeded() && verdict.startsWith("Machine test failed: passed 2 of 3 cases"),"A real mismatch is reported as a failed case, got "+verdict);
-        }finally{server.runOnServer(s->wrongTrial.close());}
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var stages=new java.util.ArrayList<String>();
             try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));var trial=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();stages.add(trial.get("stage").getAsString()+":"+(trial.has("passed")?String.valueOf(trial.get("passed").getAsInt()):"geometry"));}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
             java.util.Collections.sort(stages);check(stages.equals(java.util.List.of("ABORTED:geometry","ABORTED:geometry","FAILED:2","FAILED:geometry","PASSED:3")),"Each pass, failure and interrupted test leaves exactly one record with the right outcome, got "+stages);});
