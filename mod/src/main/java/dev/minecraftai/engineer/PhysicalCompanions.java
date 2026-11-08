@@ -21,6 +21,12 @@ final class PhysicalCompanions {
     private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
     private final Map<UUID,PhysicalBlueprintJob> jobs=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
+    /** The bounded table recipe a request names, accepting an optional "at your crafting table". */
+    static TableCraftSequence.Recipe tableRecipe(String text){
+        var named=text.endsWith(" at your crafting table")?text.substring(0,text.length()-" at your crafting table".length()):text;
+        for(var recipe:TableCraftSequence.Recipe.values())if(named.equals("craft "+recipe.label))return recipe;
+        return null;
+    }
     /** The original one-log hotbar craft keeps its exact contract; any other oak log layout uses the bounded grid protocol. */
     private static boolean oakPath(ServerPlayer worker){
         var inventory=worker.getInventory();int logs=0,occupied=0;boolean single=false;
@@ -39,7 +45,7 @@ final class PhysicalCompanions {
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
         var gridRecipe=Set.of("craft sticks","craft a crafting table").contains(text)?(text.equals("craft sticks")?GridCraftPlan.Recipe.STICK:GridCraftPlan.Recipe.CRAFTING_TABLE):null;
-        var tableRecipe=Set.of("craft a wooden pickaxe","craft a wooden pickaxe at your crafting table").contains(text)?TableCraftSequence.Recipe.WOODEN_PICKAXE:null;
+        var tableRecipe=tableRecipe(text);
         boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
         if(!gatherRequest && !placeRequest && !aimRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
