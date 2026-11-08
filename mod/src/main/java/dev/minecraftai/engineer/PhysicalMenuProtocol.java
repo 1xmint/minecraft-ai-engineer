@@ -4,7 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
 /** Only the private-constructor, exact-frame protocols may request tickets. */
-sealed interface PhysicalMenuProtocol permits OakCraftingSequence,OakCraftRecoveryPlan,GridCraftSequence,TableCraftSequence {
+sealed interface PhysicalMenuProtocol permits OakCraftingSequence,OakCraftRecoveryPlan,GridCraftSequence,TableCraftSequence,ChestTakeSequence {
     int clicks();
     int slot(int step);
     /** Exact resource frame (inventory, menu grid, cursor, preview) before a step. */

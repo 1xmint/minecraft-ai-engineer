@@ -475,7 +475,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
-        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];
+        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -582,6 +582,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-restart.done","passed");
             physicalGatherStopFlow(context,server);
             physicalNavigationFlow(context,server);
+            physicalTerrainNavigationFlow(context,server);
             UUID beforeGatherProject=server.computeOnServer(s->session(s,"Alice").projectId);
             send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(beforeGatherProject));
             server.runCommand("forceload add 2424 -16 2456 32");server.runCommand("fill 2430 100 0 2435 100 9 minecraft:stone");server.runCommand("setblock 2431 101 4 minecraft:dirt");
@@ -644,7 +645,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 6");expectChat(context,"Requested resource does not match");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A refused request after restart leaves the restored resources and source unchanged"));
             server.runCommand("tp Alice 2631.5 101 5.5");
-            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved flat walking route");
+            MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 6");expectChat(context,"No reserved walking route");
             server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(oakRecovery.worker()),net.minecraft.world.item.Items.OAK_LOG)==1 && s.overworld().getBlockState(new BlockPos(2631,101,6)).is(Blocks.OAK_LOG),"A player standing in the path refuses a second gather without changing the restored resources"));
             server.runCommand("tp Alice 2634.5 101 8 180 0");
             server.runOnServer(s->nativeOakCraftingProof(s,oakRecovery.worker()));
@@ -738,6 +739,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             tablePlacement[0]=physicalTablePlacementFlow(context,server);
             physicalOrientedPlacementFlow(context,server);
             tableCraft[0]=physicalTableCraftFlow(context,server);
+            chestTake[0]=physicalChestTakeFlow(context,server);
             physicalMachinePartsFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
@@ -805,11 +807,73 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(tableEvidence.worker());check(tableEvidence.resources().equals(PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(worker),worker)),"Inspecting table records after restart moves nothing");});
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-table-craft-restarted.done","passed");
+            var chestEvidence=chestTake[0];
+            server.runOnServer(s->check(s.getPlayerList().getPlayer(chestEvidence.worker())==null,"Chest take restart restores no worker automatically"));
+            server.runCommand("tp Alice 3436.5 101 8 180 0");
+            send(context,"engineer project use "+chestEvidence.project());server.waitFor(s->chestEvidence.project().equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+            MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+            server.runOnServer(s->{var worker=s.getPlayerList().getPlayer(chestEvidence.worker());var project=session(s,"Alice");
+                check(worker!=null && countItem(worker,net.minecraft.world.item.Items.COBBLESTONE)==13 && chestSlots(s,CHEST_AT).equals(java.util.List.of(0,0)),"Actual saved-world restart keeps the taken cobblestone in the companion and out of the chest: nothing duplicated");
+                check(project.delegation==null && !project.access.allows(worker.getUUID(),ProjectAccess.Permission.BUILD),"Chest take history restores neither grants nor delegation");
+                GridCraftTask.requireNoUnresolved(EngineerMod.managerFor(s),project,worker);menuReceipt(worker,"chest-take-restarted");});
+            MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+            server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-chest-take-restarted.done","passed");
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
     private record TablePlacementEvidence(String project,UUID worker,BlockPos target) { }
     private record GridCraftEvidence(String project,UUID worker,com.google.gson.JsonObject resources) { }
+    private record ChestTakeEvidence(String project,UUID worker) { }
+    private static final BlockPos CHEST_AT=new BlockPos(3434,101,1);
+    /** Counts held in the fixture chest's first two slots, read from its own storage without opening it. */
+    private static java.util.List<Integer> chestSlots(net.minecraft.server.MinecraftServer s,BlockPos at){
+        var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(at);
+        for(int slot=2;slot<chest.getContainerSize();slot++)check(chest.getItem(slot).isEmpty(),"The fixture chest holds nothing beyond its two stacks");
+        for(int slot=0;slot<2;slot++)check(chest.getItem(slot).isEmpty() || chest.getItem(slot).is(net.minecraft.world.item.Items.COBBLESTONE),"The fixture chest holds only cobblestone");
+        return java.util.List.of(chest.getItem(0).getCount(),chest.getItem(1).getCount());
+    }
+    /** The companion opens a real chest in its workspace and takes exact stacks natively; a stopped take is recovered without moving items. */
+    private static ChestTakeEvidence physicalChestTakeFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3424 -16 3456 32");server.runCommand("fill 3430 100 0 3439 100 8 minecraft:stone");
+        server.runCommand("tp Alice 3436.5 101 8 180 0");
+        send(context,"engineer select1 3430 100 0");send(context,"engineer select2 3436 102 6");server.waitFor(s->new BlockPos(3436,102,6).equals(session(s,"Alice").corner2));
+        server.runCommand("setblock 3434 101 1 minecraft:chest");
+        server.runCommand("item replace block 3434 101 1 container.0 with minecraft:cobblestone 8");
+        server.runCommand("item replace block 3434 101 1 container.1 with minecraft:cobblestone 5");
+        server.runCommand("setblock 3438 101 1 minecraft:chest");
+        server.runCommand("item replace block 3438 101 1 container.0 with minecraft:cobblestone 8");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty() && chestSlots(s,CHEST_AT).equals(java.util.List.of(8,5)),"The chest worker begins empty beside a chest of eight and five cobblestone"));
+        MESSAGES.clear();say(context,"Engineer, take 3 cobblestone from the chest at 3434 101 1");expectChat(context,"has no stack of exactly 3 Cobblestone; nothing was taken");
+        MESSAGES.clear();say(context,"Engineer, take 8 cobblestone from the chest at 3438 101 1");expectChat(context,"only takes from chests inside this workspace; nothing was taken");
+        MESSAGES.clear();say(context,"Engineer, take 1 unobtainium from the chest at 3434 101 1");expectChat(context,"does not know an item called unobtainium; nothing was taken");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty() && chestSlots(s,CHEST_AT).equals(java.util.List.of(8,5)) && body.containerMenu==body.inventoryMenu,"Refused takes open nothing and move nothing");
+            var outside=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(new BlockPos(3438,101,1));check(outside.getItem(0).getCount()==8,"The chest outside the workspace keeps its stack");});
+        MESSAGES.clear();say(context,"Engineer, take 8 cobblestone from the chest at 3434 101 1");expectChat(context,"took 8 Cobblestone from the chest and verified its saved inventory");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(countItem(body,net.minecraft.world.item.Items.COBBLESTONE)==8 && chestSlots(s,CHEST_AT).equals(java.util.List.of(0,5)),"Exactly eight cobblestone moved from the chest into the companion");
+            check(body.getInventory().getItem(body.getInventory().getSelectedSlot()).isEmpty() && body.containerMenu==body.inventoryMenu,"The take leaves the main hand empty and the chest closed");});
+        // Stop after the first native click: the companion holds the stack on its cursor, and closing the chest returns it to the companion's own inventory.
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var observed=new java.util.ArrayList<Integer>();boolean refused=false;
+            try{ChestTakeTask.take(EngineerMod.managerFor(s),project,body,CHEST_AT,net.minecraft.world.item.Items.COBBLESTONE,5,()->{},step->{observed.add(step);if(step==1){PhysicalCraftGuard.requestStop(body);throw new IllegalStateException("Fixture stop after native chest step 1");}});}catch(IllegalStateException expected){refused=true;}
+            check(refused && observed.equals(java.util.List.of(1)) && !PhysicalCraftGuard.active(body) && body.containerMenu==body.inventoryMenu,"A stopped chest take performs no later click and closes the chest");
+            check(countItem(body,net.minecraft.world.item.Items.COBBLESTONE)==13 && chestSlots(s,CHEST_AT).equals(java.util.List.of(0,0)) && body.inventoryMenu.getCarried().isEmpty(),"The stopped take conserves all thirteen cobblestone: none is lost, dropped or duplicated");
+            menuReceipt(body,"chest-take-interrupted");});
+        MESSAGES.clear();say(context,"Engineer, take 5 cobblestone from the chest at 3434 101 1");expectChat(context,"explicit resource recovery is required");
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"taking 5 minecraft:cobblestone from the chest at 3434, 101, 1; uncertain, needs explicit recovery; current companion and chest match a state this record allows");
+        server.runOnServer(s->check(countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.COBBLESTONE)==13 && chestSlots(s,CHEST_AT).equals(java.util.List.of(0,0)),"Refusals and inspection move no items"));
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"crafting resources are stored and their saved state was verified. No recipe was retried");
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"taking 5 minecraft:cobblestone from the chest at 3434, 101, 1; uncertain, resolved by a later recovery");
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"No unfinished crafting resources need recovery. No items were moved");
+        var finished=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
+            check(countItem(body,net.minecraft.world.item.Items.COBBLESTONE)==13 && chestSlots(s,CHEST_AT).equals(java.util.List.of(0,0)) && project.delegation==null,"Recovery records the preserved resources without moving items or leaving delegation");
+            try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".chesttake-*.json")){var out=directory().resolve("chest-take-records");Files.createDirectories(out);int count=0;for(var file:files){Files.copy(file,out.resolve(file.getFileName()));count++;}check(count==3,"The finished take, the stopped take and its recovery each wrote exactly one record; refusals wrote none");}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            menuReceipt(body,"chest-take");return new ChestTakeEvidence(project.projectId.toString(),worker);});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-chest-take.done","passed");return finished;
+    }
     private static int crafted(MinecraftServer s,UUID worker,net.minecraft.world.item.Item item){return s.getPlayerList().getPlayer(worker).getStats().getValue(net.minecraft.stats.Stats.ITEM_CRAFTED,item);}
     private static void gridHolds(MinecraftServer s,UUID worker,int logs,int planks,int sticks,int tables,String why){
         var body=s.getPlayerList().getPlayer(worker);
@@ -898,11 +962,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             throw new IllegalStateException("No clear table placement cell near the companion");});
         MESSAGES.clear();say(context,"Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ());expectChat(context,"placed its crafted crafting table and verified its saved inventory");
         server.runOnServer(s->{tableHolds(s,worker,0,0,0,"The crafted table is placed and the companion holds nothing");check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"The companion's own table stands in the workspace");});
-        // Gathering ends where the log stood, so the second log leads away from the table and the third leads back beside it.
-        for(int offset:new int[]{3,-3}){
+        // Pickup can stop a block or two short of the log, so each next log is placed from where the companion really stands: the second leads away from the table and the third leads back beside it.
+        for(int direction:new int[]{1,-1}){
             BlockPos log=server.computeOnServer(s->{var at=s.getPlayerList().getPlayer(worker).blockPosition();
                 check(at.getX()>=3230 && at.getX()<=3232 && at.getY()==101,"The companion stays in the gathering lane beside its table");
-                var cell=new BlockPos(3231,101,at.getZ()+offset);check(cell.getZ()>=1 && cell.getZ()<=8,"The next fixture log stays inside the workspace");return cell;});
+                for(int way:new int[]{direction,-direction})for(int distance=3;distance>=2;distance--){var cell=new BlockPos(3231,101,at.getZ()+way*distance);if(cell.getZ()>=1 && cell.getZ()<=8 && s.overworld().getBlockState(cell).isAir())return cell;}
+                throw new AssertionError("No gatherable fixture log cell inside the workspace from "+at.toShortString());});
             server.runCommand("setblock "+log.getX()+" "+log.getY()+" "+log.getZ()+" minecraft:oak_log");
             MESSAGES.clear();say(context,"Engineer, gather oak log at "+log.getX()+" "+log.getY()+" "+log.getZ());expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         }
@@ -1181,7 +1246,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"Oak worker begins without supplied materials or tools");PhysicalWorkerStorage.save(body);checkAdvancementOwner(body);check(PhysicalWorkerStorage.savedInventory(body,body.nameAndId()).equals(PhysicalWorkerStorage.inventory(body)),"Read-only native decoding matches the active body");checkAdvancementOwner(body);var unrelated=new net.minecraft.world.entity.item.ItemEntity(s.overworld(),2631,101,4,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG));boolean denied=false;try{PhysicalActionGate.armPickup(body,unrelated,s.getTickCount()+100,()->{},()->{throw new AssertionError("Foreign oak must never write pickup intent");});}catch(IllegalStateException expected){denied=true;}check(denied && !PhysicalActionGate.pickup(body,unrelated),"An identical foreign oak entity cannot substitute for native mining output");});
         MESSAGES.clear();say(context,"Engineer, gather dirt at 2631 101 4");expectChat(context,"Requested resource does not match");
         server.runCommand("setblock 2631 102 4 minecraft:oak_leaves[persistent=true]");
-        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved flat walking route");
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"No reserved walking route");
         server.runCommand("setblock 2631 102 4 minecraft:air");
         MESSAGES.clear();say(context,"Engineer, gather oak log at 2631 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         var recovery=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);var project=session(s,"Alice");var manager=EngineerMod.managerFor(s);
@@ -1287,6 +1352,32 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.verified.equals("untested") && project.journal.isEmpty(),"Navigation and geometry create no functional evidence or creative undo ownership");
         });
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-build-navigation.done","passed");
+    }
+    /** The companion walks over a natural grass ridge, one block up and one block down, to gather; a hazard in the only way is refused by name. */
+    private static void physicalTerrainNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
+        server.runCommand("forceload add 3328 -16 3360 32");server.waitFor(s->s.overworld().hasChunkAt(new BlockPos(3330,100,0)) && s.overworld().hasChunkAt(new BlockPos(3346,100,12)));server.runCommand("fill 3330 100 0 3346 100 12 minecraft:grass_block");server.runCommand("fill 3330 100 0 3332 100 2 minecraft:stone");
+        server.runCommand("fill 3335 100 0 3336 100 12 minecraft:dirt");server.runCommand("fill 3335 101 0 3336 101 12 minecraft:grass_block");server.runCommand("fill 3339 100 4 3343 100 8 minecraft:stone");server.runCommand("setblock 3342 101 6 minecraft:dirt");
+        server.runCommand("tp Alice 3345.5 101 11 180 0");
+        send(context,"engineer select1 3330 100 0");send(context,"engineer select2 3346 104 12");server.waitFor(s->new BlockPos(3346,104,12).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->player(s,"Alice").gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL));
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 3342 101 6");expectChat(context,"gathering one dirt block");
+        server.waitFor(s->{var body=s.getPlayerList().getPlayer(worker);return body!=null && body.getY()>101.99;},1_200);
+        expectChat(context,"verified its saved inventory",90_000);
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && countDirt(body)==1 && body.getX()>3338 && Math.abs(body.getY()-101)<1.0e-3 && s.overworld().getBlockState(new BlockPos(3342,101,6)).isAir(),"Actual owner chat walks up and down a natural grass ridge, mines the real resource and saves its exact drop");
+            for(int z=0;z<=12;z++)for(int x=3335;x<=3336;x++)check(s.overworld().getBlockState(new BlockPos(x,101,z)).is(Blocks.GRASS_BLOCK),"Walking over the ridge never edits it");
+        });
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        // A magma trench across the only way is refused with the hazard named; nothing moves or is mined.
+        server.runCommand("fill 3333 100 0 3333 100 12 minecraft:magma_block");server.runCommand("setblock 3342 101 6 minecraft:dirt");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, gather dirt at 3342 101 6");expectChat(context,"Dangerous minecraft:magma_block");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(body!=null && body.blockPosition().equals(new BlockPos(3331,101,1)) && s.overworld().getBlockState(new BlockPos(3342,101,6)).is(Blocks.DIRT),"A hazard refusal moves nothing and mines nothing");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");write("physical-terrain-navigation.done","passed");
     }
     private static void physicalNavigationFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID before=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(before));
