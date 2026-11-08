@@ -1095,7 +1095,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled. 3647, 101, 5 should be");
         server.runOnServer(s->check(!s.overworld().getBlockState(MACHINE_LEVER).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"A machine that does not match its plan has no lever pulled"));
         // A real circuit fault: the shape is right, but one case is wrong, and the test must say so.
-        server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east,lit=false]");
+        // A torch set unlit relights on its next update, so the fault is a stray power source that keeps the lamp on whatever the lever says.
+        server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east]");server.runCommand("setblock 3649 101 5 minecraft:redstone_block");
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Machine test failed: passed 2 of 3 cases",60_000);
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var stages=new java.util.ArrayList<String>();
             try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));var trial=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();stages.add(trial.get("stage").getAsString()+":"+(trial.has("passed")?String.valueOf(trial.get("passed").getAsInt()):"geometry"));}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
