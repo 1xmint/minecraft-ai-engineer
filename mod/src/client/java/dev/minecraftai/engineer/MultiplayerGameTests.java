@@ -897,11 +897,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             throw new IllegalStateException("No clear table placement cell near the companion");});
         MESSAGES.clear();say(context,"Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ());expectChat(context,"placed its crafted crafting table and verified its saved inventory");
         server.runOnServer(s->{tableHolds(s,worker,0,0,0,"The crafted table is placed and the companion holds nothing");check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"The companion's own table stands in the workspace");});
-        // Gathering ends where the log stood, so the second log leads away from the table and the third leads back beside it.
-        for(int offset:new int[]{3,-3}){
+        // Pickup can stop a block or two short of the log, so each next log is placed from where the companion really stands: the second leads away from the table and the third leads back beside it.
+        for(int direction:new int[]{1,-1}){
             BlockPos log=server.computeOnServer(s->{var at=s.getPlayerList().getPlayer(worker).blockPosition();
                 check(at.getX()>=3230 && at.getX()<=3232 && at.getY()==101,"The companion stays in the gathering lane beside its table");
-                var cell=new BlockPos(3231,101,at.getZ()+offset);check(cell.getZ()>=1 && cell.getZ()<=8,"The next fixture log stays inside the workspace");return cell;});
+                for(int way:new int[]{direction,-direction})for(int distance=3;distance>=2;distance--){var cell=new BlockPos(3231,101,at.getZ()+way*distance);if(cell.getZ()>=1 && cell.getZ()<=8 && s.overworld().getBlockState(cell).isAir())return cell;}
+                throw new AssertionError("No gatherable fixture log cell inside the workspace from "+at.toShortString());});
             server.runCommand("setblock "+log.getX()+" "+log.getY()+" "+log.getZ()+" minecraft:oak_log");
             MESSAGES.clear();say(context,"Engineer, gather oak log at "+log.getX()+" "+log.getY()+" "+log.getZ());expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
         }
