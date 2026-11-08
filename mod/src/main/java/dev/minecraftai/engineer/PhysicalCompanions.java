@@ -40,6 +40,7 @@ final class PhysicalCompanions {
         var gather=java.util.regex.Pattern.compile("gather (dirt|oak log) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);
         boolean gatherRequest=gather.matches();
         var place=java.util.regex.Pattern.compile("place retained (dirt|oak planks|crafting table) at (-?\\d+) (-?\\d+) (-?\\d+)").matcher(text);boolean placeRequest=place.matches();
+        var aimed=java.util.regex.Pattern.compile("place retained (stone|cobblestone|dirt|lever|redstone torch|redstone lamp) on the (top|north|south|east|west) (?:face|side) of (-?\\d+) (-?\\d+) (-?\\d+)(?: facing (north|south|east|west))?").matcher(text);boolean aimRequest=aimed.matches();
         boolean blueprintRequest=text.equals("build the next blueprint block with retained dirt");
         boolean jobRequest=text.equals("gather dirt and build this blueprint");
         boolean oakRequest=Set.of("craft oak planks","craft planks from your retained oak log","turn your retained oak log into planks").contains(text);
@@ -47,7 +48,7 @@ final class PhysicalCompanions {
         var tableRecipe=tableRecipe(text);
         boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
-        if(!gatherRequest && !placeRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
+        if(!gatherRequest && !placeRequest && !aimRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
@@ -56,7 +57,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
         if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null){GridCraftRecord.show(manager,project,shown.actor);TableCraftRecord.show(manager,project,shown.actor);}return true;}
-        if(gatherRequest || placeRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
+        if(gatherRequest || placeRequest || aimRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
         if(craftRequest || recoveryRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             Runnable exclusive=()->{
@@ -108,6 +109,17 @@ final class PhysicalCompanions {
             placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,target,Set.of(),()->{},switch(place.group(1)){case "dirt"->PhysicalPlacementInventory.Material.DIRT;case "oak planks"->PhysicalPlacementInventory.Material.OAK_PLANKS;default->PhysicalPlacementInventory.Material.CRAFTING_TABLE;}));
             project.tell("Your companion is placing one retained item through a native survival action.");return true;
         }
+        if(aimRequest){
+            var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
+            if(gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))throw new IllegalStateException("Dismiss the companion to stop its current physical task first");
+            var support=new BlockPos(Integer.parseInt(aimed.group(3)),Integer.parseInt(aimed.group(4)),Integer.parseInt(aimed.group(5)));
+            var face=aimed.group(2).equals("top")?net.minecraft.core.Direction.UP:net.minecraft.core.Direction.byName(aimed.group(2));
+            var facing=aimed.group(6)==null?null:net.minecraft.core.Direction.byName(aimed.group(6));
+            if(!project.contains(support) || !project.level().hasChunkAt(support))throw new IllegalStateException("The support block must be loaded inside this workspace; nothing was placed");
+            var aim=new PhysicalPlacementInventory.Aim(support,face,project.level().getBlockState(support),plannedState(aimed.group(1),face,facing));
+            placing.put(project.projectId,new PhysicalPlacementTask(manager,project,binding.actor,binding.pack,aim,Set.of(),()->{}));
+            project.tell("Your companion is placing one retained "+aimed.group(1)+" on the "+aimed.group(2)+" face of "+support.toShortString()+" through a native survival action. Only the exact planned orientation will be accepted.");return true;
+        }
         if(gatherRequest){
             var binding=actors.get(project.projectId);
             if(binding==null)throw new IllegalStateException("Summon your companion first");
@@ -120,6 +132,26 @@ final class PhysicalCompanions {
         }
         if(text.equals("dismiss my companion")){boolean removed=dismiss(project.projectId);project.tell(removed?"Physical companion dismissed. No new work was delegated.":"Companion dismissal is pending until the current native action returns and its resources are saved.");return true;}
         summon(project);project.tell("Your physical companion is here. It is a survival actor, currently idle. Saved resources are retained. Say 'dismiss my companion' to remove it.");return true;
+    }
+    /** The exact block state one native use must produce for a requested material, support face and lever facing. */
+    static net.minecraft.world.level.block.state.BlockState plannedState(String material,net.minecraft.core.Direction face,net.minecraft.core.Direction facing){
+        boolean top=face==net.minecraft.core.Direction.UP;
+        if(facing!=null && !(material.equals("lever") && top))throw new IllegalStateException("Only a lever on a top face takes a facing; its side-face orientation follows the face");
+        return switch(material){
+            case "lever"->{
+                if(top && facing==null)throw new IllegalStateException("Say which way the lever on a top face should face, for example 'facing east'");
+                yield Blocks.LEVER.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE,top?net.minecraft.world.level.block.state.properties.AttachFace.FLOOR:net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+                    .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,top?facing:face);
+            }
+            case "redstone torch"->top?Blocks.REDSTONE_TORCH.defaultBlockState()
+                :Blocks.REDSTONE_WALL_TORCH.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,face);
+            case "redstone lamp"->Blocks.REDSTONE_LAMP.defaultBlockState();
+            case "stone"->Blocks.STONE.defaultBlockState();
+            case "cobblestone"->Blocks.COBBLESTONE.defaultBlockState();
+            case "dirt"->Blocks.DIRT.defaultBlockState();
+            default->throw new IllegalStateException("The companion has no machine placement rule for "+material);
+        };
     }
     private static void compatible(){
         var carpet=FabricLoader.getInstance().getModContainer("carpet");
