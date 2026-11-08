@@ -357,6 +357,58 @@ public final class EngineerGameTests {
         } finally {buffer.release();}
         helper.succeed();
     }
+    /** Workers of one project hold separate leases, checked against each other exactly as separate projects are. */
+    @GameTest
+    public void workerLeasesWithinAProjectNeverOverlapOrReplaceEachOther(GameTestHelper helper){
+        var leases=new RegionReservations(java.util.UUID.randomUUID());var owner=java.util.UUID.randomUUID();var project=java.util.UUID.randomUUID();
+        var whole=new RegionReservations.Scope("world","minecraft:overworld",project);
+        var a=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var b=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var c=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var d=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var build=ProjectAccess.Permission.BUILD;var aCell=BlockPos.ZERO;var aRead=new BlockPos(1,0,0);var bCell=new BlockPos(10,0,0);var bRead=new BlockPos(11,0,0);
+        var first=leases.acquire(a,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(aRead),0);
+        var second=leases.acquire(b,owner,1,1,build,java.util.Set.of(bCell),java.util.Set.of(bRead),0);
+        leases.validateWrite(a,first,owner,1,1,aCell,1);leases.validateWrite(b,second,owner,1,1,bCell,1);
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(),1),"Two workers cannot reserve the same cell");
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(bRead),java.util.Set.of(),1),"A worker cannot write a sibling's dependency");
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(new BlockPos(30,0,0)),java.util.Set.of(aCell),1),"A worker cannot depend on a cell a sibling is writing");
+        reject(helper,()->leases.acquireMovement(c,owner,1,1,java.util.Set.of(bCell),java.util.Set.of(),1),"A route cannot cross a sibling's write");
+        var route=new BlockPos(20,0,0);var walking=leases.acquireMovement(c,owner,1,1,java.util.Set.of(route),java.util.Set.of(),1);
+        reject(helper,()->leases.acquireMovement(d,owner,1,1,java.util.Set.of(route),java.util.Set.of(),1),"Two workers cannot claim the same route cell");
+        reject(helper,()->leases.acquire(d,owner,1,1,build,java.util.Set.of(route),java.util.Set.of(),1),"A worker cannot build on a sibling's route");
+        reject(helper,()->leases.acquire(whole,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(),1),"The project's own lease is checked against its workers");
+        reject(helper,()->leases.validateWrite(b,first,owner,1,1,aCell,1),"One worker's ticket is useless under a sibling's lease");
+        var replaced=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(2,0,0)),java.util.Set.of(),2);
+        leases.validate(b,second,owner,1,1,2);leases.validate(c,walking,owner,1,1,2);
+        reject(helper,()->leases.validate(a,first,owner,1,1,2),"A worker's replaced lease is dead, and only that one");
+        leases.release(b,first);leases.validate(b,second,owner,1,1,2);
+        leases.revoke(a);
+        reject(helper,()->leases.validate(a,replaced,owner,1,1,3),"Revoking a worker stops that worker");
+        leases.validate(b,second,owner,1,1,3);
+        var again=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(3,0,0)),java.util.Set.of(),3);
+        var unrelated=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID(),a.worker());
+        var kept=leases.acquire(unrelated,owner,1,1,build,java.util.Set.of(new BlockPos(40,0,0)),java.util.Set.of(),3);
+        leases.revoke(whole);
+        reject(helper,()->leases.validate(a,again,owner,1,1,4),"Project revocation stops the first worker");
+        reject(helper,()->leases.validate(b,second,owner,1,1,4),"Project revocation stops the second worker");
+        reject(helper,()->leases.validate(c,walking,owner,1,1,4),"Project revocation stops a worker that is only walking");
+        leases.validate(unrelated,kept,owner,1,1,4);
+        reject(helper,()->new RegionReservations(java.util.UUID.randomUUID()).validate(unrelated,kept,owner,1,1,5),"A restart never restores a worker's lease");
+        // The project's own lease: a live one refuses workers, pausing stops workers only, and revoking stops it too. Another dimension is a separate lease.
+        var own=leases.acquire(whole,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5);
+        reject(helper,()->leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5),"A worker is refused against the project's own live lease");
+        var running=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        var nether=new RegionReservations.Scope("world","minecraft:the_nether",project,a.worker());
+        var elsewhere=leases.acquire(nether,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        leases.revokeWorkers(whole);
+        reject(helper,()->leases.validate(a,running,owner,1,1,6),"Pausing a project stops its workers");
+        leases.validate(whole,own,owner,1,1,6);leases.validate(nether,elsewhere,owner,1,1,6);
+        leases.revoke(whole);
+        reject(helper,()->leases.validate(whole,own,owner,1,1,7),"Project revocation removes the project's own lease");
+        leases.validate(nether,elsewhere,owner,1,1,7);
+        helper.succeed();
+    }
     private static void reject(GameTestHelper helper,Runnable action,String message){
         boolean rejected=false;try{action.run();}catch(RuntimeException expected){rejected=true;}helper.assertTrue(rejected,message);
     }
