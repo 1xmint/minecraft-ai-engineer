@@ -50,8 +50,9 @@ There are two ways to build a previewed design:
 
 - `build this design from the chest at X Y Z` asks your summoned survival
   companion to take real items and place every block by hand. It handles up to
-  32 blocks of stone, cobblestone, dirt, lever, redstone torch and redstone
-  lamp, and each block needs stone, cobblestone or dirt to be placed against.
+  32 blocks, two blocks tall, of stone, cobblestone, dirt, lever, redstone torch
+  and redstone lamp. It takes whole stacks from the chest, and any spare items
+  stay with the companion. Each block needs stone, cobblestone or dirt to be placed against.
   It names exactly what stops a design from qualifying, and takes nothing when
   it refuses. Your own blocks are left alone. Switched-on levers and lit lamps
   are placed switched off.

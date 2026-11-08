@@ -1085,9 +1085,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested") && designChest(s).equals(List.of(3,1,1)),"A preview builds, grants and takes nothing");
             check(project.blueprint.blocks().stream().allMatch(block->s.overworld().getBlockState(block.pos()).isAir()),"A preview places nothing");
             return project.blueprint.blocks().stream().map(block->block.pos().immutable()).toList();});
-        BlockPos collision=cells.getFirst();
+        // A preview only reports blocks outside the design it replaces, so the collision goes where the next preview lands.
+        var built=cells.stream().map(cell->cell.offset(-2,0,0)).toList();
+        BlockPos collision=built.getFirst();
         server.runCommand("setblock "+collision.getX()+" "+collision.getY()+" "+collision.getZ()+" minecraft:cobblestone");
-        MESSAGES.clear();memorySay(context,"Engineer, preview design "+turned+" at 5207 101 5");expectChat(context,"In the way: cobblestone at");
+        MESSAGES.clear();memorySay(context,"Engineer, preview design "+turned+" at 5205 101 5");expectChat(context,"In the way: cobblestone at");
         MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         MESSAGES.clear();say(context,"Engineer, build this design from the chest at 5204 101 1");expectChat(context,"is in the way of this machine. It was left alone");
         server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty() && designChest(s).equals(full) && s.overworld().getBlockState(collision).is(Blocks.COBBLESTONE),"A collision takes nothing and leaves the player's block");});
@@ -1098,7 +1100,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(designChest(s).equals(List.of(0,0,0)) && countItem(body,net.minecraft.world.item.Items.STONE)==0 && countItem(body,net.minecraft.world.item.Items.LEVER)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==0,"Exactly the chest's items became the five blocks");
             check(project.verified.equals("untested") && project.journal.isEmpty() && project.delegation==null,"A physical import build records no test, pass or grant");});
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
-        return new DesignEvidence(server.computeOnServer(s->session(s,"Alice").projectId.toString()),worker,cells);
+        return new DesignEvidence(server.computeOnServer(s->session(s,"Alice").projectId.toString()),worker,built);
     }
     private static void physicalDesignRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,DesignEvidence evidence){
         server.runOnServer(s->check(s.getPlayerList().getPlayer(evidence.worker())==null,"Design building restart restores no worker automatically"));

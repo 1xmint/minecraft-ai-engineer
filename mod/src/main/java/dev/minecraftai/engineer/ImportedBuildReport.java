@@ -17,12 +17,16 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /** What a previewed imported design would cost and whether the companion can place it by hand. Reads only; changes nothing. */
 final class ImportedBuildReport {
     private static final int SHOWN=4;
+    private static final int MAX_HEIGHT=2;
     private ImportedBuildReport() { }
 
     /** Exact reasons the companion cannot build this design; empty when it can. */
     static List<String> blockers(List<Blueprint.PlannedBlock> blocks,Level level){
         var reasons=new ArrayList<String>();
         if(blocks.size()>PhysicalMachinePlan.MAX_CELLS)reasons.add("it has "+blocks.size()+" blocks and the companion builds at most "+PhysicalMachinePlan.MAX_CELLS);
+        // The companion builds from one floor level and cannot click the top of a block above its eyes.
+        int low=blocks.stream().mapToInt(block->block.pos().getY()).min().orElse(0),high=blocks.stream().mapToInt(block->block.pos().getY()).max().orElse(0);
+        if(high-low+1>MAX_HEIGHT)reasons.add("it is "+(high-low+1)+" blocks tall and the companion builds at most "+MAX_HEIGHT+" high");
         Map<BlockPos,BlockState> planned=new HashMap<>();
         for(var block:blocks)planned.put(block.pos(),block.state());
         var noRule=new LinkedHashSet<String>();var ceiling=new ArrayList<String>();var floating=new ArrayList<String>();

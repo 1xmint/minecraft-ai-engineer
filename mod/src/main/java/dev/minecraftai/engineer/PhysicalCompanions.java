@@ -56,7 +56,7 @@ final class PhysicalCompanions {
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.get(project.projectId) instanceof PhysicalMachineJob?". It is building and testing your machine.":jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.get(project.projectId) instanceof PhysicalMachineJob?". It is working on your build.":jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
