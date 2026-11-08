@@ -1100,9 +1100,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Testing the machine by pulling its real levers",60_000);
         server.runCommand("setblock 3649 101 5 minecraft:redstone_block");expectChat(context,"Physical support or path was edited",60_000);
         server.runCommand("setblock 3649 101 5 minecraft:air");
+        // A stopped job always sends the companion away, so the next request begins by summoning it again.
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Testing the machine by pulling its real levers",60_000);
         server.runCommand("setblock 3648 101 5 minecraft:stone");expectChat(context,"The machine changed at 3648, 101, 5 during the test; no result was recorded",60_000);
         server.runCommand("setblock 3648 101 5 minecraft:redstone_lamp");
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
         server.runOnServer(s->s.tickRateManager().setTickRate(20f));
         // A real wrong result: the companion runs the real machine against a contract with one case deliberately reversed, and the mismatch is reported as a failure.
         var wrongTrial=server.computeOnServer(s->{var project=session(s,"Alice");var contract=EngineeringContracts.contract(project.blueprint);var cases=new java.util.ArrayList<>(contract.cases());var first=cases.getFirst();var reversed=new java.util.HashMap<String,Boolean>();first.outputs().forEach((name,lit)->reversed.put(name,!lit));cases.set(0,new MechanismCatalog.Vector(first.inputs(),reversed));
