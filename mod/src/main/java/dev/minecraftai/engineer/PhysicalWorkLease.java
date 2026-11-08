@@ -104,7 +104,7 @@ final class PhysicalWorkLease implements AutoCloseable {
     }
     private void validateDependencies(){
         authority();
-        for(var observed:dependencies.entrySet())if(!project.level().getBlockState(observed.getKey()).equals(observed.getValue()))
+        for(var observed:dependencies.entrySet())if(crew==null?!project.level().getBlockState(observed.getKey()).equals(observed.getValue()):!Blueprint.matches(observed.getValue(),project.level().getBlockState(observed.getKey())))
             throw new IllegalStateException("Physical support or path was edited; reconcile before continuing");
     }
     @Override public void close() {

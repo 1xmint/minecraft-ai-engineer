@@ -99,7 +99,7 @@ final class PhysicalCompanions {
             var chest=new BlockPos(Integer.parseInt(crewBuild.group(3)),Integer.parseInt(crewBuild.group(4)),Integer.parseInt(crewBuild.group(5)));
             var job=PhysicalMachineJob.crewBuild(manager,project,binding.actor,binding.pack,crewBuild.group(2),chest,exclusive(project,binding,helper));
             if(helper)helperJobs.put(project.projectId,job);else jobs.put(project.projectId,job);
-            project.tell("Your "+crewBuild.group(1)+" companion took its materials and is building component "+crewBuild.group(2)+" by hand. Say 'dismiss my second companion' or 'dismiss my companion' to stop. Your blocks are left alone.");return true;
+            project.tell("Your "+crewBuild.group(1)+" companion took its materials and is building component "+crewBuild.group(2)+" by hand. Say 'dismiss my second companion' to stop only that one, or 'dismiss my companion' to stop both. Your blocks are left alone.");return true;
         }
         if(gatherRequest || placeRequest || aimRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest || machineRequest){if(helperJobs.containsKey(project.projectId))throw new IllegalStateException("Your second companion is building; stop it before asking for other companion work");var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");
             // An owner message must never settle a placement that is still in flight; each branch below refuses a busy worker.

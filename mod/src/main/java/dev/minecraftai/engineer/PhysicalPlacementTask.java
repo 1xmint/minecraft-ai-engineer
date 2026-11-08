@@ -49,6 +49,7 @@ final class PhysicalPlacementTask implements AutoCloseable {
         if(aim==null && !level.getBlockState(support).is(Blocks.STONE))throw new IllegalStateException("Place retained material within four blocks, in clear air above stone");
         if(aim!=null && (!level.getBlockState(support).equals(aim.supportState()) || !PhysicalActionGate.inertSupport(aim.supportState())))
             throw new IllegalStateException("The planned support at "+support.toShortString()+" must be unchanged stone, cobblestone or dirt; nothing was placed");
+        PhysicalPlacementRecovery.requireNoSiblingPrepared(manager,project,worker.getUUID(),java.util.Set.of(this.target));
         inventory=aim==null?PhysicalPlacementInventory.capture(worker,material):PhysicalPlacementInventory.capture(worker,material).aimed(aim);
         var blocking=level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,new net.minecraft.world.phys.AABB(Vec3.atLowerCornerOf(target),Vec3.atLowerCornerOf(target.offset(1,1,1))));
         if(!blocking.isEmpty()){

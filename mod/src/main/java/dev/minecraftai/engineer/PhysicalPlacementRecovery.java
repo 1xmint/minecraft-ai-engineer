@@ -70,6 +70,23 @@ final class PhysicalPlacementRecovery {
             throw new IllegalStateException("Placement records need operator inspection; no recovery action ran",failed);
         }
     }
+    /** A cell where another crew member's placement is still unexplained stays untouched: building there would make that record unprovable. */
+    static void requireNoSiblingPrepared(ProjectManager manager,EngineeringSession project,UUID worker,java.util.Set<BlockPos> cells){
+        try(var files=Files.list(manager.directory)){
+            for(var file:files.filter(path->path.getFileName().toString().matches(project.projectId+"\\.place-[0-9a-f-]{36}\\.json")).sorted().toList()){
+                if(Files.size(file)>262144)throw new IllegalStateException("oversized");
+                var record=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+                if(!record.get("stage").getAsString().equals("PLACE_PREPARED") || !PhysicalWorkerIdentity.sibling(manager,project,worker,record.get("worker").getAsString()))continue;
+                var target=position(record.getAsJsonObject("target"));
+                if(cells.contains(target))throw new SiblingPlacement(target);
+            }
+        }catch(SiblingPlacement open){
+            throw new IllegalStateException("Your other companion's placement at "+open.target.toShortString()+" is unfinished; recover its resources first. Nothing was taken or placed");
+        }catch(IOException | RuntimeException failed){
+            throw new IllegalStateException("Placement records need operator inspection; no recovery action ran",failed);
+        }
+    }
+    private static final class SiblingPlacement extends RuntimeException{final transient BlockPos target;SiblingPlacement(BlockPos target){super(null,null,false,false);this.target=target;}}
     /** Closes every placement the world and the inventory prove; refuses new work if any remain uncertain. */
     static void requireNone(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
         if(!manager.server.isSameThread())throw new IllegalStateException("Placement recovery needs the server thread");

@@ -37,6 +37,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     /** A crew build's finished dependencies; any later change to them stops the build. */
     private final Map<BlockPos,BlockState> dependencyCells=new LinkedHashMap<>();
     private final PhysicalWorkLease.Crew crew;
+    private final long workerEpoch;
     private PhysicalMoveTask movement;
     private PhysicalPlacementTask place;
     private PhysicalMachineTrial trial;
@@ -62,6 +63,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         plan=PhysicalMachinePlan.of(part.blocks());
         contract=testable(EngineeringContracts.contract(part),plan);
         crew=explicit==null?null:new PhysicalWorkLease.Crew(worker.getUUID(),explicit);
+        workerEpoch=manager.reservations.workerEpoch(manager.scope(project));
         // Last, so a constructor refusal can never leave a claim behind.
         if(crew!=null)claim(assignment);
     }
@@ -69,14 +71,16 @@ final class PhysicalMachineJob implements PhysicalJob {
     private void claim(ComponentAssignments.Task task){
         if("player".equals(task.executor))throw new IllegalStateException("Component "+component+" is assigned to a player; nothing was taken or placed");
         if(task.worker!=null)throw new IllegalStateException("Component "+component+" already has a companion working on it; nothing was taken or placed");
+        var edges=new java.util.HashMap<String,java.util.Collection<String>>();
+        for(var node:ComponentTree.nodes(blueprint))edges.put(node.id(),node.dependsOn());
         for(var node:ComponentTree.nodes(blueprint)){
             if(!node.kind().equals("mechanism"))continue;
             if(!node.id().equals(component)){
-                if(node.dependsOn().contains(component) && project.assignments.task(blueprint,node.id()).worker!=null)
+                if(closure(edges,node.id()).contains(component) && project.assignments.task(blueprint,node.id()).worker!=null)
                     throw new IllegalStateException("Component "+node.id()+" depends on "+component+" and is being built; nothing was taken or placed");
                 continue;
             }
-            for(var dependency:node.dependsOn()){
+            for(var dependency:closure(edges,component)){
                 if(project.assignments.task(blueprint,dependency).worker!=null)throw new IllegalStateException("Component "+component+" depends on "+dependency+", which a companion is still building; nothing was taken or placed");
                 for(var block:ComponentTree.component(blueprint,dependency).blocks()){
                     if(!project.level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),project.level().getBlockState(block.pos())))
@@ -86,6 +90,12 @@ final class PhysicalMachineJob implements PhysicalJob {
             }
         }
         task.worker=worker.getUUID();
+    }
+    /** Everything a component depends on, directly or through other components. */
+    private static java.util.Set<String> closure(java.util.Map<String,java.util.Collection<String>> edges,String start){
+        var found=new java.util.LinkedHashSet<String>();var pending=new java.util.ArrayDeque<>(edges.getOrDefault(start,java.util.List.of()));
+        while(!pending.isEmpty()){var next=pending.pop();if(found.add(next))pending.addAll(edges.getOrDefault(next,java.util.List.of()));}
+        found.remove(start);return found;
     }
     boolean crew(){return crew!=null;}
     String componentName(){return component;}
@@ -109,6 +119,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         exclusive.run();
         var job=new PhysicalMachineJob(manager,project,worker,pack);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
+        PhysicalPlacementRecovery.requireNoSiblingPrepared(manager,project,worker.getUUID(),job.plan.planned().keySet());
         job.observe();job.fence();job.stock(chest,exclusive);
         return job;
     }
@@ -119,6 +130,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         try{
             PhysicalPlacementRecovery.requireNone(manager,project,worker);
             GridCraftTask.requireNoUnresolved(manager,project,worker);
+            PhysicalPlacementRecovery.requireNoSiblingPrepared(manager,project,worker.getUUID(),job.plan.planned().keySet());
             job.observe();job.fence();job.stock(chest,exclusive);
         }catch(RuntimeException refused){job.close();throw refused;}
         return job;
@@ -195,6 +207,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         project.access.require(owner.getUUID(),ProjectAccess.Permission.BUILD);PhysicalWorkLease.requireIdle(project);
         var assignment=project.assignments.task(blueprint,component);
         if(generation!=assignment.generation || !basis.equals(assignment.basis))throw new IllegalStateException("Machine assignment changed; request fresh work after inspection");
+        if(crew!=null && workerEpoch!=manager.reservations.workerEpoch(manager.scope(project)))throw new IllegalStateException("Project authority was withdrawn; the build stopped and needs fresh work after inspection");
         if(crew!=null && !crew.worker().equals(assignment.worker))throw new IllegalStateException("This companion no longer holds component "+component+"; request fresh work after inspection");
         for(var dependency:dependencyCells.entrySet())
             if(!project.level().hasChunkAt(dependency.getKey()) || !Blueprint.matches(dependency.getValue(),project.level().getBlockState(dependency.getKey())))
