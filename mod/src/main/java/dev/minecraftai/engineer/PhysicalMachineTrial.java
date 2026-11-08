@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -26,6 +27,7 @@ final class PhysicalMachineTrial implements AutoCloseable {
     private final ServerLevel level;
     private final MechanismCatalog.Contract contract;
     private final Runnable authority;
+    private final java.util.Map<BlockPos,net.minecraft.world.level.block.state.BlockState> planned;
     private final PhysicalWorkLease lease;
     private final BlockPos start,cell;
     private final Path file;
@@ -36,7 +38,7 @@ final class PhysicalMachineTrial implements AutoCloseable {
     private String failure;
 
     PhysicalMachineTrial(ProjectManager manager,EngineeringSession project,ServerPlayer worker,PhysicalMachinePlan plan,MechanismCatalog.Contract contract,Runnable authority){
-        this.manager=manager;this.worker=worker;level=project.level();this.contract=contract;this.authority=authority;start=worker.blockPosition();cell=plan.cells().getFirst().pos();
+        this.manager=manager;this.worker=worker;level=project.level();this.contract=contract;this.authority=authority;planned=Map.copyOf(plan.planned());start=worker.blockPosition();cell=plan.cells().getFirst().pos();
         authority.run();
         var writes=plan.planned().keySet();var reads=new HashSet<BlockPos>();
         for(var pos:writes)for(var near:BlockPos.betweenClosed(pos.offset(-2,-2,-2),pos.offset(2,2,2))){
@@ -72,6 +74,9 @@ final class PhysicalMachineTrial implements AutoCloseable {
         authority.run();
         if(!worker.blockPosition().equals(start))throw new IllegalStateException("The companion moved during the machine test; no result was recorded");
         if(!worker.getMainHandItem().isEmpty())throw new IllegalStateException("The companion's hand changed during the machine test; no result was recorded");
+        // The lease guards the cells around the machine; its own cells are guarded here, so no result ever describes a different machine.
+        for(var part:planned.entrySet())if(!Blueprint.matches(part.getValue(),level.getBlockState(part.getKey())))
+            throw new IllegalStateException("The machine changed at "+part.getKey().toShortString()+" during the test; no result was recorded");
         lease.validate(cell);
     }
     boolean tick(){
