@@ -2371,7 +2371,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
             say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
-            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");expectChat(context,"Repair proposal ready");
+            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");
             check(view(context)==null,"Diagnosis guidance arrives as ordinary text with no overlay");write("diagnosis-text.done","passed");
             say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
             say(context,"I told Engineer, wait for me.");
@@ -2566,6 +2566,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             for(var task:project.assignments.tasks.values())out.append(task.id).append(task.status).append(task.verified);
             return out.append(project.verified).append(project.state).append(project.journal.size()).append(project.delegation).append(saved(project).getAsJsonArray("functionalEvidence")).toString();});
     }
+    private static Diagnosis.Proposal changedProposal(Diagnosis.Proposal live,long authorization,long generation,java.util.Map<BlockPos,net.minecraft.world.level.block.state.BlockState> observed){
+        return new Diagnosis.Proposal(live.snapshotId(),live.actor(),live.connection(),live.epoch(),live.projectId(),live.revision(),authorization,live.component(),generation,live.componentBasis(),live.componentBasisVersion(),live.expiresAtTick(),observed,live.targets(),live.messages(),live.repairable());
+    }
     private static void diagnosisStates(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         context.waitTicks(25);String before=diagnosisFingerprint(server);
         if(!LIVE_ACCEPTANCE){
@@ -2581,9 +2584,19 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");var alice=player(s,"Alice");
             for(var other:s.getPlayerList().getPlayers())if(!other.getUUID().equals(alice.getUUID())){var seen=project.manager.view(project,other);check(seen==null || seen.blocks().stream().noneMatch(ProjectView.Ghost::diagnosed),"One player's diagnosis tint never reaches another player");}
             var live=project.diagnoses.get(alice.getUUID());check(!Diagnosis.highlight(project,alice).isEmpty(),"The tint starts live");
-            project.diagnoses.put(alice.getUUID(),new Diagnosis.Proposal(live.snapshotId(),live.actor(),live.connection(),live.epoch(),live.projectId(),live.revision(),live.authorization()-1,live.component(),live.assignmentGeneration(),live.componentBasis(),live.componentBasisVersion(),live.expiresAtTick(),live.observed(),live.targets(),live.messages(),live.repairable()));
-            check(Diagnosis.highlight(project,alice).isEmpty(),"A permission change retires the tint");project.diagnoses.put(alice.getUUID(),live);
-            var target=live.targets().getFirst();project.level().setBlock(target.pos(),Blocks.GLASS.defaultBlockState(),2);check(Diagnosis.highlight(project,alice).isEmpty(),"A world change retires the tint");project.level().setBlock(target.pos(),target.before(),2);});
+            var tinted=Diagnosis.highlight(project,alice);
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization()-1,live.assignmentGeneration(),live.observed()));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A permission change retires the tint");
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration()+1,live.observed()));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"An assignment change retires the tint");
+            // Compared against a changed snapshot, so the proof never disturbs the real blocks.
+            var tintedSnapshot=new java.util.LinkedHashMap<>(live.observed());tintedSnapshot.put(live.targets().getFirst().pos(),Blocks.BEDROCK.defaultBlockState());
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration(),tintedSnapshot));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A world change at a tinted cell retires the tint");
+            var marginSnapshot=new java.util.LinkedHashMap<>(live.observed());marginSnapshot.put(live.observed().keySet().stream().filter(cell->!tinted.contains(cell)).findFirst().orElseThrow(),Blocks.BEDROCK.defaultBlockState());
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration(),marginSnapshot));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A world change outside the tinted cells retires the tint, as repair would refuse");
+            project.diagnoses.put(alice.getUUID(),live);check(!Diagnosis.highlight(project,alice).isEmpty(),"The unchanged proposal still tints");});
         await(context,()->view(context)!=null,"Overlay stays connected after the tint checks");
         check(before.equals(diagnosisFingerprint(server)),"The tint checks restored the world");
         write("diagnosis-states.done","passed");

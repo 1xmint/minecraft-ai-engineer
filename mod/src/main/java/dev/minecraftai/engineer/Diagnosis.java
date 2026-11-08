@@ -102,12 +102,17 @@ final class Diagnosis {
         for(var block:selected.blocks()){var actual=proposal.observed().get(block.pos());if(actual==null || !Blueprint.matches(block.state(),actual))differ++;}
         for(var entry:proposal.observed().entrySet()){var entity=s.level().getBlockEntity(entry.getKey());if(entity!=null && !AnalogSafety.observedComparator(selected,entry.getKey(),entry.getValue(),entity))unread++;}
         String evidence=s.assignments.task(s.blueprint,proposal.component()).verified;
+        boolean blocked=proposal.messages().stream().anyMatch(message->message.startsWith("Static repair blocked"));
+        // The same current-evidence rule guidance uses, so a pass-looking string can never read as Verified here.
+        boolean currentPass=ProjectGuidance.evidence(s).stream().anyMatch(e->e.id().equals(proposal.component()) && e.currentPass());
+        boolean noKnownDifference=mechanical?proposal.targets().isEmpty() && !blocked:differ==0;
         var lines=new ArrayList<String>();
         lines.add("Intended (the plan, not a world fact): component '"+proposal.component()+"' has "+selected.blocks().size()+" planned blocks.");
-        lines.add("Observed (server snapshot at tick "+s.server.getTickCount()+"): "+(mechanical?proposal.targets().size()+" static correction(s); pose details follow.":differ+" of "+selected.blocks().size()+" planned blocks differ from the plan; "+proposal.observed().size()+" cells read."));
+        lines.add("Observed (server snapshot at tick "+s.server.getTickCount()+"): "+(mechanical?(blocked?"static corrections were not computed because repair is blocked; pose details follow.":proposal.targets().size()+" static correction(s); pose details follow."):differ+" of "+selected.blocks().size()+" planned blocks differ from the plan; "+proposal.observed().size()+" cells read."));
         lines.add("Unknown: "+(unread>0?unread+" protected block entities were not opened. ":"")+"How it behaves cannot be known from block positions alone.");
-        if(evidence.startsWith("passed:") && (mechanical || differ==0))lines.add("Verified (an earlier functional test, not this diagnosis): "+evidence);
+        if(currentPass && noKnownDifference)lines.add("Verified (an earlier functional test, not this diagnosis): "+evidence);
         else if(evidence.startsWith("passed:") || evidence.startsWith("stale:"))lines.add("Stale: earlier test evidence no longer counts ("+evidence+").");
+        else if(evidence.startsWith("failed"))lines.add("Failed test (an earlier functional test, not this diagnosis): "+evidence);
         else lines.add("Verified: nothing. No current functional test result exists for this component.");
         return lines;
     }
@@ -120,14 +125,16 @@ final class Diagnosis {
                 || !s.access.allows(player.getUUID(),ProjectAccess.Permission.VIEW) || s.blueprint==null)return Set.of();
         Blueprint selected;
         try{selected=ComponentTree.component(s.blueprint,proposal.component());}catch(RuntimeException changed){return Set.of();}
+        var assignment=s.assignments.task(s.blueprint,proposal.component());
+        if(assignment.generation!=proposal.assignmentGeneration() || !assignment.basis.equals(proposal.componentBasis()))return Set.of();
         var cells=new LinkedHashSet<BlockPos>();
         if(ShutterDesign.describes(selected.source()))for(Target target:proposal.targets())cells.add(target.pos());
         else for(var block:selected.blocks()){var seen=proposal.observed().get(block.pos());if(seen==null || !Blueprint.matches(block.state(),seen))cells.add(block.pos());}
         var level=s.level();
-        for(BlockPos cell:cells){
-            var seen=proposal.observed().get(cell);
-            if(seen==null || !level.hasChunkAt(cell) || !level.getBlockState(cell).equals(seen))return Set.of();
-        }
+        // The whole snapshot, not only tinted cells: a tint must not outlive a proposal repair would refuse.
+        for(BlockPos cell:cells)if(!proposal.observed().containsKey(cell))return Set.of();
+        for(var entry:proposal.observed().entrySet())
+            if(!level.hasChunkAt(entry.getKey()) || !level.getBlockState(entry.getKey()).equals(entry.getValue()))return Set.of();
         return cells;
     }
 

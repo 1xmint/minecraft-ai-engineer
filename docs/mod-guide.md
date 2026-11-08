@@ -137,9 +137,9 @@ The targeted repair workflow uses the real loaded world:
    corrections. A fresh diagnosis belongs to your current connection and
    project revision. Any intervening world edit requires another diagnosis.
    Wrong block kinds, inventories and occupied margins require manual action.
-   Each diagnosis opens with what is intended (the plan), observed (this server
+   Each diagnosis also states what is intended (the plan), observed (this server
    snapshot), unknown (behaviour and unopened block entities) and verified or
-   stale (earlier functional tests). With the optional overlay, your own
+   stale or failed (earlier functional tests). With the optional overlay, your own
    diagnosis tints the differing planned cells red. The tint is display only,
    is sent to no other player, and clears on a world or permission change.
    Players without the overlay get the same text. Occupied margin cells are not
