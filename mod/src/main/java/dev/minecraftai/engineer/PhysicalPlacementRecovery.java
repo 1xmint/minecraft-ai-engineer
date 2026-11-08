@@ -48,8 +48,7 @@ final class PhysicalPlacementRecovery {
     private static List<Open> open(ProjectManager manager,EngineeringSession project,UUID worker,JsonArray inventory){
         var found=new ArrayList<Open>();
         try(var files=Files.list(manager.directory)){
-            var records=files.filter(path->path.getFileName().toString().matches(project.projectId+"\\.place-[0-9a-f-]{36}\\.json")).sorted().limit(4097).toList();
-            if(records.size()>4096)throw new IllegalStateException("Too many placement records; operator inspection required");
+            var records=files.filter(path->path.getFileName().toString().matches(project.projectId+"\\.place-[0-9a-f-]{36}\\.json")).sorted().toList();
             for(var file:records){
                 if(Files.size(file)>262144)throw new IllegalStateException("Placement record exceeds recovery inspection limit");
                 var record=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
@@ -61,9 +60,10 @@ final class PhysicalPlacementRecovery {
                 if(!project.contains(target) || !project.level().hasChunkAt(target)){found.add(new Open(file,record,target,Outcome.UNCERTAIN));continue;}
                 var live=project.level().getBlockState(target);var before=record.getAsJsonArray("inventoryBefore");
                 Outcome outcome=inventory!=null && before.equals(inventory) && live.isAir()?Outcome.NOT_PLACED
-                    :inventory!=null && spentOne(before,inventory,record.get("material").getAsString()) && Blueprint.matches(planned,live)?Outcome.PLACED:Outcome.UNCERTAIN;
+                    :inventory!=null && record.has("material") && spentOne(before,inventory,record.get("material").getAsString()) && Blueprint.matches(planned,live)?Outcome.PLACED:Outcome.UNCERTAIN;
                 found.add(new Open(file,record,target,outcome));
             }
+            if(found.size()>4096)throw new IllegalStateException("Too many open placement records; operator inspection required");
             return found;
         }catch(IOException | IllegalArgumentException | UnsupportedOperationException | ClassCastException | NullPointerException | ArithmeticException failed){
             throw new IllegalStateException("Placement records need operator inspection; no recovery action ran",failed);
@@ -76,6 +76,14 @@ final class PhysicalPlacementRecovery {
         for(var entry:pending)if(entry.outcome==Outcome.UNCERTAIN)
             throw new IllegalStateException("An unfinished placement at "+entry.target.toShortString()+" needs inspection before new work. Nothing was taken, placed or retried");
         for(var entry:pending){entry.record.addProperty("stage","RESOLVED_"+entry.outcome);LocalFiles.write(entry.file,entry.record);}
+    }
+    /** The owner's explicit recovery: closes what is proven and records that the owner accepted what is not. Moves nothing and retries nothing. */
+    static void closeForOwner(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
+        if(!manager.server.isSameThread())throw new IllegalStateException("Placement recovery needs the server thread");
+        for(var entry:open(manager,project,worker.getUUID(),PhysicalWorkerStorage.inventory(worker))){
+            entry.record.addProperty("stage",entry.outcome==Outcome.UNCERTAIN?"RESOLVED_UNCERTAIN_BY_OWNER":"RESOLVED_"+entry.outcome);LocalFiles.write(entry.file,entry.record);
+            if(entry.outcome==Outcome.UNCERTAIN)project.tell("The placement at "+entry.target.toShortString()+" stays unexplained and you have closed it. Nothing was created, removed or retried, so check that block and your companion's inventory yourself.");
+        }
     }
     /** Read-only report for the owner, using the live inventory when the companion is present and the saved one otherwise. */
     static void show(ProjectManager manager,EngineeringSession project,ServerPlayer worker){

@@ -1019,6 +1019,22 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         check(countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)+(world.getBlockState(MACHINE_TORCH).is(net.minecraft.world.level.block.Blocks.REDSTONE_WALL_TORCH)?1:0)==1,"The torch is conserved: "+phase);
         check(countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)+(world.getBlockState(MACHINE_LAMP).is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?1:0)==1,"The lamp is conserved: "+phase);
     }
+    private static java.nio.file.Path plantOpenPlacement(net.minecraft.server.MinecraftServer s,UUID worker,BlockPos target,java.util.function.UnaryOperator<com.google.gson.JsonArray> before){
+        var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var body=s.getPlayerList().getPlayer(worker);
+        try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".place-*.json")){
+            for(var file:files){
+                var record=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+                if(record.get("schemaVersion").getAsInt()!=3 || !record.get("stage").getAsString().equals("SAVED_OBSERVATION"))continue;
+                var at=new com.google.gson.JsonObject();at.addProperty("x",target.getX());at.addProperty("y",target.getY());at.addProperty("z",target.getZ());
+                record.addProperty("stage","PLACE_PREPARED");record.add("target",at);record.addProperty("plannedState","minecraft:stone");record.addProperty("material","minecraft:stone");record.add("inventoryBefore",before.apply(PhysicalWorkerStorage.inventory(body)));
+                var planted=manager.directory.resolve(project.projectId+".place-"+UUID.randomUUID()+".json");LocalFiles.write(planted,record);return planted;
+            }
+        }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+        throw new AssertionError("The machine build should have left a real saved placement record");
+    }
+    private static String placementStage(java.nio.file.Path file){
+        try{return com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("stage").getAsString();}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+    }
     /** Starts a real NOT gate from a chest, proves a player's block stops it, resumes, and leaves the job running so the server restart cuts it off. */
     private static MachineEvidence physicalMachineBuildFlow(ClientGameTestContext context,TestDedicatedServerContext server){
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
@@ -1082,8 +1098,26 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runCommand("setblock 3647 101 5 minecraft:redstone_wall_torch[facing=east,lit=false]");
         MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"Machine test failed: passed 2 of 3 cases",60_000);
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var stages=new java.util.ArrayList<String>();
-            try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));stages.add(com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject().get("stage").getAsString());}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
-            java.util.Collections.sort(stages);check(stages.equals(java.util.List.of("FAILED","FAILED","PASSED")),"The pass and both failures each leave exactly one record, got "+stages);});
+            try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));var trial=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();stages.add(trial.get("stage").getAsString()+":"+(trial.has("passed")?String.valueOf(trial.get("passed").getAsInt()):"geometry"));}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            java.util.Collections.sort(stages);check(stages.equals(java.util.List.of("FAILED:2","FAILED:geometry","PASSED:3")),"The pass and both failures each leave exactly one record with the right score, got "+stages);});
+        // Placements a crash left open, built from this run's real saved record: each is settled only by what the world and inventory prove.
+        var empty=new BlockPos(3650,101,5);
+        server.runCommand("setblock 3647 101 5 minecraft:air");
+        var notPlaced=server.computeOnServer(s->plantOpenPlacement(s,worker,empty,inventory->inventory));
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"no block was placed and the material is still held");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled");
+        server.runOnServer(s->check(placementStage(notPlaced).equals("RESOLVED_NOT_PLACED"),"A placement that never happened is closed as not placed"));
+        var placed=server.computeOnServer(s->plantOpenPlacement(s,worker,MACHINE_STONE,inventory->{var copy=inventory.deepCopy();for(var slot:copy){var stack=slot.getAsJsonObject();if(stack.has("id") && stack.get("id").getAsString().equals("minecraft:stone")){stack.addProperty("count",stack.get("count").getAsInt()+1);return copy;}}throw new AssertionError("The companion should still hold stone");}));
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"the planned block is there and one item was used");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled");
+        server.runOnServer(s->check(placementStage(placed).equals("RESOLVED_PLACED"),"A placement the block and inventory both prove is closed as placed"));
+        var uncertain=server.computeOnServer(s->plantOpenPlacement(s,worker,empty,inventory->{var copy=inventory.deepCopy();var dirt=new com.google.gson.JsonObject();dirt.addProperty("id","minecraft:dirt");dirt.addProperty("count",1);copy.set(20,dirt);return copy;}));
+        MESSAGES.clear();say(context,"Engineer, inspect companion recovery");expectChat(context,"the block and the inventory do not agree");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"needs inspection before new work");
+        server.runOnServer(s->check(placementStage(uncertain).equals("PLACE_PREPARED") && countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.STONE)==4,"An unprovable placement stops new work and moves nothing"));
+        MESSAGES.clear();say(context,"Engineer, recover companion crafting resources");expectChat(context,"stays unexplained and you have closed it");
+        MESSAGES.clear();say(context,"Engineer, test this machine");expectChat(context,"so no lever was pulled");
+        server.runOnServer(s->check(placementStage(uncertain).equals("RESOLVED_UNCERTAIN_BY_OWNER") && countItem(s.getPlayerList().getPlayer(worker),net.minecraft.world.item.Items.STONE)==4,"Only the owner's explicit recovery closes an unprovable placement, and it moves nothing"));
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-machine-build.done","passed");
     }

@@ -76,6 +76,7 @@ final class PhysicalMachineTrial implements AutoCloseable {
     }
     boolean tick(){
         validate();
+        if(applied)requireInputsHeld();
         if(waiting>0){waiting--;return false;}
         if(applied){
             observe();applied=false;index++;
@@ -92,6 +93,15 @@ final class PhysicalMachineTrial implements AutoCloseable {
             var state=level.getBlockState(port.pos());
             if(!state.is(Blocks.LEVER))throw new IllegalStateException("Input "+port.name()+" is no longer a lever; no result was recorded");
             if(state.getValue(BlockStateProperties.POWERED)!=desired.booleanValue())pull(port.pos(),desired);
+        }
+    }
+    /** A lever someone else flipped during the settle window would make the result describe inputs that were never tested. */
+    private void requireInputsHeld(){
+        var vector=contract.cases().get(index);
+        for(var port:contract.ports()){
+            if(!port.input())continue;
+            var state=level.getBlockState(port.pos());
+            if(!state.is(Blocks.LEVER) || state.getValue(BlockStateProperties.POWERED)!=vector.inputs().get(port.name()).booleanValue())throw new IllegalStateException("The lever at "+port.pos().toShortString()+" changed during the machine test; no result was recorded");
         }
     }
     private void pull(BlockPos lever,boolean desired){
