@@ -47,7 +47,7 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
         PhysicalCraftGuard.requireRunning(worker);lease.validateMovement(occupancy);exclusive.run();
         if(worker.level()!=level || worker.connection!=connection || !PhysicalActionGate.exactConnection(worker) || !worker.isAlive()
             || !worker.position().equals(origin) || !worker.getBoundingBox().equals(box) || worker.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL)throw new IllegalStateException("Physical inventory body or connection changed");
-        if(table!=null && (!level.hasChunkAt(table) || !level.getBlockState(table).is(expected)))throw new IllegalStateException(occupy?"The companion's chest changed; stop and preserve resources":"The companion's crafting table changed; stop and preserve resources");
+        if(table!=null && (!level.hasChunkAt(table) || !level.getBlockState(table).is(expected)))throw new IllegalStateException(expected==Blocks.CHEST?"The companion's chest changed; stop and preserve resources":"The companion's crafting table changed; stop and preserve resources");
     }
     @Override public void close(){lease.close();}
 }
