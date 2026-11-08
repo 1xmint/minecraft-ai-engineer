@@ -19,7 +19,7 @@ final class PhysicalCompanions {
     private final Map<UUID,Binding> actors=new HashMap<>();
     private final Map<UUID,PhysicalResourceTask> gathering=new HashMap<>();
     private final Map<UUID,PhysicalPlacementTask> placing=new HashMap<>();
-    private final Map<UUID,PhysicalBlueprintJob> jobs=new HashMap<>();
+    private final Map<UUID,PhysicalJob> jobs=new HashMap<>();
     PhysicalCompanions(ProjectManager manager){this.manager=manager;}
     /** The bounded table recipe a request names, accepting an optional "at your crafting table". */
     static TableCraftSequence.Recipe tableRecipe(String text){
@@ -49,17 +49,19 @@ final class PhysicalCompanions {
         var chestTake=java.util.regex.Pattern.compile("take (\\d{1,2}) ([a-z_]+(?: [a-z_]+)*) from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean chestRequest=chestTake.matches();
         boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null || chestRequest;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
-        if(!gatherRequest && !placeRequest && !aimRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
+        var machineChest=java.util.regex.Pattern.compile("build this machine from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean machineFromChest=machineChest.matches();
+        boolean machineTest=text.equals("test this machine");boolean machineRequest=machineFromChest || machineTest || text.equals("build this machine");
+        if(!gatherRequest && !placeRequest && !aimRequest && !blueprintRequest && !jobRequest && !craftRequest && !recoveryRequest && !machineRequest && !Set.of("summon my companion","dismiss my companion","where is my companion","inspect companion recovery","what happened to my gathered resources").contains(text))return false;
         project.access.require(project.actor(),ProjectAccess.Permission.VIEW);
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);
-            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
+            project.tell(binding==null?"No physical companion is present for this project.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.get(project.projectId) instanceof PhysicalMachineJob?". It is building and testing your machine.":jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."));return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
-        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null){GridCraftRecord.show(manager,project,shown.actor);TableCraftRecord.show(manager,project,shown.actor);ChestTakeRecord.show(manager,project,shown.actor);}return true;}
-        if(gatherRequest || placeRequest || aimRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);}}
-        if(craftRequest || recoveryRequest){
+        if(text.equals("inspect companion recovery") || text.equals("what happened to my gathered resources")){PhysicalGatherInspection.show(manager,project);PhysicalCraftInspection.show(manager,project);var shown=actors.get(project.projectId);if(shown!=null){GridCraftRecord.show(manager,project,shown.actor);TableCraftRecord.show(manager,project,shown.actor);ChestTakeRecord.show(manager,project,shown.actor);}PhysicalPlacementRecovery.show(manager,project,shown==null?null:shown.actor);return true;}
+        if(gatherRequest || placeRequest || aimRequest || blueprintRequest || jobRequest || craftRequest || recoveryRequest || machineRequest){var binding=actors.get(project.projectId);if(binding!=null){if(PhysicalCraftGuard.active(binding.actor))throw new IllegalStateException("Companion crafting must stop and preserve resources before new work");if(!recoveryRequest)PhysicalWorkerMenus.requireSettled(binding.actor);if(!craftRequest && !recoveryRequest)GridCraftTask.requireNoUnresolved(manager,project,binding.actor);if(!recoveryRequest)PhysicalPlacementRecovery.requireNone(manager,project,binding.actor);}}
+        if(craftRequest || recoveryRequest || machineRequest){
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             Runnable exclusive=()->{
                 var owner=manager.server.getPlayerList().getPlayer(project.owner);
@@ -69,8 +71,15 @@ final class PhysicalCompanions {
                     || gathering.containsKey(project.projectId) || placing.containsKey(project.projectId) || jobs.containsKey(project.projectId))
                     throw new IllegalStateException("Inventory work needs your current idle companion; stop other work and request it again");
             };
+            if(machineRequest){
+                var job=machineTest?PhysicalMachineJob.test(manager,project,binding.actor,binding.pack,exclusive)
+                    :PhysicalMachineJob.build(manager,project,binding.actor,binding.pack,machineFromChest?new BlockPos(Integer.parseInt(machineChest.group(1)),Integer.parseInt(machineChest.group(2)),Integer.parseInt(machineChest.group(3))):null,exclusive);
+                if(job==null)return true;
+                jobs.put(project.projectId,job);
+                project.tell(machineTest?"Your companion is testing this machine by pulling its real levers. Say 'dismiss my companion' to stop.":"Your companion is building this machine from real items, by hand, one block at a time. Say 'dismiss my companion' to stop. Your blocks are left alone.");return true;
+            }
             if(recoveryRequest){
-                exclusive.run();var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var table=TableCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var chest=ChestTakeRecord.unresolvedForRecovery(manager,project,binding.actor);
+                exclusive.run();PhysicalPlacementRecovery.closeForOwner(manager,project,binding.actor);var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var table=TableCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var chest=ChestTakeRecord.unresolvedForRecovery(manager,project,binding.actor);
                 if((original!=null?1:0)+(grid!=null?1:0)+(table!=null?1:0)+(chest!=null?1:0)>1)throw new IllegalStateException("Several unfinished crafting records need operator inspection; none was selected");
                 if(original==null && grid==null && table==null && chest==null){project.tell("No unfinished crafting resources need recovery. No items were moved.");return true;}
                 if(chest!=null)ChestTakeTask.recover(manager,project,binding.actor,chest,exclusive);
@@ -268,7 +277,7 @@ final class PhysicalCompanions {
             var job=jobs.get(project.projectId);if(job!=null){
                 try{if(job.tick()){
                     jobs.remove(project.projectId);actors.put(project.projectId,new Binding(project,binding.owner,binding.ownerConnection,binding.revision,binding.authorization,binding.actor,binding.pack,binding.actor.blockPosition()));
-                }}catch(RuntimeException stopped){dismiss(project.projectId);projectMessage(binding,"Blueprint job stopped. Inspect the blueprint and resources before a fresh request: "+stopped.getMessage());}
+                }}catch(RuntimeException stopped){dismiss(project.projectId);projectMessage(binding,(job instanceof PhysicalMachineJob?"Machine job":"Blueprint job")+" stopped. Inspect the blueprint and resources before a fresh request: "+stopped.getMessage());}
                 continue;
             }
             var task=gathering.get(project.projectId);if(task!=null)try{
