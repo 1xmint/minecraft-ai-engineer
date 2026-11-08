@@ -30,8 +30,9 @@ final class ChestTakeTask {
         var storage=ChestTakeSequence.takeable(worker.level(),chest);
         var initial=ChestTakeSequence.capture(worker,storage);
         var planned=ChestTakeSequence.plan(initial,item,count);
-        ChestTakeRecord record=null;RuntimeException reported=null;PhysicalCraftGuard.begin(worker);
+        ChestTakeRecord record=null;RuntimeException reported=null;
         ChestTakeRecord.requireNoSiblingTake(manager,project,worker.getUUID(),chest);
+        PhysicalCraftGuard.begin(worker);
         try(var work=PhysicalInventoryAuthority.chest(manager,project,worker,exclusive,chest,crew)){
             Runnable authority=work::validate;authority.run();
             // Chest chunk first, then the companion: any crash point restores at most the pre-take chest with the post-take companion missing the stack, never both holding it.

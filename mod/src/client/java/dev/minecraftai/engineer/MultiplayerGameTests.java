@@ -1100,6 +1100,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var take=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);var file=manager.directory.resolve(session(s,"Alice").projectId+".chesttake-"+UUID.randomUUID()+".json");var record=new com.google.gson.JsonObject();record.addProperty("kind",ChestTakeRecord.TAKE);record.addProperty("worker",crew.first().toString());record.addProperty("stage","PREPARED");var at=new com.google.gson.JsonArray();at.add(CREW_CHEST_B.getX());at.add(CREW_CHEST_B.getY());at.add(CREW_CHEST_B.getZ());record.add("chest",at);LocalFiles.write(file,record);return file;});
         MESSAGES.clear();say(context,"Engineer, have my second companion build c from the chest at 3720 101 1");expectChat(context,"unfinished take from this chest");
         Files.delete(take);
+        server.runOnServer(s->check(!PhysicalCraftGuard.active(s.getPlayerList().getPlayer(crew.second())),"A refused take leaves the companion free to stop and be dismissed"));
         server.runOnServer(s->{var box=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(CREW_CHEST_B);check(box.getItem(1).getCount()==1 && box.getItem(2).getCount()==1 && box.getItem(3).getCount()==1 && crewClaim(s,"c")==null,"Another worker's open record moves nothing");});
         // Losing one worker stops only that worker; the other finishes.
         var lost=crewStage(context,server);crewStart(context,server,lost);
