@@ -475,7 +475,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         var config=properties();String savedProject,savedWorld;UUID savedEpoch,oldActor;OakRecovery oakRecovery,conversationCraft;
         var interruptedCrafts=new java.util.ArrayList<CraftFailureRecovery>();
         var recoveredCrafts=new java.util.ArrayList<CraftFailureRecovery>();
-        var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];var machineBuild=new MachineEvidence[1];
+        var crewBeforeRestart=new CrewEvidence[1];var gridCraft=new GridCraftEvidence[1];var tablePlacement=new TablePlacementEvidence[1];var tableCraft=new GridCraftEvidence[1];var chestTake=new ChestTakeEvidence[1];var machineBuild=new MachineEvidence[1];
         UUID resourceWorker=UUID.randomUUID();String resourceName="Wkr_"+resourceWorker.toString().substring(0,8);
         try(var server=context.worldBuilder().createServer(config)){
             server.runOnServer(s->{check(!s.isSingleplayer(),"Companion chat proof runs on an actual dedicated server");s.setUsingWhitelist(false);s.setEnforceWhitelist(false);});
@@ -820,6 +820,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
             server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-chest-take-restarted.done","passed");
             physicalMachineRestartFlow(context,server,machineBuild[0]);
+            physicalCrewFlow(context,server);
+            crewBeforeRestart[0]=physicalCrewBeforeRestart(context,server);
+        }
+        try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
+            physicalCrewRestartFlow(context,server,crewBeforeRestart[0]);
         }
     }
     private record CraftFailureRecovery(String project,UUID worker,com.google.gson.JsonObject resources,int step) { }
@@ -1008,6 +1013,132 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     /** At its own placed table the companion crafts a lever, a redstone torch and a redstone lamp, consuming exactly their recipes; a missing input moves nothing. */
     private record MachineEvidence(String project,UUID worker) { }
+    private record CrewEvidence(UUID first,UUID second) { }
+    private static final BlockPos CREW_A=new BlockPos(3706,101,5),CREW_B=new BlockPos(3722,101,5),CREW_C=new BlockPos(3730,101,5),CREW_CHEST_A=new BlockPos(3704,101,1),CREW_CHEST_B=new BlockPos(3720,101,1);
+    private static final String CREW_BUILD_A="Engineer, have my first companion build a from the chest at 3704 101 1",CREW_BUILD_B="Engineer, have my second companion build b from the chest at 3720 101 1";
+    private static void crewStock(TestDedicatedServerContext server,BlockPos chest) throws Exception {
+        String at=chest.getX()+" "+chest.getY()+" "+chest.getZ();
+        server.runCommand("setblock "+at+" minecraft:chest");
+        server.runCommand("item replace block "+at+" container.0 with minecraft:stone 5");
+        server.runCommand("item replace block "+at+" container.1 with minecraft:lever 1");
+        server.runCommand("item replace block "+at+" container.2 with minecraft:redstone_torch 1");
+        server.runCommand("item replace block "+at+" container.3 with minecraft:redstone_lamp 1");
+    }
+    private static void crewDismissAny(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        if(server.computeOnServer(s->s.getPlayerList().getPlayers().stream().anyMatch(p->p.getGameProfile().name().startsWith("Eng_")))){MESSAGES.clear();say(context,"Engineer, dismiss my companion");server.waitFor(s->s.getPlayerList().getPlayers().stream().noneMatch(p->p.getGameProfile().name().startsWith("Eng_")));}
+    }
+    /** Each scenario gets a fresh project, so its two companions start empty and share no history with the last one. */
+    private static CrewEvidence crewStage(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        crewDismissAny(context,server);
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3696 -16 3744 32");server.runCommand("fill 3700 101 0 3738 103 10 minecraft:air");server.runCommand("fill 3700 100 0 3738 100 14 minecraft:stone");
+        server.runCommand("tp Alice 3717.5 101 13 180 0");
+        send(context,"engineer select1 3700 100 0");send(context,"engineer select2 3738 103 10");server.waitFor(s->new BlockPos(3738,103,10).equals(session(s,"Alice").corner2));
+        crewStock(server,CREW_CHEST_A);crewStock(server,CREW_CHEST_B);
+        server.runOnServer(s->{var project=session(s,"Alice");project.accept(ComponentTree.compose(project.worldId,project.dimension,CREW_A,0,com.google.gson.JsonParser.parseString("""
+            [{"id":"root","kind":"group"},
+             {"id":"a","parent":"root","kind":"mechanism","template":"not-gate","anchor":{"x":0,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]},
+             {"id":"b","parent":"root","kind":"mechanism","template":"not-gate","anchor":{"x":16,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":[]},
+             {"id":"c","parent":"root","kind":"mechanism","template":"not-gate","anchor":{"x":24,"y":0,"z":0},"rotation":0,"parameters":{"delay":1},"dependsOn":["a"]}]
+            """).getAsJsonArray()));});
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID first=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        MESSAGES.clear();say(context,"Engineer, summon a second companion at 3717 101 1");expectChat(context,"Your second companion is here");
+        UUID second=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_") && !p.getUUID().equals(first)).findFirst().orElseThrow().getUUID());
+        return new CrewEvidence(first,second);
+    }
+    private static int crewPlaced(MinecraftServer s,BlockPos at){var world=s.overworld();int placed=0;for(var cell:java.util.List.of(at,at.above(),at.east(),at.east(2)))if(!world.getBlockState(cell).isAir())placed++;return placed;}
+    private static UUID crewClaim(MinecraftServer s,String component){var project=session(s,"Alice");return project.assignments.task(project.blueprint,component).worker;}
+    private static boolean crewOverlap(MinecraftServer s,CrewEvidence crew){return crew.first().equals(crewClaim(s,"a")) && crew.second().equals(crewClaim(s,"b")) && crewPlaced(s,CREW_A)>=1 && crewPlaced(s,CREW_B)>=1;}
+    private static void crewUntouched(MinecraftServer s,UUID worker,BlockPos chest,String phase){
+        var body=s.getPlayerList().getPlayer(worker);var box=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(chest);
+        check(body.getInventory().isEmpty() && box.getItem(0).getCount()==5 && box.getItem(1).getCount()==1 && box.getItem(2).getCount()==1 && box.getItem(3).getCount()==1,"Nothing moved: "+phase);
+        check(crewClaim(s,"a")==null && crewClaim(s,"b")==null && crewClaim(s,"c")==null,"A refusal leaves no claim behind: "+phase);
+    }
+    /** One worker's five stone, lever, torch and lamp are all in its own hands, its own chest or its own machine: nothing lost, invented or crossed over. */
+    private static void crewConserved(MinecraftServer s,UUID worker,BlockPos chest,BlockPos at,String phase){
+        var world=s.overworld();var body=s.getPlayerList().getPlayer(worker);var box=(net.minecraft.world.level.block.entity.ChestBlockEntity)world.getBlockEntity(chest);
+        int inChest=0;for(int slot=0;slot<box.getContainerSize();slot++)inChest+=box.getItem(slot).getCount();check(inChest==0,"The chest was drawn only by its own worker: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.STONE)+(world.getBlockState(at).is(net.minecraft.world.level.block.Blocks.STONE)?1:0)==5,"Five stone are accounted for: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.LEVER)+(world.getBlockState(at.above()).is(net.minecraft.world.level.block.Blocks.LEVER)?1:0)==1,"The lever is accounted for: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)+(world.getBlockState(at.east()).is(net.minecraft.world.level.block.Blocks.REDSTONE_WALL_TORCH)?1:0)==1,"The torch is accounted for: "+phase);
+        check(countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)+(world.getBlockState(at.east(2)).is(net.minecraft.world.level.block.Blocks.REDSTONE_LAMP)?1:0)==1,"The lamp is accounted for: "+phase);
+    }
+    private static void crewStart(ClientGameTestContext context,TestDedicatedServerContext server,CrewEvidence crew) throws Exception {
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        MESSAGES.clear();say(context,CREW_BUILD_A);expectChat(context,"Your first companion took its materials");
+        MESSAGES.clear();say(context,CREW_BUILD_B);expectChat(context,"Your second companion took its materials");
+        server.waitFor(s->crewOverlap(s,crew));
+    }
+    private static void physicalCrewFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var crew=crewStage(context,server);
+        // Refused before anything moves: an unbuilt dependency and a chest another worker has reserved.
+        MESSAGES.clear();say(context,"Engineer, have my second companion build c from the chest at 3720 101 1");expectChat(context,"depends on a, which is not built yet");
+        server.runOnServer(s->crewUntouched(s,crew.second(),CREW_CHEST_B,"unbuilt dependency"));
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");manager.reservations.acquire(manager.scope(project,crew.first()),crew.first(),project.blueprint.revision(),project.access.revision(),ProjectAccess.Permission.BUILD,java.util.Set.of(CREW_CHEST_B),java.util.Set.of(),s.getTickCount());});
+        MESSAGES.clear();say(context,CREW_BUILD_B);expectChat(context,"Another assignment reserves this region");
+        server.runOnServer(s->{crewUntouched(s,crew.second(),CREW_CHEST_B,"reserved chest");var manager=EngineerMod.managerFor(s);manager.reservations.revoke(manager.scope(session(s,"Alice"),crew.first()));});
+        // Two workers cannot hold one component, then real disjoint work overlaps.
+        server.runOnServer(s->s.tickRateManager().setTickRate(5f));
+        MESSAGES.clear();say(context,CREW_BUILD_A);expectChat(context,"Your first companion took its materials");
+        MESSAGES.clear();say(context,"Engineer, have my second companion build a from the chest at 3720 101 1");expectChat(context,"already has a companion working on it");
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(crew.second()).getInventory().isEmpty(),"A refused duplicate claim takes nothing"));
+        MESSAGES.clear();say(context,CREW_BUILD_B);expectChat(context,"Your second companion took its materials");
+        server.waitFor(s->crewOverlap(s,crew));
+        // The owner is still answered while both are mid-build, and the question changes nothing.
+        MESSAGES.clear();say(context,"Engineer, where is my companion");expectChat(context,"It is building component b");
+        var overlap=server.computeOnServer(s->{var out=new com.google.gson.JsonObject();out.addProperty("tick",s.getTickCount());out.addProperty("first",crew.first().toString());out.addProperty("second",crew.second().toString());out.addProperty("firstClaim",String.valueOf(crewClaim(s,"a")));out.addProperty("secondClaim",String.valueOf(crewClaim(s,"b")));out.addProperty("firstPlaced",crewPlaced(s,CREW_A));out.addProperty("secondPlaced",crewPlaced(s,CREW_B));return out;});
+        Files.writeString(directory().resolve("crew-overlap.json"),overlap.toString());
+        server.runOnServer(s->s.tickRateManager().setTickRate(20f));
+        expectChat(context,"Component a: Machine test passed",180_000);expectChat(context,"Component b: Machine test passed",180_000);
+        server.runOnServer(s->{crewConserved(s,crew.first(),CREW_CHEST_A,CREW_A,"first worker");crewConserved(s,crew.second(),CREW_CHEST_B,CREW_B,"second worker");check(crewClaim(s,"a")==null && crewClaim(s,"b")==null,"A finished build releases its claim");});
+        // Another worker's unexplained placement or chest take keeps its cell and chest off limits.
+        var planted=server.computeOnServer(s->{var file=plantOpenPlacement(s,crew.first(),CREW_C,inventory->inventory);try{var record=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();record.addProperty("worker",crew.first().toString());LocalFiles.write(file,record);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}return file;});
+        server.runCommand("tp "+crew.second()+" 3717.5 101 2.5");crewStock(server,CREW_CHEST_B);
+        MESSAGES.clear();say(context,"Engineer, have my second companion build c from the chest at 3720 101 1");expectChat(context,"placement at 3730, 101, 5 is unfinished");
+        Files.delete(planted);
+        var take=server.computeOnServer(s->{var manager=EngineerMod.managerFor(s);var file=manager.directory.resolve(session(s,"Alice").projectId+".chesttake-"+UUID.randomUUID()+".json");var record=new com.google.gson.JsonObject();record.addProperty("kind",ChestTakeRecord.TAKE);record.addProperty("worker",crew.first().toString());record.addProperty("stage","PREPARED");var at=new com.google.gson.JsonArray();at.add(CREW_CHEST_B.getX());at.add(CREW_CHEST_B.getY());at.add(CREW_CHEST_B.getZ());record.add("chest",at);LocalFiles.write(file,record);return file;});
+        MESSAGES.clear();say(context,"Engineer, have my second companion build c from the chest at 3720 101 1");expectChat(context,"unfinished take from this chest");
+        Files.delete(take);
+        server.runOnServer(s->{var box=(net.minecraft.world.level.block.entity.ChestBlockEntity)s.overworld().getBlockEntity(CREW_CHEST_B);check(box.getItem(1).getCount()==1 && box.getItem(2).getCount()==1 && box.getItem(3).getCount()==1 && crewClaim(s,"c")==null,"Another worker's open record moves nothing");});
+        // Losing one worker stops only that worker; the other finishes.
+        var lost=crewStage(context,server);crewStart(context,server,lost);
+        var frozen=server.computeOnServer(s->{var manager=s;manager.getPlayerList().remove(s.getPlayerList().getPlayer(lost.second()));return crewPlaced(s,CREW_B);});
+        expectChat(context,"second companion was lost");
+        server.runOnServer(s->{check(crewClaim(s,"b")==null,"A lost worker gives up its claim");check(lost.first().equals(crewClaim(s,"a")),"The other worker keeps its claim");s.tickRateManager().setTickRate(20f);});
+        expectChat(context,"Component a: Machine test passed",180_000);
+        server.runOnServer(s->{check(crewPlaced(s,CREW_B)==frozen,"Nothing is placed for a lost worker");crewConserved(s,lost.first(),CREW_CHEST_A,CREW_A,"surviving worker");});
+        // Withdrawing project authority stops both, even between two leases.
+        var revoked=crewStage(context,server);crewStart(context,server,revoked);
+        MESSAGES.clear();server.runOnServer(s->{var manager=EngineerMod.managerFor(s);manager.reservations.revokeWorkers(manager.scope(session(s,"Alice")));});
+        expectChat(context,"Second companion's machine job stopped");expectChat(context,"Machine job stopped");
+        server.runOnServer(s->{check(crewClaim(s,"a")==null && crewClaim(s,"b")==null,"Withdrawn authority releases both claims");s.tickRateManager().setTickRate(20f);});
+        // A stop request halts both while they are working.
+        var stopped=crewStage(context,server);crewStart(context,server,stopped);
+        say(context,"Engineer, stop");server.waitFor(s->crewClaim(s,"a")==null && crewClaim(s,"b")==null);
+        var still=server.computeOnServer(s->{s.tickRateManager().setTickRate(20f);return crewPlaced(s,CREW_A)+crewPlaced(s,CREW_B);});context.waitTicks(40);
+        server.runOnServer(s->check(crewPlaced(s,CREW_A)+crewPlaced(s,CREW_B)==still,"A stopped crew places nothing more"));
+        write("physical-crew.done","passed");
+    }
+    /** Leaves both workers mid-build so the real restart below has something it must not resume. */
+    private static CrewEvidence physicalCrewBeforeRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        var crew=crewStage(context,server);crewStart(context,server,crew);return crew;
+    }
+    private static void physicalCrewRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,CrewEvidence crew) throws Exception {
+        int[] before=server.computeOnServer(s->new int[]{crewPlaced(s,CREW_A),crewPlaced(s,CREW_B)});
+        context.waitTicks(60);
+        server.runOnServer(s->{var project=session(s,"Alice");check(s.getPlayerList().getPlayer(crew.second())==null,"A restart never brings the second worker back by itself");
+            check(crewClaim(s,"a")==null && crewClaim(s,"b")==null,"A restart restores no claim");check(project.delegation==null && !project.access.allows(crew.first(),ProjectAccess.Permission.BUILD) && !project.access.allows(crew.second(),ProjectAccess.Permission.BUILD),"A restart restores no permission");
+            check(crewPlaced(s,CREW_A)==before[0] && crewPlaced(s,CREW_B)==before[1],"A restart replays no action");});
+        crewDismissAny(context,server);
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        MESSAGES.clear();say(context,"Engineer, summon a second companion at 3717 101 1");expectChat(context,"Your second companion is here");
+        // Only an explicit new request continues, and it spends what the worker already carries.
+        MESSAGES.clear();say(context,CREW_BUILD_B);expectChat(context,"Component b: Machine test passed",180_000);
+        server.runOnServer(s->crewConserved(s,crew.second(),CREW_CHEST_B,CREW_B,"restarted second worker"));
+        crewDismissAny(context,server);
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-crew-restarted.done","passed");
+    }
     private static final BlockPos MACHINE_STONE=new BlockPos(3646,101,5),MACHINE_LEVER=new BlockPos(3646,102,5),MACHINE_TORCH=new BlockPos(3647,101,5),MACHINE_LAMP=new BlockPos(3648,101,5),MACHINE_CHEST=new BlockPos(3644,101,1);
     /** Every fixture item is either still in the chest, held by the companion, or standing in the machine: none lost, none invented. */
     private static void assertMachineConserved(net.minecraft.server.MinecraftServer s,UUID worker,String phase){
