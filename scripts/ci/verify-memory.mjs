@@ -473,6 +473,7 @@ try {
       "conversation-reconnect.done",
       "conversation-restart-prepared.done",
       "conversation-restart.done",
+      "older-memory-recall.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),

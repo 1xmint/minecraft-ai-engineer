@@ -1891,12 +1891,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 recoverConversationReconnect(context,server);
                 prepareConversationRestart(context,server);
                 prepareMemoryRecoveryServerRestart(server);
+                prepareOlderMemoryRecall(context,server);
             }
           }
         }
         if(!LIVE_ACCEPTANCE) {
             try(TestDedicatedServerContext server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,properties));
                 TestDedicatedServerConnection connection=server.connect()) {
+                recoverOlderMemoryRecall(context,server);
                 recoverConversationRestart(context,server);
                 recoverMemoryRecoveryServerRestart(context,server);
                 structuralReplanRecovery(context,server);
@@ -4012,6 +4014,24 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,"Engineer, yes");expectChat(context,"There is no current proposal");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.manager.epoch.toString().equals(read("conversation-disconnect-epoch")) && !project.manager.connectionId(player(s,"Alice")).equals(read("conversation-disconnect-stamp")) && project.journal.isEmpty() && project.delegation==null && !project.undoRequested && project.testTick<0,"A real reconnect in the same server epoch cannot revive the previous connection's chat approval");});
         write("conversation-reconnect.done","passed");
+    }
+    private static void prepareOlderMemoryRecall(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        send(context,"engineer select1 7300 100 0");send(context,"engineer select2 7305 101 0");send(context,"engineer reference signal-lamp");server.waitFor(s->session(s,"Alice").blueprint!=null);
+        write("older-memory-project",server.computeOnServer(s->session(s,"Alice").projectId.toString()));
+        MESSAGES.clear();memorySay(context,"Engineer, remember our decision: Route the gold clock along the south wall");expectChat(context,"knowledge revision 1");
+        MESSAGES.clear();memorySay(context,"Engineer, replace decision 1: Route the gold clock along the north wall because the east wall holds the door");expectChat(context,"knowledge revision 2. Reason kept. Replaces note 1.");
+        for(int note=3;note<=35;note++){MESSAGES.clear();memorySay(context,"Engineer, remember my goal: Unrelated filler marker "+note);expectChat(context,"knowledge revision "+note);}
+    }
+    /** A later session on a real saved-server boot, past the newest-32 window. */
+    private static void recoverOlderMemoryRecall(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        String id=read("older-memory-project");send(context,"engineer project use "+id);
+        server.waitFor(s->id.equals(String.valueOf(EngineerMod.managerFor(s).selections.get(player(s,"Alice").getUUID()))));
+        MESSAGES.clear();send(context,"engineer discuss CI recall the gold clock route.");expectChat(context,"AI explanation | design revision");expectChat(context,"Route the gold clock along the north wall, because the east wall holds the door.");
+        check(MESSAGES.stream().noneMatch(message->message.contains("south wall")),"A replaced note stays history");
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested") && saved(project).getAsJsonArray("functionalEvidence").isEmpty(),"Recalled notes create no world work or verified evidence");});
+        write("older-memory-recall.done","passed");
     }
     private static void prepareConversationRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         conversationProposal(context,"CI propose stopping the selected project.");
