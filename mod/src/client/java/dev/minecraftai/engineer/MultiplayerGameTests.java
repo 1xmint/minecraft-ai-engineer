@@ -968,7 +968,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         for(int direction:new int[]{1,-1}){
             BlockPos log=server.computeOnServer(s->{var at=s.getPlayerList().getPlayer(worker).blockPosition();
                 check(at.getX()>=3230 && at.getX()<=3232 && at.getY()==101,"The companion stays in the gathering lane beside its table");
-                for(int way:new int[]{direction,-direction})for(int distance=3;distance>=2;distance--){var cell=new BlockPos(3231,101,at.getZ()+way*distance);if(cell.getZ()>=1 && cell.getZ()<=8 && s.overworld().getBlockState(cell).isAir())return cell;}
+                // The return leg ends beside the table even if pickup stops two blocks short of the log.
+                int farthest=direction<0?Math.max(3,at.getZ()-target.getZ()-1):3;
+                for(int way:new int[]{direction,-direction})for(int distance=farthest;distance>=2;distance--){var cell=new BlockPos(3231,101,at.getZ()+way*distance);if(cell.getZ()>=1 && cell.getZ()<=8 && s.overworld().getBlockState(cell).isAir())return cell;}
                 throw new AssertionError("No gatherable fixture log cell inside the workspace from "+at.toShortString());});
             server.runCommand("setblock "+log.getX()+" "+log.getY()+" "+log.getZ()+" minecraft:oak_log");
             MESSAGES.clear();say(context,"Engineer, gather oak log at "+log.getX()+" "+log.getY()+" "+log.getZ());expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
