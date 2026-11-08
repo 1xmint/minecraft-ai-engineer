@@ -1000,7 +1000,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             check(level.getBlockState(lamp).is(Blocks.REDSTONE_LAMP) && !level.getBlockState(lamp).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"The unpowered lamp sits on S3, unlit");
             check(level.getBlockState(stone).is(Blocks.STONE) && level.getBlockState(new BlockPos(3434,101,3)).is(Blocks.STONE) && level.getBlockState(torch).is(Blocks.REDSTONE_WALL_TORCH),"Stone sits on S2 and its torch stays attached");
             check(body.getInventory().isEmpty() && PhysicalWorkerMenus.capture(body).empty(),"Four placements consumed exactly the four supplied items");});
-        MESSAGES.clear();say(context,"Engineer, place retained stone on the top face of 3433 101 1");expectChat(context,"holds no plain minecraft:stone");
+        MESSAGES.clear();// A free floor support with clear air above, so only the now-empty inventory can refuse this.
+        say(context,"Engineer, place retained stone on the top face of 3432 100 3");expectChat(context,"holds no plain minecraft:stone");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-oriented-placement.done","passed");
     }
