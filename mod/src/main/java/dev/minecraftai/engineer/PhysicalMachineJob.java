@@ -34,6 +34,9 @@ final class PhysicalMachineJob implements PhysicalJob {
     private final MechanismCatalog.Contract contract;
     /** What each machine cell must hold right now: its planned state once built, air until then. */
     private final Map<BlockPos,BlockState> expected=new LinkedHashMap<>();
+    /** A crew build's finished dependencies; any later change to them stops the build. */
+    private final Map<BlockPos,BlockState> dependencyCells=new LinkedHashMap<>();
+    private final PhysicalWorkLease.Crew crew;
     private PhysicalMoveTask movement;
     private PhysicalPlacementTask place;
     private PhysicalMachineTrial trial;
@@ -41,19 +44,52 @@ final class PhysicalMachineJob implements PhysicalJob {
     private boolean closed,announced;
     private int placed;
 
-    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack){
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack){this(manager,project,worker,pack,null);}
+    /** A non-null {@code explicit} builds that one component under this worker's own exclusive claim instead of the session's active component. */
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,String explicit){
         this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;blueprint=project.blueprint;
         if(blueprint==null)throw new IllegalStateException("There is no machine plan in this project yet; nothing was taken or placed");
         owner=manager.server.getPlayerList().getPlayer(project.owner);ownerConnection=owner==null?null:owner.connection;workerConnection=worker.connection;
-        revision=project.revision();authorization=project.access.revision();component=project.activeComponent;
+        revision=project.revision();authorization=project.access.revision();component=explicit==null?project.activeComponent:explicit;
+        if(explicit!=null && (!ComponentTree.composite(blueprint) || ComponentTree.nodes(blueprint).stream().noneMatch(node->node.kind().equals("mechanism") && node.id().equals(explicit))))
+            throw new IllegalStateException("This project has no buildable component called "+explicit+"; nothing was taken or placed");
         var assignment=project.assignments.task(blueprint,component);basis=assignment.basis;generation=assignment.generation;expires=manager.server.getTickCount()+38400L;
         var a=project.corner1;var b=project.corner2;
         if(a==null || b==null)throw new IllegalStateException("Select a workspace first; nothing was taken or placed");
         long x=Math.abs((long)a.getX()-b.getX())+1,y=Math.abs((long)a.getY()-b.getY())+1,z=Math.abs((long)a.getZ()-b.getZ())+1;
         if(x>128 || y>128 || z>128 || x*y*z>4096)throw new IllegalStateException("Workspace exceeds the bounded job limit; nothing was taken or placed");
-        plan=PhysicalMachinePlan.of(blueprint.blocks());
-        contract=testable(EngineeringContracts.contract(blueprint),plan);
+        var part=explicit==null?blueprint:ComponentTree.component(blueprint,explicit);
+        plan=PhysicalMachinePlan.of(part.blocks());
+        contract=testable(EngineeringContracts.contract(part),plan);
+        crew=explicit==null?null:new PhysicalWorkLease.Crew(worker.getUUID(),explicit);
+        // Last, so a constructor refusal can never leave a claim behind.
+        if(crew!=null)claim(assignment);
     }
+    /** Takes this component for this worker, or refuses when a player, another companion or an unfinished dependency stands in the way. */
+    private void claim(ComponentAssignments.Task task){
+        if("player".equals(task.executor))throw new IllegalStateException("Component "+component+" is assigned to a player; nothing was taken or placed");
+        if(task.worker!=null)throw new IllegalStateException("Component "+component+" already has a companion working on it; nothing was taken or placed");
+        for(var node:ComponentTree.nodes(blueprint)){
+            if(!node.kind().equals("mechanism"))continue;
+            if(!node.id().equals(component)){
+                if(node.dependsOn().contains(component) && project.assignments.task(blueprint,node.id()).worker!=null)
+                    throw new IllegalStateException("Component "+node.id()+" depends on "+component+" and is being built; nothing was taken or placed");
+                continue;
+            }
+            for(var dependency:node.dependsOn()){
+                if(project.assignments.task(blueprint,dependency).worker!=null)throw new IllegalStateException("Component "+component+" depends on "+dependency+", which a companion is still building; nothing was taken or placed");
+                for(var block:ComponentTree.component(blueprint,dependency).blocks()){
+                    if(!project.level().hasChunkAt(block.pos()) || !Blueprint.matches(block.state(),project.level().getBlockState(block.pos())))
+                        throw new IllegalStateException("Component "+component+" depends on "+dependency+", which is not built yet; nothing was taken or placed");
+                    dependencyCells.put(block.pos().immutable(),block.state());
+                }
+            }
+        }
+        task.worker=worker.getUUID();
+    }
+    boolean crew(){return crew!=null;}
+    String componentName(){return component;}
+    private String label(){return crew==null?"":"Component "+component+": ";}
     /** The contract this companion can prove with levers and lamps, or a refusal before anything is taken. */
     private static MechanismCatalog.Contract testable(MechanismCatalog.Contract contract,PhysicalMachinePlan plan){
         if(contract.cases().isEmpty() || contract.pulse()!=null || contract.analogMode()!=null)throw new IllegalStateException("This machine has no lever and lamp test the companion can run; nothing was taken or placed");
@@ -74,6 +110,17 @@ final class PhysicalMachineJob implements PhysicalJob {
         var job=new PhysicalMachineJob(manager,project,worker,pack);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
         job.observe();job.fence();job.stock(chest,exclusive);
+        return job;
+    }
+    /** One crew worker's build of one component from one chest. Every refusal releases the claim; nothing is restored from disk. */
+    static PhysicalMachineJob crewBuild(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,String id,BlockPos chest,Runnable exclusive){
+        exclusive.run();
+        var job=new PhysicalMachineJob(manager,project,worker,pack,id);
+        try{
+            PhysicalPlacementRecovery.requireNone(manager,project,worker);
+            GridCraftTask.requireNoUnresolved(manager,project,worker);
+            job.observe();job.fence();job.stock(chest,exclusive);
+        }catch(RuntimeException refused){job.close();throw refused;}
         return job;
     }
     /** Tests a finished machine. When the machine does not match its plan it reports which cells differ, records the failure and returns null without moving a lever. */
@@ -131,7 +178,7 @@ final class PhysicalMachineJob implements PhysicalJob {
             ChestTakeSequence.plan(frame,wanted.getKey(),smallest);
             takes.put(wanted.getKey(),smallest);
         }
-        for(var take:takes.entrySet())ChestTakeTask.take(manager,project,worker,chest,take.getKey(),take.getValue(),exclusive);
+        for(var take:takes.entrySet())ChestTakeTask.take(manager,project,worker,chest,take.getKey(),take.getValue(),exclusive,step->{},crew);
     }
     private static String names(Map<Item,Integer> items){
         var parts=new ArrayList<String>();
@@ -143,11 +190,15 @@ final class PhysicalMachineJob implements PhysicalJob {
             || manager.server.getPlayerList().getPlayer(owner.getUUID())!=owner || owner.connection!=ownerConnection || owner.hasDisconnected()
             || !project.projectId.equals(manager.selections.get(owner.getUUID())) || owner.level()!=project.level() || !(owner.isCreative() || owner.gameMode.getGameModeForPlayer()==GameType.SURVIVAL)
             || manager.server.getPlayerList().getPlayer(worker.getUUID())!=worker || worker.connection!=workerConnection || worker.hasDisconnected() || !worker.isAlive() || worker.level()!=project.level()
-            || worker.gameMode.getGameModeForPlayer()!=GameType.SURVIVAL || project.blueprint!=blueprint || !component.equals(project.activeComponent)
+            || worker.gameMode.getGameModeForPlayer()!=GameType.SURVIVAL || project.blueprint!=blueprint || (crew==null && !component.equals(project.activeComponent))
             || revision!=project.revision() || authorization!=project.access.revision())throw new IllegalStateException("Machine job authority changed; request fresh work after inspection");
         project.access.require(owner.getUUID(),ProjectAccess.Permission.BUILD);PhysicalWorkLease.requireIdle(project);
         var assignment=project.assignments.task(blueprint,component);
         if(generation!=assignment.generation || !basis.equals(assignment.basis))throw new IllegalStateException("Machine assignment changed; request fresh work after inspection");
+        if(crew!=null && !crew.worker().equals(assignment.worker))throw new IllegalStateException("This companion no longer holds component "+component+"; request fresh work after inspection");
+        for(var dependency:dependencyCells.entrySet())
+            if(!project.level().hasChunkAt(dependency.getKey()) || !Blueprint.matches(dependency.getValue(),project.level().getBlockState(dependency.getKey())))
+                throw new IllegalStateException("A component this one depends on changed at "+dependency.getKey().toShortString()+"; the build stopped and left it alone");
         for(var cell:plan.cells()){
             var pos=cell.pos();
             if(!project.contains(pos) || !project.level().hasChunkAt(pos))throw new IllegalStateException("Machine footprint unloaded or changed");
@@ -182,7 +233,8 @@ final class PhysicalMachineJob implements PhysicalJob {
         if(best==null)throw new IllegalStateException("No walkable spot lets your companion "+purpose+"; everything built so far was left in place");
         return best;
     }
-    private void walk(BlockPos destination){movement=new PhysicalMoveTask(manager,project,worker,pack,destination,new java.util.HashSet<>(expected.keySet()),this::fence);}
+    private java.util.Set<BlockPos> planReads(){var reads=new java.util.HashSet<>(expected.keySet());reads.addAll(dependencyCells.keySet());return reads;}
+    private void walk(BlockPos destination){movement=new PhysicalMoveTask(manager,project,worker,pack,destination,planReads(),this::fence,crew);}
     private PhysicalMachinePlan.Cell nextCell(){
         for(var cell:plan.cells())if(expected.get(cell.pos()).isAir())return cell;
         return null;
@@ -196,28 +248,33 @@ final class PhysicalMachineJob implements PhysicalJob {
         }
         if(trial!=null){
             if(!trial.tick())return false;
-            var result=trial.summary();close();owner.sendSystemMessage(Component.literal("Engineer: "+result));return true;
+            var result=trial.summary();close();owner.sendSystemMessage(Component.literal("Engineer: "+label()+result));return true;
         }
         var next=nextCell();
         if(next!=null){
             building=next.pos();var aim=PhysicalMachinePlan.aim(project.level(),next.state(),building);
             if(PhysicalMachinePlan.clickable(project.level(),worker,worker.getEyePosition(),aim) && !blocked(worker.blockPosition()))
-                place=new PhysicalPlacementTask(manager,project,worker,pack,aim,new java.util.HashSet<>(expected.keySet()),this::fence);
+                place=new PhysicalPlacementTask(manager,project,worker,pack,aim,planReads(),this::fence,crew);
             else walk(stance(building,eye->PhysicalMachinePlan.clickable(project.level(),worker,eye,aim),"place the block at "+building.toShortString()));
             return false;
         }
         building=null;
         if(!announced){
             announced=true;
-            owner.sendSystemMessage(Component.literal("Engineer: Companion placed "+placed+" blocks; every cell now matches the plan. Testing the machine by pulling its real levers."));
+            owner.sendSystemMessage(Component.literal("Engineer: "+label()+"Companion placed "+placed+" blocks; every cell now matches the plan. Testing the machine by pulling its real levers."));
         }
         var levers=contract.ports().stream().filter(MechanismCatalog.Port::input).map(MechanismCatalog.Port::pos).toList();
         Predicate<Vec3> reaches=eye->levers.stream().allMatch(lever->PhysicalMachinePlan.leverHit(project.level(),worker,eye,lever)!=null);
-        if(reaches.test(worker.getEyePosition()))trial=new PhysicalMachineTrial(manager,project,worker,plan,contract,this::fence);
+        if(reaches.test(worker.getEyePosition()))trial=new PhysicalMachineTrial(manager,project,worker,plan,contract,this::fence,crew);
         else walk(stance(levers.getFirst(),reaches,"reach every lever at once"));
         return false;
     }
     @Override public void close(){
-        try{if(movement!=null)movement.close();}finally{try{if(place!=null)place.close();}finally{try{if(trial!=null)trial.close();}finally{closed=true;PhysicalActionGate.cancel(worker);}}}
+        try{if(movement!=null)movement.close();}finally{try{if(place!=null)place.close();}finally{try{if(trial!=null)trial.close();}finally{closed=true;try{PhysicalActionGate.cancel(worker);}finally{release();}}}}
+    }
+    private void release(){
+        if(crew==null)return;
+        var task=project.assignments.tasks.get(component);
+        if(task!=null && crew.worker().equals(task.worker))task.worker=null;
     }
 }

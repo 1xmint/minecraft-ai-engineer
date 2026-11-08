@@ -9,6 +9,8 @@ import net.minecraft.world.level.GameType;
 
 /** Ephemeral owner delegation for native survival actions; never direct edits. */
 final class PhysicalWorkLease implements AutoCloseable {
+    /** One worker's exclusive claim on one component: its own reservation scope, valid only while that claim stands. */
+    record Crew(UUID worker,String component){ }
     private final ProjectManager manager;
     private final EngineeringSession project;
     private final UUID owner;
@@ -21,18 +23,28 @@ final class PhysicalWorkLease implements AutoCloseable {
     private final long generation;
     private final java.util.Map<BlockPos,net.minecraft.world.level.block.state.BlockState> dependencies;
     private final RegionReservations.Fence fence;
+    private final Crew crew;
+    private final RegionReservations.Scope scope;
     private boolean closed;
 
     PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads) {
-        this(manager,project,human,writes,reads,Set.of());
+        this(manager,project,human,writes,reads,Set.of(),null);
+    }
+    PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads,Crew crew) {
+        this(manager,project,human,writes,reads,Set.of(),crew);
     }
     static PhysicalWorkLease movement(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> occupancy,Set<BlockPos> reads){
-        return new PhysicalWorkLease(manager,project,human,Set.of(),reads,occupancy);
+        return new PhysicalWorkLease(manager,project,human,Set.of(),reads,occupancy,null);
     }
-    private PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads,Set<BlockPos> occupancy) {
+    static PhysicalWorkLease movement(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> occupancy,Set<BlockPos> reads,Crew crew){
+        return new PhysicalWorkLease(manager,project,human,Set.of(),reads,occupancy,crew);
+    }
+    private PhysicalWorkLease(ProjectManager manager,EngineeringSession project,ServerPlayer human,Set<BlockPos> writes,Set<BlockPos> reads,Set<BlockPos> occupancy,Crew crew) {
+        if(crew!=null && project.blueprint==null)throw new IllegalStateException("Crew work needs a current machine plan");
+        this.crew=crew;scope=crew==null?manager.scope(project):manager.scope(project,crew.worker());
         this.manager=manager;this.project=project;owner=human.getUUID();connection=human.connection;
         revision=project.revision();authorization=project.access.revision();
-        blueprint=project.blueprint;operation=project.activeOperation;component=project.activeComponent;
+        blueprint=project.blueprint;operation=project.activeOperation;component=crew==null?project.activeComponent:crew.component();
         var assignment=blueprint==null?null:project.assignments.task(blueprint,component);
         basis=assignment==null?null:assignment.basis;generation=assignment==null?0:assignment.generation;
         var all=new HashSet<BlockPos>();writes.forEach(p->all.add(p.immutable()));reads.forEach(p->all.add(p.immutable()));occupancy.forEach(p->all.add(p.immutable()));
@@ -43,8 +55,8 @@ final class PhysicalWorkLease implements AutoCloseable {
         // supports and walking cells must retain the captured state throughout.
         for(var pos:all)if(!writes.contains(pos))observed.put(pos.immutable(),project.level().getBlockState(pos));
         dependencies=java.util.Map.copyOf(observed);
-        fence=occupancy.isEmpty()?manager.reservations.acquire(manager.scope(project),owner,revision,authorization,ProjectAccess.Permission.BUILD,writes,reads,manager.server.getTickCount())
-            :manager.reservations.acquireMovement(manager.scope(project),owner,revision,authorization,occupancy,reads,manager.server.getTickCount());
+        fence=occupancy.isEmpty()?manager.reservations.acquire(scope,owner,revision,authorization,ProjectAccess.Permission.BUILD,writes,reads,manager.server.getTickCount())
+            :manager.reservations.acquireMovement(scope,owner,revision,authorization,occupancy,reads,manager.server.getTickCount());
     }
     static void requireIdle(EngineeringSession project){
         if(project.delegation!=null || project.hasPendingTest() || project.shutterMotion!=null
@@ -62,7 +74,8 @@ final class PhysicalWorkLease implements AutoCloseable {
             || revision!=project.revision() || authorization!=project.access.revision())
             throw new IllegalStateException("Owner connection, selection or project authority changed");
         project.access.require(owner,ProjectAccess.Permission.BUILD);
-        if(project.blueprint!=blueprint || !java.util.Objects.equals(operation,project.activeOperation) || !component.equals(project.activeComponent))
+        if(project.blueprint!=blueprint || !java.util.Objects.equals(operation,project.activeOperation) 
+            || (crew==null?!component.equals(project.activeComponent):!crew.worker().equals(project.assignments.task(blueprint,component).worker)))
             throw new IllegalStateException("Accepted physical task changed; request fresh delegation");
         if(blueprint!=null) {
             var assignment=project.assignments.task(blueprint,component);
@@ -83,11 +96,11 @@ final class PhysicalWorkLease implements AutoCloseable {
     }
     void validate(BlockPos target) {
         validateDependencies();
-        manager.reservations.validateWrite(manager.scope(project),fence,owner,revision,authorization,target,manager.server.getTickCount());
+        manager.reservations.validateWrite(scope,fence,owner,revision,authorization,target,manager.server.getTickCount());
     }
     void validateMovement(Set<BlockPos> occupied){
         validateDependencies();
-        manager.reservations.validateOccupancy(manager.scope(project),fence,owner,revision,authorization,occupied,manager.server.getTickCount());
+        manager.reservations.validateOccupancy(scope,fence,owner,revision,authorization,occupied,manager.server.getTickCount());
     }
     private void validateDependencies(){
         authority();
@@ -96,6 +109,6 @@ final class PhysicalWorkLease implements AutoCloseable {
     }
     @Override public void close() {
         if(!manager.server.isSameThread())throw new IllegalStateException("Server thread required");
-        closed=true;manager.reservations.release(manager.scope(project),fence);
+        closed=true;manager.reservations.release(scope,fence);
     }
 }

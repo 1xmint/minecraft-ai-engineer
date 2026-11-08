@@ -27,16 +27,20 @@ final class PhysicalPlacementTask implements AutoCloseable {
         this(manager,project,worker,pack,target,planReads,intention,PhysicalPlacementInventory.Material.DIRT);
     }
     PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target,java.util.Set<BlockPos> planReads,Runnable intention,PhysicalPlacementInventory.Material material) {
-        this(manager,project,worker,pack,target,planReads,intention,material,null);
+        this(manager,project,worker,pack,target,planReads,intention,material,null,null);
     }
     /**
      * Aimed machine placement: one native use on {@code face} of the inert {@code support},
      * committing only the exact planned state (orientation included); a wrong facing is refused before any item is consumed.
      */
     PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,PhysicalPlacementInventory.Aim aim,java.util.Set<BlockPos> planReads,Runnable intention) {
-        this(manager,project,worker,pack,aim.target(),planReads,intention,PhysicalPlacementInventory.Material.forState(aim.state()),aim);
+        this(manager,project,worker,pack,aim.target(),planReads,intention,PhysicalPlacementInventory.Material.forState(aim.state()),aim,null);
     }
-    private PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target,java.util.Set<BlockPos> planReads,Runnable intention,PhysicalPlacementInventory.Material material,PhysicalPlacementInventory.Aim aim) {
+    /** The same aimed placement for a crew worker, under that worker's own claim and reservations. */
+    PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,PhysicalPlacementInventory.Aim aim,java.util.Set<BlockPos> planReads,Runnable intention,PhysicalWorkLease.Crew crew) {
+        this(manager,project,worker,pack,aim.target(),planReads,intention,PhysicalPlacementInventory.Material.forState(aim.state()),aim,crew);
+    }
+    private PhysicalPlacementTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos target,java.util.Set<BlockPos> planReads,Runnable intention,PhysicalPlacementInventory.Material material,PhysicalPlacementInventory.Aim aim,PhysicalWorkLease.Crew crew) {
         this.intention=intention;
         this.worker=worker;level=worker.level();connection=worker.connection;this.pack=pack;this.target=target.immutable();start=worker.blockPosition();
         var support=aim==null?target.below():aim.support();
@@ -59,13 +63,14 @@ final class PhysicalPlacementTask implements AutoCloseable {
             reads.add(cell.immutable());
         }
         reads.addAll(planReads);
-        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),java.util.Set.of(target),reads);expires=manager.server.getTickCount()+100;
+        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),java.util.Set.of(target),reads,crew);expires=manager.server.getTickCount()+100;
         file=manager.directory.resolve(project.projectId+".place-"+UUID.randomUUID()+".json");
         record.addProperty("schemaVersion",aim!=null?3:material==PhysicalPlacementInventory.Material.DIRT?1:2);record.addProperty("world",manager.worldId);record.addProperty("dimension",project.dimension);
         record.addProperty("project",project.projectId.toString());record.addProperty("worker",worker.getUUID().toString());
         if(!planReads.isEmpty()){
-            record.addProperty("blueprint",project.blueprint.id());record.addProperty("projectRevision",project.revision());record.addProperty("component",project.activeComponent);
-            record.addProperty("assignmentBasis",project.assignments.task(project.blueprint,project.activeComponent).basis);
+            var part=crew==null?project.activeComponent:crew.component();
+            record.addProperty("blueprint",project.blueprint.id());record.addProperty("projectRevision",project.revision());record.addProperty("component",part);
+            record.addProperty("assignmentBasis",project.assignments.task(project.blueprint,part).basis);
         }
         var position=new com.google.gson.JsonObject();position.addProperty("x",target.getX());position.addProperty("y",target.getY());position.addProperty("z",target.getZ());record.add("target",position);
         if(aim!=null){

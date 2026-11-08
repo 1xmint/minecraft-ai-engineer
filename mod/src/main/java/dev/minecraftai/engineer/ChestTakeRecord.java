@@ -109,6 +109,7 @@ final class ChestTakeRecord {
                 if(++count>MAX_FILES || !Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>MAX_BYTES)throw new IllegalStateException("Chest take history needs operator inspection");
                 byte[] bytes=Files.readAllBytes(path);if(bytes.length>MAX_BYTES)throw new IllegalStateException("Chest take history is oversized");
                 var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                if(PhysicalWorkerIdentity.sibling(manager,project,worker.getUUID(),record.get("worker").getAsString()))continue;
                 nodes.add(validate(record,manager,project,worker,path,HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes))));
             }
         }catch(java.io.IOException | java.security.NoSuchAlgorithmException | RuntimeException failure){

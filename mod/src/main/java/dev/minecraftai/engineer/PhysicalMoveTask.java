@@ -25,6 +25,9 @@ final class PhysicalMoveTask implements AutoCloseable {
         this(manager,project,worker,pack,destination,Set.of(),intention);
     }
     PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention){
+        this(manager,project,worker,pack,destination,planReads,intention,null);
+    }
+    PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention,PhysicalWorkLease.Crew crew){
         this.worker=worker;this.pack=pack;this.intention=intention;connection=worker.connection;level=worker.level();initialPosition=worker.position();
         if(!manager.server.isSameThread() || level!=project.level())throw new IllegalStateException("Movement requires the current server workspace");
         PhysicalWorkLease.requireIdle(project);intention.run();
@@ -38,7 +41,7 @@ final class PhysicalMoveTask implements AutoCloseable {
         reads.addAll(planReads);
         occupancy=Set.copyOf(occupied);
         requireNoEntities();
-        lease=PhysicalWorkLease.movement(manager,project,manager.server.getPlayerList().getPlayer(project.owner),occupancy,reads);
+        lease=PhysicalWorkLease.movement(manager,project,manager.server.getPlayerList().getPlayer(project.owner),occupancy,reads,crew);
         expires=manager.server.getTickCount()+6000L;
         try{PhysicalActionGate.cancel(worker);call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);}
         catch(RuntimeException failed){close();throw failed;}

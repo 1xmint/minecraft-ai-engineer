@@ -22,7 +22,8 @@ import net.minecraft.world.phys.Vec3;
 final class ChestTakeTask {
     private ChestTakeTask() { }
     static void take(ProjectManager manager,EngineeringSession project,ServerPlayer worker,BlockPos chest,Item item,int count,Runnable exclusive){take(manager,project,worker,chest,item,count,exclusive,step->{});}
-    static void take(ProjectManager manager,EngineeringSession project,ServerPlayer worker,BlockPos chest,Item item,int count,Runnable exclusive,IntConsumer afterObserved){
+    static void take(ProjectManager manager,EngineeringSession project,ServerPlayer worker,BlockPos chest,Item item,int count,Runnable exclusive,IntConsumer afterObserved){take(manager,project,worker,chest,item,count,exclusive,afterObserved,null);}
+    static void take(ProjectManager manager,EngineeringSession project,ServerPlayer worker,BlockPos chest,Item item,int count,Runnable exclusive,IntConsumer afterObserved,PhysicalWorkLease.Crew crew){
         start(manager,project,worker,exclusive);
         GridCraftTask.requireNoUnresolved(manager,project,worker);
         chest=chest.immutable();permitted(manager,project,worker,chest);
@@ -30,7 +31,7 @@ final class ChestTakeTask {
         var initial=ChestTakeSequence.capture(worker,storage);
         var planned=ChestTakeSequence.plan(initial,item,count);
         ChestTakeRecord record=null;RuntimeException reported=null;PhysicalCraftGuard.begin(worker);
-        try(var work=PhysicalInventoryAuthority.chest(manager,project,worker,exclusive,chest)){
+        try(var work=PhysicalInventoryAuthority.chest(manager,project,worker,exclusive,chest,crew)){
             Runnable authority=work::validate;authority.run();
             // Chest chunk first, then the companion: any crash point restores at most the pre-take chest with the post-take companion missing the stack, never both holding it.
             worker.level().getChunkSource().save(true);PhysicalWorkerStorage.saveResources(worker);authority.run();
@@ -105,7 +106,6 @@ final class ChestTakeTask {
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only this project's current owner request may take from a chest");
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         PhysicalWorkLease.requireIdle(project);exclusive.run();PhysicalWorkerMenus.requireSettled(worker);
-        var identity=PhysicalWorkerIdentity.existing(manager,project);
-        if(!identity.restore() || !identity.id().equals(worker.getUUID()))throw new IllegalStateException("Chest work requires this project's initialized physical companion");
+        if(!PhysicalWorkerIdentity.member(manager,project,worker.getUUID()))throw new IllegalStateException("Chest work requires this project's initialized physical companion");
     }
 }
