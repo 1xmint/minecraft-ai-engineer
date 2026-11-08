@@ -1075,7 +1075,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         // Refused before anything moves: an unbuilt dependency and a chest another worker has reserved.
         MESSAGES.clear();say(context,"Engineer, have my second companion build c from the chest at 3720 101 1");expectChat(context,"depends on a, which is not built yet");
         server.runOnServer(s->crewUntouched(s,crew.second(),CREW_CHEST_B,"unbuilt dependency"));
-        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");manager.reservations.acquire(manager.scope(project,crew.first()),crew.first(),project.blueprint.revision(),project.access.revision(),ProjectAccess.Permission.BUILD,java.util.Set.of(CREW_CHEST_B),java.util.Set.of(),s.getTickCount());});
+        server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");manager.reservations.acquire(manager.scope(project,crew.first()),crew.first(),project.revision(),project.access.revision(),ProjectAccess.Permission.BUILD,java.util.Set.of(CREW_CHEST_B),java.util.Set.of(),s.getTickCount());});
         MESSAGES.clear();say(context,CREW_BUILD_B);expectChat(context,"Another assignment reserves this region");
         server.runOnServer(s->{crewUntouched(s,crew.second(),CREW_CHEST_B,"reserved chest");var manager=EngineerMod.managerFor(s);manager.reservations.revoke(manager.scope(session(s,"Alice"),crew.first()));});
         // Two workers cannot hold one component, then real disjoint work overlaps.
