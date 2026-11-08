@@ -737,6 +737,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             gridCraft[0]=physicalGridCraftFlow(context,server);
             tablePlacement[0]=physicalTablePlacementFlow(context,server);
             tableCraft[0]=physicalTableCraftFlow(context,server);
+            physicalMachinePartsFlow(context,server);
         }
         try(var server=new TestDedicatedServerContextImpl(context,DedicatedServerImplUtil.start(context,config));var connection=server.connect()){
             var grid=gridCraft[0];
@@ -936,6 +937,49 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             menuReceipt(body,"table-craft");return new GridCraftEvidence(project.projectId.toString(),worker,PhysicalCraftRecord.resources(PhysicalCraftFrame.capture(body),body));});
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-table-craft.done","passed");return finished;
+    }
+    /** At its own placed table the companion crafts a lever, a redstone torch and a redstone lamp, consuming exactly their recipes; a missing input moves nothing. */
+    private static void physicalMachinePartsFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3524 -16 3556 32");server.runCommand("fill 3530 100 0 3537 100 10 minecraft:stone");server.runCommand("fill 3530 101 0 3537 104 10 minecraft:air");
+        server.runCommand("setblock 3531 101 4 minecraft:oak_log");
+        server.runCommand("tp Alice 3536.5 101 10 180 0");
+        send(context,"engineer select1 3530 100 0");send(context,"engineer select2 3534 102 9");server.waitFor(s->new BlockPos(3534,102,9).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        server.runOnServer(s->check(s.getPlayerList().getPlayer(worker).getInventory().isEmpty(),"Machine parts worker begins empty"));
+        MESSAGES.clear();say(context,"Engineer, gather oak log at 3531 101 4");expectChat(context,"gathering one oak log");expectChat(context,"verified its saved inventory",60_000);
+        MESSAGES.clear();say(context,"Engineer, craft oak planks");expectChat(context,"verified its saved inventory");
+        MESSAGES.clear();say(context,"Engineer, craft a crafting table");expectChat(context,"crafted a crafting table and verified its saved inventory");
+        BlockPos target=server.computeOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            for(int x=3533;x>=3531;x--)for(int z=1;z<=6;z++){var cell=new BlockPos(x,101,z);
+                if(s.overworld().getBlockState(cell).isAir() && Math.hypot(body.getX()-(x+.5),body.getZ()-(z+.5))>=1.6 && body.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(cell))<=3.5)return cell;}
+            throw new IllegalStateException("No clear table placement cell near the companion");});
+        MESSAGES.clear();say(context,"Engineer, place retained crafting table at "+target.getX()+" "+target.getY()+" "+target.getZ());expectChat(context,"placed its crafted crafting table and verified its saved inventory");
+        // Test fixture standing in for materials the owner supplies; acquisition from the owner's chest is a separate step.
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty(),"The placed table leaves the companion empty");
+            body.getInventory().setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK,2));body.getInventory().setItem(1,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE,1));
+            body.getInventory().setItem(2,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,5));PhysicalWorkerStorage.save(body);});
+        int[] before=server.computeOnServer(s->new int[]{crafted(s,worker,net.minecraft.world.item.Items.LEVER),crafted(s,worker,net.minecraft.world.item.Items.REDSTONE_TORCH),crafted(s,worker,net.minecraft.world.item.Items.REDSTONE_LAMP)});
+        MESSAGES.clear();say(context,"Engineer, craft a redstone lamp");expectChat(context,"to craft a redstone lamp; no crafting was started");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(countItem(body,net.minecraft.world.item.Items.STICK)==2 && countItem(body,net.minecraft.world.item.Items.COBBLESTONE)==1 && countItem(body,net.minecraft.world.item.Items.REDSTONE)==5 && countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==0 && crafted(s,worker,net.minecraft.world.item.Items.REDSTONE_LAMP)==before[2],"A lamp request without glowstone opens nothing and moves nothing");});
+        MESSAGES.clear();say(context,"Engineer, craft a lever");expectChat(context,"crafted a lever at its crafting table and verified its saved inventory");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(countItem(body,net.minecraft.world.item.Items.LEVER)==1 && countItem(body,net.minecraft.world.item.Items.STICK)==1 && countItem(body,net.minecraft.world.item.Items.COBBLESTONE)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE)==5 && crafted(s,worker,net.minecraft.world.item.Items.LEVER)==before[0]+1,"A lever consumes exactly one stick and one cobblestone");});
+        MESSAGES.clear();say(context,"Engineer, craft a redstone torch at your crafting table");expectChat(context,"crafted a redstone torch at its crafting table and verified its saved inventory");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)==1 && countItem(body,net.minecraft.world.item.Items.STICK)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE)==4 && countItem(body,net.minecraft.world.item.Items.LEVER)==1 && crafted(s,worker,net.minecraft.world.item.Items.REDSTONE_TORCH)==before[1]+1,"A redstone torch consumes exactly one redstone and one stick");
+            int free=-1;for(int i=35;i>=0;i--)if(body.getInventory().getItem(i).isEmpty())free=i;check(free>=0 && free<36,"The companion has a free main slot for the supplied glowstone");
+            body.getInventory().setItem(free,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLOWSTONE,1));PhysicalWorkerStorage.save(body);});
+        MESSAGES.clear();say(context,"Engineer, craft a redstone lamp");expectChat(context,"crafted a redstone lamp at its crafting table and verified its saved inventory");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);
+            check(countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==1 && countItem(body,net.minecraft.world.item.Items.REDSTONE)==0 && countItem(body,net.minecraft.world.item.Items.GLOWSTONE)==0 && crafted(s,worker,net.minecraft.world.item.Items.REDSTONE_LAMP)==before[2]+1,"A redstone lamp consumes exactly four redstone and one glowstone");
+            int stacks=0;for(int i=0;i<body.getInventory().getContainerSize();i++)if(!body.getInventory().getItem(i).isEmpty())stacks++;
+            check(stacks==3 && countItem(body,net.minecraft.world.item.Items.LEVER)==1 && countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)==1 && PhysicalWorkerMenus.capture(body).empty(),"The companion holds exactly the three crafted machine parts and nothing else");
+            check(s.overworld().getBlockState(target).is(Blocks.CRAFTING_TABLE),"Crafting leaves the companion's table in place");});
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-machine-parts.done","passed");
     }
     /** One gathered log becomes planks and a crafting table, and the companion places that table natively. */
     private static TablePlacementEvidence physicalTablePlacementFlow(ClientGameTestContext context,TestDedicatedServerContext server){
