@@ -543,6 +543,17 @@ not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
 
+### Stored and clocked circuits (development source, preview only)
+
+Ask about a data latch, edge register, up counter or pulse tally in addressed
+chat, or use `/engineer circuit list`, `/engineer circuit show <id>` and
+`/engineer circuit lesson <id>`. You get a layout, materials and a plain lesson.
+Nothing in the world changes. These designs are proven by native Minecraft
+tests, but the engineer cannot yet build, approve or test them for you, and it
+says so. They need a test path that samples real ticks and restores clocked
+parts, because the normal test gives false results for circuits that remember.
+There is no calculator yet.
+
 ### Compare two designs (development source)
 
 Ask `compare this design with <project or catalog design>` in addressed chat.

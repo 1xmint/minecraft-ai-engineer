@@ -53,7 +53,7 @@ public final class SequentialCircuits {
         if(has(text,"how","why","explain","teach","learn","lesson"))return lesson(circuit);
         return show(circuit);
     }
-    private static boolean has(String text,String... words){return Arrays.stream(words).anyMatch(word->java.util.regex.Pattern.compile("\b"+word+"\b").matcher(text).find());}
+    private static boolean has(String text,String... words){return Arrays.stream(words).anyMatch(word->java.util.regex.Pattern.compile("\\b"+word+"\\b").matcher(text).find());}
     private static String refusal(Circuit circuit){
         return "I can preview and teach the "+circuit.name()+", but I cannot build, approve or test it yet. It needs the stateful test path that samples real ticks and restores clocked parts. The normal test would give a false result for something that remembers. Nothing was changed.";
     }
