@@ -1,651 +1,471 @@
 {
- "circuits": [
-  {
-   "id": "data-latch",
-   "name": "Data latch",
-   "model": "table",
-   "summary": "Stores one bit. While Enable is on, the lamp follows Data. While Enable is off, the lamp holds its value.",
-   "lesson": [
-    "The Data lever feeds a repeater that drives the lamp.",
-    "A second repeater presses on that repeater's side. A side-powered repeater is locked and keeps its output.",
-    "Enable turns the torch off, which removes the lock, so Data passes through.",
-    "With Enable off the torch relights and the lock returns, so changing Data has no effect."
-   ],
-   "controls": {
-    "data": [
-     0,
-     0,
-     0
-    ],
-    "enable": [
-     1,
-     0,
-     4
-    ]
-   },
-   "outputs": {
-    "q": [
-     2,
-     0,
-     0
-    ]
-   },
-   "cells": [
+  "circuits": [
     {
-     "at": [
-      1,
-      0,
-      3
-     ],
-     "state": "minecraft:stone"
+      "id": "data-latch",
+      "name": "Data latch",
+      "model": "table",
+      "summary": "Stores one bit. While Enable is on, the lamp follows Data. While Enable is off, the lamp holds its value.",
+      "lesson": [
+        "The Data lever feeds a repeater that drives the lamp.",
+        "A second repeater presses on that repeater's side. A side-powered repeater is locked and keeps its output.",
+        "Enable turns the torch off, which removes the lock, so Data passes through.",
+        "With Enable off the torch relights and the lock returns, so changing Data has no effect."
+      ],
+      "controls": {
+        "data": [0, 0, 0],
+        "enable": [1, 0, 4]
+      },
+      "outputs": {
+        "q": [2, 0, 0]
+      },
+      "cells": [
+        {
+          "at": [1, 0, 3],
+          "state": "minecraft:stone"
+        },
+        {
+          "at": [1, 0, 2],
+          "state": "minecraft:redstone_wall_torch[facing=north]"
+        },
+        {
+          "at": [1, 0, 0],
+          "state": "minecraft:repeater[facing=west,delay=1]"
+        },
+        {
+          "at": [1, 0, 1],
+          "state": "minecraft:repeater[facing=south,delay=1]"
+        },
+        {
+          "at": [0, 0, 0],
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]"
+        },
+        {
+          "at": [1, 0, 4],
+          "state": "minecraft:lever[face=wall,facing=south,powered=false]"
+        },
+        {
+          "at": [2, 0, 0],
+          "state": "minecraft:redstone_lamp"
+        }
+      ],
+      "steps": [
+        {
+          "inputs": {
+            "enable": "1",
+            "data": "b"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "enable": "0"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "data": "!b"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "enable": "1"
+          },
+          "expect": {
+            "q": "!b"
+          }
+        },
+        {
+          "inputs": {
+            "enable": "0"
+          },
+          "expect": {
+            "q": "!b"
+          }
+        },
+        {
+          "inputs": {
+            "data": "b"
+          },
+          "expect": {
+            "q": "!b"
+          }
+        }
+      ],
+      "limit": "One bit. It holds its value only while its chunk stays loaded and the parts stay in place."
     },
     {
-     "at": [
-      1,
-      0,
-      2
-     ],
-     "state": "minecraft:redstone_wall_torch[facing=north]"
+      "id": "edge-register",
+      "name": "Edge-triggered register",
+      "model": "table",
+      "summary": "Stores one bit, captured only at the moment the Clock lever turns on.",
+      "lesson": [
+        "Two locked-repeater stages sit in a row: the first listens while Clock is off, the second while Clock is on.",
+        "When Clock turns on, the first stage locks and the second passes on what the first captured.",
+        "Changing Data while Clock stays on or off cannot reach the lamp.",
+        "So the lamp only changes at a rising Clock edge."
+      ],
+      "controls": {
+        "data": [0, 0, 0],
+        "clock": [1, 0, 3]
+      },
+      "outputs": {
+        "q": [3, 0, 0]
+      },
+      "cells": [
+        {
+          "at": [1, 0, 2],
+          "state": "minecraft:stone"
+        },
+        {
+          "at": [2, 0, 2],
+          "state": "minecraft:redstone_wall_torch[facing=east]"
+        },
+        {
+          "at": [1, 0, 0],
+          "state": "minecraft:repeater[facing=west,delay=1]"
+        },
+        {
+          "at": [2, 0, 0],
+          "state": "minecraft:repeater[facing=west,delay=1]"
+        },
+        {
+          "at": [1, 0, 1],
+          "state": "minecraft:repeater[facing=south,delay=1]"
+        },
+        {
+          "at": [2, 0, 1],
+          "state": "minecraft:repeater[facing=south,delay=1]"
+        },
+        {
+          "at": [0, 0, 0],
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]"
+        },
+        {
+          "at": [1, 0, 3],
+          "state": "minecraft:lever[face=wall,facing=south,powered=false]"
+        },
+        {
+          "at": [3, 0, 0],
+          "state": "minecraft:redstone_lamp"
+        }
+      ],
+      "steps": [
+        {
+          "inputs": {
+            "clock": "0",
+            "data": "b"
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "data": "!b"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "q": "b"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "q": "!b"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0",
+            "data": "b"
+          },
+          "expect": {
+            "q": "!b"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "q": "b"
+          }
+        }
+      ],
+      "limit": "One bit. Proven with each input held for twenty game ticks between edges."
     },
     {
-     "at": [
-      1,
-      0,
-      0
-     ],
-     "state": "minecraft:repeater[facing=west,delay=1]"
+      "id": "up-counter",
+      "name": "Two-bit up counter",
+      "model": "counter",
+      "summary": "Counts rising Clock edges from 0 to 3 and wraps. Two copper bulbs hold the bits.",
+      "lesson": [
+        "A copper bulb flips each time its power rises, so it remembers one bit by itself.",
+        "A comparator reads the first bulb and, through a block, keeps a torch off while that bulb is lit.",
+        "When the first bulb goes dark the torch relights, a rising edge that flips the second bulb.",
+        "That is a carry: the second bulb changes once for every two clock pulses."
+      ],
+      "controls": {
+        "clock": [0, 0, 0]
+      },
+      "outputs": {
+        "b0": [1, 0, 0],
+        "b1": [5, 0, 0]
+      },
+      "cells": [
+        {
+          "at": [3, 0, 0],
+          "state": "minecraft:stone"
+        },
+        {
+          "at": [4, 0, 0],
+          "state": "minecraft:redstone_wall_torch[facing=east]"
+        },
+        {
+          "at": [2, 0, 0],
+          "state": "minecraft:comparator[facing=west,mode=compare]"
+        },
+        {
+          "at": [0, 0, 0],
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]"
+        },
+        {
+          "at": [1, 0, 0],
+          "state": "minecraft:waxed_copper_bulb[lit=false,powered=false]"
+        },
+        {
+          "at": [5, 0, 0],
+          "state": "minecraft:waxed_copper_bulb[lit=false,powered=true]"
+        }
+      ],
+      "steps": [
+        {
+          "inputs": {},
+          "expect": {
+            "count": "0"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "1"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "1"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "2"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "2"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "3"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "3"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "4"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "4"
+          }
+        }
+      ],
+      "limit": "Two bits. A plain hand-built copy may flip its second bulb as it is placed, so read the bulbs rather than assuming they start at zero."
     },
     {
-     "at": [
-      1,
-      0,
-      1
-     ],
-     "state": "minecraft:repeater[facing=south,delay=1]"
-    },
-    {
-     "at": [
-      0,
-      0,
-      0
-     ],
-     "state": "minecraft:lever[face=floor,facing=east,powered=false]"
-    },
-    {
-     "at": [
-      1,
-      0,
-      4
-     ],
-     "state": "minecraft:lever[face=wall,facing=south,powered=false]"
-    },
-    {
-     "at": [
-      2,
-      0,
-      0
-     ],
-     "state": "minecraft:redstone_lamp"
+      "id": "pulse-tally",
+      "name": "Pulse tally with lamp display",
+      "model": "counter",
+      "summary": "The two-bit counter with two lamps that show its bits at a distance.",
+      "lesson": [
+        "This is the up counter with a small display added.",
+        "The block behind the first comparator also lights the first lamp.",
+        "A second comparator reads the second bulb and lights the second lamp.",
+        "Lamps show the stored value but do not hold it. The bulbs do."
+      ],
+      "controls": {
+        "clock": [0, 0, 0]
+      },
+      "outputs": {
+        "b0": [1, 0, 0],
+        "b1": [5, 0, 0],
+        "lamp0": [3, 0, -1],
+        "lamp1": [7, 0, 0]
+      },
+      "cells": [
+        {
+          "at": [3, 0, 0],
+          "state": "minecraft:stone"
+        },
+        {
+          "at": [4, 0, 0],
+          "state": "minecraft:redstone_wall_torch[facing=east]"
+        },
+        {
+          "at": [2, 0, 0],
+          "state": "minecraft:comparator[facing=west,mode=compare]"
+        },
+        {
+          "at": [0, 0, 0],
+          "state": "minecraft:lever[face=floor,facing=east,powered=false]"
+        },
+        {
+          "at": [6, 0, 0],
+          "state": "minecraft:comparator[facing=west,mode=compare]"
+        },
+        {
+          "at": [3, 0, -1],
+          "state": "minecraft:redstone_lamp"
+        },
+        {
+          "at": [7, 0, 0],
+          "state": "minecraft:redstone_lamp"
+        },
+        {
+          "at": [1, 0, 0],
+          "state": "minecraft:waxed_copper_bulb[lit=false,powered=false]"
+        },
+        {
+          "at": [5, 0, 0],
+          "state": "minecraft:waxed_copper_bulb[lit=false,powered=true]"
+        }
+      ],
+      "steps": [
+        {
+          "inputs": {},
+          "expect": {
+            "count": "0"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "1"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "1"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "2"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "2"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "3"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "3"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "1"
+          },
+          "expect": {
+            "count": "4"
+          }
+        },
+        {
+          "inputs": {
+            "clock": "0"
+          },
+          "expect": {
+            "count": "4"
+          }
+        }
+      ],
+      "limit": "A two-lamp binary display, not a seven-segment display and not a calculator."
     }
-   ],
-   "steps": [
-    {
-     "inputs": {
-      "enable": "1",
-      "data": "b"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "enable": "0"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "data": "!b"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "enable": "1"
-     },
-     "expect": {
-      "q": "!b"
-     }
-    },
-    {
-     "inputs": {
-      "enable": "0"
-     },
-     "expect": {
-      "q": "!b"
-     }
-    },
-    {
-     "inputs": {
-      "data": "b"
-     },
-     "expect": {
-      "q": "!b"
-     }
-    }
-   ],
-   "limit": "One bit. It holds its value only while its chunk stays loaded and the parts stay in place."
-  },
-  {
-   "id": "edge-register",
-   "name": "Edge-triggered register",
-   "model": "table",
-   "summary": "Stores one bit, captured only at the moment the Clock lever turns on.",
-   "lesson": [
-    "Two locked-repeater stages sit in a row: the first listens while Clock is off, the second while Clock is on.",
-    "When Clock turns on, the first stage locks and the second passes on what the first captured.",
-    "Changing Data while Clock stays on or off cannot reach the lamp.",
-    "So the lamp only changes at a rising Clock edge."
-   ],
-   "controls": {
-    "data": [
-     0,
-     0,
-     0
-    ],
-    "clock": [
-     1,
-     0,
-     3
-    ]
-   },
-   "outputs": {
-    "q": [
-     3,
-     0,
-     0
-    ]
-   },
-   "cells": [
-    {
-     "at": [
-      1,
-      0,
-      2
-     ],
-     "state": "minecraft:stone"
-    },
-    {
-     "at": [
-      2,
-      0,
-      2
-     ],
-     "state": "minecraft:redstone_wall_torch[facing=east]"
-    },
-    {
-     "at": [
-      1,
-      0,
-      0
-     ],
-     "state": "minecraft:repeater[facing=west,delay=1]"
-    },
-    {
-     "at": [
-      2,
-      0,
-      0
-     ],
-     "state": "minecraft:repeater[facing=west,delay=1]"
-    },
-    {
-     "at": [
-      1,
-      0,
-      1
-     ],
-     "state": "minecraft:repeater[facing=south,delay=1]"
-    },
-    {
-     "at": [
-      2,
-      0,
-      1
-     ],
-     "state": "minecraft:repeater[facing=south,delay=1]"
-    },
-    {
-     "at": [
-      0,
-      0,
-      0
-     ],
-     "state": "minecraft:lever[face=floor,facing=east,powered=false]"
-    },
-    {
-     "at": [
-      1,
-      0,
-      3
-     ],
-     "state": "minecraft:lever[face=wall,facing=south,powered=false]"
-    },
-    {
-     "at": [
-      3,
-      0,
-      0
-     ],
-     "state": "minecraft:redstone_lamp"
-    }
-   ],
-   "steps": [
-    {
-     "inputs": {
-      "clock": "0",
-      "data": "b"
-     },
-     "expect": {}
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "data": "!b"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "q": "b"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "q": "!b"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0",
-      "data": "b"
-     },
-     "expect": {
-      "q": "!b"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "q": "b"
-     }
-    }
-   ],
-   "limit": "One bit. Proven with each input held for twenty game ticks between edges."
-  },
-  {
-   "id": "up-counter",
-   "name": "Two-bit up counter",
-   "model": "counter",
-   "summary": "Counts rising Clock edges from 0 to 3 and wraps. Two copper bulbs hold the bits.",
-   "lesson": [
-    "A copper bulb flips each time its power rises, so it remembers one bit by itself.",
-    "A comparator reads the first bulb and, through a block, keeps a torch off while that bulb is lit.",
-    "When the first bulb goes dark the torch relights, a rising edge that flips the second bulb.",
-    "That is a carry: the second bulb changes once for every two clock pulses."
-   ],
-   "controls": {
-    "clock": [
-     0,
-     0,
-     0
-    ]
-   },
-   "outputs": {
-    "b0": [
-     1,
-     0,
-     0
-    ],
-    "b1": [
-     5,
-     0,
-     0
-    ]
-   },
-   "cells": [
-    {
-     "at": [
-      3,
-      0,
-      0
-     ],
-     "state": "minecraft:stone"
-    },
-    {
-     "at": [
-      4,
-      0,
-      0
-     ],
-     "state": "minecraft:redstone_wall_torch[facing=east]"
-    },
-    {
-     "at": [
-      2,
-      0,
-      0
-     ],
-     "state": "minecraft:comparator[facing=west,mode=compare]"
-    },
-    {
-     "at": [
-      0,
-      0,
-      0
-     ],
-     "state": "minecraft:lever[face=floor,facing=east,powered=false]"
-    },
-    {
-     "at": [
-      1,
-      0,
-      0
-     ],
-     "state": "minecraft:waxed_copper_bulb[lit=false,powered=false]"
-    },
-    {
-     "at": [
-      5,
-      0,
-      0
-     ],
-     "state": "minecraft:waxed_copper_bulb[lit=false,powered=true]"
-    }
-   ],
-   "steps": [
-    {
-     "inputs": {},
-     "expect": {
-      "count": "0"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "1"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "1"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "2"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "2"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "3"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "3"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "4"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "4"
-     }
-    }
-   ],
-   "limit": "Two bits. A plain hand-built copy may flip its second bulb as it is placed, so read the bulbs rather than assuming they start at zero."
-  },
-  {
-   "id": "pulse-tally",
-   "name": "Pulse tally with lamp display",
-   "model": "counter",
-   "summary": "The two-bit counter with two lamps that show its bits at a distance.",
-   "lesson": [
-    "This is the up counter with a small display added.",
-    "The block behind the first comparator also lights the first lamp.",
-    "A second comparator reads the second bulb and lights the second lamp.",
-    "Lamps show the stored value but do not hold it. The bulbs do."
-   ],
-   "controls": {
-    "clock": [
-     0,
-     0,
-     0
-    ]
-   },
-   "outputs": {
-    "b0": [
-     1,
-     0,
-     0
-    ],
-    "b1": [
-     5,
-     0,
-     0
-    ],
-    "lamp0": [
-     3,
-     0,
-     -1
-    ],
-    "lamp1": [
-     7,
-     0,
-     0
-    ]
-   },
-   "cells": [
-    {
-     "at": [
-      3,
-      0,
-      0
-     ],
-     "state": "minecraft:stone"
-    },
-    {
-     "at": [
-      4,
-      0,
-      0
-     ],
-     "state": "minecraft:redstone_wall_torch[facing=east]"
-    },
-    {
-     "at": [
-      2,
-      0,
-      0
-     ],
-     "state": "minecraft:comparator[facing=west,mode=compare]"
-    },
-    {
-     "at": [
-      0,
-      0,
-      0
-     ],
-     "state": "minecraft:lever[face=floor,facing=east,powered=false]"
-    },
-    {
-     "at": [
-      6,
-      0,
-      0
-     ],
-     "state": "minecraft:comparator[facing=west,mode=compare]"
-    },
-    {
-     "at": [
-      3,
-      0,
-      -1
-     ],
-     "state": "minecraft:redstone_lamp"
-    },
-    {
-     "at": [
-      7,
-      0,
-      0
-     ],
-     "state": "minecraft:redstone_lamp"
-    },
-    {
-     "at": [
-      1,
-      0,
-      0
-     ],
-     "state": "minecraft:waxed_copper_bulb[lit=false,powered=false]"
-    },
-    {
-     "at": [
-      5,
-      0,
-      0
-     ],
-     "state": "minecraft:waxed_copper_bulb[lit=false,powered=true]"
-    }
-   ],
-   "steps": [
-    {
-     "inputs": {},
-     "expect": {
-      "count": "0"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "1"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "1"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "2"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "2"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "3"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "3"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "1"
-     },
-     "expect": {
-      "count": "4"
-     }
-    },
-    {
-     "inputs": {
-      "clock": "0"
-     },
-     "expect": {
-      "count": "4"
-     }
-    }
-   ],
-   "limit": "A two-lamp binary display, not a seven-segment display and not a calculator."
-  }
- ]
+  ]
 }

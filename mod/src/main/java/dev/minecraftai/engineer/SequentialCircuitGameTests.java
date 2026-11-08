@@ -69,7 +69,7 @@ public final class SequentialCircuitGameTests {
         for(var cell:circuit.cells())h.setBlock(world.apply(cell.at().below()),Blocks.STONE.defaultBlockState());
         for(var cell:circuit.cells()){
             var state=Blueprint.state(cell.state()).rotate(rotation);
-            if(state.is(Blocks.WAXED_COPPER_BULB)){
+            if(cell.state().contains("copper_bulb")){
                 int bit=circuit.outputs().get("b1").equals(cell.at())?1:0;
                 state=state.setValue(BlockStateProperties.LIT,((initial>>bit)&1)==1);
             }
