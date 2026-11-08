@@ -118,6 +118,7 @@ final class ProjectManager {
         LocalFiles.write(directory.resolveSibling("creator-grants.json"), data);
     }
     RegionReservations.Scope scope(EngineeringSession project) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId); }
+    RegionReservations.Scope scope(EngineeringSession project, UUID worker) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId, java.util.Objects.requireNonNull(worker)); }
     static void validateWorkspaceBounds(BlockPos a,BlockPos b){
         if(a==null || b==null)throw new IllegalStateException("A complete workspace requires both corners");
         long x=Math.abs((long)a.getX()-b.getX())+1,y=Math.abs((long)a.getY()-b.getY())+1,z=Math.abs((long)a.getZ()-b.getZ())+1;

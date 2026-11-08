@@ -5,7 +5,10 @@ import net.minecraft.core.BlockPos;
 
 /** Server-thread leases protect writes and their dependencies, never ordinary player building. */
 final class RegionReservations {
-    record Scope(String world, String dimension, UUID project) { }
+    /** A null worker is the project's own lease. Each worker of a project holds a separate lease, conflict-checked against its siblings and the project's. */
+    record Scope(String world, String dimension, UUID project, UUID worker) {
+        Scope(String world, String dimension, UUID project) { this(world, dimension, project, null); }
+    }
     record Fence(UUID epoch, UUID leaseId, UUID actor, int projectRevision, long authorizationRevision,
                  ProjectAccess.Permission action) { }
     private static final long LEASE_TICKS = 100;
@@ -86,7 +89,11 @@ final class RegionReservations {
         Lease current = leases.get(scope);
         if (current != null && current.fence.equals(fence)) leases.remove(scope);
     }
-    void revoke(Scope scope) { leases.remove(scope); }
+    /** Revoking a project's lease stops every worker of that project; revoking a worker's lease stops only that worker. */
+    void revoke(Scope scope) {
+        if (scope.worker() != null) { leases.remove(scope); return; }
+        leases.keySet().removeIf(other -> other.project().equals(scope.project()) && other.world().equals(scope.world()) && other.dimension().equals(scope.dimension()));
+    }
     void close() { leases.clear(); }
     private static boolean intersects(Set<BlockPos> a, Set<BlockPos> b) {
         Set<BlockPos> small = a.size() <= b.size() ? a : b, large = small == a ? b : a;
