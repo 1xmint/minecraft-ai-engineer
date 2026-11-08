@@ -736,6 +736,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             write("physical-craft-interruptions.done","passed");
             gridCraft[0]=physicalGridCraftFlow(context,server);
             tablePlacement[0]=physicalTablePlacementFlow(context,server);
+            physicalOrientedPlacementFlow(context,server);
             tableCraft[0]=physicalTableCraftFlow(context,server);
             chestTake[0]=physicalChestTakeFlow(context,server);
             physicalMachinePartsFlow(context,server);
@@ -1073,6 +1074,50 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();say(context,place);expectChat(context,"in clear air above stone");
         MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
         server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-table-placement.done","passed");return evidence;
+    }
+    /** Machine parts placed by one native use each against an aimed support face, in exactly the planned orientation; a wrong facing consumes nothing. */
+    private static void physicalOrientedPlacementFlow(ClientGameTestContext context,TestDedicatedServerContext server){
+        UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
+        server.runCommand("forceload add 3424 -16 3456 32");server.runCommand("fill 3430 100 0 3438 100 9 minecraft:stone");server.runCommand("fill 3430 101 0 3438 105 9 minecraft:air");
+        // Supports outside the 3x3 summon pad: S1 for the lever, S2 for the wall torch and the stone above it, S3 for the lamp.
+        server.runCommand("setblock 3433 101 1 minecraft:stone");server.runCommand("setblock 3434 101 3 minecraft:stone");server.runCommand("setblock 3431 101 3 minecraft:stone");
+        server.runCommand("tp Alice 3437.5 101 9 180 0");
+        send(context,"engineer select1 3430 100 0");send(context,"engineer select2 3437 104 7");server.waitFor(s->new BlockPos(3437,104,7).equals(session(s,"Alice").corner2));
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        UUID worker=server.computeOnServer(s->s.getPlayerList().getPlayers().stream().filter(p->p.getGameProfile().name().startsWith("Eng_")).findFirst().orElseThrow().getUUID());
+        // Test fixture standing in for materials the owner supplies; acquisition is covered by its own flows.
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(body.getInventory().isEmpty() && body.blockPosition().equals(new BlockPos(3431,101,1)),"Oriented placement worker begins empty at its spawn");
+            body.getInventory().setItem(0,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEVER));body.getInventory().setItem(1,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE_TORCH));
+            body.getInventory().setItem(2,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE_LAMP));body.getInventory().setItem(3,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE));
+            PhysicalWorkerStorage.save(body);});
+        var lever=new BlockPos(3433,102,1);var torch=new BlockPos(3433,101,3);var lamp=new BlockPos(3431,102,3);var stone=new BlockPos(3434,102,3);
+        MESSAGES.clear();say(context,"Engineer, place retained lever on the top face of 3433 101 1");expectChat(context,"Say which way the lever on a top face should face");
+        MESSAGES.clear();say(context,"Engineer, place retained redstone lamp on the top face of 3431 101 3 facing east");expectChat(context,"Only a lever on a top face takes a facing");
+        // The companion looks east at S1, so a floor lever natively faces east; asking for north is refused at the commit and consumes nothing.
+        MESSAGES.clear();say(context,"Engineer, place retained lever on the top face of 3433 101 1 facing north");expectChat(context,"Only the exact planned orientation will be accepted");expectChat(context,"Physical placement stopped",30_000);
+        server.runOnServer(s->{check(s.overworld().getBlockState(lever).isAir(),"A wrong lever facing writes no block");check(s.getPlayerList().getPlayer(worker)==null,"A stopped placement dismisses the companion");});
+        MESSAGES.clear();say(context,"Engineer, summon my companion");expectChat(context,"Your physical companion is here");
+        server.runOnServer(s->{var body=s.getPlayerList().getPlayer(worker);check(countItem(body,net.minecraft.world.item.Items.LEVER)==1 && countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)==1
+            && countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==1 && countItem(body,net.minecraft.world.item.Items.STONE)==1,"The refused lever consumed no material and the saved inventory returned intact");});
+        MESSAGES.clear();say(context,"Engineer, place retained lever on the top face of 3433 101 1 facing east");expectChat(context,"placed one retained lever as",30_000);
+        server.runOnServer(s->{var state=s.overworld().getBlockState(lever);var body=s.getPlayerList().getPlayer(worker);
+            check(state.is(Blocks.LEVER) && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE)==net.minecraft.world.level.block.state.properties.AttachFace.FLOOR
+                && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.EAST && !state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED),"The lever stands on S1's top face, facing east, off");
+            check(countItem(body,net.minecraft.world.item.Items.LEVER)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)==1,"Placing the lever consumed exactly one lever and nothing else");});
+        MESSAGES.clear();say(context,"Engineer, place retained redstone torch on the west face of 3434 101 3");expectChat(context,"placed one retained redstone torch as",30_000);
+        server.runOnServer(s->{var state=s.overworld().getBlockState(torch);var body=s.getPlayerList().getPlayer(worker);
+            check(state.is(Blocks.REDSTONE_WALL_TORCH) && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)==net.minecraft.core.Direction.WEST && state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"The torch hangs lit on S2's west face");
+            check(countItem(body,net.minecraft.world.item.Items.REDSTONE_TORCH)==0 && countItem(body,net.minecraft.world.item.Items.REDSTONE_LAMP)==1,"Placing the torch consumed exactly one torch");});
+        MESSAGES.clear();say(context,"Engineer, place retained redstone lamp on the top face of 3431 101 3");expectChat(context,"placed one retained redstone lamp as",30_000);
+        MESSAGES.clear();say(context,"Engineer, place retained stone on the top face of 3434 101 3");expectChat(context,"placed one retained stone as",30_000);
+        server.runOnServer(s->{var level=s.overworld();var body=s.getPlayerList().getPlayer(worker);
+            check(level.getBlockState(lamp).is(Blocks.REDSTONE_LAMP) && !level.getBlockState(lamp).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT),"The unpowered lamp sits on S3, unlit");
+            check(level.getBlockState(stone).is(Blocks.STONE) && level.getBlockState(new BlockPos(3434,101,3)).is(Blocks.STONE) && level.getBlockState(torch).is(Blocks.REDSTONE_WALL_TORCH),"Stone sits on S2 and its torch stays attached");
+            check(body.getInventory().isEmpty() && PhysicalWorkerMenus.capture(body).empty(),"Four placements consumed exactly the four supplied items");});
+        MESSAGES.clear();// A free floor support with clear air above, so only the now-empty inventory can refuse this.
+        say(context,"Engineer, place retained stone on the top face of 3432 100 3");expectChat(context,"holds no plain minecraft:stone");
+        MESSAGES.clear();say(context,"Engineer, dismiss my companion");expectChat(context,"Physical companion dismissed");
+        server.runCommand("tp Alice 2634.5 101 8 180 0");write("physical-oriented-placement.done","passed");
     }
     private static void nativePlacementGateRefusals(MinecraftServer server,ServerPlayer worker){
         var manager=EngineerMod.managerFor(server);var project=session(server,"Alice");var owner=player(server,"Alice");var target=new BlockPos(2633,101,3);

@@ -193,7 +193,7 @@ public final class PhysicalActionGate {
             }catch(RuntimeException refused){return false;}
         }
         // No other containers, secondary block interactions, buckets, fire or spawn eggs.
-        if(level!=actor.level() || !heldPlacement(bound,actor,stack,net.minecraft.world.InteractionHand.MAIN_HAND) || !level.hasChunkAt(hit.getBlockPos()) || !level.getBlockState(hit.getBlockPos()).is(Blocks.STONE)){
+        if(level!=actor.level() || !heldPlacement(bound,actor,stack,net.minecraft.world.InteractionHand.MAIN_HAND) || !level.hasChunkAt(hit.getBlockPos()) || !supportClicked(bound,level,hit)){
             ACTORS.get(actor.getUUID()).ticket=null;return false;
         }
         return check(actor,"place",new BlockPlaceContext(actor,net.minecraft.world.InteractionHand.MAIN_HAND,stack,hit).getClickedPos(),false);
@@ -208,6 +208,18 @@ public final class PhysicalActionGate {
         boolean permitted=check(actor,"place",context.getClickedPos(),true);
         if(permitted && ACTORS.get(actor.getUUID())==bound && bound.placement==plan && heldPlacement(bound,current,context.getItemInHand(),context.getHand())){bound.pendingPlace=context.getClickedPos().immutable();bound.placementCommit=ticket;return true;}return false;
     }
+    /** Legacy commits the default state; aimed commits must match the planned state exactly except for neighbour-driven power and light. */
+    private static boolean plannedCommit(PhysicalPlacementInventory placement,BlockState state){
+        return placement.aim()==null?state.equals(placement.planned()):Blueprint.matches(placement.planned(),state);
+    }
+    /** Legacy placements click stone; aimed ones click exactly their planned face of their unchanged inert support. */
+    private static boolean supportClicked(Entry entry,Level level,BlockHitResult hit){
+        var aim=entry.placement==null?null:entry.placement.aim();var live=level.getBlockState(hit.getBlockPos());
+        if(aim==null)return live.is(Blocks.STONE);
+        return hit.getBlockPos().equals(aim.support()) && hit.getDirection()==aim.face() && live.equals(aim.supportState()) && inertSupport(live);
+    }
+    /** Supports whose server-side use does nothing, so the click can only reach item placement. */
+    static boolean inertSupport(BlockState state){return state.is(Blocks.STONE) || state.is(Blocks.COBBLESTONE) || state.is(Blocks.DIRT);}
     private static boolean heldPlacement(Entry entry,ServerPlayer actor,ItemStack stack,net.minecraft.world.InteractionHand hand){
         try{return hand==net.minecraft.world.InteractionHand.MAIN_HAND && entry.placement!=null && stack==actor.getMainHandItem() && stack.is(entry.placement.item()) && entry.placement.beforeMatches(actor);}catch(RuntimeException invalid){return false;}
     }
@@ -221,7 +233,7 @@ public final class PhysicalActionGate {
                 || !exactConnection(actor) || actor.level().getServer().getPlayerList().getPlayer(actor.getUUID())!=actor || !actor.isAlive()
                 || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || actor.level()!=context.getLevel()
                 || actor.level().getServer().getTickCount()>=ticket.expires || !actor.level().hasChunkAt(ticket.target) || !actor.level().getBlockState(ticket.target).equals(ticket.before)
-                || !heldPlacement(entry,actor,context.getItemInHand(),context.getHand()) || !state.equals(entry.placement.block().defaultBlockState()))throw new IllegalStateException("No exact native placement commit");
+                || !heldPlacement(entry,actor,context.getItemInHand(),context.getHand()) || !plannedCommit(entry.placement,state))throw new IllegalStateException("No exact native placement commit");
             ticket.authority.run();
             if(ACTORS.get(actor.getUUID())!=entry || entry.placement!=plan || !exactConnection(actor) || actor.level().getServer().getPlayerList().getPlayer(actor.getUUID())!=actor
                 || !actor.isAlive() || actor.gameMode.getGameModeForPlayer()!=net.minecraft.world.level.GameType.SURVIVAL || actor.level()!=context.getLevel()
@@ -234,7 +246,7 @@ public final class PhysicalActionGate {
         var actor=context.getPlayer();if(!managed(actor))return;var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor)return;
         var target=entry.pendingPlace;entry.pendingPlace=null;entry.placementCommit=null;
-        if(target!=null && entry.placement!=null && target.equals(context.getClickedPos()) && result.consumesAction() && context.getLevel().getBlockState(target).is(entry.placement.block()))entry.observedPlace=target;
+        if(target!=null && entry.placement!=null && target.equals(context.getClickedPos()) && result.consumesAction() && context.getLevel().getBlockState(target).is(entry.placement.planned().getBlock()))entry.observedPlace=target;
     }
     static boolean placementObserved(ServerPlayer actor,BlockPos target){thread(actor);var entry=ACTORS.get(actor.getUUID());return entry!=null && entry.actor==actor && target.equals(entry.observedPlace);}
     public static boolean mine(ServerPlayer actor,BlockPos target){
