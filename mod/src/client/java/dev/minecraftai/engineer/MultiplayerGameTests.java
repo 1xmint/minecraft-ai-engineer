@@ -1889,9 +1889,9 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             try(TestDedicatedServerConnection reconnected=server.connect()){
                 recoverMemoryRecoveryReconnect(server);
                 recoverConversationReconnect(context,server);
+                prepareOlderMemoryRecall(context,server);
                 prepareConversationRestart(context,server);
                 prepareMemoryRecoveryServerRestart(server);
-                prepareOlderMemoryRecall(context,server);
             }
           }
         }
@@ -4023,6 +4023,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         MESSAGES.clear();memorySay(context,"Engineer, remember our decision: Route the gold clock along the south wall");expectChat(context,"knowledge revision 1");
         MESSAGES.clear();memorySay(context,"Engineer, replace decision 1: Route the gold clock along the north wall because the east wall holds the door");expectChat(context,"knowledge revision 2. Reason kept. Replaces note 1.");
         for(int note=3;note<=35;note++){MESSAGES.clear();memorySay(context,"Engineer, remember my goal: Unrelated filler marker "+note);expectChat(context,"knowledge revision "+note);}
+        // The conversation restart proof needs its project selected when its proposal is made.
+        send(context,"engineer project use "+previous);server.waitFor(s->session(s,"Alice").projectId.toString().equals(previous));
     }
     /** A later session on a real saved-server boot, past the newest-32 window. */
     private static void recoverOlderMemoryRecall(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {

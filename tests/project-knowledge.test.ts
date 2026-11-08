@@ -968,7 +968,7 @@ test("older current notes are recalled across the whole history without leaking 
       store.gateway.rememberNote(
         frame(),
         { schemaVersion: 2, kind: "decision", text, ...extra },
-        at,
+        at - 1,
       );
     say("Route the gold clock south", 1);
     say("Route the gold clock north", 2, {
@@ -977,13 +977,13 @@ test("older current notes are recalled across the whole history without leaking 
     });
     say("Start the art gallery tour", 3);
     store.gateway.rememberNote(
-      frame({ actorId: EDITOR }),
+      frame(),
       {
         schemaVersion: 2,
         kind: "reference",
         text: "https://example.invalid/gold-clock",
       },
-      4,
+      3,
     );
     for (let i = 5; i <= 40; i++) say(`Unrelated filler ${i}`, i);
 
@@ -1008,7 +1008,7 @@ test("older current notes are recalled across the whole history without leaking 
       "the east wall holds the door",
     );
     assert.ok(asked.notes[1]!.kind === "reference");
-    assert.equal(asked.notes[1]!.authorId, EDITOR);
+    assert.equal(asked.notes[1]!.authorId, OWNER);
 
     // A reason alone can recall a note; a word found inside a longer word cannot.
     assert.deepEqual(
@@ -1091,12 +1091,21 @@ test("older current notes are recalled across the whole history without leaking 
     });
     store.gateway.rememberNote(
       b,
-      { ...note, text: "Project b has no gold clock history." },
-      100,
+      { ...note, text: "Project b gold clock note." },
+      0,
     );
+    // Past the newest window, so the older-note search really runs for this project.
+    for (let i = 1; i <= 33; i++)
+      store.gateway.rememberNote(
+        b,
+        { ...note, text: `Project b filler ${i}` },
+        i,
+      );
+    const other = store.gateway.relevantKnowledge(b, "gold clock");
+    assert.equal(other.hasEarlier, true);
     assert.deepEqual(
-      store.gateway.relevantKnowledge(b, "gold clock").notes.map((n) => n.text),
-      ["Project b has no gold clock history."],
+      other.notes.filter((n) => !n.text.includes("filler")).map((n) => n.text),
+      ["Project b gold clock note."],
       "Another project's notes are never searched",
     );
   } finally {
