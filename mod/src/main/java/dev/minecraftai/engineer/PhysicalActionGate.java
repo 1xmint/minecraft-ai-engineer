@@ -21,7 +21,7 @@ public final class PhysicalActionGate {
         MenuRun(UUID operation,PhysicalMenuProtocol sequence,ServerPlayer actor,Runnable authority){this.operation=operation;this.sequence=sequence;connection=actor.connection;menu=sequence.menu(actor);this.authority=authority;}
     }
     private record Ticket(String operation,BlockPos target,BlockState before,long expires,Runnable authority,Runnable writeAhead) { }
-    private record TableOpen(BlockPos table,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
+    private record TableOpen(BlockPos table,net.minecraft.world.level.block.Block block,ItemStack stack,long expires,Runnable authority,Runnable writeAhead) { }
     private record Pickup(net.minecraft.world.entity.item.ItemEntity drop,ItemStack stack,List<ItemStack> baseline,long expires,Runnable authority,Runnable writeAhead) { }
     private static final class Entry {
         final ServerPlayer actor;
@@ -65,7 +65,14 @@ public final class PhysicalActionGate {
         PhysicalWorkerMenus.requireSettled(actor);
         thread(actor);var entry=ACTORS.get(actor.getUUID());
         if(entry==null || entry.actor!=actor || !menuIdle(entry) || !actor.level().hasChunkAt(table) || !actor.level().getBlockState(table).is(Blocks.CRAFTING_TABLE))throw new IllegalStateException("No idle bound actor beside a placed crafting table");
-        entry.tableOpen=new TableOpen(table.immutable(),actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
+        entry.tableOpen=new TableOpen(table.immutable(),Blocks.CRAFTING_TABLE,actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
+    }
+    /** One-call capability to open exactly one plain chest with an empty main hand; never a placement. */
+    static void armChest(ServerPlayer actor,BlockPos chest,long expires,Runnable authority,Runnable writeAhead){
+        PhysicalWorkerMenus.requireSettled(actor);
+        thread(actor);var entry=ACTORS.get(actor.getUUID());
+        if(entry==null || entry.actor!=actor || !menuIdle(entry) || !actor.getMainHandItem().isEmpty() || !actor.level().hasChunkAt(chest) || !actor.level().getBlockState(chest).is(Blocks.CHEST))throw new IllegalStateException("No idle empty-handed bound actor beside a chest");
+        entry.tableOpen=new TableOpen(chest.immutable(),Blocks.CHEST,actor.getMainHandItem(),expires,java.util.Objects.requireNonNull(authority),java.util.Objects.requireNonNull(writeAhead));
     }
     static void armPickup(ServerPlayer actor,net.minecraft.world.entity.item.ItemEntity drop,long expires,Runnable authority,Runnable writeAhead){
         PhysicalWorkerMenus.requireSettled(actor);
@@ -180,7 +187,7 @@ public final class PhysicalActionGate {
             bound.tableOpen=null;
             try{
                 if(level!=actor.level() || bound.connection!=actor.connection || actor.hasDisconnected() || !hit.getBlockPos().equals(open.table()) || !level.hasChunkAt(open.table())
-                    || !level.getBlockState(open.table()).is(Blocks.CRAFTING_TABLE) || stack!=open.stack() || stack!=actor.getMainHandItem() || actor.isSecondaryUseActive()
+                    || !level.getBlockState(open.table()).is(open.block()) || stack!=open.stack() || stack!=actor.getMainHandItem() || actor.isSecondaryUseActive()
                     || actor.level().getServer().getTickCount()>=open.expires())return false;
                 open.authority().run();open.writeAhead().run();return true;
             }catch(RuntimeException refused){return false;}
