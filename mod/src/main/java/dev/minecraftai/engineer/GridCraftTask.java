@@ -37,6 +37,7 @@ final class GridCraftTask {
         PhysicalCraftRecord.requireNoUnresolved(manager,project,worker,OakCraftingPlan.recordedContract());
         GridCraftRecord.requireNoUnresolved(manager,project,worker);
         TableCraftRecord.requireNoUnresolved(manager,project,worker);
+        ChestTakeRecord.requireNoUnresolved(manager,project,worker);
     }
     private static void start(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive){
         if(!manager.server.isSameThread())throw new IllegalStateException("Native crafting needs the server thread");
