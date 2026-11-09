@@ -317,6 +317,8 @@ final class EngineeringSession implements BuildExecutor {
         access.require(actor(),ProjectAccess.Permission.EDIT);
         ComponentTree.validate(value);
         if(shutterOwned)throw new IllegalStateException("Release mechanical control before replacing its accepted design");
+        if(sequentialRun!=null)throw new IllegalStateException("A stored-circuit test is running; finish or stop it before replacing its design");
+        SequentialFunctionalRun.requireNoPending(this);
         if (state.equals("PLANNING") || state.equals("EXECUTING") || testTick >= 0 || hasPendingTest() || shutterMotion!=null || !journal.isEmpty()) throw new IllegalStateException("Stop planning/building and reconcile pending work before replacing its blueprint");
         JsonObject intended=value.source().deepCopy();
         intended.addProperty("projectId",projectId.toString()); intended.addProperty("revision",Math.addExact(projectRevision,1));
@@ -720,7 +722,7 @@ final class EngineeringSession implements BuildExecutor {
             detail="Recovering the original memory input and stored bit using a fresh bounded attempt. This does not run a functional test.";
             tell(detail);return;
         }
-        if(blueprint!=null && SequentialIntention.describes(blueprint.source()) && SequentialFunctionalRun.pending(this)){SequentialFunctionalRun.recover(this);return;}
+        if(SequentialFunctionalRun.pending(this)){SequentialFunctionalRun.recover(this);return;}
         if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source()) && hasPendingTest())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && hasPendingTest()){
