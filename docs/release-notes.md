@@ -37,8 +37,10 @@ items have the limits named under "Not supported yet".
 - **Diagnosis says what is known.** It separates intended, observed, unknown,
   stale and verified states. The optional overlay tints the differing cells.
   Players without the overlay get the same guidance as chat text.
-- **Four stored and clocked circuits can be previewed and taught:** data latch,
-  edge register, up counter and pulse tally.
+- **Four stored and clocked circuits can be previewed, built and live tested
+  through chat:** data latch, edge register, up counter and pulse tally. A pass
+  needs every step on live ticks, and every lever and output back where it
+  started. Testing needs creative mode.
 - **Comparisons count real lever tests** as passed, failed, interrupted,
   refused, older revision and unreadable. They never become a rate.
 - **Delayed replies stay private.** A note reply that is out of date because of
@@ -59,9 +61,9 @@ items have the limits named under "Not supported yet".
 
 - **Machine building covers the NOT gate only.** Larger circuits have no
   physical build path.
-- **The four stored circuits cannot be built or tested through conversation.**
-  They refuse those requests and say that nothing changed. There is no small
-  calculator or seven-segment display.
+- **There is no small calculator or seven-segment display.** If a stored-circuit
+  test is interrupted, a player must put the levers down by hand before it can
+  be cleared. It is never replayed automatically.
 - **Imported designs:** up to 32 blocks, 2 tall, six block kinds. They are
   never tested and never become verified.
 - **Two companions:** only the first companion gathers. A route that crosses
