@@ -2673,7 +2673,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"Only the project owner can change");
             write("conversation-setup-editor-denied.done","passed");
         }
-        await(context,()->Files.exists(directory().resolve("finish")),"finish",LIVE_ACCEPTANCE?WAIT_MILLIS:600_000); // End-of-scenario wait includes the longer owner memory/schematic flow.
+        await(context,()->Files.exists(directory().resolve("finish")),"finish",LIVE_ACCEPTANCE?WAIT_MILLIS:1_500_000); // End-of-scenario wait includes the longer owner memory/schematic flow.
         disconnect(context);
     }
 

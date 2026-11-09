@@ -16,9 +16,10 @@ companion_pid=""
 companion_entry="$repo/scripts/ci/companion.mjs"
 # Includes real approval expiry, analog/connected suites, native repeated trials,
 # memory construction and saved-world recovery. Memory preview now begins near
-# minute22; keep a bounded window for the added construction/reload proof.
-client_timeout=35m
-harness_seconds=2160
+# minute22; keep a bounded window for the added construction/reload proof
+# and the four stored-circuit live tests.
+client_timeout=50m
+harness_seconds=3060
 # Synthetic provider only; this offline UUID carries no real account credentials.
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
   export MCE_CODEX_OPERATOR_UUID=10920508-d5d8-3eed-93d2-92f193afe7d7
