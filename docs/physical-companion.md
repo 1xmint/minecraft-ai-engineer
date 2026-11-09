@@ -1,10 +1,11 @@
 # Optional physical companion
 
 Current source supports a visible survival actor, bounded resource gathering,
-flat navigation, native inventory crafting and retained-item placement. Alpha.2
-predates these features. Check the chosen release notes and use its paired files.
-General survival machine construction, tools, workbench recipes and concurrent
-builders remain unfinished.
+flat navigation, native inventory crafting, retained-item placement, building and
+lever-testing the NOT gate from chest items, and two companions building separate
+parts at once. Alpha.2 predates these features. Check the
+[release notes](release-notes.md) and use the paired files. Other machines and
+tools remain unfinished.
 
 ![The companion rendered by the actual client](images/physical-companion.png)
 
@@ -95,6 +96,24 @@ materials and composite physical scheduling are unsupported.
 Matching player blocks do not become assistant-owned. Native placement does not
 fabricate creative undo history or grant a functional pass. This bounded dirt
 executor is not a general redstone machine builder.
+
+## Build a machine
+
+Put the materials in a chest in the workspace, preview the NOT gate, then say
+`Engineer, build this machine from the chest at X Y Z`. The companion draws real
+items and places each block by survival item use. It then pulls the real lever
+and reads the real lamp for each case. `Engineer, test this machine` tests again.
+A player's block in the way stops the job and is left alone. A restart resumes
+nothing; ask again to finish from what exists.
+
+## A second companion
+
+`Engineer, summon a second companion at X Y Z`, then
+`Engineer, have my first companion build ID from the chest at X Y Z` and the same
+for `my second companion`. `Engineer, recover my second companion's resources` and
+`Engineer, dismiss my second companion` act on that companion only. Each one has
+its own inventory, task and permissions. A part, chest or dependency another
+worker holds is refused and nothing moves.
 
 ## Stop, proof and limits
 
