@@ -1016,6 +1016,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     /** At its own placed table the companion crafts a lever, a redstone torch and a redstone lamp, consuming exactly their recipes; a missing input moves nothing. */
     private record MachineEvidence(String project,UUID worker) { }
     private record CrewEvidence(UUID first,UUID second) { }
+    private static UUID crewRestartProject;
     private static final BlockPos CREW_A=new BlockPos(3706,101,5),CREW_B=new BlockPos(3722,101,5),CREW_C=new BlockPos(3730,101,5),CREW_CHEST_A=new BlockPos(3704,101,1),CREW_CHEST_B=new BlockPos(3720,101,1);
     private static final String CREW_BUILD_A="Engineer, have my first companion build a from the chest at 3704 101 1",CREW_BUILD_B="Engineer, have my second companion build b from the chest at 3720 101 1";
     private static void crewStock(TestDedicatedServerContext server,BlockPos chest) throws Exception {
@@ -1125,9 +1126,12 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     }
     /** Leaves both workers mid-build so the real restart below has something it must not resume. */
     private static CrewEvidence physicalCrewBeforeRestart(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
-        var crew=crewStage(context,server);crewStart(context,server,crew);return crew;
+        var crew=crewStage(context,server);crewStart(context,server,crew);crewRestartProject=server.computeOnServer(s->session(s,"Alice").projectId);return crew;
     }
     private static void physicalCrewRestartFlow(ClientGameTestContext context,TestDedicatedServerContext server,CrewEvidence crew) throws Exception {
+        // Alice owns several projects, so after a restart she has to name the one she means.
+        send(context,"engineer project use "+crewRestartProject);
+        server.waitFor(s->s.getPlayerList().getPlayers().stream().anyMatch(p->p.getGameProfile().name().equals("Alice") && crewRestartProject.equals(EngineerMod.managerFor(s).selections.get(p.getUUID()))));
         int[] before=server.computeOnServer(s->new int[]{crewPlaced(s,CREW_A),crewPlaced(s,CREW_B)});
         context.waitTicks(60);
         server.runOnServer(s->{var project=session(s,"Alice");check(s.getPlayerList().getPlayer(crew.second())==null,"A restart never brings the second worker back by itself");
