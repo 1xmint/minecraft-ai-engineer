@@ -546,7 +546,11 @@ not a completed-product release.
 ### Compare two designs (development source)
 
 Ask `compare this design with <project or catalog design>` in addressed chat.
-The answer is read-only and changes nothing. Every number carries its unit:
+The answer is read-only and changes nothing. If the companion has tested a
+machine with its real levers, the answer also counts those tests: passed,
+failed, interrupted, refused before any lever moved, older revision and
+unreadable. They stay separate and never become a rate. Those records hold no
+measured timing, so timing from them is reported as unavailable. Every number carries its unit:
 blocks, blocks² for footprint, blocks³ for the bounding-box volume, and items
 for materials. Material counts are what each design calls for, not what anyone
 has collected or stored. A generated design's configured delay is shown as
