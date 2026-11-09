@@ -84,10 +84,10 @@ final class ChestTakeSequence implements PhysicalMenuProtocol {
         if(found<0)throw new IllegalStateException("That chest has no stack of exactly "+count+" "+new ItemStack(item).getHoverName().getString()+"; nothing was taken");
         return found;
     }
-    /** An empty main slot that is not the held hotbar slot, preferring the backpack rows so the main hand stays empty. */
+    /** An empty main slot that is not the held hotbar slot, preferring the hotbar so a native placement can use what was taken. */
     private static int emptyMain(List<ItemStack> inventory,int selected){
-        for(int slot=9;slot<MAIN_SLOTS;slot++)if(inventory.get(slot).isEmpty())return slot;
         for(int slot=0;slot<9;slot++)if(slot!=selected && inventory.get(slot).isEmpty())return slot;
+        for(int slot=9;slot<MAIN_SLOTS;slot++)if(inventory.get(slot).isEmpty())return slot;
         throw new IllegalStateException("Your companion has no free inventory space; nothing was taken");
     }
 
