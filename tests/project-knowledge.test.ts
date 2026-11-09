@@ -1090,14 +1090,14 @@ test("older current notes are recalled across the whole history without leaking 
       }),
     });
     store.gateway.rememberNote(
-      b,
+      { ...b, requestId: randomUUID() },
       { ...note, text: "Project b gold clock note." },
       0,
     );
     // Past the newest window, so the older-note search really runs for this project.
     for (let i = 1; i <= 33; i++)
       store.gateway.rememberNote(
-        b,
+        { ...b, requestId: randomUUID() },
         { ...note, text: `Project b filler ${i}` },
         i,
       );
