@@ -113,7 +113,8 @@ final class PhysicalPlacementTask implements AutoCloseable {
         if(PhysicalActionGate.placementObserved(worker,target)){
             call("stopAll",new Class[]{});
             if(!prepared || !placedAsPlanned() || !inventory.afterMatches(worker))throw new IllegalStateException("Native placement outcome is uncertain");
-            PhysicalWorkerStorage.save(worker);record.add("inventorySaved",PhysicalWorkerStorage.inventory(worker));record.addProperty("stage","SAVED_OBSERVATION");LocalFiles.write(file,record);close();return true;
+            // Companion first, then the block's chunk, and only then close the record: a crash between them can lose the item but never duplicate it, and the still-open record reports it.
+            PhysicalWorkerStorage.save(worker);level.getChunkSource().save(true);record.add("inventorySaved",PhysicalWorkerStorage.inventory(worker));record.addProperty("stage","SAVED_OBSERVATION");LocalFiles.write(file,record);close();return true;
         }
         if(!level.getBlockState(target).isAir())throw new IllegalStateException("Placement cell changed without native completion");return false;
     }
