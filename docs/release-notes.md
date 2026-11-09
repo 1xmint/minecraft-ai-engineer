@@ -66,7 +66,8 @@ items have the limits named under "Not supported yet".
   never tested and never become verified.
 - **Two companions:** only the first companion gathers. A route that crosses
   the other worker's reservation stops that worker rather than rerouting.
-  Components within 3 blocks of each other cannot be tested separately.
+  A machine test will not start if redstone or any other block that could affect
+  the result is within 2 blocks of the component, including a neighbouring part.
 - **Machine tests record no timing.** Comparisons say timing from them is
   unavailable.
 - **Note recall matches literal words,** so a synonym will not find a note.

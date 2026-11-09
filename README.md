@@ -67,10 +67,10 @@ After following the server/operator setup in the installation guide:
 
 Codex reasoning uses the configured account-owning operator's ChatGPT sign-in and
 subscription quota. No API key or separately billed API service is used. Other
-members never receive that login or direct model access. Current source adds
-offline voice drafts/private spoken replies and physical survival work, including
-a companion that builds and tests a NOT gate and two companions working at once.
-Published downloads predate these additions. The [release notes](docs/release-notes.md)
+members never receive that login or direct model access. The alpha.3 download
+includes offline voice drafts, private spoken replies and bounded physical survival
+work. A companion that builds and tests a NOT gate, and two companions working at
+once, came after alpha.3 and are in current source only. The [release notes](docs/release-notes.md)
 list what the current source supports, what it does not, and the human checks still open.
 
 The [companion guide](docs/companion-guide.md) covers configuration and memory.
