@@ -89,14 +89,20 @@ final class RegionReservations {
         Lease current = leases.get(scope);
         if (current != null && current.fence.equals(fence)) leases.remove(scope);
     }
+    private final Map<Scope,Long> workerEpochs=new HashMap<>();
+    private void bumpWorkers(Scope scope){workerEpochs.merge(new Scope(scope.world(),scope.dimension(),scope.project(),null),1L,Long::sum);}
+    /** Changes whenever this project's workers are revoked, so a job between two leases still notices. */
+    long workerEpoch(Scope scope){return workerEpochs.getOrDefault(new Scope(scope.world(),scope.dimension(),scope.project(),null),0L);}
     /** Stops every worker of this project and leaves the project's own lease to its fenced release. */
     void revokeWorkers(Scope scope) {
+        bumpWorkers(scope);
         leases.keySet().removeIf(other -> other.worker() != null && other.project().equals(scope.project()) && other.world().equals(scope.world()) && other.dimension().equals(scope.dimension()));
     }
 
     /** Revoking a project's lease stops every worker of that project; revoking a worker's lease stops only that worker. */
     void revoke(Scope scope) {
         if (scope.worker() != null) { leases.remove(scope); return; }
+        bumpWorkers(scope);
         leases.keySet().removeIf(other -> other.project().equals(scope.project()) && other.world().equals(scope.world()) && other.dimension().equals(scope.dimension()));
     }
     void close() { leases.clear(); }
