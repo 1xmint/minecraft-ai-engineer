@@ -53,6 +53,12 @@ public final class EngineerMod implements ModInitializer {
             Commands.literal("engineer")
                 .executes(ctx->help(ctx.getSource()))
                 .then(Commands.literal("help").executes(ctx->help(ctx.getSource())))
+                .then(Commands.literal("circuit")
+                    .then(Commands.literal("list").executes(ctx->circuitReply(ctx.getSource(),SequentialCircuits.list())))
+                    .then(Commands.argument("action",StringArgumentType.word()).then(Commands.argument("id",StringArgumentType.word()).executes(ctx->{
+                        try{return circuitReply(ctx.getSource(),SequentialCircuits.command(StringArgumentType.getString(ctx,"action"),StringArgumentType.getString(ctx,"id")));}
+                        catch(IllegalArgumentException unknown){return circuitReply(ctx.getSource(),java.util.List.of(unknown.getMessage()));}
+                    }))))
                 .then(Commands.literal("catalog").executes(ctx->{ctx.getSource().sendSuccess(()->Component.literal("Engineer mechanisms: "+String.join(", ",MechanismCatalog.ids())+". Use reference <mechanism> [delay]; repeater delay is 1–4 redstone ticks, inverter uses 1."),false);return 1;}))
                 .then(Commands.literal("project")
                     .then(Commands.literal("adopt-legacy").executes(ctx->withManager(ctx.getSource(),(m,p)->{
@@ -170,6 +176,7 @@ public final class EngineerMod implements ModInitializer {
     static boolean recoveryInitialized(MinecraftServer server){var manager=MANAGERS.get(server);return manager!=null && manager.recoveryInitialized;}
     static boolean current(ProjectManager manager) { return MANAGERS.get(manager.server)==manager; }
     static EngineeringSession sessionFor(ServerPlayer player) { return managerFor(player.level().getServer()).selected(player,false); }
+    private static int circuitReply(CommandSourceStack source,java.util.List<String> lines){lines.forEach(line->source.sendSuccess(()->Component.literal(line),false));return 1;}
     private static int help(CommandSourceStack source) { source.sendSuccess(()->Component.literal("Engineer: "+HELP),false);return Command.SINGLE_SUCCESS; }
     private static int withManager(CommandSourceStack source,BiConsumer<ProjectManager,ServerPlayer> action) {
         try {ServerPlayer p=source.getPlayerOrException();action.accept(managerFor(source.getServer()),p);return Command.SINGLE_SUCCESS;}

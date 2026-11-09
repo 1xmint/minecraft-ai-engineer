@@ -1335,6 +1335,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var manager=EngineerMod.managerFor(s);var project=session(s,"Alice");var stages=new java.util.ArrayList<String>();
             try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".machine-trial-*.json")){var out=directory().resolve("machine-trials");Files.createDirectories(out);for(var file:files){Files.copy(file,out.resolve(file.getFileName()));var trial=com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();stages.add(trial.get("stage").getAsString()+":"+(trial.has("passed")?String.valueOf(trial.get("passed").getAsInt()):"geometry"));}}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
             java.util.Collections.sort(stages);check(stages.equals(java.util.List.of("ABORTED:geometry","ABORTED:geometry","FAILED:2","FAILED:geometry","PASSED:3")),"Each pass, failure and interrupted test leaves exactly one record with the right outcome, got "+stages);});
+        MESSAGES.clear();say(context,"Engineer, compare this with catalog not gate");expectChat(context,"Real lever tests on this design: 1 passed, 1 failed, 2 interrupted, 1 refused before any lever moved, 0 for an older revision, 0 unreadable. These are counts, not a rate.");expectChat(context,"Timing from real lever tests: unavailable");expectChat(context,"This comparison changed nothing.");
         // Placements a crash left open, built from this run's real saved record: each is settled only by what the world and inventory prove.
         var empty=new BlockPos(3650,101,5);
         server.runCommand("setblock 3647 101 5 minecraft:air");
@@ -2047,6 +2048,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
                 if(!LIVE_ACCEPTANCE)server.runOnServer(s->{
                     String original=session(s,"Alice").projectId.toString();commandAs(s,"Alice","engineer project new");
                     commandAs(s,"Alice","engineer select1 1300 100 0");commandAs(s,"Alice","engineer select2 1302 101 0");commandAs(s,"Alice","engineer reference observer-pulse");commandAs(s,"Alice","engineer project share Eve viewer");
+                    s.getCommands().performPrefixedCommand(s.createCommandSourceStack().withSuppressedOutput(),"forceload add 1296 -4 1306 4");
                     write("observer-text-project",session(s,"Alice").projectId.toString());commandAs(s,"Alice","engineer project use "+original);
                 });
                 write("text-viewer", "ready");
@@ -2615,7 +2617,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
-            write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-revoked");
+            delayedReplyPrivacyAsker(context);
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Engineer:");
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
@@ -2723,6 +2725,8 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             say(context,"Engineer, EXPLAIN HOW THIS WORKS");expectChat(context,"Lesson for component root");
             say(context,"Engineer, explain the timing");say(context,"Engineer, what materials do I need?");
             expectChat(context,"Intended observer timing");expectChat(context,"1 observer");
+            MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Verified: nothing.");
+            check(view(context)==null,"Diagnosis guidance arrives as ordinary text with no overlay");write("diagnosis-text.done","passed");
             say(context,"Engineer, stop");expectChat(context,"does not grant you build permission");
             say(context,"I told Engineer, wait for me.");
             write("conversation-broadcast-sent","ready");awaitFile(context,"conversation-broadcast-received.done");
@@ -2908,10 +2912,54 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         throw new AssertionError("Expected native command response: "+text+"; received "+MESSAGES);
     }
     private static void diagnoseReady(ClientGameTestContext context){MESSAGES.clear();send(context,"engineer diagnose");expectChat(context,"Repair proposal ready");}
+    /** Everything a read-only question must leave alone. */
+    private static String diagnosisFingerprint(TestDedicatedServerContext server){
+        return server.computeOnServer(s->{var project=session(s,"Alice");var out=new StringBuilder();
+            for(var block:project.blueprint.blocks())for(var cell:BlockPos.betweenClosed(block.pos().offset(-2,-2,-2),block.pos().offset(2,2,2)))out.append(project.level().getBlockState(cell)).append(';');
+            for(var online:s.getPlayerList().getPlayers()){var inventory=online.getInventory();out.append(online.getUUID());for(int slot=0;slot<inventory.getContainerSize();slot++)out.append(inventory.getItem(slot)).append(',');}
+            for(var task:project.assignments.tasks.values())out.append(task.id).append(task.status).append(task.verified);
+            return out.append(project.verified).append(project.state).append(project.journal.size()).append(project.delegation).append(saved(project).getAsJsonArray("functionalEvidence")).toString();});
+    }
+    private static Diagnosis.Proposal changedProposal(Diagnosis.Proposal live,long authorization,long generation,java.util.Map<BlockPos,net.minecraft.world.level.block.state.BlockState> observed){
+        return new Diagnosis.Proposal(live.snapshotId(),live.actor(),live.connection(),live.epoch(),live.projectId(),live.revision(),authorization,live.component(),generation,live.componentBasis(),live.componentBasisVersion(),live.expiresAtTick(),observed,live.targets(),live.messages(),live.repairable());
+    }
+    private static void diagnosisStates(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        context.waitTicks(25);String before=diagnosisFingerprint(server);
+        if(!LIVE_ACCEPTANCE){
+            MESSAGES.clear();say(context,"Engineer, CI diagnose selected design.");expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Repair proposal ready");
+            check(before.equals(diagnosisFingerprint(server)),"A natural diagnosis question changes no blocks, inventory, task or verification");
+        }
+        diagnoseReady(context);expectChat(context,"Intended (the plan, not a world fact)");expectChat(context,"Observed (server snapshot at tick");expectChat(context,"Unknown:");expectChat(context,"Verified: nothing.");
+        check(before.equals(diagnosisFingerprint(server)),"A diagnosis command changes no blocks, inventory, task or verification");
+        await(context,()->view(context)!=null && view(context).blocks().stream().anyMatch(ProjectView.Ghost::diagnosed),"The requesting player's overlay tints the diagnosed cells");
+        check(view(context).blocks().stream().filter(ProjectView.Ghost::diagnosed).noneMatch(ProjectView.Ghost::matches),"Only differing cells are tinted");
+        await(context,()->dev.minecraftai.engineer.client.GhostPreviewRenderer.extractedDiagnosedCount()>0,"The tint reaches the native renderer");
+        context.takeScreenshot("engineer-diagnosis-highlight");
+        server.runOnServer(s->{var project=session(s,"Alice");var alice=player(s,"Alice");
+            for(var other:s.getPlayerList().getPlayers())if(!other.getUUID().equals(alice.getUUID())){var seen=project.manager.view(project,other);check(seen==null || seen.blocks().stream().noneMatch(ProjectView.Ghost::diagnosed),"One player's diagnosis tint never reaches another player");}
+            var live=project.diagnoses.get(alice.getUUID());check(!Diagnosis.highlight(project,alice).isEmpty(),"The tint starts live");
+            var tinted=Diagnosis.highlight(project,alice);
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization()-1,live.assignmentGeneration(),live.observed()));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A permission change retires the tint");
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration()+1,live.observed()));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"An assignment change retires the tint");
+            // Compared against a changed snapshot, so the proof never disturbs the real blocks.
+            var tintedSnapshot=new java.util.LinkedHashMap<>(live.observed());tintedSnapshot.put(live.targets().getFirst().pos(),Blocks.BEDROCK.defaultBlockState());
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration(),tintedSnapshot));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A world change at a tinted cell retires the tint");
+            var marginSnapshot=new java.util.LinkedHashMap<>(live.observed());marginSnapshot.put(live.observed().keySet().stream().filter(cell->!tinted.contains(cell)).findFirst().orElseThrow(),Blocks.BEDROCK.defaultBlockState());
+            project.diagnoses.put(alice.getUUID(),changedProposal(live,live.authorization(),live.assignmentGeneration(),marginSnapshot));
+            check(Diagnosis.highlight(project,alice).isEmpty(),"A world change outside the tinted cells retires the tint, as repair would refuse");
+            project.diagnoses.put(alice.getUUID(),live);check(!Diagnosis.highlight(project,alice).isEmpty(),"The unchanged proposal still tints");});
+        await(context,()->view(context)!=null,"Overlay stays connected after the tint checks");
+        check(before.equals(diagnosisFingerprint(server)),"The tint checks restored the world");
+        write("diagnosis-states.done","passed");
+    }
     private static RepairRecovery repairFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         final var relay=new BlockPos(21,101,0);final var input=new BlockPos(20,101,0);
         server.runCommand("tp Alice 21 102 3 180 20");
         server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.hasBuiltStructure(),"Player construction constrains revisions even without any assistant journal");});
+        diagnosisStates(context,server);
         diagnoseReady(context);
         server.runCommand("setblock 21 100 0 minecraft:glass");
         MESSAGES.clear();send(context,"engineer repair");expectChat(context,"World changed");
@@ -3599,7 +3647,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
-        server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
+        // Each request and the change that outdates it share one server task, so the reply cannot arrive between them.
+        dev.minecraftai.engineer.client.SpokenReplyCapture.start();dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        server.runOnServer(s->{commandAs(s,"Bob","engineer notes");commandAs(s,"Bob","engineer project new");check(!session(s,"Bob").projectId.toString().equals(read("knowledge-project")),"The asker really left the project while the reply was outstanding");});
+        write("knowledge-bob-switched","ready");awaitFile(context,"knowledge-bob-switch-checked");
+        server.runOnServer(s->{commandAs(s,"Bob","engineer project use "+read("knowledge-project"));check(session(s,"Bob").projectId.toString().equals(read("knowledge-project")),"The asker returned before the second delayed request");commandAs(s,"Bob","engineer notes");commandAs(s,"Alice","engineer project revoke Bob");});
+        write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Reading shared project notes") || message.contains("Shared project notes, revision")),"Another player never receives a member's delayed reply");
+        check(dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().noneMatch(line->line.contains("project notes")),"Another player never hears a member's delayed reply");
         if(LIVE_DISCUSSION || LIVE_NATURAL){
             write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
             var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Discussion notes survive a real companion process replacement");
@@ -4617,6 +4672,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         return player;
     }
     private static EngineeringSession session(MinecraftServer server, String name) { return EngineerMod.sessionFor(player(server, name)); }
+    private static void assertDelayedReplySilent(ClientGameTestContext context,String why) throws Exception {
+        context.waitTicks(60);
+        check(MESSAGES.stream().anyMatch(message->message.contains("Reading shared project notes")),"The delayed request really started: "+why);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Shared project notes, revision") || message.contains("six blocks") || message.contains("visible lamp")),"No delayed note text in chat: "+why);
+        check(dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().noneMatch(line->line.contains("Shared project notes, revision") || line.contains("six blocks") || line.contains("visible lamp")),"No delayed note text is spoken: "+why);
+    }
+    /** The asker's side: speech and chat both carry a current reply, and neither carries an outdated one. */
+    private static void delayedReplyPrivacyAsker(ClientGameTestContext context) throws Exception {
+        dev.minecraftai.engineer.client.SpokenReplyCapture.start();dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        send(context,"engineer notes");expectChat(context,"Keep the entrance within six blocks.");
+        await(context,()->dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().anyMatch(line->line.contains("six blocks")),"A current reply is really spoken, so silence below means something");
+        dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-switched");
+        assertDelayedReplySilent(context,"the asker changed project");
+        dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        write("knowledge-bob-switch-checked","passed");awaitFile(context,"knowledge-bob-revoked");
+        assertDelayedReplySilent(context,"the asker lost access");
+        write("delayed-reply-private.done","passed");
+    }
     private static void commandAs(MinecraftServer server, String name, String command) {
         server.getCommands().performPrefixedCommand(player(server, name).createCommandSourceStack(), command);
     }

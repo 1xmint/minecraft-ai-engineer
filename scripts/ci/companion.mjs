@@ -161,9 +161,13 @@ const server = createCompanionServer({
                             "Undo this full adder.",
                           ].includes(input.message)
                         ? "undo"
-                        : null;
+                        : input.message === "CI diagnose selected design."
+                          ? "diagnose"
+                          : null;
       const componentId =
-        action === "build" || action === "test" ? "root" : null;
+        action === "build" || action === "test" || action === "diagnose"
+          ? "root"
+          : null;
       if (!action || !capabilities.get(action)?.has(componentId))
         throw new Error("Unexpected natural-request fixture choice");
       return {
