@@ -25,6 +25,10 @@ final class ConversationSetupText {
             case "show me a comparator","show me a compare comparator" -> "comparator-compare";
             case "show me a subtracting comparator","show me a subtract comparator" -> "comparator-subtract";
             case "show me a sticky shutter" -> "sticky-shutter";
+            case "show me a data latch" -> "data-latch";
+            case "show me an edge register","show me an edge-triggered register" -> "edge-register";
+            case "show me an up counter","show me a binary counter" -> "up-counter";
+            case "show me a pulse tally" -> "pulse-tally";
             case "show me a toggle memory","show me a one-bit memory","show me a one bit memory" -> "toggle-memory";
             case "show me a half-adder","show me a half adder" -> "half-adder";
             case "show me a full-adder","show me a full adder","show me an adder with carry-in" -> "full-adder";

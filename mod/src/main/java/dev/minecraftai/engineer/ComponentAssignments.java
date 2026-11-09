@@ -16,6 +16,7 @@ final class ComponentAssignments {
         long generation;
         JsonObject lastPassedScope;
         MemoryFunctionalEvidence memoryPassEvidence; // Ephemeral; never serialized or loaded.
+        SequentialFunctionalRun.Evidence sequentialPass; // Ephemeral; never serialized or loaded.
         UUID worker; // Ephemeral claim by one live companion; never serialized or loaded.
         Task(String id, String basis) { this.id=id;this.basis=basis; }
         void assign(UUID actor, String executor) {

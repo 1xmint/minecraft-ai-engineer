@@ -60,7 +60,7 @@ final class LessonAssistant {
         String intendedBehavior=generated?GeneratedBlueprint.behavior(selected).summary().replace(" Functional testing is still required.",""):null;
         boolean analog=AnalogIntention.describes(selected.source());
         boolean connected=ConnectedIntention.describes(selected.source());
-        boolean memory=ToggleMemoryIntention.describes(selected.source());
+        boolean memory=ToggleMemoryIntention.describes(selected.source()) || SequentialIntention.describes(selected.source());
         Blueprint canonical=generated || mechanical || analog || connected || memory?selected:MechanismCatalog.create(contract.template(),selected.worldId(),selected.dimension(),selected.anchor(),selected.rotation(),delay);
         if(topic==Topic.DETAIL) {
             s.tell("Lesson for component "+target+": "+canonical.name()+". "+(generated?intendedBehavior:canonical.source().get("explanation").getAsString()));

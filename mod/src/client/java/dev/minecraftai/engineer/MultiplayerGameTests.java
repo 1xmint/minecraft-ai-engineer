@@ -2673,7 +2673,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();say(context,"Engineer, mark the first corner here");expectChat(context,"Only the project owner can change");
             write("conversation-setup-editor-denied.done","passed");
         }
-        await(context,()->Files.exists(directory().resolve("finish")),"finish",LIVE_ACCEPTANCE?WAIT_MILLIS:600_000); // End-of-scenario wait includes the longer owner memory/schematic flow.
+        await(context,()->Files.exists(directory().resolve("finish")),"finish",LIVE_ACCEPTANCE?WAIT_MILLIS:1_500_000); // End-of-scenario wait includes the longer owner memory/schematic flow.
         disconnect(context);
     }
 
@@ -3970,6 +3970,100 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         toggleMemoryPreviewFlow(context,server);
         ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
         while(System.nanoTime()-ready<0)context.waitTicks(2);
+        sequentialFlows(context,server);
+    }
+    private static void sequentialPause(ClientGameTestContext context){
+        long ready=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(61);
+        while(System.nanoTime()-ready<0)context.waitTicks(2);
+    }
+    private static void sequentialFlows(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runCommand("forceload add 2880 -16 3000 48");
+        String[][] flows={{"2900","Engineer, show me an edge register","edge-register"},{"2920","Engineer, show me an up counter","up-counter"},{"2940","Engineer, show me a pulse tally","pulse-tally"},{"2960","Engineer, show me a data latch","data-latch"}};
+        for(var flow:flows){sequentialFlow(context,server,Integer.parseInt(flow[0]),flow[1],flow[2]);sequentialPause(context);}
+        sequentialFailures(context,server);
+    }
+    /** One circuit through the real chat path: preview, lesson, approved build, approved live test. */
+    private static void sequentialFlow(ClientGameTestContext context,TestDedicatedServerContext server,int x,String ask,String id) throws Exception {
+        String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
+        String name=SequentialCircuits.get(id).name();
+        var first=new BlockPos(x,100,0);var second=new BlockPos(x+9,104,7);
+        server.runOnServer(s->{var actor=player(s,"Alice");actor.getAbilities().flying=true;actor.onUpdateAbilities();});
+        MESSAGES.clear();setupSay(context,"Engineer, start a new project");expectChat(context,"Created your private project");
+        server.waitFor(s->!session(s,"Alice").projectId.toString().equals(previous));
+        server.runCommand("tp Alice "+x+" 100 0");server.waitFor(s->player(s,"Alice").blockPosition().equals(first));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the first corner here");expectChat(context,"First corner marked at your feet");
+        server.runCommand("tp Alice "+(x+9)+" 104 7");server.waitFor(s->player(s,"Alice").blockPosition().equals(second));
+        MESSAGES.clear();setupSay(context,"Engineer, mark the second corner here");expectChat(context,"Workspace marked from");
+        MESSAGES.clear();setupSay(context,ask);expectChat(context,"Preview ready: "+name);
+        server.waitFor(s->session(s,"Alice").blueprint!=null && SequentialIntention.describes(session(s,"Alice").blueprint.source()));
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.journal.isEmpty() && project.delegation==null && project.verified.equals("untested"),"A stored-circuit preview grants no construction or pass");});
+        MESSAGES.clear();say(context,"Engineer, explain this part");expectChat(context,name);
+        conversationApprove(context,"CI build selected lamp.");server.waitFor(s->session(s,"Alice").state.equals("COMPLETED"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.blueprint.blocks().stream().allMatch(cell->Blueprint.matches(cell.state(),project.level().getBlockState(cell.pos()))) && project.verified.equals("untested") && project.delegation==null,"Native construction completes the exact stored circuit and stays untested");});
+        MESSAGES.clear();say(context,"Engineer, what should I do next?");expectChat(context,"live stored-circuit test");
+        conversationApprove(context,"CI test selected lamp.");expectChat(context,"Stored-circuit test passed: "+name,120_000);
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sequential:"+id+":"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.sequentialRun==null && project.delegation==null && !SequentialFunctionalRun.pending(project) && !sequentialLevers(project).containsValue(true) && SequentialFunctionalRun.current(project.blueprint,project.assignments.task(project.blueprint,"root")),"A live pass ends with levers down, no authority held and current evidence");});
+        write("sequential-"+id+"-record.json",server.computeOnServer(s->{var project=session(s,"Alice");var trial=project.verified.substring(project.verified.lastIndexOf(':')+1);try{return Files.readString(project.manager.directory.resolve(project.projectId+".sequential-trial-"+trial+".json"));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}}));
+        write("sequential-"+id+".done","passed");
+    }
+    private static java.util.Map<String,Boolean> sequentialLevers(EngineeringSession project){
+        var levers=new java.util.LinkedHashMap<String,Boolean>();var blueprint=project.blueprint;
+        SequentialIntention.circuit(blueprint).controls().forEach((name,pos)->levers.put(name,project.level().getBlockState(SequentialIntention.world(blueprint,pos)).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED)));
+        return levers;
+    }
+    private static void sequentialPull(MinecraftServer server,EngineeringSession project,String name){
+        var pos=SequentialIntention.world(project.blueprint,SequentialIntention.circuit(project.blueprint).controls().get(name));
+        var state=project.level().getBlockState(pos);((net.minecraft.world.level.block.LeverBlock)state.getBlock()).pull(state,project.level(),pos,player(server,"Alice"));
+    }
+    private static void sequentialInterrupted(ClientGameTestContext context,TestDedicatedServerContext server,String why) throws Exception {
+        server.waitFor(s->session(s,"Alice").state.equals("PAUSED"));expectChat(context,"No pass was granted");
+        var held=server.computeOnServer(s->sequentialLevers(session(s,"Alice")));
+        context.waitTicks(40);
+        server.runOnServer(s->{var project=session(s,"Alice");check(project.sequentialRun==null && project.delegation==null && project.verified.equals("untested") && SequentialFunctionalRun.pending(project) && sequentialLevers(project).equals(held) && project.assignments.task(project.blueprint,"root").sequentialPass==null,why+" grants no pass, releases authority, keeps its marker and moves no lever afterwards");});
+    }
+    /** Levers just put down are still propagating; the live test rightly refuses a circuit that is not holding still. */
+    private static void sequentialSettle(TestDedicatedServerContext server) throws Exception {
+        long ready=server.computeOnServer(s->s.overworld().getGameTime())+40;
+        server.waitFor(s->s.overworld().getGameTime()>=ready);
+    }
+    private static void sequentialFailures(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);check(project.projectId.equals(project.manager.selections.get(player(s,"Bob").getUUID())),"Bob selected the project before the viewer refusal");commandAs(s,"Bob","engineer test");
+            check(project.sequentialRun==null && project.verified.startsWith("passed:sequential:") && !SequentialFunctionalRun.pending(project),"A viewer cannot start a stored-circuit test");
+            boolean refused=false;var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();try{project.trial.start();}catch(IllegalStateException expected){refused=true;}finally{project.commandActor=previous;}
+            check(refused,"The generic restore test refuses stored circuits");});
+        write("sequential-refusals.done","passed");
+        connectedAction(server,project->project.test());
+        server.waitFor(s->SequentialFunctionalRun.pending(session(s,"Alice")));
+        MESSAGES.clear();server.runOnServer(s->sequentialPull(s,session(s,"Alice"),"data"));
+        sequentialInterrupted(context,server,"A lever moved by someone else");
+        server.runOnServer(s->{var project=session(s,"Alice");if(!sequentialLevers(project).containsValue(true))sequentialPull(s,project,"data");
+            boolean refused=false;var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();try{project.test();}catch(IllegalStateException expected){refused=true;}finally{project.commandActor=previous;}
+            check(refused && SequentialFunctionalRun.pending(project),"An interrupted test blocks a new one");});
+        MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"I changed nothing");
+        server.runOnServer(s->{var project=session(s,"Alice");check(SequentialFunctionalRun.pending(project) && sequentialLevers(project).containsValue(true),"Resume never moves a raised lever");
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);loaded.load();
+            check(loaded.state.equals("PAUSED") && loaded.verified.equals("untested") && loaded.sequentialRun==null,"A project reloaded from disk stays paused and untested during an interrupted test");
+            sequentialLevers(project).forEach((name,up)->{if(up)sequentialPull(s,project,name);});});
+        MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"Interrupted stored-circuit test cleared");
+        server.runOnServer(s->check(!SequentialFunctionalRun.pending(session(s,"Alice")),"Levers down by hand lets resume clear the marker"));
+        sequentialSettle(server);connectedAction(server,project->project.test());
+        server.waitFor(s->SequentialFunctionalRun.pending(session(s,"Alice")));
+        MESSAGES.clear();server.runOnServer(s->{var project=session(s,"Alice");project.access.revoke(player(s,"Alice").getUUID(),player(s,"Bob").getUUID());});
+        sequentialInterrupted(context,server,"A sharing change during a test");
+        server.runOnServer(s->{var project=session(s,"Alice");sequentialLevers(project).forEach((name,up)->{if(up)sequentialPull(s,project,name);});});
+        MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"Interrupted stored-circuit test cleared");
+        write("sequential-interrupted.done","passed");
+        sequentialSettle(server);connectedAction(server,project->project.test());
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sequential:data-latch:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");var task=project.assignments.task(project.blueprint,"root");check(SequentialFunctionalRun.current(project.blueprint,task),"A fresh pass after recovery is current");
+            var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);loaded.load();
+            check(loaded.verified.equals(SequentialFunctionalRun.STALE_STATUS),"A saved stored-circuit pass reloads as stale history");
+            task.generation++;project.save();check(project.verified.equals(SequentialFunctionalRun.INVALIDATED_STATUS),"An assignment change invalidates the pass");});
+        connectedAction(server,project->project.test());
+        server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sequential:data-latch:"));assertPersisted(server);
+        server.runOnServer(s->{var project=session(s,"Alice");check(SequentialFunctionalRun.current(project.blueprint,project.assignments.task(project.blueprint,"root")) && !sequentialLevers(project).containsValue(true),"A fresh pass is current again");});
+        write("sequential-stale.done","passed");
     }
     private static void toggleMemoryPreviewFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());

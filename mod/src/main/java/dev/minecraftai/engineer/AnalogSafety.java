@@ -17,6 +17,10 @@ final class AnalogSafety {
             if(!pos.equals(intention.design().comparator()))return null;
             return intention.design().cells().stream().filter(cell->cell.pos().equals(pos)).findFirst().orElseThrow().state();
         }
+        if(SequentialIntention.describes(blueprint.source())){
+            SequentialIntention.validated(blueprint);
+            return blueprint.blocks().stream().filter(cell->cell.pos().equals(pos) && cell.state().is(Blocks.COMPARATOR)).map(Blueprint.PlannedBlock::state).findFirst().orElse(null);
+        }
         if(ToggleMemoryIntention.describes(blueprint.source())){
             ToggleMemoryIntention.validated(blueprint);
             return blueprint.blocks().stream().filter(cell->cell.pos().equals(pos) && cell.state().is(Blocks.COMPARATOR)).map(Blueprint.PlannedBlock::state).findFirst().orElse(null);

@@ -82,6 +82,7 @@ final class ProjectGuidance {
         return untested(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> untested(EngineeringSession s,Function<BlockPos,BlockState> world){
+        if(s.blueprint!=null && SequentialIntention.describes(s.blueprint.source()))return List.of(SequentialFunctionalRun.current(s.blueprint,s.assignments.tasks.get("root"))?"Recorded current stored-circuit test: "+s.verified:"No current stored-circuit pass is recorded. A fresh test needs every lever down, then follows every step on live ticks.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(MemoryFunctionalEvidence.current(s.blueprint,s.assignments.tasks.get("root"))?"Recorded current memory test: "+s.verified:"No current memory pass is recorded. A fresh test requires 96 live tick samples and restoration of the original pair.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint==null){
@@ -109,6 +110,7 @@ final class ProjectGuidance {
         return next(s,s.blueprint==null || ImportedBlueprint.describes(s.blueprint.source())?null:loadedBlocks(s));
     }
     static List<String> next(EngineeringSession s,Function<BlockPos,BlockState> world){
+        if(s.blueprint!=null && SequentialIntention.describes(s.blueprint.source()))return List.of(SequentialFunctionalRun.pending(s)?"An interrupted stored-circuit test needs attention. Put every lever down by hand, then ask me to resume.":SequentialFunctionalRun.current(s.blueprint,s.assignments.tasks.get("root"))?"This stored circuit has a current live pass. Changing its design or assignment will require a fresh test.":s.hasBuiltStructure()?"Ask me to run the live stored-circuit test. Put every lever down first.":"Ask me to build this previewed stored circuit, then approve the live stored-circuit test.",LessonAssistant.NOT_OBSERVED);
         if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))return List.of(s.pendingMemoryInput!=null?"Inspect the interrupted memory state, then explicitly ask to resume recovery of the original pair.":MemoryFunctionalEvidence.current(s.blueprint,s.assignments.tasks.get("root"))?"The current memory has a recorded functional pass. Ask how its toggle and readout work; this answer did not re-test it.":"Complete the memory construction lesson, then ask me to test the memory with 96 live tick observations.",NOTHING_STARTED,LessonAssistant.NOT_OBSERVED);
         var out=new ArrayList<String>();
         if(s.blueprint!=null && ImportedBlueprint.describes(s.blueprint.source())){
