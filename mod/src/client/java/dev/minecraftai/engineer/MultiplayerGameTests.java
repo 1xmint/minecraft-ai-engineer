@@ -4022,6 +4022,11 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         context.waitTicks(40);
         server.runOnServer(s->{var project=session(s,"Alice");check(project.sequentialRun==null && project.delegation==null && project.verified.equals("untested") && SequentialFunctionalRun.pending(project) && sequentialLevers(project).equals(held) && project.assignments.task(project.blueprint,"root").sequentialPass==null,why+" grants no pass, releases authority, keeps its marker and moves no lever afterwards");});
     }
+    /** Levers just put down are still propagating; the live test rightly refuses a circuit that is not holding still. */
+    private static void sequentialSettle(TestDedicatedServerContext server) throws Exception {
+        long ready=server.computeOnServer(s->s.overworld().getGameTime())+40;
+        server.waitFor(s->s.overworld().getGameTime()>=ready);
+    }
     private static void sequentialFailures(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);check(project.projectId.equals(project.manager.selections.get(player(s,"Bob").getUUID())),"Bob selected the project before the viewer refusal");commandAs(s,"Bob","engineer test");
             check(project.sequentialRun==null && project.verified.startsWith("passed:sequential:") && !SequentialFunctionalRun.pending(project),"A viewer cannot start a stored-circuit test");
@@ -4042,14 +4047,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             sequentialLevers(project).forEach((name,up)->{if(up)sequentialPull(s,project,name);});});
         MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"Interrupted stored-circuit test cleared");
         server.runOnServer(s->check(!SequentialFunctionalRun.pending(session(s,"Alice")),"Levers down by hand lets resume clear the marker"));
-        connectedAction(server,project->project.test());
+        sequentialSettle(server);connectedAction(server,project->project.test());
         server.waitFor(s->SequentialFunctionalRun.pending(session(s,"Alice")));
         MESSAGES.clear();server.runOnServer(s->{var project=session(s,"Alice");project.access.revoke(player(s,"Alice").getUUID(),player(s,"Bob").getUUID());});
         sequentialInterrupted(context,server,"A sharing change during a test");
         server.runOnServer(s->{var project=session(s,"Alice");sequentialLevers(project).forEach((name,up)->{if(up)sequentialPull(s,project,name);});});
         MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"Interrupted stored-circuit test cleared");
         write("sequential-interrupted.done","passed");
-        connectedAction(server,project->project.test());
+        sequentialSettle(server);connectedAction(server,project->project.test());
         server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sequential:data-latch:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");var task=project.assignments.task(project.blueprint,"root");check(SequentialFunctionalRun.current(project.blueprint,task),"A fresh pass after recovery is current");
             var loaded=new EngineeringSession(project.manager,project.projectId,project.owner,project.dimension);loaded.load();
