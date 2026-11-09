@@ -34,6 +34,8 @@ final class GridCraftTask {
     }
     /** Any unfinished oak or grid craft blocks new inventory work until explicitly recovered. */
     static void requireNoUnresolved(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
+        // Crafting records belong to the first companion; the second companion only ever takes from chests.
+        if(PhysicalWorkerIdentity.helper(manager,project,worker.getUUID())){ChestTakeRecord.requireNoUnresolved(manager,project,worker);return;}
         PhysicalCraftRecord.requireNoUnresolved(manager,project,worker,OakCraftingPlan.recordedContract());
         GridCraftRecord.requireNoUnresolved(manager,project,worker);
         TableCraftRecord.requireNoUnresolved(manager,project,worker);
