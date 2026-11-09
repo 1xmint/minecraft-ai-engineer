@@ -19,6 +19,7 @@ public record Blueprint(String id, String projectId, int revision, String worldI
     private static final Set<String> DYNAMIC = Set.of("powered", "lit", "power", "locked");
 
     public static Blueprint parse(JsonObject json, String world, String dimension) {
+        if(SequentialIntention.describes(json))return SequentialIntention.read(json,world,dimension,UUID.fromString(json.get("projectId").getAsString())).blueprint();
         if(ToggleMemoryIntention.describes(json))return ToggleMemoryIntention.read(json,world,dimension,UUID.fromString(json.get("projectId").getAsString())).blueprint();
         if(ConnectedIntention.describes(json))return ConnectedIntention.read(json,world,dimension,UUID.fromString(json.get("projectId").getAsString())).blueprint();
         if (integer(json.get("schemaVersion")) != 1 || !world.equals(json.get("worldId").getAsString())
