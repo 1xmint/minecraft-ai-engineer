@@ -61,6 +61,8 @@ final class ChestTakeTask {
             worker.level().getChunkSource().save(true);PhysicalWorkerStorage.save(worker);authority.run();journal.complete();
         }catch(RuntimeException failure){
             PhysicalActionGate.cancel(worker);close(worker,failure);
+            // No record means nothing was attempted: keep the precise refusal, there is nothing to recover.
+            if(record==null){reported=failure;throw failure;}
             // Save the chest chunk before the companion even when the chest failed to close. Only a closed menu with both saves done
             // may mark the record uncertain; otherwise it stays NEW and requireSettled or the record refuses everything until inspected.
             if(record!=null){
