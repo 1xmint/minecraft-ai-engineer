@@ -109,6 +109,7 @@ final class ChestTakeRecord {
                 if(++count>MAX_FILES || !Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>MAX_BYTES)throw new IllegalStateException("Chest take history needs operator inspection");
                 byte[] bytes=Files.readAllBytes(path);if(bytes.length>MAX_BYTES)throw new IllegalStateException("Chest take history is oversized");
                 var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                if(PhysicalWorkerIdentity.sibling(manager,project,worker.getUUID(),record.get("worker").getAsString()))continue;
                 nodes.add(validate(record,manager,project,worker,path,HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes))));
             }
         }catch(java.io.IOException | java.security.NoSuchAlgorithmException | RuntimeException failure){
@@ -128,6 +129,26 @@ final class ChestTakeRecord {
             if(!target.couldHold(node.record().getAsJsonObject("initial")))throw new IllegalStateException("Chest recovery observed resources its target could not have left");
         }
         return new Chain(List.copyOf(nodes),Map.copyOf(recoverer));
+    }
+    /** A chest another crew member has an unfinished take from keeps its contents until that take is explained; otherwise its recovery could never match. */
+    static void requireNoSiblingTake(ProjectManager manager,EngineeringSession project,UUID worker,BlockPos chest){
+        var open=new HashMap<String,BlockPos>();var recovered=new HashSet<String>();int count=0;
+        try(var files=Files.newDirectoryStream(manager.directory,project.projectId+".chesttake-*.json")){
+            for(var path:files){
+                if(++count>MAX_FILES || !Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>MAX_BYTES)throw new IllegalStateException("oversized");
+                byte[] bytes=Files.readAllBytes(path);if(bytes.length>MAX_BYTES)throw new IllegalStateException("oversized");
+                var record=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                if(!PhysicalWorkerIdentity.sibling(manager,project,worker,record.get("worker").getAsString()))continue;
+                if(record.get("kind").getAsString().equals(RECOVERY)){recovered.add(record.get("recovers").getAsString());continue;}
+                if(record.get("stage").getAsString().equals("COMPLETE"))continue;
+                var at=record.getAsJsonArray("chest");
+                open.put(HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)),new BlockPos(at.get(0).getAsInt(),at.get(1).getAsInt(),at.get(2).getAsInt()));
+            }
+        }catch(java.io.IOException | java.security.NoSuchAlgorithmException | RuntimeException failure){
+            throw new IllegalStateException("Chest take history needs operator inspection; no items were moved",failure);
+        }
+        open.keySet().removeAll(recovered);
+        if(open.containsValue(chest))throw new IllegalStateException("Your other companion has an unfinished take from this chest; recover its resources first. Nothing was moved");
     }
     static void requireNoUnresolved(ProjectManager manager,EngineeringSession project,ServerPlayer worker){
         if(!load(manager,project,worker).leaves().isEmpty())throw new IllegalStateException("A chest take has an unfinished record; explicit resource recovery is required");

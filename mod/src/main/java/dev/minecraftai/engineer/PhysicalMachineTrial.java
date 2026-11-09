@@ -38,6 +38,9 @@ final class PhysicalMachineTrial implements AutoCloseable {
     private String failure;
 
     PhysicalMachineTrial(ProjectManager manager,EngineeringSession project,ServerPlayer worker,PhysicalMachinePlan plan,MechanismCatalog.Contract contract,Runnable authority){
+        this(manager,project,worker,plan,contract,authority,null);
+    }
+    PhysicalMachineTrial(ProjectManager manager,EngineeringSession project,ServerPlayer worker,PhysicalMachinePlan plan,MechanismCatalog.Contract contract,Runnable authority,PhysicalWorkLease.Crew crew){
         this.manager=manager;this.worker=worker;level=project.level();this.contract=contract;this.authority=authority;planned=Map.copyOf(plan.planned());start=worker.blockPosition();cell=plan.cells().getFirst().pos();
         authority.run();
         var writes=plan.planned().keySet();var reads=new HashSet<BlockPos>();
@@ -54,9 +57,10 @@ final class PhysicalMachineTrial implements AutoCloseable {
         else for(int slot=0;slot<9 && hand<0;slot++)if(inventory.getItem(slot).isEmpty())hand=slot;
         if(hand<0)throw new IllegalStateException("The companion needs one empty hotbar slot to pull levers; no lever was moved");
         inventory.setSelectedSlot(hand);
-        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),writes,reads);
+        lease=new PhysicalWorkLease(manager,project,manager.server.getPlayerList().getPlayer(project.owner),writes,reads,crew);
         file=manager.directory.resolve(project.projectId+".machine-trial-"+UUID.randomUUID()+".json");
         record=header(manager,project,worker,"RUNNING");
+        if(crew!=null)record.addProperty("component",crew.component());
         record.addProperty("cases",contract.cases().size());record.addProperty("settleTicks",contract.settleTicks());
         try{LocalFiles.write(file,record);}catch(RuntimeException failed){lease.close();throw failed;}
     }
