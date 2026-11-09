@@ -15,7 +15,10 @@ public record ProjectView(UUID recipient, String worldId, String dimension, Stri
     public static final int MAX_PACKET_BYTES = 900_000;
     public static final int MAX_TEXT_LENGTH = 1024;
 
-    public record Ghost(BlockPos pos, BlockState state, boolean currentStage, boolean matches, boolean wrong) {
+    public record Ghost(BlockPos pos, BlockState state, boolean currentStage, boolean matches, boolean wrong, boolean diagnosed) {
+        public Ghost(BlockPos pos, BlockState state, boolean currentStage, boolean matches, boolean wrong) {
+            this(pos, state, currentStage, matches, wrong, false);
+        }
         public Ghost {
             Objects.requireNonNull(pos, "position");
             Objects.requireNonNull(state, "state");

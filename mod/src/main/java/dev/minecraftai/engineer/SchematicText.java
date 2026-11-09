@@ -8,11 +8,13 @@ import java.util.regex.Pattern;
  * discards are stated in the same sentence, never assumed.
  */
 final class SchematicText {
-    record Request(String action,String name,int design,int other,String transform,boolean discard) { }
+    record Request(String action,String name,int design,int other,String transform,boolean discard,net.minecraft.core.BlockPos at) {
+        Request(String action,String name,int design,int other,String transform,boolean discard){this(action,name,design,other,transform,discard,null);}
+    }
     private static final String NAME="([a-z0-9][a-z0-9_-]{0,63})(?:\\.schem)?";
     private static final Pattern INSPECT=Pattern.compile("^(?:inspect|check|look at) (?:the )?schematic "+NAME+"$",Pattern.CASE_INSENSITIVE);
     private static final Pattern IMPORT=Pattern.compile("^import (?:the )?schematic "+NAME+"( and (?:drop|dropping|discard|discarding) (?:its |the )?block (?:entities|contents))?$",Pattern.CASE_INSENSITIVE);
-    private static final Pattern PREVIEW=Pattern.compile("^preview (?:imported )?design #?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
+    private static final Pattern PREVIEW=Pattern.compile("^preview (?:imported )?design #?(\\d{1,9})(?: at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8}))?$",Pattern.CASE_INSENSITIVE);
     private static final Pattern SHOW=Pattern.compile("^(?:show|inspect) (?:imported )?design #?(\\d{1,9})$",Pattern.CASE_INSENSITIVE);
     private static final Pattern ROTATE=Pattern.compile("^rotate (?:imported )?design #?(\\d{1,9}) (?:by )?(90|180|270)(?: degrees)?(?: clockwise)?$",Pattern.CASE_INSENSITIVE);
     private static final Pattern MIRROR=Pattern.compile("^(?:mirror|flip) (?:imported )?design #?(\\d{1,9}) (east-west|north-south|east west|north south)$",Pattern.CASE_INSENSITIVE);
@@ -33,7 +35,7 @@ final class SchematicText {
         m=IMPORT.matcher(text);
         if(m.matches())return new Request("import",m.group(1),0,0,null,m.group(2)!=null);
         m=PREVIEW.matcher(text);
-        if(m.matches())return new Request("preview",null,id(m.group(1)),0,null,false);
+        if(m.matches())return new Request("preview",null,id(m.group(1)),0,null,false,m.group(2)==null?null:new net.minecraft.core.BlockPos(Integer.parseInt(m.group(2)),Integer.parseInt(m.group(3)),Integer.parseInt(m.group(4))));
         m=SHOW.matcher(text);
         if(m.matches())return new Request("design",null,id(m.group(1)),0,null,false);
         m=ROTATE.matcher(text);
@@ -57,7 +59,7 @@ final class SchematicText {
         var request=parse(message);
         if(request==null){
             if(!ambiguous(message))return false;
-            session.player().sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: For schematics, say for example 'list schematics', 'inspect schematic castle', 'import schematic castle and drop block entities', 'rotate design 1 by 90', 'mirror design 1 east-west', 'compare design 1 with 2', 'show design 1' or 'export selection as gate'."));
+            session.player().sendSystemMessage(net.minecraft.network.chat.Component.literal("Engineer: For schematics, say for example 'list schematics', 'inspect schematic castle', 'import schematic castle and drop block entities', 'rotate design 1 by 90', 'mirror design 1 east-west', 'compare design 1 with 2', 'show design 1', 'preview design 1 at 10 64 20' or 'export selection as gate'."));
             return true;
         }
         session.manager.schematics.handle(session,request);

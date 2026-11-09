@@ -42,8 +42,23 @@ gravity blocks, specialized interactive blocks and arbitrary redstone remain
 outside this imported set. The Engineer names unsupported blocks. You can still
 inspect, transform, compare or export geometry that cannot be built.
 
-Construction currently uses creative editing. Material counts do not imply
-survival gathering or inventory consumption.
+Say `preview design 3 at 10 64 20` to choose where the design goes inside your
+marked workspace. The preview lists materials, anything already in the way, and
+whether your physical companion can place the design by hand.
+
+There are two ways to build a previewed design:
+
+- `build this design from the chest at X Y Z` asks your summoned survival
+  companion to take real items and place every block by hand. It handles up to
+  32 blocks, two blocks tall, of stone, cobblestone, dirt, lever, redstone torch
+  and redstone lamp. It takes whole stacks from the chest, and any spare items
+  stay with the companion. Each block needs stone, cobblestone or dirt to be placed against.
+  It names exactly what stops a design from qualifying, and takes nothing when
+  it refuses. Your own blocks are left alone. Switched-on levers and lit lamps
+  are placed switched off.
+- Asking the Engineer to build it, with a separate approval, uses creative
+  editing. Material counts on that path do not imply survival gathering or
+  inventory consumption.
 
 ## Verification, recovery and export
 

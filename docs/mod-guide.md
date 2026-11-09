@@ -137,6 +137,13 @@ The targeted repair workflow uses the real loaded world:
    corrections. A fresh diagnosis belongs to your current connection and
    project revision. Any intervening world edit requires another diagnosis.
    Wrong block kinds, inventories and occupied margins require manual action.
+   Each diagnosis also states what is intended (the plan), observed (this server
+   snapshot), unknown (behaviour and unopened block entities) and verified or
+   stale or failed (earlier functional tests). With the optional overlay, your own
+   diagnosis tints the differing planned cells red. The tint is display only,
+   is sent to no other player, and clears on a world or permission change.
+   Players without the overlay get the same text. Occupied margin cells are not
+   ghosts, so they appear only in the text. Asking changes nothing in the world.
 3. `/engineer test` runs the mechanism's real truth table and restores inputs.
    Repair completion alone records no functional pass.
 4. `/engineer revise 4` changes the intended repeater delay while retaining the
@@ -542,6 +549,17 @@ made no claim that the circuit was built or tested. This remains a source featur
 not a completed-product release.
 
 ![Actual project-grounded reply received in Minecraft](images/grounded-discussion.png)
+
+### Stored and clocked circuits (development source, preview only)
+
+Ask about a data latch, edge register, up counter or pulse tally in addressed
+chat, or use `/engineer circuit list`, `/engineer circuit show <id>` and
+`/engineer circuit lesson <id>`. You get a layout, materials and a plain lesson.
+Nothing in the world changes. These designs are proven by native Minecraft
+tests, but the engineer cannot yet build, approve or test them for you, and it
+says so. They need a test path that samples real ticks and restores clocked
+parts, because the normal test gives false results for circuits that remember.
+There is no calculator yet.
 
 ### Compare two designs (development source)
 
