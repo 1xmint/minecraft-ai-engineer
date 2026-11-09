@@ -453,7 +453,7 @@ export class ServerGateway {
       project.name,
       context.projectRevision,
       blueprint,
-      memory.knowledge(context),
+      memory.relevantKnowledge(context, message, selected),
       selected,
       message,
     );
@@ -578,7 +578,7 @@ export class ServerGateway {
       project.name,
       context.projectRevision,
       memory.blueprint(context),
-      memory.knowledge(context),
+      memory.relevantKnowledge(context, message, componentId),
       componentId,
       message,
     );
