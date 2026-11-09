@@ -56,6 +56,7 @@ final class FunctionalTrial {
 
     void start(){
         var s=session;s.access.require(s.actor(),ProjectAccess.Permission.BUILD);
+        if(s.blueprint!=null && SequentialIntention.describes(s.blueprint.source()))throw new IllegalStateException("Stored circuits use their own live test. Nothing was changed.");
         if(s.blueprint!=null && ToggleMemoryIntention.describes(s.blueprint.source()))throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         s.requireCreative();
         if(pending())throw new IllegalStateException("Reconcile all interrupted test inputs with resume before testing again");

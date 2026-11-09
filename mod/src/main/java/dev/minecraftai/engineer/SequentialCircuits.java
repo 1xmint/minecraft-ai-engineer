@@ -10,8 +10,8 @@ import java.util.*;
 
 /**
  * Read-only catalog of clocked and stored circuits: preview, materials and lessons.
- * It never touches the world or a project. Building and testing wait for the stateful execution path,
- * because the combinational test and restore path would give false results for circuits that remember.
+ * It never touches the world or a project. Building and testing happen from a project preview, through
+ * SequentialIntention and SequentialFunctionalRun, because the combinational test would be false for memory.
  */
 public final class SequentialCircuits {
     public record Cell(BlockPos at,String state){}
@@ -29,7 +29,7 @@ public final class SequentialCircuits {
     }
     public static List<String> list(){
         var lines=new ArrayList<String>();
-        lines.add("Stored and clocked circuits (preview and lessons only for now):");
+        lines.add("Stored and clocked circuits (preview in a project to build and live test):");
         CIRCUITS.values().forEach(c->lines.add(c.id()+": "+c.summary()));
         return lines;
     }
@@ -43,19 +43,22 @@ public final class SequentialCircuits {
         };
     }
     /** Addressed chat. Empty means the request is about something else and other routes should handle it. */
-    public static List<String> conversation(String request){
+    public static List<String> conversation(String request){return conversation(request,null);}
+    /** heldId names the circuit already previewed in this project, whose build and test belong to approval. */
+    public static List<String> conversation(String request,String heldId){
         String text=request.toLowerCase(Locale.ROOT);
         if(text.contains("sequential circuit") || text.contains("stored circuit") || text.contains("clocked circuit"))return list();
         var match=SPOKEN.entrySet().stream().filter(e->text.contains(e.getKey())).map(Map.Entry::getValue).findFirst();
         if(match.isEmpty())return List.of();
         var circuit=get(match.get());
-        if(has(text,"build","place","construct","approve","test"))return List.of(refusal(circuit));
+        if(has(text,"build","place","construct","approve","test"))return circuit.id().equals(heldId)?List.of():List.of(refusal(circuit));
         if(has(text,"how","why","explain","teach","learn","lesson"))return lesson(circuit);
         return show(circuit);
     }
     private static boolean has(String text,String... words){return Arrays.stream(words).anyMatch(word->java.util.regex.Pattern.compile("\\b"+word+"\\b").matcher(text).find());}
     private static String refusal(Circuit circuit){
-        return "I can preview and teach the "+circuit.name()+", but I cannot build, approve or test it yet. It needs the stateful test path that samples real ticks and restores clocked parts. The normal test would give a false result for something that remembers. Nothing was changed.";
+        String ask=switch(circuit.id()){case "data-latch"->"show me a data latch";case "edge-register"->"show me an edge register";case "up-counter"->"show me an up counter";default->"show me a pulse tally";};
+        return "To build the "+circuit.name()+", mark a workspace in a project and say 'Engineer, "+ask+"'. You can then approve its build and its live test. Nothing was changed.";
     }
     private static List<String> lesson(Circuit circuit){
         var lines=new ArrayList<String>();

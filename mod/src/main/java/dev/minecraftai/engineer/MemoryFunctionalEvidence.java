@@ -37,6 +37,7 @@ final class MemoryFunctionalEvidence {
                 && ("passed:toggle-memory:revision-"+evidence.revision+":96-live-samples:"+evidence.id).equals(task.verified);
     }
     static boolean currentTrial(Blueprint blueprint,ComponentAssignments.Task task) {
+        if(blueprint!=null && SequentialIntention.describes(blueprint.source()))return SequentialFunctionalRun.current(blueprint,task);
         return blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())?current(blueprint,task):FunctionalTrial.matchesCurrentScope(blueprint,task);
     }
 }
