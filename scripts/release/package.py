@@ -52,7 +52,7 @@ def build(root, output, jar=None):
     for name in modules:
         emitted = "dist/" + name[:-3] + ".js"
         files[emitted] = read(emitted)
-    for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "sequential-circuits.json", "imported-materials.json"]:
+    for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "imported-materials.json"]:
         emitted = f"dist/catalog/{name}"
         files[emitted] = read(emitted)
     for required in [
