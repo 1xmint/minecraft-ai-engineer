@@ -81,6 +81,7 @@ final class EngineeringSession implements BuildExecutor {
     MemoryRecoveryDriver memoryRecoveryDriver;
     MemoryRecoveryRun memoryRecoveryRun;
     MemoryFunctionalRun memoryFunctionalRun;
+    SequentialFunctionalRun sequentialRun;
     MemoryPendingInput pendingMemoryInput;
     MemoryRecoveryCheckpoint pendingMemoryRecovery;
     final ShutterRecoveryMotion shutterRecovery = new ShutterRecoveryMotion(this);
@@ -174,6 +175,8 @@ final class EngineeringSession implements BuildExecutor {
     void claimShutterTrial(){claim(ProjectAccess.Permission.BUILD,true,MechanicalPurpose.TRIAL);}
     private void claim(ProjectAccess.Permission action,boolean test,MechanicalPurpose purpose){
         if(pendingMemoryInput!=null)throw new IllegalStateException("An interrupted memory input transaction needs explicit recovery before new project work");
+        if(sequentialRun!=null)throw new IllegalStateException("A stored-circuit test is running; finish or stop it before new project work");
+        SequentialFunctionalRun.requireNoPending(this);
         if(memoryInputDriver!=null)throw new IllegalStateException("A native memory input transaction is active; finish its observed edge before new project work");
         boolean recovery=purpose==MechanicalPurpose.RECOVERY && (shutterMotion!=null || hasPendingTest()) && state.equals("PAUSED");
         boolean trial=purpose==MechanicalPurpose.TRIAL && shutterMotion==null && !hasPendingTest() && testTick<0 && !state.equals("EXECUTING") && !state.equals("VERIFYING") && !shutterRecovery.running();
@@ -190,7 +193,7 @@ final class EngineeringSession implements BuildExecutor {
             throw new IllegalStateException("Explicitly delegate this component with component build "+activeComponent);
         if((state.equals("EXECUTING") || testTick>=0) && !controller.equals(actor())) throw new IllegalStateException("Stop the active assignment before taking over");
         var lease=manager.acquire(this,actor(),action,test);
-        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action)) || ImportedBlueprint.describes(reservationBlueprint(action).source()) || ToggleMemoryIntention.describes(reservationBlueprint(action).source());
+        controller=actor(); delegation=lease;delegationConnection=player().connection;isolationLease=test || GeneratedBlueprint.isGenerated(reservationBlueprint(action)) || ImportedBlueprint.describes(reservationBlueprint(action).source()) || ToggleMemoryIntention.describes(reservationBlueprint(action).source()) || SequentialIntention.describes(reservationBlueprint(action).source());
         if((!test || purpose==MechanicalPurpose.CONSTRUCTION) && action==ProjectAccess.Permission.BUILD && task.executor.equals("unassigned"))task.assign(actor(),"assistant");
         delegationComponent=activeComponent;delegationBasis=task.basis;delegationGeneration=task.generation;
     }
@@ -208,7 +211,7 @@ final class EngineeringSession implements BuildExecutor {
     private static Set<BlockPos> dependencyPositions(Blueprint source,String component,boolean isolation) {
         if(ShutterDesign.describes(source.source())){ComponentTree.component(source,component);return ShutterDesign.read(source.source()).readCells();}
         Set<BlockPos> result=new LinkedHashSet<>();
-        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source) || ImportedBlueprint.describes(source.source()) || ToggleMemoryIntention.describes(source.source()))?2:1,new HashSet<>(),result);
+        collectDependencies(source,component,(isolation || GeneratedBlueprint.isGenerated(source) || ImportedBlueprint.describes(source.source()) || ToggleMemoryIntention.describes(source.source()) || SequentialIntention.describes(source.source()))?2:1,new HashSet<>(),result);
         return result;
     }
     private static void collectDependencies(Blueprint source,String id,int margin,Set<String> visited,Set<BlockPos> result) {
@@ -480,7 +483,7 @@ final class EngineeringSession implements BuildExecutor {
             if (!actual.isAir() && !Blueprint.matches(b.state(), actual)) throw new IllegalStateException("Occupied or incorrect block at " + b.pos().toShortString() + "; move the preview or correct it yourself");
             proposedBaseline.put(b.pos(), actual);
         }
-        if(GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source()) || ToggleMemoryIntention.describes(blueprint.source()))validateGeneratedBuildMargin();
+        if(GeneratedBlueprint.isGenerated(blueprint) || ImportedBlueprint.describes(blueprint.source()) || ToggleMemoryIntention.describes(blueprint.source()) || SequentialIntention.describes(blueprint.source()))validateGeneratedBuildMargin();
         boolean mechanical=ShutterDesign.describes(blueprint.source());
         if(mechanical)ShutterEnvironment.validateConstruction(level(),ShutterDesign.read(blueprint.source()),dependencyPositions(true));
         var proposedDependencies=captureDependencies();
@@ -717,6 +720,7 @@ final class EngineeringSession implements BuildExecutor {
             detail="Recovering the original memory input and stored bit using a fresh bounded attempt. This does not run a functional test.";
             tell(detail);return;
         }
+        if(blueprint!=null && SequentialIntention.describes(blueprint.source()) && SequentialFunctionalRun.pending(this)){SequentialFunctionalRun.recover(this);return;}
         if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source()) && hasPendingTest())throw new IllegalStateException(ToggleMemoryIntention.TEST_UNAVAILABLE);
         if(state.equals("PLANNING"))throw new IllegalStateException("Planning is active; wait before resuming world work");
         if(blueprint!=null && ShutterDesign.describes(blueprint.source()) && hasPendingTest()){
@@ -771,13 +775,14 @@ final class EngineeringSession implements BuildExecutor {
         state="PAUSED"; detail=reason; teaching=false;
         cursor(controller).teaching=false;
         // An active functional test restores the exact input before relinquishing its authority.
-        try{if(memoryFunctionalRun!=null)memoryFunctionalRun.stop();if(memoryRecoveryRun!=null)memoryRecoveryRun.stop();if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
+        try{if(sequentialRun!=null)sequentialRun.stop();if(memoryFunctionalRun!=null)memoryFunctionalRun.stop();if(memoryRecoveryRun!=null)memoryRecoveryRun.stop();if(memoryRecoveryDriver!=null)memoryRecoveryDriver.stop();shutterTrial.stop(reason);shutterRecovery.stop(reason);if (hasPendingTest()) restoreTest();}
         finally{manager.release(this);}
         save(); checkpoint(); tell(reason);
     }
     @Override public String status() { return state + ": " + detail + "; assistant recorded changes=" + journal.size() + "; functional verification=" + verified+"; project memory="+memoryStatus; }
     @Override public void tick() {
         if(testTick<0)connectedTestArea=null;
+        if(sequentialRun!=null){sequentialRun.tick();tickTutorials();return;}
         if(memoryFunctionalRun!=null){memoryFunctionalRun.tick();tickTutorials();return;}
         if(memoryRecoveryRun!=null){memoryRecoveryRun.tick();tickTutorials();return;}
         if(shutterRecovery.running()){shutterRecovery.tick();tickTutorials();return;}
@@ -1058,6 +1063,7 @@ final class EngineeringSession implements BuildExecutor {
             if(hasBuiltStructure())throw new IllegalArgumentException("Built connected designs cannot be replaced by another preview; reconcile their existing work first");
             accept(candidate);return true;
         }
+        if(SequentialIntention.describes(candidate.source())){SequentialIntention.validated(candidate);if(hasBuiltStructure())throw new IllegalArgumentException("Built stored-circuit designs cannot be replaced by another preview; reconcile their existing work first");accept(candidate);return true;}
         if(ToggleMemoryIntention.describes(candidate.source())) {
             ToggleMemoryIntention.validated(candidate);
             if(hasBuiltStructure())throw new IllegalArgumentException("Built memory designs cannot be replaced by another preview; reconcile their existing work first");
@@ -1494,6 +1500,10 @@ final class EngineeringSession implements BuildExecutor {
     }
     boolean hasPendingTest() { return trial.pending(); }
     void test() {
+        if(blueprint!=null && SequentialIntention.describes(blueprint.source())){
+            access.require(actor(),ProjectAccess.Permission.BUILD);
+            sequentialRun=SequentialFunctionalRun.open(this);verified="untested";state="VERIFYING";detail="Testing the stored circuit on live ticks; every lever and output must return to where it started before a pass.";tell(detail);return;
+        }
         if(blueprint!=null && ToggleMemoryIntention.describes(blueprint.source())){
             access.require(actor(),ProjectAccess.Permission.BUILD);
             memoryFunctionalRun=MemoryFunctionalRun.open(this);verified="untested";
@@ -1605,6 +1615,9 @@ final class EngineeringSession implements BuildExecutor {
                     && !MemoryFunctionalEvidence.current(blueprint,task)) {
                 verified=MemoryFunctionalEvidence.INVALIDATED_STATUS;task.verified=verified;
             }
+            if(SequentialIntention.describes(blueprint.source()) && verified.startsWith("passed:sequential:") && !SequentialFunctionalRun.current(blueprint,task)) {
+                verified=SequentialFunctionalRun.INVALIDATED_STATUS;task.verified=verified;
+            }
         }
         if(pendingMemoryInput!=null)pendingMemoryInput.requireMatches(this);
         if(pendingMemoryRecovery!=null)pendingMemoryRecovery.requireMatches(this);
@@ -1619,6 +1632,14 @@ final class EngineeringSession implements BuildExecutor {
             if(!verified.equals("untested")) {
                 if(!MemoryFunctionalEvidence.historicalStatus(verified))throw new IllegalStateException("Unsupported native memory display status; checkpoint was not overwritten");
                 json.addProperty("memoryVerificationStatus",verified);
+            }
+        }
+        if(blueprint!=null && SequentialIntention.describes(blueprint.source())) {
+            // A saved pass is history only; the generic trial loader always sees untested.
+            json.addProperty("verified","untested");
+            if(!verified.equals("untested")) {
+                if(!SequentialFunctionalRun.historicalStatus(verified))throw new IllegalStateException("Unsupported stored-circuit status; checkpoint was not overwritten");
+                json.addProperty("sequentialVerificationStatus",verified);
             }
         }
         JsonArray lessons=new JsonArray();cursors.forEach((actor,cursor)->{var item=new JsonObject();item.addProperty("actorId",actor.toString());item.addProperty("stage",cursor.stage);item.addProperty("teaching",cursor.teaching);lessons.add(item);});json.add("tutorials",lessons);
@@ -1825,6 +1846,14 @@ final class EngineeringSession implements BuildExecutor {
                 // label while the generic loader still rejects every input/evidence field.
                 verified="untested";trial.load(json);verified=MemoryFunctionalEvidence.HISTORICAL_STATUS;
             } else trial.load(json);
+            if(json.has("sequentialVerificationStatus")) {
+                String shown=json.get("sequentialVerificationStatus").getAsString();
+                if(blueprint==null || !SequentialIntention.describes(blueprint.source()) || !SequentialFunctionalRun.historicalStatus(shown))throw new IllegalStateException("Unsupported stored-circuit status; project was not loaded");
+                verified=SequentialFunctionalRun.STALE_STATUS;
+            }
+            if(blueprint!=null && SequentialIntention.describes(blueprint.source()) && SequentialFunctionalRun.pending(this)) {
+                state="PAUSED";detail="A stored-circuit test was interrupted. Put every lever down by hand, then ask me to resume.";
+            }
             for(JsonElement e:json.getAsJsonArray("journal")){
                 JsonObject x=e.getAsJsonObject();String operation=grouped?operationGroup(x.get("operation").getAsString()):"legacy";
                 boolean scoped=journalVersion>=3;
