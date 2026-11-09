@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /** One fresh owner request, bounded native gather/place phases; never restored from disk. */
-final class PhysicalBlueprintJob implements AutoCloseable {
+final class PhysicalBlueprintJob implements PhysicalJob {
     private final ProjectManager manager;
     private final EngineeringSession project;
     private final Blueprint blueprint;
@@ -88,7 +88,7 @@ final class PhysicalBlueprintJob implements AutoCloseable {
         }
         if(best==null)throw new IllegalStateException("No walking route reaches a safe placement stance");return best;
     }
-    boolean tick(){
+    @Override public boolean tick(){
         fence();
         if(movement!=null){
             if(movement.tick()){
