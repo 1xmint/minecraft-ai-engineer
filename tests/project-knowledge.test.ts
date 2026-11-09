@@ -955,3 +955,160 @@ test("replaced notes never reach discussion or planning as current requirements,
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("older current notes are recalled across the whole history without leaking or reviving history", () => {
+  const store = new MemoryStore(":memory:");
+  try {
+    sync(store);
+    const say = (
+      text: string,
+      at: number,
+      extra: Record<string, unknown> = {},
+    ) =>
+      store.gateway.rememberNote(
+        frame(),
+        { schemaVersion: 2, kind: "decision", text, ...extra },
+        at - 1,
+      );
+    say("Route the gold clock south", 1);
+    say("Route the gold clock north", 2, {
+      supersedes: 1,
+      rationale: "the east wall holds the door",
+    });
+    say("Start the art gallery tour", 3);
+    store.gateway.rememberNote(
+      frame(),
+      {
+        schemaVersion: 2,
+        kind: "reference",
+        text: "https://example.invalid/gold-clock",
+      },
+      3,
+    );
+    for (let i = 5; i <= 40; i++) say(`Unrelated filler ${i}`, i);
+
+    const before = store.gateway.knowledge(frame());
+    const asked = store.gateway.relevantKnowledge(
+      frame(),
+      "Why is the gold clock routed there?",
+    );
+    assert.equal(asked.revision, before.revision);
+    assert.equal(asked.hasEarlier, true);
+    assert.deepEqual(
+      asked.notes.slice(0, 2).map((n) => n.revision),
+      [2, 4],
+      "Only older current notes sharing whole words join the window",
+    );
+    assert.equal(asked.notes.length, 34);
+    const recalled = asked.notes[0]!;
+    assert.equal(recalled.authorId, OWNER);
+    assert.equal(recalled.source, "owner-authored");
+    assert.equal(
+      recalled.schemaVersion === 2 ? recalled.rationale : undefined,
+      "the east wall holds the door",
+    );
+    assert.ok(asked.notes[1]!.kind === "reference");
+    assert.equal(asked.notes[1]!.authorId, OWNER);
+
+    // A reason alone can recall a note; a word found inside a longer word cannot.
+    assert.deepEqual(
+      store.gateway
+        .relevantKnowledge(frame(), "the east door")
+        .notes.slice(0, 1)
+        .map((n) => n.revision),
+      [2],
+    );
+    assert.equal(
+      store.gateway.relevantKnowledge(frame(), "starting art").notes[0]!
+        .revision,
+      3,
+    );
+    assert.deepEqual(
+      store.gateway.relevantKnowledge(frame(), "tar"),
+      before,
+      "Nothing related leaves the ordinary window untouched",
+    );
+    assert.deepEqual(store.gateway.relevantKnowledge(frame()), before);
+
+    const planning = JSON.parse(
+      store.gateway.reasoning(frame(), "gold clock route").text,
+    ).knowledge;
+    assert.ok(
+      planning.notes.some((n: { revision: number }) => n.revision === 2),
+    );
+    assert.ok(
+      planning.notes.every((n: { revision: number }) => n.revision !== 1),
+    );
+    assert.ok(planning.notes.length <= 8, "The context stays bounded");
+    assert.match(planning.source, /not observed or verified/);
+
+    assert.throws(() =>
+      store.gateway.relevantKnowledge(
+        frame({ projectId: "other-project" }),
+        "gold clock",
+      ),
+    );
+    assert.throws(
+      () =>
+        store.gateway.relevantKnowledge(frame({ actorId: EVE }), "gold clock"),
+      "A non-member reads nothing",
+    );
+    assert.throws(
+      () =>
+        store.gateway.relevantKnowledge(
+          frame({ serverEpoch: "stale-epoch" }),
+          "gold clock",
+        ),
+      "A stale session reads nothing",
+    );
+    const removed = frame({ authorizationRevision: 2 });
+    sync(store, removed, [members[0]!]);
+    assert.throws(
+      () =>
+        store.gateway.relevantKnowledge(
+          { ...removed, actorId: EDITOR },
+          "gold clock",
+        ),
+      "A revoked member reads nothing",
+    );
+
+    const b = frame({ projectId: "project-b" });
+    store.gateway.sync({
+      context: b,
+      worldId: "world-a",
+      dimension: "minecraft:overworld",
+      name: "Other owner's project",
+      members,
+      isOperator: true,
+      blueprint: makeReferenceBlueprint({
+        request: "reference",
+        projectId: "project-b",
+        worldId: "world-a",
+        dimension: "minecraft:overworld",
+        anchor: { x: 0, y: 100, z: 0 },
+        rotation: 0,
+      }),
+    });
+    store.gateway.rememberNote(
+      { ...b, requestId: randomUUID() },
+      { ...note, text: "Project b gold clock note." },
+      0,
+    );
+    // Past the newest window, so the older-note search really runs for this project.
+    for (let i = 1; i <= 33; i++)
+      store.gateway.rememberNote(
+        { ...b, requestId: randomUUID() },
+        { ...note, text: `Project b filler ${i}` },
+        i,
+      );
+    const other = store.gateway.relevantKnowledge(b, "gold clock");
+    assert.equal(other.hasEarlier, true);
+    assert.deepEqual(
+      other.notes.filter((n) => !n.text.includes("filler")).map((n) => n.text),
+      ["Project b gold clock note."],
+      "Another project's notes are never searched",
+    );
+  } finally {
+    store.close();
+  }
+});
