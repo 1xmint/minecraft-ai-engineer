@@ -53,7 +53,8 @@ final class PhysicalCompanions {
         boolean craftRequest=oakRequest || gridRecipe!=null || tableRecipe!=null || chestRequest;
         boolean recoveryRequest=Set.of("recover companion crafting resources","recover my companion's crafting resources").contains(text);
         var machineChest=java.util.regex.Pattern.compile("build this machine from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean machineFromChest=machineChest.matches();
-        boolean machineTest=text.equals("test this machine");boolean machineRequest=machineFromChest || machineTest || text.equals("build this machine");
+        var designChest=java.util.regex.Pattern.compile("build this design from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean designFromChest=designChest.matches();boolean designRequest=designFromChest || text.equals("build this design");
+        boolean machineTest=text.equals("test this machine");boolean machineRequest=machineFromChest || machineTest || designRequest || text.equals("build this machine");
         var second=java.util.regex.Pattern.compile("summon a second companion at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean secondRequest=second.matches();
         var crewBuild=java.util.regex.Pattern.compile("have my (first|second) companion build (?:component )?([a-z0-9_-]+) from the chest at (-?\\d{1,8}) (-?\\d{1,4}) (-?\\d{1,8})").matcher(text);boolean crewRequest=crewBuild.matches();
         boolean dismissSecond=text.equals("dismiss my second companion");
@@ -63,7 +64,7 @@ final class PhysicalCompanions {
         if(text.equals("where is my companion")){
             var binding=actors.get(project.projectId);var extra=helpers.get(project.projectId);var helperJob=helperJobs.get(project.projectId);
             String secondary=extra==null?"":" The second companion is at "+extra.actor.blockPosition().toShortString()+(helperJob!=null?". It is building component "+helperJob.componentName()+".":". It is idle.");
-            project.tell((binding==null?extra==null?"No physical companion is present for this project.":"The first companion is gone.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.get(project.projectId) instanceof PhysicalMachineJob?". It is building and testing your machine.":jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."))+secondary);return true;
+            project.tell((binding==null?extra==null?"No physical companion is present for this project.":"The first companion is gone.":"The companion is at "+binding.actor.blockPosition().toShortString()+(jobs.get(project.projectId) instanceof PhysicalMachineJob?". It is working on your build.":jobs.containsKey(project.projectId)?". It is gathering materials and constructing your blueprint.":placing.containsKey(project.projectId)?". It is placing your retained material.":gathering.containsKey(project.projectId)?". It is gathering your requested resource.":". It is idle."))+secondary);return true;
         }
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);
         if(!project.owner.equals(project.actor()))throw new IllegalStateException("Only the project owner can summon or dismiss its physical companion");
@@ -109,11 +110,11 @@ final class PhysicalCompanions {
             var binding=actors.get(project.projectId);if(binding==null)throw new IllegalStateException("Summon your companion first");
             Runnable exclusive=exclusive(project,binding,false);
             if(machineRequest){
-                var job=machineTest?PhysicalMachineJob.test(manager,project,binding.actor,binding.pack,exclusive)
+                var job=designRequest?PhysicalMachineJob.geometry(manager,project,binding.actor,binding.pack,designFromChest?new BlockPos(Integer.parseInt(designChest.group(1)),Integer.parseInt(designChest.group(2)),Integer.parseInt(designChest.group(3))):null,exclusive):machineTest?PhysicalMachineJob.test(manager,project,binding.actor,binding.pack,exclusive)
                     :PhysicalMachineJob.build(manager,project,binding.actor,binding.pack,machineFromChest?new BlockPos(Integer.parseInt(machineChest.group(1)),Integer.parseInt(machineChest.group(2)),Integer.parseInt(machineChest.group(3))):null,exclusive);
                 if(job==null)return true;
                 jobs.put(project.projectId,job);
-                project.tell(machineTest?"Your companion is testing this machine by pulling its real levers. Say 'dismiss my companion' to stop.":"Your companion is building this machine from real items, by hand, one block at a time. Say 'dismiss my companion' to stop. Your blocks are left alone.");return true;
+                project.tell(designRequest?"Your companion is building this imported design from real items, by hand, one block at a time. It will stay untested. Say 'dismiss my companion' to stop. Your blocks are left alone.":machineTest?"Your companion is testing this machine by pulling its real levers. Say 'dismiss my companion' to stop.":"Your companion is building this machine from real items, by hand, one block at a time. Say 'dismiss my companion' to stop. Your blocks are left alone.");return true;
             }
             if(recoveryRequest){
                 exclusive.run();PhysicalPlacementRecovery.closeForOwner(manager,project,binding.actor);var original=PhysicalCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var grid=GridCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var table=TableCraftRecord.unresolvedForRecovery(manager,project,binding.actor);var chest=ChestTakeRecord.unresolvedForRecovery(manager,project,binding.actor);

@@ -31,6 +31,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     private final long authorization,generation,expires;
     private final String basis,component;
     private final PhysicalMachinePlan plan;
+    /** Null only for an imported design, which has no functional contract: it is placed and never tested. */
     private final MechanismCatalog.Contract contract;
     /** What each machine cell must hold right now: its planned state once built, air until then. */
     private final Map<BlockPos,BlockState> expected=new LinkedHashMap<>();
@@ -45,9 +46,10 @@ final class PhysicalMachineJob implements PhysicalJob {
     private boolean closed,announced;
     private int placed;
 
-    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack){this(manager,project,worker,pack,null);}
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,boolean geometryOnly){this(manager,project,worker,pack,geometryOnly,null);}
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,String explicit){this(manager,project,worker,pack,false,explicit);}
     /** A non-null {@code explicit} builds that one component under this worker's own exclusive claim instead of the session's active component. */
-    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,String explicit){
+    private PhysicalMachineJob(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,boolean geometryOnly,String explicit){
         this.manager=manager;this.project=project;this.worker=worker;this.pack=pack;blueprint=project.blueprint;
         if(blueprint==null)throw new IllegalStateException("There is no machine plan in this project yet; nothing was taken or placed");
         owner=manager.server.getPlayerList().getPlayer(project.owner);ownerConnection=owner==null?null:owner.connection;workerConnection=worker.connection;
@@ -61,7 +63,7 @@ final class PhysicalMachineJob implements PhysicalJob {
         if(x>128 || y>128 || z>128 || x*y*z>4096)throw new IllegalStateException("Workspace exceeds the bounded job limit; nothing was taken or placed");
         var part=explicit==null?blueprint:ComponentTree.component(blueprint,explicit);
         plan=PhysicalMachinePlan.of(part.blocks());
-        contract=testable(EngineeringContracts.contract(part),plan);
+        contract=geometryOnly?null:testable(EngineeringContracts.contract(part),plan);
         crew=explicit==null?null:new PhysicalWorkLease.Crew(worker.getUUID(),explicit);
         workerEpoch=manager.reservations.workerEpoch(manager.scope(project));
         // Last, so a constructor refusal can never leave a claim behind.
@@ -117,7 +119,18 @@ final class PhysicalMachineJob implements PhysicalJob {
     /** Takes what is missing from the chest (or uses what is held) and returns the running job. Refuses before any take when the build cannot start. */
     static PhysicalMachineJob build(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos chest,Runnable exclusive){
         exclusive.run();
-        var job=new PhysicalMachineJob(manager,project,worker,pack);
+        var job=new PhysicalMachineJob(manager,project,worker,pack,false);
+        PhysicalPlacementRecovery.requireNone(manager,project,worker);
+        job.observe();job.fence();job.stock(chest,exclusive);
+        return job;
+    }
+    /** Builds the previewed imported design from real items and stops at geometry: no lever is pulled and no test or pass is recorded. */
+    static PhysicalMachineJob geometry(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos chest,Runnable exclusive){
+        exclusive.run();
+        if(project.blueprint==null || !ImportedBlueprint.describes(project.blueprint.source()))throw new IllegalStateException("Preview an imported design first; nothing was taken or placed");
+        var blockers=ImportedBuildReport.blockers(project.blueprint.blocks(),project.level());
+        if(!blockers.isEmpty())throw new IllegalStateException("The companion cannot build this design by hand: "+String.join("; ",blockers)+". Nothing was taken or placed");
+        var job=new PhysicalMachineJob(manager,project,worker,pack,true);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
         PhysicalPlacementRecovery.requireNoSiblingPrepared(manager,project,worker.getUUID(),job.plan.planned().keySet());
         job.observe();job.fence();job.stock(chest,exclusive);
@@ -138,7 +151,7 @@ final class PhysicalMachineJob implements PhysicalJob {
     /** Tests a finished machine. When the machine does not match its plan it reports which cells differ, records the failure and returns null without moving a lever. */
     static PhysicalMachineJob test(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,Runnable exclusive){
         exclusive.run();
-        var job=new PhysicalMachineJob(manager,project,worker,pack);
+        var job=new PhysicalMachineJob(manager,project,worker,pack,false);
         PhysicalPlacementRecovery.requireNone(manager,project,worker);
         var mismatches=new ArrayList<String>();
         for(var cell:job.plan.cells()){
@@ -272,6 +285,10 @@ final class PhysicalMachineJob implements PhysicalJob {
             return false;
         }
         building=null;
+        if(contract==null){
+            close();owner.sendSystemMessage(Component.literal("Engineer: Companion placed "+placed+" blocks; every cell now matches the imported design. Geometry only: it is untested, no lever was pulled and no test was recorded."));
+            return true;
+        }
         if(!announced){
             announced=true;
             owner.sendSystemMessage(Component.literal("Engineer: "+label()+"Companion placed "+placed+" blocks; every cell now matches the plan. Testing the machine by pulling its real levers."));

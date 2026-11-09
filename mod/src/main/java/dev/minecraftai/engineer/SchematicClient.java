@@ -78,7 +78,7 @@ final class SchematicClient {
                 if(error!=null){tell(f,refusal(error));return;}
                 if(r.action().equals("preview")){
                     s.access.require(f.actor,ProjectAccess.Permission.EDIT);var previous=s.commandActor;
-                    try{s.commandActor=f.actor;var message=preview(reply,s);
+                    try{s.commandActor=f.actor;var message=preview(reply,s,r.at());
                         f.revision=s.revision(); // Advance only after this frame's own accepted preview.
                         tell(f,message);
                     }finally{s.commandActor=previous;}
@@ -135,7 +135,7 @@ final class SchematicClient {
                 +(parts.isEmpty()?"They use the same materials.":"Material changes: "+String.join(", ",parts)+(delta.size()>6?", +"+(delta.size()-6)+" more":"")+".")
                 +" Geometry only: neither design is tested, and a difference in shape is not a difference in behaviour.";
     }
-    private static String preview(JsonObject reply,EngineeringSession s){
+    private static String preview(JsonObject reply,EngineeringSession s,net.minecraft.core.BlockPos requested){
         if(!reply.get("status").getAsString().equals("shared"))throw new IllegalArgumentException("Expected an authorized stored design");
         var placement=reply.getAsJsonObject("placement");
         if(!placement.get("available").getAsBoolean())return placement.get("reason").getAsString();
@@ -143,8 +143,9 @@ final class SchematicClient {
         var source=SchematicBlueprint.candidate(placement.getAsJsonArray("blocks"),id,design.get("digest").getAsString(),design.getAsJsonObject("source").get("sha256").getAsString(),s.worldId,s.dimension,s.projectId.toString());
         var unsupported=SchematicBlueprint.unsupported(source);
         if(!unsupported.isEmpty())return "This design cannot be built with the current safe block library: "+String.join(", ",unsupported.subList(0,Math.min(6,unsupported.size())))+". You can still inspect and export it.";
-        s.proposeImported(Blueprint.parse(source,s.worldId,s.dimension),s.anchor(),0);
-        return "Preview ready: Imported design "+id+". No blocks were placed. It is untested and has no functional test contract. Ask me to build it for a separate approval.";
+        var at=requested==null?s.anchor():requested;
+        s.proposeImported(Blueprint.parse(source,s.worldId,s.dimension),at,0);
+        return "Preview ready: Imported design "+id+" at "+at.toShortString()+". No blocks were placed. It is untested and has no functional test contract. "+ImportedBuildReport.describe(s.blueprint.blocks(),s.level())+" Ask me to build it for a separate approval.";
     }
     private static String shared(JsonObject reply,EngineeringSession s){
         var design=reply.getAsJsonObject("design");var placement=reply.getAsJsonObject("placement");int id=design.get("designId").getAsInt();
