@@ -2,7 +2,7 @@
 
 This development branch adds a curated one-bit half-adder. The physical circuit
 has native Minecraft proof in all four orientations. Full conversational,
-multiplayer and restart checks are still pending; it is not in alpha.2.
+multiplayer and restart checks are still pending. It was added after alpha.2.
 
 Mark a workspace at least 46 blocks wide, 2 high and 37 deep using the normal
 project conversation, then say **“Engineer, show me a half-adder.”** Previewing

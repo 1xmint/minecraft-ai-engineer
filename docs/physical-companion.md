@@ -1,9 +1,10 @@
 # Optional physical companion
 
-Current source supports a visible survival actor, bounded resource gathering,
-flat navigation, native inventory crafting, retained-item placement, building and
-lever-testing the NOT gate from chest items, and two companions building separate
-parts at once. Published downloads through alpha.3 predate these features. Check the
+The alpha.3 download supports a visible survival actor, bounded resource gathering,
+flat navigation, native inventory crafting and retained-item placement. Current
+source also builds and lever-tests the NOT gate from chest items and runs two
+companions building separate parts at once; published downloads through alpha.3
+do not include those two. Check the
 [release notes](release-notes.md) and use the paired files. Other machines and
 tools remain unfinished.
 
