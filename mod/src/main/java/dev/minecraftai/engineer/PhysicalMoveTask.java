@@ -25,6 +25,9 @@ final class PhysicalMoveTask implements AutoCloseable {
         this(manager,project,worker,pack,destination,Set.of(),intention);
     }
     PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention){
+        this(manager,project,worker,pack,destination,planReads,intention,null);
+    }
+    PhysicalMoveTask(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Object pack,BlockPos destination,Set<BlockPos> planReads,Runnable intention,PhysicalWorkLease.Crew crew){
         this.worker=worker;this.pack=pack;this.intention=intention;connection=worker.connection;level=worker.level();initialPosition=worker.position();
         if(!manager.server.isSameThread() || level!=project.level())throw new IllegalStateException("Movement requires the current server workspace");
         PhysicalWorkLease.requireIdle(project);intention.run();
@@ -38,7 +41,7 @@ final class PhysicalMoveTask implements AutoCloseable {
         reads.addAll(planReads);
         occupancy=Set.copyOf(occupied);
         requireNoEntities();
-        lease=PhysicalWorkLease.movement(manager,project,manager.server.getPlayerList().getPlayer(project.owner),occupancy,reads);
+        lease=PhysicalWorkLease.movement(manager,project,manager.server.getPlayerList().getPlayer(project.owner),occupancy,reads,crew);
         expires=manager.server.getTickCount()+6000L;
         try{PhysicalActionGate.cancel(worker);call("stopAll",new Class[]{});call("setForward",new Class[]{float.class},0f);}
         catch(RuntimeException failed){close();throw failed;}
@@ -55,8 +58,8 @@ final class PhysicalMoveTask implements AutoCloseable {
             if(from.getY()!=to.getY())for(var column:List.of(from,to))
                 boxes.add(new net.minecraft.world.phys.AABB(column.getX(),Math.min(from.getY(),to.getY()),column.getZ(),column.getX()+1,Math.max(from.getY(),to.getY())+2,column.getZ()+1).inflate(0.45,0,0.45));
         }
-        for(var box:boxes)if(level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,box).stream().anyMatch(entity->entity!=worker))
-            throw new IllegalStateException("Another entity occupies the reserved walking route");
+        for(var box:boxes)for(var entity:level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,box))if(entity!=worker)
+            throw new IllegalStateException("Another entity occupies the reserved walking route: "+net.minecraft.world.entity.EntityType.getKey(entity.getType()).getPath());
     }
     private BlockPos edgeStart(){return route.cells().get(Math.max(0,Math.min(step,route.cells().size())-1));}
     private BlockPos edgeEnd(){return route.cells().get(Math.min(step,route.cells().size()-1));}

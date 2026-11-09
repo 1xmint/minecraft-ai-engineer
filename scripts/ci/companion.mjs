@@ -204,6 +204,28 @@ const server = createCompanionServer({
           basis: ["project"],
         };
       }
+      if (input.message === "CI recall the gold clock route.") {
+        // The kept note is older than the newest 32; the note it replaced must stay out.
+        const kept = source.sources.find(
+          (item) =>
+            item.kind === "owner-authored-requirement" &&
+            item.data.revision === 2 &&
+            item.data.text === "Route the gold clock along the north wall" &&
+            item.data.rationale === "the east wall holds the door",
+        );
+        if (
+          source.knowledgeRevision !== 35 ||
+          !kept ||
+          source.sources.some((item) => item.data?.revision === 1)
+        )
+          throw new Error("Older current note was not recalled exactly");
+        return {
+          schemaVersion: 1,
+          kind: "explanation",
+          text: `Owner-authored note #2: ${kept.data.text}, because ${kept.data.rationale}. This is a requirement, not a measured world fact.`,
+          basis: ["project", kept.id],
+        };
+      }
       const expected =
         input.message === "CI explain entrance decision."
           ? {

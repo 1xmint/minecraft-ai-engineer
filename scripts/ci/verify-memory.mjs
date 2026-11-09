@@ -475,6 +475,7 @@ try {
       "conversation-restart.done",
       "diagnosis-states.done",
       "diagnosis-text.done",
+      "older-memory-recall.done",
     ])
       assert.equal(
         readFileSync(`${coordination}/${marker}`, "utf8").trim(),
