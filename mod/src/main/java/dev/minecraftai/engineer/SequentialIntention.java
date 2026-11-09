@@ -40,12 +40,14 @@ final class SequentialIntention {
         out.addProperty("name",circuit.name());out.addProperty("explanation",circuit.summary()+" "+String.join(" ",circuit.lesson()));
         var stages=new JsonArray();
         stages.add(stage("foundation","Support the circuit","Place a stone support under every part."));
-        stages.add(stage("solid","Place solid and lit parts","Place stone, lamps and bulbs so attached parts have something to hold on to."));
+        stages.add(stage("solid","Place solid and lit parts","Place stone and lamps so attached parts have something to hold on to."));
         stages.add(stage("wiring","Place controls and wiring parts","Place levers, torches, repeaters and comparators."));
+        // Bulbs go last: a bulb placed before its powering torch would flip on, and a comparator placed beside a lit bulb never notices.
+        stages.add(stage("memory","Place memory bulbs","Place the copper bulbs last so each one starts dark and ready to count."));
         out.add("stages",stages);
         var blocks=new JsonArray();var resources=new TreeMap<String,Integer>();
         for(var cell:circuit.cells()){blocks.add(block(cell.at().below(),"minecraft:stone","foundation"));resources.merge("minecraft:stone",1,Integer::sum);}
-        for(String stage:List.of("solid","wiring"))for(var cell:circuit.cells()){
+        for(String stage:List.of("solid","wiring","memory"))for(var cell:circuit.cells()){
             if(!stage.equals(stageOf(cell.state())))continue;
             blocks.add(block(cell.at(),cell.state(),stage));resources.merge(item(cell.state()),1,Integer::sum);
         }
@@ -78,7 +80,7 @@ final class SequentialIntention {
         var stages=new ArrayList<Blueprint.Stage>();for(var value:source.getAsJsonArray("stages")){var stage=value.getAsJsonObject();stages.add(new Blueprint.Stage(stage.get("id").getAsString(),stage.get("title").getAsString(),stage.get("explanation").getAsString()));}
         return new Blueprint(source.get("id").getAsString(),source.get("projectId").getAsString(),source.get("revision").getAsInt(),source.get("worldId").getAsString(),source.get("dimension").getAsString(),source.get("name").getAsString(),anchor,angle,List.copyOf(blocks),List.copyOf(stages),source());
     }
-    private static String stageOf(String state){return state.equals("minecraft:stone") || state.contains("lamp") || state.contains("bulb")?"solid":"wiring";}
+    private static String stageOf(String state){return state.contains("bulb")?"memory":state.equals("minecraft:stone") || state.contains("lamp")?"solid":"wiring";}
     private static String item(String state){return state.replaceFirst("\\[.*$","").replace("redstone_wall_torch","redstone_torch").replace("redstone_wire","redstone");}
     private static JsonObject stage(String id,String title,String explanation){var out=new JsonObject();out.addProperty("id",id);out.addProperty("title",title);out.addProperty("explanation",explanation);out.add("prerequisites",new JsonArray());return out;}
     private static JsonObject block(BlockPos pos,String state,String stage){var out=new JsonObject();out.add("pos",Blueprint.jsonPos(pos));out.addProperty("state",state);out.addProperty("stage",stage);out.addProperty("component","root");out.add("prerequisites",new JsonArray());return out;}

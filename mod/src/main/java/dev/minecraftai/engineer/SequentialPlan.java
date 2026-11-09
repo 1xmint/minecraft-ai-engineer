@@ -34,7 +34,7 @@ final class SequentialPlan {
             levers.put(name,false);var change=new LinkedHashMap<String,Boolean>();change.put(name,false);
             out.add(new Step(Collections.unmodifiableMap(change),Map.copyOf(held)));
         }
-        if(!held.equals(start))throw new IllegalStateException("Test sequence for "+circuit.id()+" would not restore its starting value");
+        if(!held.equals(start))throw new IllegalStateException("Test sequence for "+circuit.id()+" would not restore its starting value: observed "+start+", would end at "+held);
         return List.copyOf(out);
     }
     static int count(Map<String,Boolean> outputs){
