@@ -18,16 +18,17 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
     private final Runnable exclusive;
     private final BlockPos table;
     private final net.minecraft.world.level.block.Block expected;
-    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive){this(manager,project,worker,exclusive,null,Blocks.CRAFTING_TABLE,false);}
+    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive){this(manager,project,worker,exclusive,null,Blocks.CRAFTING_TABLE,false,null);}
     /** The table form also leases the one placed crafting table the worker will open, so any edit to it stops the work. */
-    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table){this(manager,project,worker,exclusive,table,Blocks.CRAFTING_TABLE,false);}
+    PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table){this(manager,project,worker,exclusive,table,Blocks.CRAFTING_TABLE,false,null);}
     /** The chest form leases the one chest as exclusive occupancy, so no other worker lease may read, write or occupy it meanwhile. */
-    static PhysicalInventoryAuthority chest(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos chest){return new PhysicalInventoryAuthority(manager,project,worker,exclusive,java.util.Objects.requireNonNull(chest),Blocks.CHEST,true);}
-    private PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table,net.minecraft.world.level.block.Block expected,boolean occupy){
+    static PhysicalInventoryAuthority chest(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos chest){return chest(manager,project,worker,exclusive,chest,null);}
+    static PhysicalInventoryAuthority chest(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos chest,PhysicalWorkLease.Crew crew){return new PhysicalInventoryAuthority(manager,project,worker,exclusive,java.util.Objects.requireNonNull(chest),Blocks.CHEST,true,crew);}
+    private PhysicalInventoryAuthority(ProjectManager manager,EngineeringSession project,ServerPlayer worker,Runnable exclusive,BlockPos table,net.minecraft.world.level.block.Block expected,boolean occupy,PhysicalWorkLease.Crew crew){
         this.worker=worker;this.table=table==null?null:table.immutable();this.expected=expected;this.exclusive=java.util.Objects.requireNonNull(exclusive);
         if(!manager.server.isSameThread() || !project.owner.equals(project.actor()))throw new IllegalStateException("Only the current owner may request native inventory work");
         project.access.require(project.actor(),ProjectAccess.Permission.BUILD);PhysicalWorkLease.requireIdle(project);exclusive.run();
-        var identity=PhysicalWorkerIdentity.existing(manager,project);if(!identity.restore() || !identity.id().equals(worker.getUUID()))throw new IllegalStateException("Inventory work needs this project's initialized companion");
+        if(!PhysicalWorkerIdentity.member(manager,project,worker.getUUID()))throw new IllegalStateException("Inventory work needs this project's initialized companion");
         var human=manager.server.getPlayerList().getPlayer(project.owner);if(human==null)throw new IllegalStateException("Inventory-work owner is unavailable");
         level=worker.level();connection=worker.connection;origin=worker.position();box=worker.getBoundingBox();
         if(level!=project.level() || !PhysicalActionGate.exactConnection(worker))throw new IllegalStateException("Inventory-work worker connection differs");
@@ -41,7 +42,7 @@ final class PhysicalInventoryAuthority implements AutoCloseable {
                 throw new IllegalStateException(occupy?"Chest take needs a loaded chest inside this workspace":"Table crafting needs a loaded crafting table inside this workspace");
             if(occupy)occupied.add(this.table);else reads.add(this.table);
         }
-        occupancy=Set.copyOf(occupied);reads.addAll(occupancy);lease=PhysicalWorkLease.movement(manager,project,human,occupancy,reads);
+        occupancy=Set.copyOf(occupied);reads.addAll(occupancy);lease=PhysicalWorkLease.movement(manager,project,human,occupancy,reads,crew);
     }
     void validate(){
         PhysicalCraftGuard.requireRunning(worker);lease.validateMovement(occupancy);exclusive.run();

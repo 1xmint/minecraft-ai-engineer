@@ -346,12 +346,15 @@ public final class EngineerGameTests {
     public void boundedOverlayWireFormat(GameTestHelper helper){
         var recipient=java.util.UUID.randomUUID();
         var view=new ProjectView(recipient,"world","minecraft:overworld","project","epoch",1,1,1,0,"Private lesson",
-                java.util.List.of(new ProjectView.Ghost(BlockPos.ZERO,Blocks.STONE.defaultBlockState(),true,false,false)));
+                java.util.List.of(new ProjectView.Ghost(BlockPos.ZERO,Blocks.STONE.defaultBlockState(),true,false,false,true)));
         var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),helper.getLevel().registryAccess());
         try {
             EngineerNetwork.SnapshotPayload.CODEC.encode(buffer,new EngineerNetwork.SnapshotPayload(1,view));
             var decoded=EngineerNetwork.SnapshotPayload.CODEC.decode(buffer);
             helper.assertTrue(decoded.view().recipient().equals(recipient) && decoded.view().blocks().size()==1,"Presentation retains its exact authorized recipient and bounded geometry");
+            helper.assertTrue(decoded.view().blocks().getFirst().diagnosed(),"The display-only diagnosis tint survives the wire");
+            buffer.clear();EngineerNetwork.SnapshotPayload.CODEC.encode(buffer,new EngineerNetwork.SnapshotPayload(1,view));buffer.setByte(buffer.writerIndex()-1,16);
+            reject(helper,()->EngineerNetwork.SnapshotPayload.CODEC.decode(buffer),"Unknown overlay flags are rejected");
             buffer.clear();buffer.writeVarInt(1);buffer.writeByte(7);
             reject(helper,()->EngineerNetwork.HelloPayload.CODEC.decode(buffer),"Hello cannot smuggle actor or command data after its protocol field");
         } finally {buffer.release();}

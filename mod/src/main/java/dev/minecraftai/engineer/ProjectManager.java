@@ -206,13 +206,14 @@ final class ProjectManager {
         var cursor = project.cursor(player.getUUID());
         String stage = project.blueprint.stages().get(cursor.stage).id(); var ghosts = new ArrayList<ProjectView.Ghost>();
         int bytes=ProjectView.MAX_TEXT_LENGTH*3+2048;
+        var diagnosed=Diagnosis.highlight(project,player);
         for (Blueprint.PlannedBlock b : project.blueprint.blocks()) {
             bytes+=Blueprint.describe(b.state()).length()*3+16;
             if(bytes>ProjectView.MAX_PACKET_BYTES)break;
             boolean loaded = project.level().hasChunkAt(b.pos());
             var actual = loaded ? project.level().getBlockState(b.pos()) : null;
             boolean matches = loaded && Blueprint.matches(b.state(), actual);
-            ghosts.add(new ProjectView.Ghost(b.pos(), b.state(), stage.equals(b.stage()), matches, loaded && !actual.isAir() && !matches));
+            ghosts.add(new ProjectView.Ghost(b.pos(), b.state(), stage.equals(b.stage()), matches, loaded && !actual.isAir() && !matches, diagnosed.contains(b.pos())));
         }
         return new ProjectView(player.getUUID(), worldId, project.dimension, project.projectId.toString(), epoch.toString(), ++sequence,
                 project.revision(), project.access.revision(), cursor.stage,
