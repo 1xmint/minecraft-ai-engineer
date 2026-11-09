@@ -1,7 +1,8 @@
-# Release notes: v0.1.0-alpha.3 (preparation)
+# Release notes: next preview after v0.1.0-alpha.3 (preparation)
 
-This describes what the alpha.3 source does. It is a development preview for
-one dedicated local server. Use a disposable world and the paired files from
+This describes the current source. Nothing listed under "New since alpha.3" is
+in the published v0.1.0-alpha.3 download, which predates it. It is a development
+preview for one dedicated local server. Use a disposable world and the paired files from
 one release. Nothing here is proof of the human checks listed at the end.
 
 ## Supported versions
@@ -17,7 +18,7 @@ one release. Nothing here is proof of the human checks listed at the end.
 The mod jar and companion zip are a pair. `BUILD.json` and `SHA256SUMS` in the
 release identify them. Do not mix files from different releases.
 
-## New since alpha.2
+## New since alpha.3
 
 Each item was checked by automated runs against a real Minecraft server. Some
 items have the limits named under "Not supported yet".

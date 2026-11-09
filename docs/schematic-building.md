@@ -1,7 +1,8 @@
 # Building imported schematics
 
-This feature is on the development branch. Full multiplayer integration checks
-are still pending; the published alpha.2 does not include imported construction.
+This feature is on the development branch. Published downloads through alpha.3
+do not include building imported designs with a physical companion. See the
+[release notes](release-notes.md) for its limits.
 
 The server operator puts Sponge v3 `.schem` files in `schematics/library` inside
 the companion's configuration folder. In game, address the Engineer in chat:

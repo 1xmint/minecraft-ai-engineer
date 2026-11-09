@@ -70,8 +70,8 @@ subscription quota. No API key or separately billed API service is used. Other
 members never receive that login or direct model access. Current source adds
 offline voice drafts/private spoken replies and physical survival work, including
 a companion that builds and tests a NOT gate and two companions working at once.
-Alpha.2 predates these additions. The [release notes](docs/release-notes.md) list
-what alpha.3 supports, what it does not, and the human checks still open.
+Published downloads predate these additions. The [release notes](docs/release-notes.md)
+list what the current source supports, what it does not, and the human checks still open.
 
 The [companion guide](docs/companion-guide.md) covers configuration and memory.
 The [mod guide](docs/mod-guide.md) covers sharing, lessons, conflict protection,

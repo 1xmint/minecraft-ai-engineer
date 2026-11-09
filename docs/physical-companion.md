@@ -3,7 +3,7 @@
 Current source supports a visible survival actor, bounded resource gathering,
 flat navigation, native inventory crafting, retained-item placement, building and
 lever-testing the NOT gate from chest items, and two companions building separate
-parts at once. Alpha.2 predates these features. Check the
+parts at once. Published downloads through alpha.3 predate these features. Check the
 [release notes](release-notes.md) and use the paired files. Other machines and
 tools remain unfinished.
 
