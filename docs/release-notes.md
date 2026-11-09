@@ -7,13 +7,13 @@ one release. Nothing here is proof of the human checks listed at the end.
 
 ## Supported versions
 
-| Part | Version |
-| --- | --- |
-| Minecraft Java | 26.3 |
-| Fabric Loader | 0.20.1 |
-| Fabric API | 0.165.0+26.3 |
-| Java | 25 |
-| Node | 24.14 or newer within Node 24 |
+| Part           | Version                       |
+| -------------- | ----------------------------- |
+| Minecraft Java | 26.3                          |
+| Fabric Loader  | 0.20.1                        |
+| Fabric API     | 0.165.0+26.3                  |
+| Java           | 25                            |
+| Node           | 24.14 or newer within Node 24 |
 
 The mod jar and companion zip are a pair. `BUILD.json` and `SHA256SUMS` in the
 release identify them. Do not mix files from different releases.
