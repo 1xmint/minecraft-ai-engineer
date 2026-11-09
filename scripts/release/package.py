@@ -94,7 +94,7 @@ def build(root, output, jar=None):
             metadata = json.loads(archive.read("fabric.mod.json"))
             if metadata["id"] != "engineer" or jar_path.name.endswith("-sources.jar"):
                 raise ValueError("Expected the deployable engineer jar")
-            for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "imported-materials.json"]:
+            for name in ["mechanisms.json", "shutter.json", "half-adder.json", "half-adder-definition.json", "full-adder-definition.json", "toggle-memory.json", "sequential-circuits.json", "imported-materials.json"]:
                 if archive.read(f"engineer/{name}") != read(f"catalog/{name}"):
                     raise ValueError("Jar catalog differs from the companion checkout")
 

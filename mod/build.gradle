@@ -26,6 +26,7 @@ processResources {
     from('../catalog/half-adder-definition.json') { into 'engineer' }
     from('../catalog/full-adder-definition.json') { into 'engineer' }
     from('../catalog/toggle-memory.json') { into 'engineer' }
+    from('../catalog/sequential-circuits.json') { into 'engineer' }
     from('../catalog/imported-materials.json') { into 'engineer' }
     from('../tests/fixtures/shutter-design.json') { into 'engineer/fixtures' }
     from('../tests/fixtures/shutter-trace.json') { into 'engineer/fixtures' }
