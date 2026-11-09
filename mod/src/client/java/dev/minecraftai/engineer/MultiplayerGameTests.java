@@ -2399,7 +2399,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
             MESSAGES.clear();memorySay(context,"Engineer, remember my decision: An editor cannot author this.");expectChat(context,"Only the project owner");
             MESSAGES.clear();send(context,"engineer discuss CI explain entrance decision.");expectChat(context,"permission");
             if(LIVE_NATURAL){MESSAGES.clear();send(context,"engineer request "+LIVE_NATURAL_MESSAGE);expectChat(context,"single configured account-owning operator");}
-            write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-revoked");
+            delayedReplyPrivacyAsker(context);
             MESSAGES.clear();send(context,"engineer project use "+read("knowledge-project"));expectChat(context,"unavailable or not shared");
             MESSAGES.clear();memorySay(context,"Engineer, what do you remember about this project?");expectChat(context,"Engineer:");
             check(MESSAGES.stream().noneMatch(message->message.contains("Keep the entrance within six blocks.")),"Revoked members cannot read project notes");
@@ -3383,7 +3383,14 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         }
         server.runOnServer(s->{assertKnowledgeHasNoWorldAuthority(session(s,"Alice"));commandAs(s,"Alice","engineer project share Bob editor");});
         write("knowledge-bob-request","ready");awaitFile(context,"knowledge-bob.done");
-        server.runOnServer(s->commandAs(s,"Alice","engineer project revoke Bob"));write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
+        // Each request and the change that outdates it share one server task, so the reply cannot arrive between them.
+        dev.minecraftai.engineer.client.SpokenReplyCapture.start();dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        server.runOnServer(s->{commandAs(s,"Bob","engineer notes");commandAs(s,"Bob","engineer project new");check(!session(s,"Bob").projectId.toString().equals(read("knowledge-project")),"The asker really left the project while the reply was outstanding");});
+        write("knowledge-bob-switched","ready");awaitFile(context,"knowledge-bob-switch-checked");
+        server.runOnServer(s->{commandAs(s,"Bob","engineer project use "+read("knowledge-project"));check(session(s,"Bob").projectId.toString().equals(read("knowledge-project")),"The asker returned before the second delayed request");commandAs(s,"Bob","engineer notes");commandAs(s,"Alice","engineer project revoke Bob");});
+        write("knowledge-bob-revoked","ready");awaitFile(context,"knowledge-bob-denied.done");
+        check(MESSAGES.stream().noneMatch(message->message.contains("Reading shared project notes") || message.contains("Shared project notes, revision")),"Another player never receives a member's delayed reply");
+        check(dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().noneMatch(line->line.contains("project notes")),"Another player never hears a member's delayed reply");
         if(LIVE_DISCUSSION || LIVE_NATURAL){
             write("generated-companion-restart.request","ready");awaitFile(context,"generated-companion-restart.done");
             var receipt=JsonParser.parseString(read("generated-companion-restart.done")).getAsJsonObject();check(receipt.get("oldPid").getAsLong()!=receipt.get("newPid").getAsLong(),"Discussion notes survive a real companion process replacement");
@@ -4381,6 +4388,25 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         return player;
     }
     private static EngineeringSession session(MinecraftServer server, String name) { return EngineerMod.sessionFor(player(server, name)); }
+    private static void assertDelayedReplySilent(ClientGameTestContext context,String why) throws Exception {
+        context.waitTicks(60);
+        check(MESSAGES.stream().anyMatch(message->message.contains("Reading shared project notes")),"The delayed request really started: "+why);
+        check(MESSAGES.stream().noneMatch(message->message.contains("Shared project notes, revision") || message.contains("six blocks") || message.contains("visible lamp")),"No delayed note text in chat: "+why);
+        check(dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().noneMatch(line->line.contains("Shared project notes, revision") || line.contains("six blocks") || line.contains("visible lamp")),"No delayed note text is spoken: "+why);
+    }
+    /** The asker's side: speech and chat both carry a current reply, and neither carries an outdated one. */
+    private static void delayedReplyPrivacyAsker(ClientGameTestContext context) throws Exception {
+        dev.minecraftai.engineer.client.SpokenReplyCapture.start();dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        send(context,"engineer notes");expectChat(context,"Keep the entrance within six blocks.");
+        await(context,()->dev.minecraftai.engineer.client.SpokenReplyCapture.heard().stream().anyMatch(line->line.contains("six blocks")),"A current reply is really spoken, so silence below means something");
+        dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        write("knowledge-bob.done","passed");awaitFile(context,"knowledge-bob-switched");
+        assertDelayedReplySilent(context,"the asker changed project");
+        dev.minecraftai.engineer.client.SpokenReplyCapture.clear();MESSAGES.clear();
+        write("knowledge-bob-switch-checked","passed");awaitFile(context,"knowledge-bob-revoked");
+        assertDelayedReplySilent(context,"the asker lost access");
+        write("delayed-reply-private.done","passed");
+    }
     private static void commandAs(MinecraftServer server, String name, String command) {
         server.getCommands().performPrefixedCommand(player(server, name).createCommandSourceStack(), command);
     }
