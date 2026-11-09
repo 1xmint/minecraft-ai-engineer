@@ -58,8 +58,8 @@ final class PhysicalMoveTask implements AutoCloseable {
             if(from.getY()!=to.getY())for(var column:List.of(from,to))
                 boxes.add(new net.minecraft.world.phys.AABB(column.getX(),Math.min(from.getY(),to.getY()),column.getZ(),column.getX()+1,Math.max(from.getY(),to.getY())+2,column.getZ()+1).inflate(0.45,0,0.45));
         }
-        for(var box:boxes)if(level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,box).stream().anyMatch(entity->entity!=worker))
-            throw new IllegalStateException("Another entity occupies the reserved walking route");
+        for(var box:boxes)for(var entity:level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,box))if(entity!=worker)
+            throw new IllegalStateException("Another entity occupies the reserved walking route: "+net.minecraft.world.entity.EntityType.getKey(entity.getType()).getPath());
     }
     private BlockPos edgeStart(){return route.cells().get(Math.max(0,Math.min(step,route.cells().size())-1));}
     private BlockPos edgeEnd(){return route.cells().get(Math.min(step,route.cells().size()-1));}

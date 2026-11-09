@@ -1033,7 +1033,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
     private static CrewEvidence crewStage(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         crewDismissAny(context,server);
         UUID previous=server.computeOnServer(s->session(s,"Alice").projectId);send(context,"engineer project new");server.waitFor(s->!session(s,"Alice").projectId.equals(previous));
-        server.runCommand("forceload add 3696 -16 3744 32");server.runCommand("fill 3700 101 0 3738 103 10 minecraft:air");server.runCommand("fill 3700 100 0 3738 100 14 minecraft:stone");
+        server.runCommand("forceload add 3696 -16 3744 32");server.runCommand("fill 3700 101 0 3738 103 10 minecraft:air");server.runCommand("fill 3700 100 0 3738 100 14 minecraft:stone");server.runCommand("kill @e[type=minecraft:item,x=3698,y=99,z=-2,dx=44,dy=8,dz=20]");
         server.runCommand("tp Alice 3717.5 101 13 180 0");
         send(context,"engineer select1 3700 100 0");send(context,"engineer select2 3738 103 10");server.waitFor(s->new BlockPos(3738,103,10).equals(session(s,"Alice").corner2));
         crewStock(server,CREW_CHEST_A);crewStock(server,CREW_CHEST_B);
