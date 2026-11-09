@@ -30,20 +30,21 @@ public final class GhostPreviewRenderer {
         LevelRenderEvents.COLLECT_SUBMITS.register(GhostPreviewRenderer::submit);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->{extractedModels=0;submittedModels=0;});
     }
+    private static int extractedDiagnosed;
     private static void extract(LevelExtractionContext context){
         var target=(FabricRenderState)context.levelState();var view=ClientPreview.renderInput();
         if(view==null || !view.dimension().equals(context.level().dimension().identifier().toString())){
-            target.setData(FRAME,EMPTY);extractedModels=0;return;
+            target.setData(FRAME,EMPTY);extractedModels=0;extractedDiagnosed=0;return;
         }
-        var camera=context.camera().position();var models=new ArrayList<Model>();
+        var camera=context.camera().position();var models=new ArrayList<Model>();int diagnosed=0;
         var modelSet=Minecraft.getInstance().getModelManager().getBlockStateModelSet();
         for(var ghost:PreviewSelection.nearby(view,camera)){
             if(ghost.matches() || ghost.state().isAir())continue;
             var parts=new ArrayList<BlockStateModelPart>();
             modelSet.get(ghost.state()).collectParts(RandomSource.create(ghost.state().getSeed(ghost.pos())),parts);
-            if(!parts.isEmpty())models.add(new Model(ghost.pos(),parts,ghost.currentStage()?0x80ffffff:0x55ffffff));
+            if(!parts.isEmpty())models.add(new Model(ghost.pos(),parts,ghost.diagnosed()?0xc0ff5a4a:ghost.currentStage()?0x80ffffff:0x55ffffff));if(ghost.diagnosed())diagnosed++;
         }
-        target.setData(FRAME,new Frame(camera,models));extractedModels=models.size();
+        target.setData(FRAME,new Frame(camera,models));extractedModels=models.size();extractedDiagnosed=diagnosed;
     }
     private static void submit(LevelRenderContext context){
         var frame=((FabricRenderState)context.levelState()).getDataOrDefault(FRAME,EMPTY);
@@ -66,5 +67,6 @@ public final class GhostPreviewRenderer {
     }
     /** Diagnostic counters for native visual acceptance, never world or permission state. */
     public static int extractedModelCount(){return extractedModels;}
+    public static int extractedDiagnosedCount(){return extractedDiagnosed;}
     public static int submittedModelCount(){return submittedModels;}
 }

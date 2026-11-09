@@ -35,6 +35,30 @@ public final class DesignComparisonGameTests {
         helper.succeed();
     }
 
+    private static JsonObject leverRecord(String stage){
+        var r=new JsonObject();r.addProperty("schemaVersion",1);r.addProperty("world",WORLD);r.addProperty("dimension",DIM);r.addProperty("project","p");r.addProperty("worker","w");r.addProperty("blueprint","current");r.addProperty("stage",stage);r.addProperty("cases",3);r.addProperty("settleTicks",12);return r;
+    }
+    private static JsonObject leverResults(JsonObject r,int passed){var results=new JsonArray();for(int i=0;i<3;i++)results.add(new JsonObject());r.add("results",results);r.addProperty("passed",passed);return r;}
+    private static MachineTrialEvidence.Outcome classify(JsonObject r){return MachineTrialEvidence.classify(r,WORLD,DIM,"p","current");}
+    @GameTest public void leverRecordsKeepEveryOutcomeSeparate(GameTestHelper helper){
+        helper.assertTrue(classify(leverResults(leverRecord("PASSED"),3))==MachineTrialEvidence.Outcome.PASSED,"All cases passing is a pass");
+        helper.assertTrue(classify(leverResults(leverRecord("FAILED"),2))==MachineTrialEvidence.Outcome.FAILED,"A wrong case is a failure");
+        helper.assertTrue(classify(leverRecord("ABORTED"))==MachineTrialEvidence.Outcome.INTERRUPTED,"A stopped test has no verdict");
+        helper.assertTrue(classify(leverRecord("RUNNING"))==MachineTrialEvidence.Outcome.INTERRUPTED,"A test the server never finished has no verdict");
+        var refused=leverRecord("FAILED");refused.remove("cases");refused.add("geometryMismatches",new JsonArray());
+        helper.assertTrue(classify(refused)==MachineTrialEvidence.Outcome.REFUSED,"A machine that did not match its plan was refused, not failed");
+        var older=leverResults(leverRecord("PASSED"),3);older.addProperty("blueprint","earlier");
+        helper.assertTrue(classify(older)==MachineTrialEvidence.Outcome.STALE,"A pass on an earlier revision does not count for this one");
+        helper.assertTrue(classify(leverResults(leverRecord("PASSED"),2))==MachineTrialEvidence.Outcome.UNREADABLE,"A pass with a wrong case is not believed");
+        var thin=leverRecord("PASSED");helper.assertTrue(classify(thin)==MachineTrialEvidence.Outcome.UNREADABLE,"A pass with no results is not believed");
+        var foreign=leverResults(leverRecord("PASSED"),3);foreign.addProperty("project","other");helper.assertTrue(classify(foreign)==MachineTrialEvidence.Outcome.UNREADABLE,"Another project's record is never counted");
+        helper.assertTrue(classify(new JsonObject())==MachineTrialEvidence.Outcome.UNREADABLE,"An empty record is unreadable");
+        var counts=MachineTrialEvidence.count(List.of(MachineTrialEvidence.Outcome.PASSED,MachineTrialEvidence.Outcome.INTERRUPTED,MachineTrialEvidence.Outcome.INTERRUPTED,MachineTrialEvidence.Outcome.REFUSED),false);
+        var lines=String.join(" ",MachineTrialEvidence.lines("this design",counts,"other",null));
+        helper.assertTrue(lines.contains("1 passed, 0 failed, 2 interrupted, 1 refused before any lever moved, 0 for an older revision, 0 unreadable")&&lines.contains("not a rate")&&lines.contains("Timing from real lever tests: unavailable")&&!lines.contains("%"),"Counts stay separate, with no rate or timing: "+lines);
+        helper.assertTrue(MachineTrialEvidence.lines("a",MachineTrialEvidence.count(List.of(),false),"b",null).isEmpty(),"A design with no lever tests gets no lever-test lines");
+        helper.succeed();
+    }
     @GameTest public void identicalDesignsShowNoInventedAdvantage(GameTestHelper helper){
         var lines=DesignComparison.compare(measure("A",catalog("signal-lamp",0,0,2)),measure("B",catalog("signal-lamp",40,90,2)));
         helper.assertTrue(has(lines,"Measured differences: none") && has(lines,"no measured difference; neither design has an advantage")

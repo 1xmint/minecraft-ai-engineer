@@ -10,7 +10,11 @@ import {
   NOTE_SEARCH_LIMIT,
 } from "./project-knowledge.js";
 import type { DatabaseSync } from "node:sqlite";
-import { currentNotes } from "./discussion.js";
+import { currentNotes, noteWords } from "./discussion.js";
+
+const RELEVANT_NOTE_WORDS = 12;
+const RELEVANT_NOTE_SCAN = 128;
+const RELEVANT_OLDER_NOTES = 8;
 import { validateInventory, type InventorySnapshot } from "./inventory.js";
 import {
   componentMemoryScopes,
@@ -354,6 +358,73 @@ export class GatewayMemory {
       revision,
       notes: Object.freeze(notes),
       hasEarlier: revision > notes.length,
+    });
+  }
+  /**
+   * The newest window plus older current notes that share literal words with the request.
+   * Only this project's own stored text and reasons are read. Replaced notes stay history, and
+   * the caller's note limit still bounds what reaches a model.
+   */
+  relevantKnowledge(
+    context: GatewayContext,
+    message?: string,
+    componentId?: string,
+  ): ProjectKnowledge {
+    const base = this.knowledge(context);
+    if (!base.hasEarlier) return base;
+    const asked = noteWords(`${message ?? ""} ${componentId ?? ""}`);
+    const words = [...asked].slice(0, RELEVANT_NOTE_WORDS);
+    if (!words.length) return base;
+    const matches = words
+      .map(
+        () =>
+          "(instr(lower(json_extract(document,'$.text')),?)>0 OR instr(lower(coalesce(json_extract(document,'$.rationale'),'')),?)>0)",
+      )
+      .join("+");
+    const pairs = words.flatMap((word) => [word, word]);
+    const rows = this.db
+      .prepare(
+        `SELECT note_revision,document,(${matches}) AS score FROM gateway_project_notes
+         WHERE server_id=? AND project_id=? AND note_revision<?
+           AND note_revision NOT IN (SELECT json_extract(document,'$.supersedes') FROM gateway_project_notes WHERE server_id=? AND project_id=? AND json_extract(document,'$.supersedes') IS NOT NULL)
+           AND (${matches})>0
+         ORDER BY score DESC,note_revision DESC LIMIT ?`,
+      )
+      .all(
+        ...pairs,
+        context.serverId,
+        context.projectId,
+        base.notes[0]!.revision,
+        context.serverId,
+        context.projectId,
+        ...pairs,
+        RELEVANT_NOTE_SCAN,
+      ) as { note_revision: number; document: string }[];
+    // The search matches inside longer words, so whole words decide what really relates.
+    const older = rows
+      .map((row) => {
+        const note = readProjectNote(JSON.parse(row.document));
+        if (note.revision !== row.note_revision)
+          throw new RequestError(
+            "Stored project-note revision is inconsistent.",
+            409,
+          );
+        const shared = [
+          ...noteWords(
+            `${note.text} ${note.schemaVersion === 2 ? (note.rationale ?? "") : ""}`,
+          ),
+        ].filter((word) => asked.has(word)).length;
+        return { note, shared };
+      })
+      .filter((entry) => entry.shared > 0)
+      .sort((a, b) => b.shared - a.shared || b.note.revision - a.note.revision)
+      .slice(0, RELEVANT_OLDER_NOTES)
+      .map((entry) => entry.note)
+      .sort((a, b) => a.revision - b.revision);
+    if (!older.length) return base;
+    return Object.freeze({
+      ...base,
+      notes: Object.freeze([...older, ...base.notes]),
     });
   }
   private atomic<T>(work: () => T): T {
@@ -1018,7 +1089,7 @@ export class GatewayMemory {
     context: GatewayContext,
     request?: string,
   ): Readonly<{ knowledgeRevision: number; text: string }> {
-    const knowledge = this.knowledge(context);
+    const knowledge = this.relevantKnowledge(context, request);
     const legacy = this.context(context);
     // Preserve byte-for-byte empty-note contexts used by existing acceptance receipts.
     if (knowledge.revision === 0)
