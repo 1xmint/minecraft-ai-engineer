@@ -4023,7 +4023,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.runOnServer(s->{var project=session(s,"Alice");check(project.sequentialRun==null && project.delegation==null && project.verified.equals("untested") && SequentialFunctionalRun.pending(project) && sequentialLevers(project).equals(held) && project.assignments.task(project.blueprint,"root").sequentialPass==null,why+" grants no pass, releases authority, keeps its marker and moves no lever afterwards");});
     }
     private static void sequentialFailures(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
-        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);commandAs(s,"Bob","engineer test");
+        server.runOnServer(s->{var project=session(s,"Alice");commandAs(s,"Alice","engineer project share Bob viewer");commandAs(s,"Bob","engineer project use "+project.projectId);check(project.projectId.equals(project.manager.selections.get(player(s,"Bob").getUUID())),"Bob selected the project before the viewer refusal");commandAs(s,"Bob","engineer test");
             check(project.sequentialRun==null && project.verified.startsWith("passed:sequential:") && !SequentialFunctionalRun.pending(project),"A viewer cannot start a stored-circuit test");
             boolean refused=false;var previous=project.commandActor;project.commandActor=player(s,"Alice").getUUID();try{project.trial.start();}catch(IllegalStateException expected){refused=true;}finally{project.commandActor=previous;}
             check(refused,"The generic restore test refuses stored circuits");});
@@ -4045,7 +4045,7 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         connectedAction(server,project->project.test());
         server.waitFor(s->SequentialFunctionalRun.pending(session(s,"Alice")));
         MESSAGES.clear();server.runOnServer(s->{var project=session(s,"Alice");project.access.revoke(player(s,"Alice").getUUID(),player(s,"Bob").getUUID());});
-        sequentialInterrupted(context,server,"A permission change during a test");
+        sequentialInterrupted(context,server,"A sharing change during a test");
         server.runOnServer(s->{var project=session(s,"Alice");sequentialLevers(project).forEach((name,up)->{if(up)sequentialPull(s,project,name);});});
         MESSAGES.clear();connectedAction(server,project->project.resume());expectChat(context,"Interrupted stored-circuit test cleared");
         write("sequential-interrupted.done","passed");

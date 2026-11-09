@@ -153,6 +153,7 @@ final class SequentialFunctionalRun {
                 || session.assignments.task(blueprint,"root").generation!=generation)
             throw new IllegalStateException("the connection, selection, design or permissions changed");
         session.access.require(player.getUUID(),ProjectAccess.Permission.BUILD);SequentialIntention.validated(blueprint);
+        session.manager.validate(session);
     }
     private void writePending(){
         try{
@@ -165,15 +166,19 @@ final class SequentialFunctionalRun {
     private void persist(JsonObject record){
         Path directory=session.manager.directory;
         try{
-            long bytes=0;int count=0;
+            int size=LocalFiles.GSON.toJson(record).getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            if(size>131072)throw new IllegalStateException("stored-circuit evidence limit reached");
+            var saved=new ArrayList<Path>();long bytes=0;
             try(var files=Files.list(directory)){
                 for(var path:files.filter(path->path.getFileName().toString().startsWith(session.projectId+".sequential-trial-")).toList()){
                     if(!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS))throw new IllegalStateException("Stored-circuit evidence contains a non-regular file");
-                    bytes=Math.addExact(bytes,Files.size(path));count++;
+                    saved.add(path);bytes=Math.addExact(bytes,Files.size(path));
                 }
             }
-            int size=LocalFiles.GSON.toJson(record).getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
-            if(size>131072 || count>=64 || bytes+size>4L*1024*1024)throw new IllegalStateException("stored-circuit evidence limit reached");
+            // Only this project's oldest test records make room; a pass is proven by the fresh run, not by an old file.
+            var times=new java.util.HashMap<Path,Long>();for(var path:saved)times.put(path,Files.getLastModifiedTime(path).toMillis());
+            saved.sort(java.util.Comparator.comparing(times::get));
+            for(int oldest=0;saved.size()-oldest>=64 || bytes+size>4L*1024*1024;oldest++){bytes-=Files.size(saved.get(oldest));Files.delete(saved.get(oldest));}
             Path file=directory.resolve(session.projectId+".sequential-trial-"+record.get("id").getAsString()+".json");
             Files.createFile(file);LocalFiles.write(file,record);
             if(!com.google.gson.JsonParser.parseString(Files.readString(file)).equals(record))throw new IllegalStateException("stored-circuit evidence differs after writing");
@@ -194,7 +199,12 @@ final class SequentialFunctionalRun {
         if(!s.server.isSameThread())throw new IllegalStateException("Stored-circuit tests belong to the server thread");
         s.access.require(s.actor(),ProjectAccess.Permission.BUILD);
         if(s.sequentialRun!=null)throw new IllegalStateException("A stored-circuit test is still running; stop it first");
-        SequentialIntention.validated(s.blueprint);requireBuilt(s);
+        if(s.blueprint==null || !SequentialIntention.describes(s.blueprint.source())){
+            try{Files.delete(pendingFile(s));}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}
+            s.tell("The design that interrupted test belonged to is no longer here, so there are no levers for me to check. I cleared the interrupted test and moved nothing. Check any leftover levers by hand.");return;
+        }
+        SequentialIntention.validated(s.blueprint);
+        try{requireBuilt(s);}catch(IllegalStateException damaged){s.tell("I changed nothing: "+damaged.getMessage()+". Put that part back by hand, then ask me to resume.");return;}
         var up=new ArrayList<String>();
         SequentialIntention.circuit(s.blueprint).controls().forEach((name,pos)->{if(s.level().getBlockState(SequentialIntention.world(s.blueprint,pos)).getValue(BlockStateProperties.POWERED))up.add(name);});
         if(!up.isEmpty()){s.tell("I changed nothing. Please put these levers down by hand, then ask me to resume: "+String.join(", ",up)+".");return;}
