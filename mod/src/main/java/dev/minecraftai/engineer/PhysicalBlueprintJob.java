@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /** One fresh owner request, bounded native gather/place phases; never restored from disk. */
-final class PhysicalBlueprintJob implements AutoCloseable {
+final class PhysicalBlueprintJob implements PhysicalJob {
     private final ProjectManager manager;
     private final EngineeringSession project;
     private final Blueprint blueprint;
@@ -73,7 +73,7 @@ final class PhysicalBlueprintJob implements AutoCloseable {
             if(!project.level().hasChunkAt(source) || !project.level().getBlockState(source).is(Blocks.DIRT))continue;
             try{PhysicalResourceTask.stance(project,worker,source);return source;}catch(IllegalStateException inaccessible){/* Try another originally observed source; never alter it to fit. */}
         }
-        throw new IllegalStateException("No original dirt source has an accessible flat gather route; inspect the path and resources");
+        throw new IllegalStateException("No original dirt source has an accessible gather route; inspect the path and resources");
     }
     private BlockPos placementStance(BlockPos target){
         // Retain the existing native placement path when the actual pickup
@@ -86,9 +86,9 @@ final class PhysicalBlueprintJob implements AutoCloseable {
             try{var route=PhysicalMoveTask.plan(project,worker,candidate);if(route.cells().size()<distance){best=candidate;distance=route.cells().size();}}
             catch(IllegalStateException inaccessible){/* No new action permission is issued during route search. */}
         }
-        if(best==null)throw new IllegalStateException("No flat walking route reaches a safe placement stance");return best;
+        if(best==null)throw new IllegalStateException("No walking route reaches a safe placement stance");return best;
     }
-    boolean tick(){
+    @Override public boolean tick(){
         fence();
         if(movement!=null){
             if(movement.tick()){

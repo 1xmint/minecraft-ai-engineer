@@ -130,6 +130,46 @@ public final class EngineerGameTests {
         helper.assertTrue(copied.cells().getLast().equals(new BlockPos(1,0,0)),"Mutable Minecraft positions cannot change a captured route");
         helper.succeed();
     }
+    @GameTest public void walkingRouteClimbsAndDropsOneBlockAndNamesEveryRefusal(GameTestHelper helper){
+        var inside=new java.util.HashSet<BlockPos>();
+        for(int x=0;x<8;x++)for(int y=0;y<8;y++)for(int z=0;z<8;z++)inside.add(helper.absolutePos(new BlockPos(x,y,z)));
+        var terrain=new PhysicalTerrain(helper.getLevel(),inside::contains);
+        java.util.function.BiFunction<BlockPos,BlockPos,PhysicalRoutePlan> walk=(a,b)->PhysicalRoutePlan.walking(helper.absolutePos(a),helper.absolutePos(b),terrain);
+        var start=new BlockPos(1,1,3);var goal=new BlockPos(6,1,3);
+        // A two-wide ridge one block high across the whole area: the only way over is up one and down one.
+        scene(helper,Blocks.STONE);for(int z=0;z<8;z++)for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,1,z),Blocks.STONE);
+        var route=walk.apply(start,goal);
+        helper.assertTrue(route.cells().getLast().equals(helper.absolutePos(goal)) && route.cells().stream().anyMatch(cell->cell.getY()==helper.absolutePos(goal).getY()+1),"The route climbs one block onto the ridge and drops one block back down");
+        for(int i=1;i<route.cells().size();i++)helper.assertTrue(Math.abs(route.cells().get(i).getY()-route.cells().get(i-1).getY())<=1,"No step rises or falls more than one block");
+        // Make the ridge two high: too tall to climb.
+        for(int z=0;z<8;z++)for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,2,z),Blocks.STONE);
+        refuses(helper,()->walk.apply(start,goal),"A climb taller than one block","A two-block wall is refused by name");
+        // A one-high ridge under a low ceiling over the lower stance: no room to jump.
+        for(int z=0;z<8;z++){for(int x=3;x<=4;x++)helper.setBlock(new BlockPos(x,2,z),Blocks.AIR);helper.setBlock(new BlockPos(2,3,z),Blocks.STONE);}
+        refuses(helper,()->walk.apply(start,goal),"No headroom to step","A ceiling over the climb is refused by name");
+        // A raised platform two blocks above the floor: stepping off it is a two-block drop.
+        scene(helper,Blocks.STONE);for(int z=0;z<8;z++)for(int x=0;x<=3;x++)for(int y=1;y<=2;y++)helper.setBlock(new BlockPos(x,y,z),Blocks.STONE);
+        refuses(helper,()->walk.apply(new BlockPos(1,3,3),goal),"A drop deeper than one block","A two-block drop is refused by name");
+        // Lava or water in the floor ahead is refused before any route is planned through it.
+        for(var fluid:java.util.List.of(Blocks.LAVA,Blocks.WATER)){
+            scene(helper,Blocks.STONE);for(int z=0;z<8;z++)helper.setBlock(new BlockPos(3,0,z),fluid);
+            refuses(helper,()->walk.apply(start,goal),"Dangerous "+net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(fluid),"A fluid trench is refused as a named hazard");
+        }
+        // Natural grass ground with short grass in the way is ordinary walking terrain.
+        scene(helper,Blocks.GRASS_BLOCK);for(int x=1;x<=6;x++)helper.setBlock(new BlockPos(x,1,3),Blocks.SHORT_GRASS);
+        helper.assertTrue(walk.apply(start,goal).cells().size()==6,"Grass ground and short grass give the direct six-cell route");
+        refuses(helper,()->walk.apply(start,new BlockPos(6,1,9)),"not walkable","A stance outside the workspace is refused");
+        reject(helper,()->new PhysicalRoutePlan(java.util.List.of(start,start.east().above(2))),"An assembled route cannot skip two blocks of height");
+        helper.succeed();
+    }
+    /** Clears the 8x8x8 test area and lays one floor layer at y=0. */
+    private static void scene(GameTestHelper helper,net.minecraft.world.level.block.Block floor){
+        for(int x=0;x<8;x++)for(int y=0;y<8;y++)for(int z=0;z<8;z++)helper.setBlock(new BlockPos(x,y,z),y==0?floor:Blocks.AIR);
+    }
+    private static void refuses(GameTestHelper helper,Runnable action,String reason,String message){
+        String seen=null;try{action.run();}catch(IllegalStateException expected){seen=expected.getMessage();}
+        helper.assertTrue(seen!=null && seen.contains(reason),message+" (got: "+seen+")");
+    }
     @GameTest public void movementOccupancyNeverGrantsMutation(GameTestHelper helper){
         var leases=new RegionReservations(java.util.UUID.randomUUID());var owner=java.util.UUID.randomUUID();
         var a=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID());
@@ -306,15 +346,70 @@ public final class EngineerGameTests {
     public void boundedOverlayWireFormat(GameTestHelper helper){
         var recipient=java.util.UUID.randomUUID();
         var view=new ProjectView(recipient,"world","minecraft:overworld","project","epoch",1,1,1,0,"Private lesson",
-                java.util.List.of(new ProjectView.Ghost(BlockPos.ZERO,Blocks.STONE.defaultBlockState(),true,false,false)));
+                java.util.List.of(new ProjectView.Ghost(BlockPos.ZERO,Blocks.STONE.defaultBlockState(),true,false,false,true)));
         var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),helper.getLevel().registryAccess());
         try {
             EngineerNetwork.SnapshotPayload.CODEC.encode(buffer,new EngineerNetwork.SnapshotPayload(1,view));
             var decoded=EngineerNetwork.SnapshotPayload.CODEC.decode(buffer);
             helper.assertTrue(decoded.view().recipient().equals(recipient) && decoded.view().blocks().size()==1,"Presentation retains its exact authorized recipient and bounded geometry");
+            helper.assertTrue(decoded.view().blocks().getFirst().diagnosed(),"The display-only diagnosis tint survives the wire");
+            buffer.clear();EngineerNetwork.SnapshotPayload.CODEC.encode(buffer,new EngineerNetwork.SnapshotPayload(1,view));buffer.setByte(buffer.writerIndex()-1,16);
+            reject(helper,()->EngineerNetwork.SnapshotPayload.CODEC.decode(buffer),"Unknown overlay flags are rejected");
             buffer.clear();buffer.writeVarInt(1);buffer.writeByte(7);
             reject(helper,()->EngineerNetwork.HelloPayload.CODEC.decode(buffer),"Hello cannot smuggle actor or command data after its protocol field");
         } finally {buffer.release();}
+        helper.succeed();
+    }
+    /** Workers of one project hold separate leases, checked against each other exactly as separate projects are. */
+    @GameTest
+    public void workerLeasesWithinAProjectNeverOverlapOrReplaceEachOther(GameTestHelper helper){
+        var leases=new RegionReservations(java.util.UUID.randomUUID());var owner=java.util.UUID.randomUUID();var project=java.util.UUID.randomUUID();
+        var whole=new RegionReservations.Scope("world","minecraft:overworld",project);
+        var a=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var b=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var c=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var d=new RegionReservations.Scope("world","minecraft:overworld",project,java.util.UUID.randomUUID());
+        var build=ProjectAccess.Permission.BUILD;var aCell=BlockPos.ZERO;var aRead=new BlockPos(1,0,0);var bCell=new BlockPos(10,0,0);var bRead=new BlockPos(11,0,0);
+        var first=leases.acquire(a,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(aRead),0);
+        var second=leases.acquire(b,owner,1,1,build,java.util.Set.of(bCell),java.util.Set.of(bRead),0);
+        leases.validateWrite(a,first,owner,1,1,aCell,1);leases.validateWrite(b,second,owner,1,1,bCell,1);
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(),1),"Two workers cannot reserve the same cell");
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(bRead),java.util.Set.of(),1),"A worker cannot write a sibling's dependency");
+        reject(helper,()->leases.acquire(c,owner,1,1,build,java.util.Set.of(new BlockPos(30,0,0)),java.util.Set.of(aCell),1),"A worker cannot depend on a cell a sibling is writing");
+        reject(helper,()->leases.acquireMovement(c,owner,1,1,java.util.Set.of(bCell),java.util.Set.of(),1),"A route cannot cross a sibling's write");
+        var route=new BlockPos(20,0,0);var walking=leases.acquireMovement(c,owner,1,1,java.util.Set.of(route),java.util.Set.of(),1);
+        reject(helper,()->leases.acquireMovement(d,owner,1,1,java.util.Set.of(route),java.util.Set.of(),1),"Two workers cannot claim the same route cell");
+        reject(helper,()->leases.acquire(d,owner,1,1,build,java.util.Set.of(route),java.util.Set.of(),1),"A worker cannot build on a sibling's route");
+        reject(helper,()->leases.acquire(whole,owner,1,1,build,java.util.Set.of(aCell),java.util.Set.of(),1),"The project's own lease is checked against its workers");
+        reject(helper,()->leases.validateWrite(b,first,owner,1,1,aCell,1),"One worker's ticket is useless under a sibling's lease");
+        var replaced=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(2,0,0)),java.util.Set.of(),2);
+        leases.validate(b,second,owner,1,1,2);leases.validate(c,walking,owner,1,1,2);
+        reject(helper,()->leases.validate(a,first,owner,1,1,2),"A worker's replaced lease is dead, and only that one");
+        leases.release(b,first);leases.validate(b,second,owner,1,1,2);
+        leases.revoke(a);
+        reject(helper,()->leases.validate(a,replaced,owner,1,1,3),"Revoking a worker stops that worker");
+        leases.validate(b,second,owner,1,1,3);
+        var again=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(3,0,0)),java.util.Set.of(),3);
+        var unrelated=new RegionReservations.Scope("world","minecraft:overworld",java.util.UUID.randomUUID(),a.worker());
+        var kept=leases.acquire(unrelated,owner,1,1,build,java.util.Set.of(new BlockPos(40,0,0)),java.util.Set.of(),3);
+        leases.revoke(whole);
+        reject(helper,()->leases.validate(a,again,owner,1,1,4),"Project revocation stops the first worker");
+        reject(helper,()->leases.validate(b,second,owner,1,1,4),"Project revocation stops the second worker");
+        reject(helper,()->leases.validate(c,walking,owner,1,1,4),"Project revocation stops a worker that is only walking");
+        leases.validate(unrelated,kept,owner,1,1,4);
+        reject(helper,()->new RegionReservations(java.util.UUID.randomUUID()).validate(unrelated,kept,owner,1,1,5),"A restart never restores a worker's lease");
+        // The project's own lease: a live one refuses workers, pausing stops workers only, and revoking stops it too. Another dimension is a separate lease.
+        var own=leases.acquire(whole,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5);
+        reject(helper,()->leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(50,0,0)),java.util.Set.of(),5),"A worker is refused against the project's own live lease");
+        var running=leases.acquire(a,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        var nether=new RegionReservations.Scope("world","minecraft:the_nether",project,a.worker());
+        var elsewhere=leases.acquire(nether,owner,1,1,build,java.util.Set.of(new BlockPos(60,0,0)),java.util.Set.of(),5);
+        leases.revokeWorkers(whole);
+        reject(helper,()->leases.validate(a,running,owner,1,1,6),"Pausing a project stops its workers");
+        leases.validate(whole,own,owner,1,1,6);leases.validate(nether,elsewhere,owner,1,1,6);
+        leases.revoke(whole);
+        reject(helper,()->leases.validate(whole,own,owner,1,1,7),"Project revocation removes the project's own lease");
+        leases.validate(nether,elsewhere,owner,1,1,7);
         helper.succeed();
     }
     private static void reject(GameTestHelper helper,Runnable action,String message){

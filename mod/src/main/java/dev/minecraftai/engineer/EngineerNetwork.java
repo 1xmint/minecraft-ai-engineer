@@ -15,7 +15,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 /** Optional presentation protocol. The only client input is its protocol version. */
 public final class EngineerNetwork {
-    public static final int PROTOCOL = 1;
+    public static final int PROTOCOL = 2;
     private static final Map<ServerGamePacketListenerImpl, Channel> CHANNELS = new ConcurrentHashMap<>();
     private static boolean initialized;
 
@@ -100,7 +100,7 @@ public final class EngineerNetwork {
             for (ProjectView.Ghost ghost : view.blocks()) {
                 buffer.writeBlockPos(ghost.pos());
                 buffer.writeUtf(Blueprint.describe(ghost.state()), 512);
-                buffer.writeByte((ghost.currentStage() ? 1 : 0) | (ghost.matches() ? 2 : 0) | (ghost.wrong() ? 4 : 0));
+                buffer.writeByte((ghost.currentStage() ? 1 : 0) | (ghost.matches() ? 2 : 0) | (ghost.wrong() ? 4 : 0) | (ghost.diagnosed() ? 8 : 0));
             }
         }
         if (buffer.writerIndex() - start > ProjectView.MAX_PACKET_BYTES) {
@@ -127,8 +127,8 @@ public final class EngineerNetwork {
                 var position = buffer.readBlockPos();
                 var state = Blueprint.state(buffer.readUtf(512));
                 int flags = buffer.readUnsignedByte();
-                if ((flags & ~7) != 0) throw new IllegalArgumentException("Invalid overlay flags");
-                blocks.add(new ProjectView.Ghost(position, state, (flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0));
+                if ((flags & ~15) != 0) throw new IllegalArgumentException("Invalid overlay flags");
+                blocks.add(new ProjectView.Ghost(position, state, (flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0, (flags & 8) != 0));
             }
             view = new ProjectView(recipient, world, dimension, project, epoch, sequence, revision, authority, stage, text, blocks);
         }

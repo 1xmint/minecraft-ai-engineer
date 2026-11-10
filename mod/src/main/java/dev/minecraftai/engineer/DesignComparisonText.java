@@ -12,7 +12,7 @@ final class DesignComparisonText {
     private static final Pattern CATALOG=Pattern.compile("^(?:the |a )?catalog (?:design )?([a-z0-9 -]{1,64}?)(?: (?:with )?(?:delay|repeater setting) (\\d{1,2}))?$");
     private DesignComparisonText() { }
 
-    record Target(String label, Blueprint blueprint, ComponentAssignments.Task task, List<TrialEvidenceTally.Attempt> attempts) { }
+    record Target(String label, Blueprint blueprint, ComponentAssignments.Task task, List<TrialEvidenceTally.Attempt> attempts, EngineeringSession project) { }
 
     static boolean handle(ProjectManager manager, EngineeringSession s, String request) {
         String target=target(request);
@@ -33,8 +33,12 @@ final class DesignComparisonText {
         Target other;
         try { other=resolve(manager, s, target); }
         catch(IllegalArgumentException refused) { return List.of(refused.getMessage()); }
-        return DesignComparison.compare(DesignComparison.measure("this design", s.blueprint, task(s),s.trial.attempts()),
-                DesignComparison.measure(other.label(), other.blueprint(), other.task(),other.attempts()));
+        var lines=new ArrayList<>(DesignComparison.compare(DesignComparison.measure("this design", s.blueprint, task(s),s.trial.attempts()),
+                DesignComparison.measure(other.label(), other.blueprint(), other.task(),other.attempts())));
+        // Catalog designs are templates with no project, so they have no lever tests of their own.
+        var machine=MachineTrialEvidence.lines("this design", MachineTrialEvidence.read(manager, s), other.label(), other.project() == null ? null : MachineTrialEvidence.read(manager, other.project()));
+        lines.addAll(lines.size() - 1, machine);
+        return lines;
     }
 
     static ComponentAssignments.Task task(EngineeringSession s) {
@@ -53,7 +57,7 @@ final class DesignComparisonText {
                 throw new IllegalArgumentException("The catalog has no design called " + id + ". It has: " + String.join(", ", MechanismCatalog.ids()) + ".");
             int delay=catalog.group(2) == null ? 1 : Integer.parseInt(catalog.group(2));
             try {
-                return new Target("catalog " + id, MechanismCatalog.create(id, s.blueprint.worldId(), s.dimension, s.blueprint.anchor(), s.blueprint.rotation(), delay), null,List.of());
+                return new Target("catalog " + id, MechanismCatalog.create(id, s.blueprint.worldId(), s.dimension, s.blueprint.anchor(), s.blueprint.rotation(), delay), null,List.of(), null);
             } catch(IllegalArgumentException outside) {
                 throw new IllegalArgumentException("Catalog " + id + " does not support repeater setting " + delay + ".");
             }
@@ -83,7 +87,7 @@ final class DesignComparisonText {
         }
         var other=here.getFirst();
         if(other.blueprint == null) throw new IllegalArgumentException(label(other) + " has no design yet, so there is nothing to measure.");
-        return new Target(label(other), other.blueprint, task(other),other.trial.attempts());
+        return new Target(label(other), other.blueprint, task(other),other.trial.attempts(), other);
     }
 
     private static String label(EngineeringSession p) {

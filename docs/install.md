@@ -68,8 +68,9 @@ does not place blocks and a geometry match does not prove the circuit works.
 Use the included [mod guide](docs/mod-guide.md) for sharing, personal lessons,
 permissions, interruption, undo and restart. See the
 [companion guide](docs/companion-guide.md) for configuration. Creative execution
-is supported; survival gathering and a visible NPC are still unfinished. Voice is
-optional and fully local; see below.
+is supported. A visible survival companion can gather, craft and build the NOT
+gate machine; see the [release notes](docs/release-notes.md) for what is and is
+not supported. Voice is optional and fully local; see below.
 This bundle is not proof of full human acceptance or production account login.
 
 ## Voice (optional, local)

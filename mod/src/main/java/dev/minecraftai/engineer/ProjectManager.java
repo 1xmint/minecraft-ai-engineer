@@ -118,6 +118,7 @@ final class ProjectManager {
         LocalFiles.write(directory.resolveSibling("creator-grants.json"), data);
     }
     RegionReservations.Scope scope(EngineeringSession project) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId); }
+    RegionReservations.Scope scope(EngineeringSession project, UUID worker) { return new RegionReservations.Scope(worldId, project.dimension, project.projectId, java.util.Objects.requireNonNull(worker)); }
     static void validateWorkspaceBounds(BlockPos a,BlockPos b){
         if(a==null || b==null)throw new IllegalStateException("A complete workspace requires both corners");
         long x=Math.abs((long)a.getX()-b.getX())+1,y=Math.abs((long)a.getY()-b.getY())+1,z=Math.abs((long)a.getZ()-b.getZ())+1;
@@ -171,7 +172,8 @@ final class ProjectManager {
     boolean mayMutate(EngineeringSession project) {
         try { validate(project); return true; } catch (RuntimeException revoked) { return false; }
     }
-    void release(EngineeringSession project) { reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
+    /** Pause, completion and failure all come through here. Workers run only while the project is idle, so any of these stops them too. */
+    void release(EngineeringSession project) { reservations.revokeWorkers(scope(project)); reservations.release(scope(project), project.delegation); project.delegation = null;project.delegationConnection=null; }
     void changed(EngineeringSession project) {
         // Invalidate queued model replies and active leases before any next tick.
         project.clearDiagnoses();project.clearStructuralPreview();
@@ -204,13 +206,14 @@ final class ProjectManager {
         var cursor = project.cursor(player.getUUID());
         String stage = project.blueprint.stages().get(cursor.stage).id(); var ghosts = new ArrayList<ProjectView.Ghost>();
         int bytes=ProjectView.MAX_TEXT_LENGTH*3+2048;
+        var diagnosed=Diagnosis.highlight(project,player);
         for (Blueprint.PlannedBlock b : project.blueprint.blocks()) {
             bytes+=Blueprint.describe(b.state()).length()*3+16;
             if(bytes>ProjectView.MAX_PACKET_BYTES)break;
             boolean loaded = project.level().hasChunkAt(b.pos());
             var actual = loaded ? project.level().getBlockState(b.pos()) : null;
             boolean matches = loaded && Blueprint.matches(b.state(), actual);
-            ghosts.add(new ProjectView.Ghost(b.pos(), b.state(), stage.equals(b.stage()), matches, loaded && !actual.isAir() && !matches));
+            ghosts.add(new ProjectView.Ghost(b.pos(), b.state(), stage.equals(b.stage()), matches, loaded && !actual.isAir() && !matches, diagnosed.contains(b.pos())));
         }
         return new ProjectView(player.getUUID(), worldId, project.dimension, project.projectId.toString(), epoch.toString(), ++sequence,
                 project.revision(), project.access.revision(), cursor.stage,

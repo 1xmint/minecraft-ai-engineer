@@ -118,6 +118,7 @@ public final class ComponentTree {
 
     /** Validates single recipes or verifies every persisted composite field against regeneration. */
     public static void validate(Blueprint blueprint) {
+        if(SequentialIntention.describes(blueprint.source())){SequentialIntention.validated(blueprint);return;}
         if(ToggleMemoryIntention.describes(blueprint.source())){ToggleMemoryIntention.validated(blueprint);return;}
         if(ImportedBlueprint.describes(blueprint.source())){ImportedBlueprint.validate(blueprint);return;}
         if(ConnectedIntention.describes(blueprint.source())){ConnectedIntention.validated(blueprint);return;}

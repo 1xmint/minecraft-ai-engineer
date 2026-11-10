@@ -4,6 +4,11 @@ package dev.minecraftai.engineer;
 final class EngineeringContracts {
     private EngineeringContracts() { }
     static MechanismCatalog.Contract contract(Blueprint blueprint) {
+        if(SequentialIntention.describes(blueprint.source())){
+            SequentialIntention.validated(blueprint);var ports=new java.util.ArrayList<MechanismCatalog.Port>();
+            for(var value:blueprint.source().getAsJsonArray("ports")){var port=value.getAsJsonObject();ports.add(new MechanismCatalog.Port(port.get("name").getAsString(),Blueprint.pos(port.getAsJsonObject("pos")).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()),port.get("kind").getAsString().equals("input")));}
+            return new MechanismCatalog.Contract("sequential-circuit",ports,java.util.List.of(),20);
+        }
         if(ToggleMemoryIntention.describes(blueprint.source())){
             ToggleMemoryIntention.validated(blueprint);var ports=new java.util.ArrayList<MechanismCatalog.Port>();
             for(var value:blueprint.source().getAsJsonArray("ports")){var port=value.getAsJsonObject();ports.add(new MechanismCatalog.Port(port.get("name").getAsString(),Blueprint.pos(port.getAsJsonObject("pos")).rotate(Blueprint.rotation(blueprint.rotation())).offset(blueprint.anchor()),port.get("kind").getAsString().equals("input")));}
