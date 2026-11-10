@@ -55,13 +55,13 @@ final class SequentialFunctionalRun {
         s.access.require(s.actor(),ProjectAccess.Permission.BUILD);
         if(!s.activeComponent.equals("root") || s.testTick>=0 || s.hasPendingTest() || s.state.equals("EXECUTING") || s.state.equals("VERIFYING") || s.state.equals("PLANNING"))throw new IllegalStateException("Finish or stop current work before testing this circuit");
         SequentialIntention.validated(s.blueprint);s.requireCreative();
-        requireBuilt(s);
+        requireBuilt(s);s.validateTestArea();
         var level=s.level();
         for(var control:SequentialIntention.circuit(s.blueprint).controls().entrySet()){
             if(level.getBlockState(SequentialIntention.world(s.blueprint,control.getValue())).getValue(BlockStateProperties.POWERED))throw new IllegalStateException("Put the "+control.getKey()+" lever down before testing. Nothing was changed.");
         }
         s.claim(ProjectAccess.Permission.BUILD,true);
-        try{return new SequentialFunctionalRun(s);}catch(RuntimeException failure){s.manager.release(s);throw failure;}
+        try{var run=new SequentialFunctionalRun(s);run.discardPass();return run;}catch(RuntimeException failure){s.manager.release(s);throw failure;}
     }
     void tick(){
         thread();if(closed)return;
@@ -89,9 +89,7 @@ final class SequentialFunctionalRun {
             if(++stepIndex<plan.size())return;
             pass();
         }catch(RuntimeException failure){
-            String report=closeReport();
-            try{stop();}catch(RuntimeException cleanup){failure.addSuppressed(cleanup);}
-            fail(failure,report);
+            fail(failure);
         }
     }
     private void pass(){
@@ -110,28 +108,44 @@ final class SequentialFunctionalRun {
         try{session.save();}catch(RuntimeException failure){current.sequentialPass=null;current.verified="untested";session.verified="untested";throw failure;}
         session.checkpoint();session.tell(session.detail);
     }
-    private void fail(RuntimeException failure,String report){
-        if(session.blueprint==blueprint){var current=session.assignments.task(blueprint,"root");current.sequentialPass=null;current.verified="untested";session.verified="untested";}session.state="PAUSED";
+    private void discardPass(){
+        task.sequentialPass=null;task.verified="untested";
+        if(session.blueprint==blueprint)session.verified="untested";
+    }
+    private void fail(RuntimeException failure){
+        // Clear live evidence and release authority before any fallible observation or I/O.
+        discardPass();boolean owned=session.sequentialRun==this;
+        try{stop();}catch(RuntimeException cleanup){failure.addSuppressed(cleanup);}
+        if(!owned && session.sequentialRun!=null)return;
+        session.state="PAUSED";
+        String report;
+        try{report=closeReport();}catch(RuntimeException observation){failure.addSuppressed(observation);report=" Lever positions could not be checked. Inspect the circuit before requesting more work.";}
         session.detail="Stored-circuit test stopped: "+failure.getMessage()+". No pass was granted."+report;
-        session.save();session.checkpoint();session.tell(session.detail);
+        boolean saved=false;
+        try{session.save();saved=true;}catch(RuntimeException persistence){failure.addSuppressed(persistence);session.detail+=" The stopped state could not be saved. No current pass was kept.";}
+        if(saved)try{session.checkpoint();}catch(RuntimeException checkpoint){failure.addSuppressed(checkpoint);session.detail+=" The project service could not be updated.";}
+        try{session.tell(session.detail);}catch(RuntimeException notification){failure.addSuppressed(notification);}
     }
     /** What a player needs to know before anything else happens. Never moves a lever. */
     private String closeReport(){
-        if(!started)return " No lever was moved.";
+        String next=pending(session)?" Put every lever down, then ask me to resume.":" Request a fresh test when ready.";
+        if(!started)return " No lever was moved."+next;
         var up=new ArrayList<String>();
         for(var entry:levers.entrySet()){var state=session.level().getBlockState(entry.getValue());if(state.hasProperty(BlockStateProperties.POWERED) && state.getValue(BlockStateProperties.POWERED))up.add(entry.getKey());}
-        return " I did not move any lever back."+(up.isEmpty()?" All levers are down.":" Levers still up: "+String.join(", ",up)+".")+" Put every lever down, then ask me to resume.";
+        return " I did not move any lever back."+(up.isEmpty()?" All levers are down.":" Levers still up: "+String.join(", ",up)+".")+next;
     }
     void stop(){
         thread();if(closed)return;
-        closed=true;if(session.sequentialRun==this)session.sequentialRun=null;
-        if(session.delegation!=null)session.manager.release(session);
+        closed=true;if(session.sequentialRun==this){session.sequentialRun=null;if(session.delegation!=null)session.manager.release(session);}
     }
     private void pull(String name,boolean wanted){
+        validate();
         var pos=levers.get(name);var state=session.level().getBlockState(pos);
+        started=true;
         ((LeverBlock)state.getBlock()).pull(state,session.level(),pos,player);
         if(session.level().getBlockState(pos).getValue(BlockStateProperties.POWERED)!=wanted)throw new IllegalStateException("the "+name+" lever did not move");
         leverNow.put(name,wanted);
+        validate();
     }
     private void checkLevers(){
         for(var entry:levers.entrySet()){
@@ -153,12 +167,12 @@ final class SequentialFunctionalRun {
                 || session.assignments.task(blueprint,"root").generation!=generation)
             throw new IllegalStateException("the connection, selection, design or permissions changed");
         session.access.require(player.getUUID(),ProjectAccess.Permission.BUILD);SequentialIntention.validated(blueprint);
-        session.manager.validate(session);
+        session.manager.validate(session);session.validateTestArea();
     }
     private void writePending(){
         try{
             var file=pendingFile(session);var record=new JsonObject();record.addProperty("schemaVersion",1);record.addProperty("kind","sequential-test-in-progress");record.addProperty("projectId",session.projectId.toString());record.addProperty("blueprintId",blueprint.source().get("id").getAsString());record.addProperty("revision",revision);
-            started=true;Files.createFile(file);LocalFiles.write(file,record);
+            Files.createFile(file);LocalFiles.write(file,record);
             if(!com.google.gson.JsonParser.parseString(Files.readString(file)).equals(record))throw new IllegalStateException("the test marker differs after writing");
             marked=true;
         }catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}

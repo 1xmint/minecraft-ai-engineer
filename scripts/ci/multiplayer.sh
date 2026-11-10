@@ -172,7 +172,7 @@ if [[ "${MCE_LIVE_ACCEPTANCE:-}" == true ]]; then
   cp -a "$MCE_ACCEPTANCE_EXCHANGE_DIR" "$evidence/live-exchange"
 fi
 if [[ "${MCE_LIVE_ACCEPTANCE:-}" != true ]]; then
-  for marker in sequential-edge-register.done sequential-up-counter.done sequential-pulse-tally.done sequential-data-latch.done sequential-refusals.done sequential-interrupted.done sequential-stale.done; do
+  for marker in sequential-edge-register.done sequential-up-counter.done sequential-pulse-tally.done sequential-data-latch.done sequential-refusals.done sequential-interrupted.done sequential-stale.done sequential-persistence.done; do
     [[ -f "$coord/$marker" && "$(cat "$coord/$marker")" == passed ]] || { echo "Missing stored-circuit proof: $marker" >&2; exit 1; }
   done
   cp "$coord"/sequential-*-record.json "$evidence/"

@@ -4064,6 +4064,28 @@ public final class MultiplayerGameTests implements FabricClientGameTest {
         server.waitFor(s->session(s,"Alice").verified.startsWith("passed:sequential:data-latch:"));assertPersisted(server);
         server.runOnServer(s->{var project=session(s,"Alice");check(SequentialFunctionalRun.current(project.blueprint,project.assignments.task(project.blueprint,"root")) && !sequentialLevers(project).containsValue(true),"A fresh pass is current again");});
         write("sequential-stale.done","passed");
+        sequentialPersistenceFailures(server);
+    }
+    private static void sequentialPersistenceFailures(TestDedicatedServerContext server) throws Exception {
+        // A new accepted test must immediately retire the previous live pass.
+        connectedAction(server,project->{project.test();var task=project.assignments.task(project.blueprint,"root");check(task.sequentialPass==null && task.verified.equals("untested") && !SequentialFunctionalRun.current(project.blueprint,task),"Retesting immediately invalidates the old current pass");});
+        server.waitFor(s->SequentialFunctionalRun.pending(session(s,"Alice")));
+        var blocked=server.computeOnServer(s->{var project=session(s,"Alice");var path=project.file.resolveSibling(project.file.getFileName()+".tmp");try{Files.createDirectory(path);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}return path;});
+        try{
+            server.waitFor(s->session(s,"Alice").sequentialRun==null);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.assignments.task(project.blueprint,"root").sequentialPass==null && project.verified.equals("untested"),"A real checkpoint write failure grants no pass and releases authority");check(!SequentialFunctionalRun.pending(project) && !sequentialLevers(project).containsValue(true) && project.detail.contains("could not be saved") && !project.detail.contains("ask me to resume"),"A failure after marker removal gives fresh-test advice, not impossible recovery");});
+            sequentialSettle(server); // The dedicated server still ticks after the I/O failure.
+        }finally{Files.delete(blocked);}
+        server.runOnServer(s->session(s,"Alice").save());
+        var markerBlocked=server.computeOnServer(s->{var project=session(s,"Alice");var path=SequentialFunctionalRun.pendingFile(project).resolveSibling(SequentialFunctionalRun.pendingFile(project).getFileName()+".tmp");try{Files.createDirectory(path);}catch(java.io.IOException failure){throw new java.io.UncheckedIOException(failure);}return path;});
+        try{
+            connectedAction(server,project->project.test());
+            server.waitFor(s->session(s,"Alice").sequentialRun==null);
+            server.runOnServer(s->{var project=session(s,"Alice");check(project.state.equals("PAUSED") && project.delegation==null && project.assignments.task(project.blueprint,"root").sequentialPass==null && SequentialFunctionalRun.pending(project) && !sequentialLevers(project).containsValue(true) && project.detail.contains("No lever was moved"),"A real marker write failure stops before the first native edge and retains recovery state");});
+        }finally{Files.delete(markerBlocked);}
+        connectedAction(server,project->project.resume());
+        server.runOnServer(s->check(!SequentialFunctionalRun.pending(session(s,"Alice")),"Explicit recovery clears the failed pre-edge marker"));
+        write("sequential-persistence.done","passed");
     }
     private static void toggleMemoryPreviewFlow(ClientGameTestContext context,TestDedicatedServerContext server) throws Exception {
         String previous=server.computeOnServer(s->session(s,"Alice").projectId.toString());
