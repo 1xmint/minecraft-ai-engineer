@@ -42,7 +42,7 @@ exact main run that passed all five required checks.
 
 ## Try it
 
-Download the [multiplayer development preview v0.1.0-alpha.2](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.2).
+Download the [multiplayer development preview v0.1.0-alpha.3](https://github.com/1xmint/minecraft-ai-engineer/releases/tag/v0.1.0-alpha.3).
 Get its companion zip, matching mod jar, `BUILD.json` and `SHA256SUMS`, then follow
 `START-HERE.md` inside the zip or the [installation guide](docs/install.md).
 The companion contains compiled JavaScript: install its pinned runtime dependencies
