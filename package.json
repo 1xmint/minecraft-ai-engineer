@@ -27,7 +27,7 @@
     "@openai/codex-sdk": "0.164.0"
   },
   "devDependencies": {
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "prettier": "3.9.10",
     "prismarine-nbt": "2.8.0",
     "typescript": "7.0.2"
